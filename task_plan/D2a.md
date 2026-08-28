@@ -279,6 +279,41 @@ This mechanically clears a small, explicit allowlist of critical/warning alerts 
 
 - **Failure alerts (on any hard-stop).** Routine chat is unmonitored, so any condition that halts a routine or needs a human MUST be surfaced: `CALL ops.sp_raise_alert('critical', '<ID>', '<category>', '<one-line message>', '<JSON context>')` AND log the run `'halted'`. `alert_emailer.gs`'s 2-hourly poll of `ops.alerts` already delivers this by email — **no calendar event** (2026-07-09; the sole exception, a BigQuery-unreachable pre-flight, is handled separately above since BigQuery down means `sp_raise_alert` itself can't run). Hard-stops include: the §13 cash-tripwire >$1 unexplained residual (`cash_tripwire`); a Strategy C max-loss **dual-path disagreement** (closed-form vs Monte-Carlo diverge — a code-bug signal per Strategy.md, not a normal deferral; `dual_path`); `state.embedding_health.is_healthy = FALSE` after a decision write (`embedding`); a required connector (IBKR / BigQuery) unreachable (`connector`); a **missed order confirmation** discovered by D3 (`missed_confirmation`, see D3 Calendar Hygiene); or any other unrecoverable state. (A normal deferral that resolves to its `conservative_default` is NOT a hard-stop — no alert.) **A hard-stop does NOT skip Session end (stated explicitly, landing-hardening 2026-07-29).** `'halted'`/`'failed'` is a *terminal log*, not an immediate exit: before writing it, perform §Branch and state propagation → "Session end" — commit all changes, push the assigned branch, verify with `git ls-remote` — exactly as a `'completed'` run would, so any file edits the run had already made reach `origin` instead of dying with the container. The only differences are the status logged and the `error_msg` attached. (A 2026-07-29 audit read all 33 slices and found every abort-capable gate it examined — connector pre-flight, the dependency gate, the upstream-output freshness gate, the same-day double-run guard, the arsenal kill-switch — positioned BEFORE any file edit, so today this is expected to be a no-op in practice; that was a systematic read, not an exhaustive proof over every conditional branch. It is stated anyway so that a mid-run hard-stop added *after* an edit step by some future revision cannot silently strand work, and so no routine has to infer the commit obligation from the run-logging template.)
 
+- **OUT-OF-SCOPE FINDINGS — WHERE THEY GO, AND WHAT COUNTS AS A VENUE (added 2026-08-28; binds ALL routines).**
+  Every fleet trigger already carries the standing operator addendum: *"For an issue OUTSIDE this run's scope:
+  fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an
+  `events.queue_events` row or an `ops.alerts` info row naming the owning routine or surface — and move on."*
+  That addendum is the binding rule; it lives in the trigger prompt (`scripts/routine_backup.py` `SCOPE_ADDENDUM`,
+  mirrored onto all 32 fleet triggers and CI-enforced by that script's `check` (2)), which means it is NOT in this
+  corpus and specifies only *record it*. This bullet is the missing half — the part a routine can actually read
+  while it works, restated here because a rule that reaches a routine only through its prompt preamble, and never
+  through the plan it executes from, gets honored inconsistently. Measured 2026-08-28: it was.
+  - **A RUN-LOG NOTE AND A `reason` STRING ARE NOT VENUES.** The addendum names exactly two. On 2026-08-27 D2a
+    found a real spec defect and recorded it only in an `ops.trading_control` `reason` string plus its own
+    `ops.run_log` note — reaching no routine at all — the night after correctly filing a different finding as an
+    `ops.alerts` info row (`sweep_recipient_view_drift`). Prose that no consumer reads is not a record; it is a
+    diary. If the finding is worth stating, it is worth putting where something will pick it up.
+  - **NAME A VERIFIED CONSUMER, NEVER AN ASSUMED ONE.** Before naming an owner, confirm that owner actually reads
+    the venue you are writing to — SL2 pinned this for itself on 2026-08-27 ("AN OUT-OF-SECTION ESCALATION MUST
+    NAME A VERIFIED CONSUMER"); it generalizes to every routine. Verify by reading the named routine's own section
+    for a matching read, exactly as `state.queue_venue_claim_unwired` (`bigquery/160` + `bigquery/199`) does
+    mechanically for the queue venue. This is not hypothetical: SL2's `premortem_preamble_stale` names W4, and W4's
+    section contains no alert read at all.
+  - **VENUE CHOICE.** Prefer `events.queue_events` when a lane with a real drainer fits the finding
+    (`PENDING_ANALYSIS`→D2, `PENDING_REVIEW`→AR_att/AR_orc, `PENDING_DRAFT`→SL2, `PENDING_ROSTER`→SL5) — that venue
+    has both drainers and a mechanical consumer-reality check. For a SPEC/DESIGN defect on a surface you do not own,
+    no such lane exists: use an `ops.alerts` **`info`** row, which W5's SPEC-DEFECT NOTICE INTAKE now drains.
+    Format, matching existing house practice: `severity='info'`, `source` = the DISCOVERING routine (never the
+    owner), `category` = a snake_case noun phrase naming the defect class, and a message opening
+    `OWNER: <file or surface> (nearest owning routine: <id>)` followed by what is wrong and what you did NOT do.
+  - **THIS DOES NOT REOPEN "don't invent an `ops.alerts` category".** The `VISIBILITY — a suppressed run must not be
+    silent` and `RUN-LOG GAP INTERPRETATION` bullets above still stand: a routine's own RUN-STATE narrative uses
+    `sp_log_decision`, not a new alert category. The rule there is about not minting categories for ordinary
+    run-state, and its stated hazard is that an unregistered category latches forever under `ops.alert_policy`'s
+    fail-closed allowlist. A cross-surface defect notice is a different class and its latching is now the CORRECT
+    behavior, because W5 owns the close — an evidence-bearing resolve, not an auto-age. Do NOT add these categories
+    to `ops.alert_policy`'s auto-resolve allowlist: that would clear them without anyone having acted.
+
 - **Staging atomicity (order-staging routines) — gate `completed` on the human actually being surfaced.** For a **craftable Equity/ETF order**, that surface IS `create_order_instruction` itself (it crafts the order and fires IBKR's own notification in one call) — if it fails, the `ORDER_STAGED` `pending` row must not be written either; treat it as a hard error (`CALL ops.sp_raise_alert('critical', '<ID>', 'staging', 'create_order_instruction failed for <ticker> — no order crafted', '<JSON>')`, log the run `'failed'`/`'halted'`, do **NOT** log `'completed'`). For a **non-craftable order** (manual-entry fallback), creating the `[Claude] Confirm order` event IS the delivery mechanism (2026-07-09) — if `create_event` fails after the `ORDER_STAGED` `pending` row is written, the human is never told (routine chat is unmonitored): `CALL ops.sp_raise_alert('critical', '<ID>', 'staging', 'confirm-order event creation failed for <ticker> — order staged but unsurfaced', '<JSON>')`, log the run `'failed'`/`'halted'`, do **NOT** log `'completed'`. Either way this mirrors the verified-push gate above, making a staged-but-unsurfaced order a durable terminal-status fact the `missed_run` / `routine_stalled` / `state.go_without_order` switches catch, rather than a silent `completed` hiding a real actionable order. (D3's `state.open_orders`-vs-IBKR reconciliation + `state.go_without_order` remain the next-day backstop; this closes the same-run window.)
 
 These are mechanical infrastructure calls, not analysis, and never substitute for a routine's own outputs (decisions still go to `events.decision_log` via `ops.sp_log_decision`, queues to `events.queue_events`, etc.).
@@ -1225,7 +1260,12 @@ Concretely, every run:
   `bigquery/23_trading_control.sql`'s header forbids ("an auto halt is cleared by an explicit manual INSERT,
   never by another automated row") and records as not enforced in SQL; the guard enforces it here. Nothing is
   lost by deferring — because both arms are state-keyed, a write skipped under a halt is simply made by the
-  next run after the halt clears. This is in-band,
+  next run after the halt clears.
+  **IF THIS BULLET'S OWN SPEC LOOKS WRONG WHILE YOU ARE EXECUTING IT, FILE IT — do not just narrate it in the
+  run-log note or the row's `reason`.** That is the shared OUT-OF-SCOPE FINDINGS rule (§Observability) applied to
+  the site that produced it: on 2026-08-27 this exact bullet's alert-conditioned close was diagnosed correctly by
+  D2a and recorded only in a `reason` string, so nothing consumed it. Write the `ops.alerts` `info` row naming the
+  owning surface, then proceed. This is in-band,
   fail-safe, and reversible — it does not touch `state.trading_enabled`/`halt_all`-the-mechanism, the
   mechanical kill triggers, the IBKR confirm-tap requirement itself, or deposits.
 - **Book soft-drawdown surfacing (record-only — finding C1, 2026-07-17 book-drawdown rebase).** After

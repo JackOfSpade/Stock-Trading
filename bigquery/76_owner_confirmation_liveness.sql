@@ -103,8 +103,28 @@ FROM pending p, last_fill lf, stale s, ltd;
 -- halt, but a halt_all=FALSE marker landing AFTER a genuine halt_all=TRUE row becomes the latest row and
 -- reads as an UN-HALT of the whole book — exactly what bigquery/23_trading_control.sql's header forbids
 -- ("an auto halt is cleared by an explicit manual INSERT, never by another automated row") and records as
--- not enforced in SQL. LATENT, NOT ACTIVE: no automated writer of halt_all=TRUE exists anywhere in the tree
--- today, so the trigger is an operator manual halt followed by a D2a marker write. Enforcement lives in the
+-- not enforced in SQL.
+--
+-- LATENT, NOT ACTIVE -- RE-MEASURED 2026-08-28, not assumed. Sweep of 18 surfaces (all bigquery/*.sql, dbt
+-- models+tests, Claude_Task_Plan.md + all 34 task_plan/ slices, Operating_Protocols.md, OWNER_ACTIONS.md,
+-- ops/RUNBOOK.md, scripts/*.py incl. ops/dashboard/, *.gs, .github/workflows/*.yml, and live
+-- INFORMATION_SCHEMA.ROUTINES/VIEWS across all 6 datasets) found NO automated writer of halt_all=TRUE on any
+-- surface. Confirmed behaviorally over the table's entire lifetime via region-us JOBS_BY_PROJECT full-text
+-- scan: 7 INSERT-typed jobs have ever targeted ops.trading_control (one of them errored, invalidQuery), zero
+-- UPDATE/DELETE/MERGE/TRUNCATE ever, and EVERY one wrote halt_all=FALSE. halt_all=TRUE has never been written
+-- by anyone. The only documented halt_all=TRUE path is the operator's ad-hoc INSERT in bigquery/23's header;
+-- it is typed by a person and nothing invokes it. So the trigger for this hazard is an operator manual halt
+-- followed by a D2a marker write.
+--
+-- STATE THAT PRECISELY, because the short version is misleading: this system DOES halt itself automatically --
+-- it just never does so through the halt_all COLUMN. state.trading_enabled / _mechanical are conjunctions whose
+-- other AND-terms (blocking_criticals, breach_hard/-40%, breach_soft, freshness, position drift) are driven
+-- autonomously, and monitors promote themselves into those terms. "No automated halt exists" would be FALSE;
+-- "no automated writer of halt_all exists" is what was measured. Per the standing inert-today-is-a-countdown
+-- rule, re-measure this before relying on it again -- and the FIRST time a halt_all=TRUE row is genuinely
+-- written, revisit whether the 24h dbt-test detection below should escalate to the 6h scheduled-query CRITICAL.
+--
+-- Enforcement lives in the
 -- D2a bullet itself (its HALT-ROW GUARD): both arms carry
 --   AND NOT COALESCE((SELECT halt_all FROM ops.trading_control ORDER BY control_ts DESC LIMIT 1), FALSE)
 -- and both arms are state-keyed, so a write skipped under a halt is simply made by the next run after the

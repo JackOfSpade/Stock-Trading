@@ -75,6 +75,51 @@ the repo which model is live" one.
 
 ---
 
+# STANDING PROCEDURE (not a dated one-off) — HALT ALL TRADING, and resume afterwards
+
+**Read this before you need it.** Added 2026-08-28, because the measurement that prompted it was
+uncomfortable: the string `halt_all` appeared **zero** times in this file, in `ops/RUNBOOK.md`, and in
+`Operating_Protocols.md`. The single most consequential action you can take in this system was documented
+only inside a comment in `bigquery/23_trading_control.sql`. It is also the one action nothing automates —
+**no routine, procedure, scheduled query, workflow or script has ever written `halt_all=TRUE`**, verified
+over the table's entire lifetime (every INSERT job ever issued against `ops.trading_control` wrote `FALSE`).
+If the book is to be halted at the control-table level, you are the only one who can do it.
+
+**To HALT everything:**
+
+```sql
+INSERT INTO `stock-trading-498512.ops.trading_control` (halt_all, mode, reason, set_by)
+VALUES (TRUE, 'manual', '<why, in one line — this text is echoed in halt_reason>', 'operator');
+```
+
+`state.trading_enabled` and `state.trading_enabled_mechanical` read `halt_all` off the **single latest row
+by `control_ts`**, so this takes effect on the next read by any routine — no deploy, no restart. Every
+staging routine is FATAL-gated on it via `ops.sp_assert_trading_enabled`. It stops ORDER STAGING; it does not
+and cannot reach into IBKR to cancel anything already staged, and your confirm tap remains the only thing
+that can execute an order either way.
+
+**To RESUME — must be this exact shape:**
+
+```sql
+INSERT INTO `stock-trading-498512.ops.trading_control` (halt_all, mode, reason, set_by)
+VALUES (FALSE, 'manual', '<why it is safe to resume>', 'operator');
+```
+
+**`mode='manual'` and `set_by='operator'` are load-bearing on the resume, not decoration.** The asymmetry
+rule (`bigquery/23`'s header) is that an auto halt is cleared by an explicit human INSERT, never by another
+automated row — and since 2026-08-28 that rule is machine-checked:
+`dbt/tests/assert_trading_control_no_automated_unhalt.sql` FAILS if the latest row clears a halt while being
+anything other than exactly `mode='manual' AND set_by='operator'`. Resume with any other mode/set_by and CI
+goes red, correctly.
+
+**What NOT to do:** do not clear a halt by editing or deleting the halt row — the table is append-only and a
+`DELETE`/`UPDATE` on it fires a CRITICAL `safety_critical_dml` alert within 6h. Append a new row instead.
+
+**Expect an alert either way, and it is not a false positive.** Both statements fire the WARNING
+`control_plane_insert` lane (a control-plane INSERT on an append-only safety table), and the halt-clear also
+fires the CRITICAL `safety_critical_control_insert` lane, whose entire purpose is to make you confirm that a
+manual re-enable was actually you. Resolve them by `alert_id` once you have confirmed your own action.
+
 # 2026-08-23 FMP earnings-calendar horizon — owner decision, not a bug (W1 catalyst calendar)
 
 ## FMP-earn-horizon. NORMAL — Strategy A's 6-month catalyst calendar can only source CONFIRMED earnings dates ~13 weeks out on the current FMP tier — decide whether to raise the tier or accept the gap — `[NORMAL — owner decision pending; no default action, existing per-name fallback already covers the gap]`

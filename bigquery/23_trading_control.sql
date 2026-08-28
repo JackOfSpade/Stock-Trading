@@ -36,6 +36,13 @@ CREATE TABLE IF NOT EXISTS `stock-trading-498512.ops.trading_control` (
 OPTIONS(description='Append-only halt-all control. Latest row by control_ts wins (state.trading_control_latest). Seeded halt_all=FALSE so the gate starts in a known-open state.');
 
 -- Seed exactly once so the table is never empty (state.trading_enabled below assumes >=1 row).
+-- DO NOT narrow this guard to the repo's usual per-reason/per-date idempotency idiom (e.g. `WHERE NOT EXISTS
+-- (... WHERE set_by='backfill-2026-07-03')`). The guard is deliberately TABLE-EMPTINESS, which is what makes
+-- this seed unable to clear a halt: once any halt_all=TRUE row exists the table is non-empty and zero rows
+-- land. Narrowed to a per-reason predicate it would re-fire on every whole-file re-apply and become a genuinely
+-- unguarded AUTOMATED halt_all=FALSE writer -- the un-halt hazard documented in the asymmetric-halt note above
+-- and enforced by dbt/tests/assert_trading_control_no_automated_unhalt.sql (added 2026-08-28). Verified live:
+-- this INSERT has re-fired 3 times on real re-applies (2026-07-04, 2026-07-11 x2) and landed ZERO rows each time.
 INSERT INTO `stock-trading-498512.ops.trading_control` (halt_all, mode, reason, set_by)
 SELECT FALSE, 'manual', 'Initial seed — trading-enable gate activated (self-improvement audit B-1-obs, 2026-07-03).', 'backfill-2026-07-03'
 FROM (SELECT 1)

@@ -355,3 +355,26 @@ invariants:
     source_of_truth: bigquery/100_market_only_order_guard.sql / bigquery/101_market_only_decision_seed.sql
       (2026-07-21 owner directive) / bigquery/104_strip_pretrade_rails.sql (2026-07-22 pre-trade
       rail strip)
+
+  - id: trading_control_insert_carries_halt_guard
+    files: [Claude_Task_Plan.md]
+    match_paragraph: true
+    forbid_regex: 'INSERT INTO ops\.trading_control(?:(?!NOT COALESCE\(\(SELECT halt_all).)*$'
+    reason: >
+      Any routine-executed INSERT INTO ops.trading_control must carry the halt-row guard
+      `AND NOT COALESCE((SELECT halt_all FROM ops.trading_control ORDER BY control_ts DESC LIMIT 1), FALSE)`
+      in the SAME paragraph. state.trading_control_latest / state.trading_enabled /
+      state.trading_enabled_mechanical each read halt_all off the SINGLE latest row by control_ts with NO
+      mode filter, so ANY automated halt_all=FALSE row landing after a genuine halt_all=TRUE row silently
+      UN-HALTS the entire book, whatever its mode — the discipline bigquery/23_trading_control.sql's header
+      states ("an auto halt is cleared by an explicit manual INSERT, never by another automated row") and
+      explicitly records as NOT enforced in SQL. Found 2026-08-28 triaging control_plane_insert alert
+      637a7fe1, where bigquery/76's header asserted the opposite ("can NEVER interact with that global
+      latest-row selection, by construction") — true only in the direction of CREATING a halt, never of
+      clearing one. This rule catches a future revision that adds or copies a trading_control INSERT
+      without the guard, at the point it is introduced; dbt/tests/assert_trading_control_no_automated_unhalt.sql
+      catches the resulting STATE afterwards, whoever caused it. Both are needed: prose binds only the
+      routine that reads it, and the dbt test only fires once a halt actually exists.
+    source_of_truth: bigquery/23_trading_control.sql header (asymmetric halt/resume) +
+      bigquery/76_owner_confirmation_liveness.sql "ops.trading_control usage convention for this gate"
+      (corrected 2026-08-28) + dbt/tests/assert_trading_control_no_automated_unhalt.sql
