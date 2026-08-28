@@ -1170,12 +1170,20 @@ Concretely, every run:
   one sanctioned human touch.** `SELECT * FROM state.owner_confirmation_liveness`
   (`bigquery/76_owner_confirmation_liveness.sql`). If `entries_halted = TRUE` (>=1 `state.open_orders`
   row still `pending` AND `trading_days_since_last_fill >= 3` — the operator has not confirmed a single
-  order in 3+ trading days while something is still waiting on a tap): (a) if no unresolved
-  `owner_confirmation_stale` alert already exists, `INSERT INTO ops.trading_control (halt_all, mode,
-  reason, set_by) VALUES (FALSE, 'entries_halted', '<n_pending_instructions> pending instruction(s),
-  <trading_days_since_last_fill> trading days since the last reconciled fill', 'D2a')` — an AUDIT-TRAIL
-  row only (`halt_all` stays `FALSE`; see that file's header for why this must never flip `halt_all`),
-  then `CALL ops.sp_raise_alert_once('warning','D2a','owner_confirmation_stale', 'Owner confirm-tap
+  order in 3+ trading days while something is still waiting on a tap): (a) OPEN THE MARKER — keyed on the
+  CONTROL-ROW state, never on an alert existing: `INSERT INTO ops.trading_control (halt_all, mode, reason,
+  set_by) SELECT FALSE, 'entries_halted', '<n_pending_instructions> pending instruction(s),
+  <trading_days_since_last_fill> trading days since the last reconciled fill', 'D2a' FROM UNNEST([1]) AS _t
+  WHERE NOT EXISTS (SELECT 1 FROM ops.trading_control o WHERE o.mode = 'entries_halted' AND NOT EXISTS
+  (SELECT 1 FROM ops.trading_control c WHERE c.mode = 'entries_halted_cleared' AND c.control_ts > o.control_ts))
+  AND NOT COALESCE((SELECT halt_all FROM ops.trading_control ORDER BY control_ts DESC LIMIT 1), FALSE)` — an
+  AUDIT-TRAIL row only (`halt_all` stays `FALSE`; see the HALT-ROW GUARD below and that file's header for why
+  this must never flip `halt_all`). The guard keys on THIS LANE being closed rather than on alert absence: an
+  alert resolved out of band while `entries_halted` is still TRUE would otherwise let the next run open a
+  SECOND marker for the same episode. Then, and only if no unresolved `owner_confirmation_stale` alert already
+  exists — that condition is load-bearing on the RAISE and stays, because the message below embeds two counters
+  that change run to run and would defeat `sp_raise_alert_once`'s (category, message) dedup —
+  `CALL ops.sp_raise_alert_once('warning','D2a','owner_confirmation_stale', 'Owner confirm-tap
   liveness: <n_pending_instructions> pending instruction(s), <trading_days_since_last_fill> trading days
   since the last fill — D2 NEW-ENTRY staging (fresh GO decisions only) is paused; already-staged orders —
   entries and exits alike — keep re-crafting daily, unaffected.', <JSON:
@@ -1184,12 +1192,40 @@ Concretely, every run:
   staged-but-paused, same pattern as the PENDING-NEWCOMER FROZEN CHECK) while `entries_halted = TRUE`;
   this routine's own Staged-order registry reconciliation above (§11) — which re-crafts ANY already-staged
   pending row, entries and exits alike — is completely unaffected either way.
-  If `entries_halted = FALSE` and an unresolved `owner_confirmation_stale` alert exists (a fill has since
+  If `entries_halted = FALSE`, run the two arms below INDEPENDENTLY — the audit-trail close is keyed on the
+  CONTROL-ROW state, never on an alert existing (2026-08-27 D2a finding): the only `owner_confirmation_stale`
+  alert ever raised was resolved out of band by an interactive session the next morning, which left its paired
+  `mode='entries_halted'` row open with no later run able to satisfy an alert-conditioned close — and nothing
+  else in the system emits that close.
+  (i) ALERT RESOLVE — only when an unresolved `owner_confirmation_stale` alert exists (a fill has since
   landed — auto-clears with no operator action): `UPDATE ops.alerts SET resolved = TRUE, resolved_note =
   'auto-resolved: a fill was reconciled, state.owner_confirmation_liveness.entries_halted is now FALSE'
-  WHERE category = 'owner_confirmation_stale' AND NOT resolved`, and
-  `INSERT INTO ops.trading_control (halt_all, mode, reason, set_by) VALUES (FALSE, 'entries_halted_cleared',
-  'fill reconciled, entries pause lifted', 'D2a')` for the matching audit-trail close. This is in-band,
+  WHERE category = 'owner_confirmation_stale' AND NOT resolved`. Correctly alert-scoped and unchanged: with no
+  alert open there is nothing to resolve.
+  (ii) AUDIT-TRAIL CLOSE — fires whenever the marker lane is still OPEN (some `mode='entries_halted'` row has
+  no LATER `mode='entries_halted_cleared'` row), whether or not an alert exists or ever did: `INSERT INTO
+  ops.trading_control (halt_all, mode, reason, set_by) SELECT FALSE, 'entries_halted_cleared', '<the fill that
+  cleared it, plus the control_id of the entries_halted row being closed>', 'D2a' FROM UNNEST([1]) AS _t
+  WHERE EXISTS (SELECT 1 FROM ops.trading_control o WHERE o.mode = 'entries_halted' AND NOT EXISTS
+  (SELECT 1 FROM ops.trading_control c WHERE c.mode = 'entries_halted_cleared' AND c.control_ts > o.control_ts))
+  AND NOT COALESCE((SELECT halt_all FROM ops.trading_control ORDER BY control_ts DESC LIMIT 1), FALSE)`. Keying
+  the guard on the open marker is what makes the write idempotent: once the close lands the lane is matched, so
+  a retry, a second run the same day, and every run until `entries_halted` next goes TRUE are all no-ops —
+  whereas a same-DAY-existence guard would still write a fresh close on every later flip-day. `FROM UNNEST([1])`
+  is load-bearing, not noise (GoogleSQL rejects a literal-only SELECT carrying a WHERE — the same note as in
+  `bigquery/151_connector_tool_inventory.sql`).
+  **HALT-ROW GUARD (both arms).** Every row this bullet writes carries `halt_all = FALSE`, and the
+  `AND NOT COALESCE((SELECT halt_all ...), FALSE)` term in both INSERTs is what makes that safe rather than
+  merely conventional. The "ops.trading_control usage convention for this gate" block in
+  `bigquery/76_owner_confirmation_liveness.sql` claims a `halt_all=FALSE` marker "can NEVER interact with that
+  global latest-row selection, by construction"; that holds in ONE DIRECTION ONLY. No consumer of
+  `state.trading_control_latest` / `state.trading_enabled` / `state.trading_enabled_mechanical` filters by
+  `mode` — each reads `halt_all` off the single latest row by `control_ts` — so a marker landing after a
+  genuine `halt_all=TRUE` row would itself read as an un-halt of the whole book. That is exactly what
+  `bigquery/23_trading_control.sql`'s header forbids ("an auto halt is cleared by an explicit manual INSERT,
+  never by another automated row") and records as not enforced in SQL; the guard enforces it here. Nothing is
+  lost by deferring — because both arms are state-keyed, a write skipped under a halt is simply made by the
+  next run after the halt clears. This is in-band,
   fail-safe, and reversible — it does not touch `state.trading_enabled`/`halt_all`-the-mechanism, the
   mechanical kill triggers, the IBKR confirm-tap requirement itself, or deposits.
 - **Book soft-drawdown surfacing (record-only — finding C1, 2026-07-17 book-drawdown rebase).** After

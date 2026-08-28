@@ -93,8 +93,23 @@ FROM pending p, last_fill lf, stale s, ltd;
 -- row from an earlier real breaker trip (or vice versa) purely by insertion order, exactly the "silently
 -- clobbered a live fix" class of risk CLAUDE.md's Terraform note and bigquery/47's header both warn
 -- about elsewhere in this file set. Keeping halt_all=FALSE on every 'entries_halted' row means this
--- gate can NEVER interact with that global latest-row selection, by construction — see the
--- Claude_Task_Plan.md D2a bullet for the exact INSERT/UPDATE + alert-raise/resolve text using this
+-- gate can never CREATE a halt it does not own.
+--
+-- CORRECTED 2026-08-28 (triage of control_plane_insert alert 637a7fe1). This sentence previously read that
+-- the gate "can NEVER interact with that global latest-row selection, by construction". That is only half
+-- true, and the missing half is the dangerous one. NOT ONE consumer filters by mode — verified against the
+-- LIVE bodies of state.trading_control_latest, state.trading_enabled and state.trading_enabled_mechanical,
+-- each of which reads halt_all off the SINGLE latest row by control_ts. So a marker row cannot CREATE a
+-- halt, but a halt_all=FALSE marker landing AFTER a genuine halt_all=TRUE row becomes the latest row and
+-- reads as an UN-HALT of the whole book — exactly what bigquery/23_trading_control.sql's header forbids
+-- ("an auto halt is cleared by an explicit manual INSERT, never by another automated row") and records as
+-- not enforced in SQL. LATENT, NOT ACTIVE: no automated writer of halt_all=TRUE exists anywhere in the tree
+-- today, so the trigger is an operator manual halt followed by a D2a marker write. Enforcement lives in the
+-- D2a bullet itself (its HALT-ROW GUARD): both arms carry
+--   AND NOT COALESCE((SELECT halt_all FROM ops.trading_control ORDER BY control_ts DESC LIMIT 1), FALSE)
+-- and both arms are state-keyed, so a write skipped under a halt is simply made by the next run after the
+-- halt clears — deferred, never lost. Do NOT restore the absolute "by construction" claim.
+-- See the Claude_Task_Plan.md D2a bullet for the exact INSERT/UPDATE + alert-raise/resolve text using this
 -- convention.
 --
 -- ops.alert_policy seed (bigquery/34_alert_lifecycle.sql): 'owner_confirmation_stale' is intentionally
