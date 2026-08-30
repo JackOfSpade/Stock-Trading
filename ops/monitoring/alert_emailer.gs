@@ -446,7 +446,7 @@ function escalateDeliveryFailure_(err) {
 // self-defeating design, so there is deliberately no Channel-2 direct-mail twin here. Raised at
 // 'warning', not 'critical', for the same reason v6 is: a critical counts toward
 // state.trading_enabled's blocking_criticals and would HALT ORDER STAGING over a mail-routing rule.
-// NOTE the ntfy relay (scripts/alert_relay.py, */30 GitHub Action) is a clean no-op unless WEBHOOK_URL
+// NOTE the ntfy relay (scripts/alert_relay.py, `0 */2 * * *` GitHub Action) is a clean no-op unless WEBHOOK_URL
 // is set — if it is not, this row still lands in ops.alerts and is visible to any routine's board read.
 const INBOX_FAIL_ESCALATE_AFTER   = 3;   // ~6h at POLL_HOURS=2 — matches DELIVERY_FAIL_ESCALATE_AFTER
 const INBOX_FAIL_REESCALATE_EVERY = 12;  // then roughly daily
@@ -521,9 +521,11 @@ function verifyInboxDelivery_() {
   //
   // WHICH PROCEDURE, and why it is not always _once. sp_raise_alert_once is a pure conditional INSERT:
   // it will not re-raise, re-stamp or bump alert_ts while a matching unresolved row exists. alert_relay.py
-  // only POSTs rows with alert_ts inside its ~35-minute window, so a _once-only design would ping ntfy
-  // EXACTLY ONCE ever — in the ~35min after the first escalation, roughly 6h into an outage — and then
-  // stay silent no matter how long the channel stayed dark, making INBOX_FAIL_REESCALATE_EVERY dead code.
+  // only POSTs rows with alert_ts inside a window sized off the actual elapsed time since its own last
+  // successful run (a 130-minute floor, matching the 2h alerts cron — not a fixed ~35 minutes), so a
+  // _once-only design would ping ntfy EXACTLY ONCE ever — in that window after the first escalation,
+  // roughly 6h into an outage — and then stay silent no matter how long the channel stayed dark, making
+  // INBOX_FAIL_REESCALATE_EVERY dead code.
   // So: the FIRST escalation uses _once (collapse onto one row if something already opened it), and the
   // periodic reminders use plain sp_raise_alert, whose fresh row is precisely what re-enters the relay
   // window and re-pings the phone. Roughly one extra row per day of a genuine outage, which is the

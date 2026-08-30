@@ -13,6 +13,40 @@
   the Actions jobs API: `checks` ~148 s → 3 min + `warehouse-validation` ~26 s → 1 min, runs
   32448847866 / 32437747452) — cheaper, but the batching discipline below is unchanged.
 
+- **Scheduled workflows cost Actions minutes with NO push — and per-push is almost always MORE
+  expensive, not less.** Measured 2026-08-30. `ci.yml` runs on every push at ~4 billable min, and the
+  repo takes **~290 pushes/month** (daily push-count series measured 2026-08-30: median ~7.5
+  CI runs/day, mean ~9.1/day — day-to-day count swings widely, so lean on the ~290/month figure,
+  not the per-day median, when costing this). A DAILY cron is 30 runs/month. So
+  converting any cron to a push trigger multiplies its cost ~10x, and path filters do not rescue it
+  (`bigquery/` changed on 24 of 30 days, `ops/` 18, `scripts/` 17). Two crons are also *semantically*
+  impossible per-push: `stranded-branch-check` detects a merge that did NOT happen (no event exists to
+  fire on), and `live-sql-parity` detects console/MCP edits that produce no commit at all. **Do not
+  re-propose "move the scheduled checks to per-push to save money" — it is arithmetically backwards.**
+
+  **A measurement trap that already caught one audit:** GitHub's scheduled-trigger delivery is
+  best-effort and its rate SWINGS. `alert-relay`'s `*/30` cron delivered 18-41 runs/day through
+  2026-08-26, then collapsed to 3-7/day from 2026-08-27 during a platform-side scheduling backlog
+  (confirmed platform-side, not repo-side: push-triggered `ci.yml` runs showed ZERO delay in the same
+  window, while three unrelated scheduled workflows all slipped 4-11h simultaneously). An audit that
+  sampled only the tail concluded ~7 runs/day and undercounted that one workflow by ~4x. **Always
+  sample 3+ weeks of run history before costing a scheduled workflow, never the last few days.**
+
+  2026-08-30 retune, for anyone reviewing why these cadences look the way they do: `alert-relay`
+  `*/30` → `0 */2` (every 2h; it is the BACKUP channel, `alert_emailer.gs` is primary at
+  `POLL_HOURS = 2`, and a backup never needs to poll faster than the primary it backs up — this
+  was ~892 min/mo, ~60% of the whole scheduled bill). An earlier cut of this same retune briefly
+  shifted the run onto a staggered every-2h offset (starting at 01:00 UTC instead of 00:00 UTC) to
+  land an alerts run 5 min before the 13:05 orders run and keep the window step's anchor reset
+  harmless, but a brute-force sweep over independent per-run scheduling delays showed the staggered
+  and plain even-hour schedules both left the same 80-min hole, so the alignment bought nothing and
+  was reverted — the hole is closed by the window step's margin=130 instead (see alert-relay.yml's
+  `on.schedule` comment and scripts/alert_relay.py, which document that reverted history directly).
+  Any other prose describing that staggered-hour offset as still in effect is stale;
+  `sql-dryrun-sweep` weekly → monthly; `stranded-branch-check` `*/6` → uniform
+  8h; `golden-prose-daily.yml` and `gemini-key-health.yml` deleted (see the golden-scenarios note
+  below). `live-sql-parity` and `offsite-backup` cadences were deliberately NOT touched.
+
   **Practice:** in an interactive session, accumulate related edits and push ONCE per
   completed, reviewable unit of work — the same discipline the scheduled routine fleet
   already follows (one branch, one push, auto-merge drains it). Do not push to "checkpoint"
@@ -96,10 +130,19 @@
   by that workflow** (verified 2026-07-16 against a critic finding that re-raised this as a gap —
   "N-5" in that pass's findings doc — before checking whether it was already closed; it was).
   `run_golden.py --live`'s `QUEUE_INSERT_TEMPLATE` and its `::warning::` on a decision flip are a
-  CI-side, print-only, ADVISORY signal by design (per-push until 2026-08-21; daily via
-  golden-prose-daily.yml since — an owner-directed cost/quality change, the posture unchanged). The
-  job has no BigQuery credentials at all, no WIF identity — a claim to the contrary in a future audit
-  is factually wrong against the current workflow files (golden-scenarios.yml + golden-prose-daily.yml). The REAL landing surface already exists elsewhere and is fully wired: D3's
+  CI-side, print-only, ADVISORY signal by design. Its history: per-push until 2026-08-21, then daily
+  via `golden-prose-daily.yml`, then **RETIRED OUTRIGHT on 2026-08-30** — the daily job was deleted, so
+  NO CI workflow re-evaluates scenarios live any more. It was removed because its flips were measured
+  to be FALSE POSITIVES, not regressions: it reported a flip on every run (PA-02, RS-02, KT-07) while
+  D3 re-evaluated the same scenarios and logged ZERO flips (`events.decision_log`, 29 of 33 on both
+  2026-08-25 and 2026-08-26). The decisive case: KT-07 flipped 2026-08-28 while its ONLY governing file
+  (`Experiment_Parameters.md`) had zero commits — prose that did not change cannot regress, so the flip
+  was free-tier judge noise. It was degraded too, evaluating only 15 of 33 scenarios on its last run
+  (`Gemini model ladder exhausted — HTTP 503`). `gemini-key-health.yml` was deleted in the same pass:
+  it existed only to watch `GEMINI_API_KEY`, whose only functional consumer was that daily job. The
+  remaining workflow (`golden-scenarios.yml`) has no BigQuery credentials at all and no WIF identity —
+  a claim to the contrary in a future audit is factually wrong against it. The REAL landing surface
+  already exists elsewhere and is fully wired: D3's
   **GOLDEN-SCENARIO PROSE-REGRESSION CHECK** step (`Claude_Task_Plan.md`, self-improvement audit
   2026-07-15) independently re-evaluates any scenario whose `governing_files` changed since D3's
   last run and, on a genuine flip, performs the real `INSERT INTO events.queue_events`

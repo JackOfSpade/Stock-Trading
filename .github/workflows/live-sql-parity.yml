@@ -121,7 +121,13 @@ jobs:
         run: |
           set -uo pipefail
           dbt deps >/dev/null 2>&1 || true
-          if dbt test 2>&1 | tee /tmp/b3_out.txt; then
+          # THREADS RAISED 4 -> 8 (2026-08-30), CLI FLAG ONLY, NOT dbt/profiles.ci.yml: `dbt test` is
+          # the largest step in this job (116-166s of a 198-262s run) — raising threads here cuts its
+          # wall-clock. dbt/profiles.ci.yml's `threads: 4` default is left untouched because that file
+          # is shared by three consumers, including ci.yml's per-push dbt-parity HARD MERGE GATE, which
+          # has already stranded every branch twice on unrelated changes — it must not be touched for
+          # an unrelated tuning change here. Revert by deleting the --threads argument below.
+          if dbt test --threads "${DBT_TEST_THREADS:-8}" 2>&1 | tee /tmp/b3_out.txt; then
             echo "result=ok" >> "$GITHUB_OUTPUT"
           else
             echo "result=violation" >> "$GITHUB_OUTPUT"

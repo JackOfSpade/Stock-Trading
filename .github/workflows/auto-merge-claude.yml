@@ -235,9 +235,14 @@ jobs:
             # Claude_Task_Plan.md/the golden fixtures change), so most commits will have NO matching run
             # at all — is_secondary_gate_satisfied treats that as satisfied (not a block), and only an
             # explicit non-success conclusion (the workflow DID run for this SHA and schema-validate
-            # failed) blocks the merge. prose-regression (the OTHER job in that workflow) is
-            # continue-on-error: true, so it can never make the overall run conclusion "failure" on its
-            # own — checking the run's overall conclusion here still only reflects schema-validate.
+            # failed) blocks the merge. STALE-COMMENT FIX (2026-08-30): this used to note that
+            # prose-regression, "the OTHER job in that workflow", was continue-on-error and so could
+            # never turn the overall run conclusion to "failure". That job no longer exists — it moved
+            # out to golden-prose-daily.yml on 2026-08-21 and that workflow was deleted outright on
+            # 2026-08-30 (see CLAUDE.md's golden-scenarios note). golden-scenarios.yml now runs
+            # schema-validate ALONE, so the run's overall conclusion reflects the hard gate directly,
+            # with no continue-on-error job in the mix. The check below is unchanged and is now
+            # strictly less ambiguous than when the comment was written.
             gs_runs_json="$(gh api \
               "repos/$GITHUB_REPOSITORY/actions/workflows/golden-scenarios.yml/runs?head_sha=$sha&per_page=1" \
               2>/dev/null || echo "")"

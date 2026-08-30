@@ -46,7 +46,7 @@ Env (all optional — used by the bq/gh probes when present; falls back to OPEN 
 prerequisite env/binary is unavailable, per fail-open above):
   BQ_PROJECT (default stock-trading-498512), GH_TOKEN / GITHUB_TOKEN (gh CLI auth),
   GITHUB_REPOSITORY (owner/repo — used by the D probe; falls back to `gh repo view`),
-  HAS_ALERT_WEBHOOK_URL / HAS_OFFSITE_BACKUP_GCS / HAS_ANTHROPIC_API_KEY / HAS_GEMINI_API_KEY ('true'/'false' — the
+  HAS_ALERT_WEBHOOK_URL / HAS_OFFSITE_BACKUP_GCS / HAS_ANTHROPIC_API_KEY ('true'/'false' — the
   workflow exports these from `secrets.X != ''` since a workflow token cannot `gh secret list`).
 
 Stdlib only.
@@ -268,13 +268,6 @@ def check_E_offsite():
     return _check_env_true("HAS_OFFSITE_BACKUP_GCS", "OFFSITE_BACKUP_GCS")
 
 
-def check_E_anthropic():
-    # 2026-07-17: golden-scenarios' live eval was swapped to Gemini's FREE tier as the SOLE provider
-    # (no Anthropic fallback), so this item is satisfied by GEMINI_API_KEY. (The id keeps its historical
-    # 'E-anthropic' name for traceability against the original owner-actions list.)
-    return _check_env_true("HAS_GEMINI_API_KEY", "GEMINI_API_KEY")
-
-
 def check_sq_dml_watch():
     ok, n, reason = _bq_count(
         "SELECT COUNTIF(monitored) n FROM `%s.state.scheduled_query_version_drift` "
@@ -336,7 +329,6 @@ PROBES = {
     "D": check_D,
     "E-webhook": check_E_webhook,
     "E-offsite": check_E_offsite,
-    "E-anthropic": check_E_anthropic,
     "sq-dml-watch": check_sq_dml_watch,
     "F-quota": check_F_quota,
     "S": check_S,
@@ -413,9 +405,12 @@ def find_anchor_line_index(lines, fence_start_idx, fence_id):
         reaches a heading, so there is no heading boundary in play at all.
       * ZERO bullets are found before the enclosing heading, but that heading's own label doesn't
         match the fence id's label — the fence physically sits after a DIFFERENT, sibling item's
-        heading (id E-anthropic's live mis-anchor: its fence follows item E-2's heading instead of
-        item E's own `ANTHROPIC_API_KEY` bullet, and E-2's heading already read '[DONE', permanently
-        short-circuiting E-anthropic's real probe).
+        heading (id E-anthropic's mis-anchor AS OF THE 2026-07-20 FIX: its fence followed item E-2's
+        heading instead of item E's own `ANTHROPIC_API_KEY` bullet, and E-2's heading already read
+        '[DONE', permanently short-circuiting E-anthropic's probe. Retained as the worked example for
+        this shape; note that E-anthropic's probe was REMOVED on 2026-08-30 when the Gemini key was
+        retired, so that particular id no longer has a probe to short-circuit — the anchor-resolution
+        rule below is unchanged and still applies to every other id).
       * EXACTLY ONE bullet is found before the walk stops at a heading boundary, and that heading's
         own label doesn't match the fence id's label either — a single stray bullet (e.g. a sibling
         item's own bullet) sitting between the fence and a DIFFERENT item's heading must not be

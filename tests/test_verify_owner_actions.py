@@ -587,20 +587,6 @@ def test_bq_scalar_row_missing_column_is_fail_open(monkeypatch):
     assert "could not parse bq result" in reason
 
 
-# ---- check_E_anthropic: satisfied by GEMINI_API_KEY (the 2026-07-17 free-tier swap) ----
-def test_check_E_anthropic_true_via_gemini_key(monkeypatch):
-    monkeypatch.setenv("HAS_GEMINI_API_KEY", "true")
-    passed, evidence = voa.check_E_anthropic()
-    assert passed is True
-    assert "GEMINI_API_KEY" in evidence
-
-
-def test_check_E_anthropic_false_when_unset(monkeypatch):
-    monkeypatch.delenv("HAS_GEMINI_API_KEY", raising=False)
-    passed, _evidence = voa.check_E_anthropic()
-    assert passed is False
-
-
 # ---- write path: fail-open when persisting the flip fails (never raise / always exit 0) ----
 # ---- malformed ```verify fences must be LOUD, not silent (codebase audit 2026-07-26) -------
 #

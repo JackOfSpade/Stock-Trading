@@ -46,7 +46,7 @@ def test_fmt_ts_bogus_timezone_falls_back_gracefully():
 # interval — shrinking it to match the cron exactly would reopen the "late run leaves a permanent
 # hole" failure mode the margin exists to prevent. This test converts that prose claim
 # into a checked invariant: it reads the REAL cron from .github/workflows/alert-relay.yml (the
-# fast `*/30 * * * *` alerts schedule — read-only, this file does not own the workflow) so a future
+# `0 */2 * * *` alerts schedule — read-only, this file does not own the workflow) so a future
 # edit to either the cron or WINDOW_MIN that violates the margin fails loudly here instead of
 # silently reopening the coverage gap.
 def _alerts_cron_interval_minutes():
@@ -54,19 +54,25 @@ def _alerts_cron_interval_minutes():
     workflow_path = os.path.join(repo_root, ".github", "workflows", "alert-relay.yml")
     with open(workflow_path) as f:
         text = f.read()
-    # The alerts (fast, best-effort) schedule is the only `*/N * * * *` style cron in this workflow
+    # The alerts (best-effort backup) schedule is the only INTERVAL-style cron in this workflow
     # (the other two crons are the daily orders reminder and the weekly heartbeat, both fixed times,
-    # not `*/N` intervals) — match that specific pattern rather than assuming list position.
-    m = re.search(r"cron:\s*'\*/(\d+) \* \* \* \*'", text)
-    assert m, "could not find the alerts */N cron in alert-relay.yml — did its schedule change?"
-    return int(m.group(1))
+    # not intervals) — match that shape rather than assuming list position. Two forms are accepted so
+    # a future retune in EITHER direction stays guarded instead of failing on the regex:
+    #   `*/N * * * *`  -> every N MINUTES   (the pre-2026-08-30 shape, N=30)
+    #   `M */N * * *` or `M A-B/N * * *` -> every N HOURS (current: `0 */2 * * *` -> 120 min)
+    m = re.search(r"cron:\s*'(?:\*|\d+(?:-\d+)?)/(\d+) \* \* \* \*'", text)
+    if m:
+        return int(m.group(1))
+    m = re.search(r"cron:\s*'\d+ (?:\*|\d+-\d+)/(\d+) \* \* \*'", text)
+    assert m, "could not find the alerts interval cron in alert-relay.yml — did its schedule change?"
+    return int(m.group(1)) * 60
 
 
 def test_window_min_covers_cron_interval_with_margin():
     cron_interval = _alerts_cron_interval_minutes()
-    assert cron_interval == 30, "documented/assumed alerts cron interval changed — re-check the margin"
-    # >= is the bare minimum (no coverage gap on an on-time run); WINDOW_MIN=35 keeps a 5-minute
-    # margin on top of that. Real scheduler lateness is much larger than 5 minutes, which is why the
+    assert cron_interval == 120, "documented/assumed alerts cron interval changed — re-check the margin"
+    # >= is the bare minimum (no coverage gap on an on-time run); WINDOW_MIN=130 keeps a 10-minute
+    # margin on top of that, mirroring the workflow's own `gap + 10` sizing. Real scheduler lateness is much larger than 5 minutes, which is why the
     # workflow overrides RELAY_WINDOW_MIN per run from the actual gap since its last successful run —
     # this module default is the floor for an override-less (local/manual) invocation. Either
     # regressing WINDOW_MIN below the cron interval, or widening the cron interval past WINDOW_MIN,

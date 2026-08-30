@@ -128,7 +128,7 @@ jobs:
             echo "::notice::warehouse-validation's SQL syntax portion is explicitly disabled (RUN_SQL_DRYRUN=off) — a raw bigquery/*.sql parse error would not be caught before it reaches the live apply step. RUNBOOK §6."
           fi
           if [ "${{ vars.RUN_SQL_DRYRUN_SWEEP }}" = "off" ]; then
-            echo "::notice::sql-dryrun-sweep (weekly full-tree syntax sweep) explicitly disabled (RUN_SQL_DRYRUN_SWEEP=off) — a parse error in an UNCHANGED bigquery/*.sql file (the gap that hid 3 real parse bugs in /34 and /63) would go undetected. Deliberately independent of RUN_SQL_DRYRUN; see sql-dryrun-sweep.yml."
+            echo "::notice::sql-dryrun-sweep (monthly full-tree syntax sweep) explicitly disabled (RUN_SQL_DRYRUN_SWEEP=off) — a parse error in an UNCHANGED bigquery/*.sql file (the gap that hid 3 real parse bugs in /34 and /63) would go undetected. Deliberately independent of RUN_SQL_DRYRUN; see sql-dryrun-sweep.yml."
           fi
 
           if [ -s /tmp/loadbearing.txt ]; then

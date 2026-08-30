@@ -53,7 +53,19 @@ name: Stranded-branch check
 
 on:
   schedule:
-    - cron: '23 */6 * * *'   # every 6h (UTC)
+    # RETUNED 2026-08-30: 4x/day -> 3x/day, for GitHub Actions cost — each run is a single ~35s job
+    # billed at the 1-minute floor, so this drops ~120 -> ~90 min/month.
+    #
+    # UNIFORM 8h spacing was chosen deliberately OVER simply deleting one of the four `*/6` slots:
+    # dropping a single slot (e.g. just the 18:23 UTC one) would have left a non-uniform 12h gap
+    # (12:23 -> 00:23 UTC) and doubled worst-case detection latency for a strand that lands right
+    # after the last surviving sweep before that gap, whereas even 8h spacing keeps every gap equal.
+    #
+    # 8h still comfortably exceeds the detect step's own MAX_AGE_HOURS='6' staleness threshold below:
+    # a branch stranded right after a sweep is still >6h unmerged by the next one, so it is flagged on
+    # the very next run either way. Worst-case detection moves from ~6h to ~8h (plus GitHub's measured
+    # 30-100 min scheduling delay for scheduled workflows).
+    - cron: '23 0,8,16 * * *'   # every 8h (UTC) — 3 sweeps/day
   workflow_dispatch: {}
 
 permissions:

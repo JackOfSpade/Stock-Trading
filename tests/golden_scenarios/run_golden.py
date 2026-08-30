@@ -39,7 +39,11 @@ TWO MODES, matching the two-job split in .github/workflows/golden-scenarios.yml:
       SAME governing-files-changed-since-last-check + re-evaluate logic independently (D3 IS the model,
       no separate API call), and actually files the queue entry (review_type='prose-regression', now a
       recognized AR review_type — see the Adversarial Reviews section) on a real mismatch. This CI job
-      remains a secondary, push-time signal only. Requires GEMINI_API_KEY (free tier). Always exits 0
+      was a secondary, push-time signal only; as of 2026-08-30 NO CI job invokes --live at all
+      (golden-prose-daily.yml, which held the last such invocation, was deleted along with the
+      GEMINI_API_KEY repo secret — its flips were measured to be free-tier judge noise, not prose
+      regressions, while D3 logged zero flips over the same scenarios). --live therefore survives as
+      a MANUAL tool only; set GEMINI_API_KEY in your own environment to use it. Always exits 0
       (advisory) unless the offline schema gate itself fails first, or setup fails outright (missing API
       key/library), which is reported but still does not fail the *build* — the workflow's
       continue-on-error covers that.
