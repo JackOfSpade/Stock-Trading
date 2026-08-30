@@ -46,8 +46,8 @@ jobs:
           # secrets expression into the shell script text — the GitHub Actions script-injection
           # anti-pattern, and the only remaining instance of it in this repo (quality pass
           # 2026-08-22). Every sibling guard already does it this way: alert-relay.yml's
-          # WEBHOOK_URL, guard-config-audit.yml's ALERT_WEBHOOK_URL, gemini-key-health.yml's
-          # GEMINI_API_KEY, owner-actions-verify.yml's HAS_* flags — and this very file's later
+          # WEBHOOK_URL, guard-config-audit.yml's ALERT_WEBHOOK_URL,
+          # owner-actions-verify.yml's HAS_* flags — and this very file's later
           # "Mirror" step for ALERT_WEBHOOK_URL. Identical behavior, no expression substituted into
           # a quoted shell string.
           if [ -n "$DEST" ] \

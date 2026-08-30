@@ -174,58 +174,6 @@ done_when: standing decision — either (a) raise the FMP plan tier and re-probe
 
 ---
 
-# 2026-08-19 `GEMINI_API_KEY` — migrate to an **auth key** before Google's September 2026 Standard-key cutoff
-
-## G-authkey. Replace the golden-scenarios Gemini key with an AI Studio **auth key** (`AQ.…`) — `[URGENT — hard vendor deadline in September 2026]`
-
-**What to do (5 minutes, AI Studio + one `gh` command):** open Google AI Studio → API keys, create a
-new key (AI Studio now creates **auth keys** by default — they are service-account-bound and begin
-`AQ.`, versus the legacy **Standard** keys that begin `AIza`), confirm the new key is NOT tagged
-`Standard`/`Blocked` in that list, then `gh secret set GEMINI_API_KEY -R JackOfSpade/Stock-Trading`
-(omit the value; it prompts securely), which invalidates the old one. Then dispatch
-`golden-scenarios.yml` once and confirm the live job still reports real matches rather than HTTP 401.
-**First, check whether the CURRENT key is already an auth key** — if the 2026-08-17 replacement was
-minted in AI Studio after the default flipped, it may already be `AQ.`-prefixed and this item is a
-no-op confirmation. Only you can see the prefix; Claude cannot read the secret.
-
-**WHY — this is a dated vendor deprecation, NOT a "free keys expire on a cycle" effect.** Google's
-own docs (`ai.google.dev/gemini-api/docs/api-key`) state: *"On September 2026, the Gemini API will
-reject requests from Standard keys. You must migrate to auth keys before this date to avoid service
-interruption."* Enforcement has been rolling out **unevenly since 2026-06-19**, which is what
-produces the `API_KEY_SERVICE_BLOCKED` 401s on keys that were working the day before. A second,
-separate policy (from 2026-05-07) blocks *unrestricted* keys that have been **dormant** for an
-extended period. Neither is a fixed TTL — so "rotate every N days" is the wrong fix, and a plain
-calendar reminder would not have prevented this.
-
-**THE EVIDENCE THIS IS WHAT BIT US (measured 2026-08-19 from `golden-scenarios.yml` run logs).** The
-key rotated on 2026-07-18 (item **E-2** — an *exposure* rotation, not an expiry) demonstrably worked
-through **2026-08-12** (runs at 02:26/02:49/03:43/04:12 UTC returned HTTP **429**, which proves
-authentication succeeded). From **2026-08-13 02:30 UTC** every run failed in ~1 second with HTTP
-**401** — verbatim: *"Request had invalid authentication credentials. Expected OAuth 2 access token,
-login cookie or other valid authentication credential."* — the exact generic envelope
-`API_KEY_SERVICE_BLOCKED` uses. It stayed 401 through **2026-08-17 14:26 UTC** and was working again
-by **14:36 UTC** the same day. That ~10-minute window is an **out-of-band rotation nobody wrote
-down**, which is why a 2026-08-19 review had to re-derive it from CI logs. ~26 days from mint to
-death matches the enforcement-sweep pattern, not a documented lifetime.
-
-**CURRENT STATUS — the job is healthy right now, so this is prevention, not an outage.** A dispatched
-run on 2026-08-19 17:32 UTC (run `32282227291`) evaluated **all 33 scenarios, 0 skipped, zero 401s
-and zero 429s**: 31 MATCH, 2 decision FLIPs (`PA-05`, `RS-02`). Those two flips are prose-regression
-signal for D3/AR_orc's existing loop, **not** a key problem — do not treat them as part of this item.
-The 429 storm seen on 2026-08-17 is also gone: that run predated the same-day RPM/batching fixes
-(`29f6547`, `8102b0b`, `b1274d3`, `867cdb1`), all of which landed after it, so it had never been
-re-measured until now.
-
-**NO VERIFY FENCE, deliberately — for exactly the reason item E-2 already records.**
-`scripts/verify_owner_actions.py` can only ever confirm *a key exists* (`HAS_GEMINI_API_KEY`), never
-*which kind of key it is*, and a `models.list` probe returning 200 proves the key is alive today
-without proving it is an auth key that will survive September. So this item closes on your
-confirmation, the same way E-2 did. The companion **key-liveness monitor** (`gemini-key-health.yml`,
-landed separately 2026-08-19) detects a DEAD key within a day; it deliberately does not and cannot
-detect a *doomed* one, which is what this item is for.
-
----
-
 # 2026-08-18 OPS2 catch-up headroom — 15 min before OPS0's sweep vs N=4 inline executions
 
 ## OPS2-headroom. RETIME OPS2 (or OPS0) so the catch-up executor can finish before the watchdog sweeps — `[OPTIONAL — the false-alert half was fixed in-repo 2026-08-19; what remains is throughput, not correctness]`
@@ -1989,6 +1937,15 @@ Anthropic-side to rotate; the chat-exposed-key rotation item was **E-2** (`GEMIN
 above), not this one. Until 2026-07-20 this fence had no heading of its own and mis-anchored to
 E-2's — which already read `[DONE]` — so it falsely reported DONE too; it now has its own heading
 so `check_E_anthropic()`'s real probe can actually run.
+
+**UPDATE 2026-08-30 — backing probe removed, item unaffected.** `check_E_anthropic()` was deleted
+from `scripts/verify_owner_actions.py` (and `HAS_GEMINI_API_KEY` dropped from
+`owner-actions-verify.yml`'s env) as part of retiring the dead Gemini surface — the key itself was
+deleted as a GitHub secret the same day. This item stays `[DONE]` as permanent historical record per
+this file's convention (see S/T/Y/F/GS-1/GS-2); the `` ```verify `` fence below is now inert prose
+(no registered probe) but is harmless — this heading already reads `[DONE`, so
+`verify_owner_actions.py`'s `already_done()` check short-circuits before ever reaching a probe
+lookup for this id, exactly as it does for every other closed item with no PROBES entry.
 
 ```verify
 id: E-anthropic

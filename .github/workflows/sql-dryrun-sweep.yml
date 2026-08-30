@@ -26,19 +26,51 @@ name: BigQuery SQL full dry-run sweep
 #
 # Read-only: `bq query --dry_run` never executes anything, and this uses the SAME read-only WIF SA as
 # ci.yml's gate (dataViewer + jobUser). No DDL grant, no writes.
+#
+# RETUNED 2026-08-30: weekly -> monthly, for GitHub Actions cost — this workflow is ~8 billable
+# min/run, so weekly was ~37 min/month. The back-catalogue parse-error latency for an UNCHANGED file
+# (the gap this sweep exists to close, see above) widens from ~7 days to ~30 days as a result; that is
+# acceptable because those files are not deployed between sweeps except during a DR rebuild, so a
+# wider sweep interval does not widen any live-drift window, only the time-to-DETECT a latent parse
+# bug in a file nobody is touching. The other regression path — a bug in the sweep's OWN checker
+# logic — needs no cron at all and is NOT the reason this runs: `tests/test_check_sql_dryrun.py`
+# (48 tests) already exercises that script inside ci.yml's `checks` job on every push, for free. A
+# path-filtered `push:` trigger was drafted here to "offset" the wider cron gap and then removed once
+# costed: it would have added ~10.7 min/month (~8 min/run x 4 push-days per 90 days = 32 min per 90
+# days ≈ 10.7 min/month) to re-cover what those unit tests already cover — roughly a third of the
+# ~29 min/month saving (37 → 8 min/month) the weekly→monthly move produces, not nearly all of it.
+# See the note on `on:` below.
+#
+# ACCEPTED KNOWN GAP, recorded explicitly: there is NO liveness/dead-man monitor for this workflow —
+# verified, `ci_findings_bridge_stale` (bigquery/111) is hardcoded to workflow='live-sql-parity' only,
+# so a silently broken sweep (e.g. the guard step mis-skipping, or a `bq`/WIF outage that never
+# surfaces) goes undetected indefinitely. Monthly widens a pre-existing gap rather than creating a new
+# one. Building a BigQuery liveness beat for this workflow (mirroring live-sql-parity.yml's
+# __run_marker__ pattern) was deliberately judged disproportionate here — it would mean new
+# alert-category SQL on the trading-halt path for a backstop-to-a-backstop.
 
 on:
+  # NO push TRIGGER — DELIBERATE, and do not "helpfully" add one back (2026-08-30). A path-filtered
+  # push trigger on `scripts/check_sql_dryrun.py` was drafted for this retune and then REMOVED once
+  # measured: this workflow is a ~8-billable-minute full sweep, that file changed on 4 distinct days
+  # in the last 90, so the trigger would have cost ~10.7 min/month (8 min/run x 4 push-days per 90
+  # days = 32 min per 90 days) — roughly a third of the ~29 min/month saving the weekly->monthly
+  # move produces, not nearly all of it. And it would have bought NOTHING, because the checker's own logic
+  # is already covered by `tests/test_check_sql_dryrun.py` (48 tests), which runs inside ci.yml's
+  # existing `checks` job on EVERY push at zero marginal cost (it is a step in a job that already
+  # runs, so it adds no new billable job-minute). Unit tests guard the checker; this sweep guards the
+  # CORPUS of unchanged bigquery/*.sql files, which is a different question and is time-based.
   schedule:
-    - cron: '15 9 * * 0'   # weekly, Sunday ~09:15 UTC — after owner-actions-verify (08:20 Sun), clear
-                           # of the daily offsite-backup (06:00) / live-sql-parity (07:10) crons
+    - cron: '15 9 1 * *'   # monthly, 1st ~09:15 UTC — clear of the daily offsite-backup (06:00) /
+                           # live-sql-parity (07:10) crons
   workflow_dispatch: {}    # manual sweep escape hatch
 
 # MISSING-CONCURRENCY FIX (2026-07-26, codebase audit): this was the only one of the 13 workflows
 # with no concurrency block. It has both schedule: and workflow_dispatch:, and its "Open/refresh
 # finding issue (dedup)" / "Close finding issue if resolved" steps do a read-then-write dedup lookup
 # (gh issue list -> comment/close/create) plus ops.ci_findings INSERTs that are NOT safe to run
-# twice concurrently — a manual workflow_dispatch firing during the Sunday 09:15 UTC scheduled run
-# could race the dedup lookup and create a second, undeduped issue/row instead of updating the
+# twice concurrently — a manual workflow_dispatch firing during the monthly 1st ~09:15 UTC scheduled
+# run could race the dedup lookup and create a second, undeduped issue/row instead of updating the
 # existing one. Matches live-sql-parity.yml / keyless-sa-audit.yml's group naming + cancel-in-
 # progress: false (a sweep in progress must finish and report, not be silently cancelled mid-write).
 concurrency:

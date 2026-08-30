@@ -1033,7 +1033,7 @@ stays red (auto-merge skips it) or an unresolved `Auto-merge conflict:` PR stran
 and every monitor (freshness/cadence) watches BigQuery, so none see the git↔BigQuery divergence. That is
 why this sat undetected until W5 happened to notice.
 
-**Fix: `.github/workflows/stranded-branch-check.yml`** — a scheduled sweep (every 6h) that flags any
+**Fix: `.github/workflows/stranded-branch-check.yml`** — a scheduled sweep (every 8h) that flags any
 `claude/*` branch unmerged > 6h, or any open `Auto-merge conflict:` PR, and opens a deduped GitHub issue
 (notifies the owner) + fails the run. Delivery is a GitHub issue, **not `ops.alerts`**, because writing
 `ops.alerts` from CI would require granting the deliberately read-only CI identity (RUNBOOK §6) BigQuery

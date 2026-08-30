@@ -27,8 +27,28 @@ name: Alert relay (webhook push)
 # alerts via bigquery/59's catchup_refire_no_trigger_id warning through the standard `alerts` mode.
 
 on:
+  # Cadence changed 2026-08-30 from `*/30` (every 30 min) to `0 */2 * * *` (every 2h). This relay is
+  # the BACKUP/channel-diversity path — ntfy via GitHub Actions — for ops.alerts; the PRIMARY delivery
+  # channel is ops/monitoring/alert_emailer.gs, which polls Gmail every POLL_HOURS=2. A backup channel
+  # never needs to poll faster than the primary it backs up, so matching the emailer's 2h costs ZERO
+  # effective alerting latency. Measured over Aug 11-26 2026 from the Actions jobs API, `*/30` was
+  # running 18-41 times/day (~892 billable min/month, ~60% of the repo's entire scheduled-Actions
+  # bill) for a channel whose primary is free and already 2h. Do NOT "restore" this to `*/30` as a
+  # perceived regression — the slower cadence is the fix, not drift.
   schedule:
-    - cron: '*/30 * * * *'   # alert relay — recent ops.alerts (fast, best-effort)
+    - cron: '0 */2 * * *'    # alert relay — recent ops.alerts (best-effort backup channel).
+                             # 2h, matching the PRIMARY channel it backs up (alert_emailer.gs,
+                             # POLL_HOURS = 2). A backup never needs to poll faster than its
+                             # primary. `*/30` was delivering ~30 runs/day = ~892 billable
+                             # min/month, ~60% of this repo's entire scheduled-Actions bill.
+                             # NOTE: hour-alignment here is NOT load-bearing. An earlier cut of
+                             # this change used odd hours ('0 1-23/2 * * *') to dodge the
+                             # anchor problem described on the window step below; a brute-force
+                             # sweep over independent per-run scheduling delays showed odd and
+                             # even hours BOTH still leaving an 80-min hole, so the alignment
+                             # bought nothing and was reverted to this plainer form. The hole is
+                             # closed by the window step's margin instead. Do not reintroduce an
+                             # alignment trick here believing it fixes coverage — it does not.
     - cron: '5 13 * * *'     # daily staged-order reminder ~07:05 MT confirm window (A3)
     - cron: '15 13 * * 1'    # weekly (Monday) webhook liveness heartbeat
   workflow_dispatch:
@@ -112,8 +132,8 @@ jobs:
           done
 
           # Check B: at most ONE on.schedule cron may lack an explicit comparison — that's the
-          # documented implicit-default case (the fast */30 alerts cron falls through to the `else`
-          # branch). More than one uncompared cron means some OTHER schedule was added without a
+          # documented implicit-default case (the fast `0 */2 * * *` alerts cron falls through to the
+          # `else` branch). More than one uncompared cron means some OTHER schedule was added without a
           # matching mode branch, so it too would silently default to mode=alerts.
           unhandled=""
           unhandled_count=0
@@ -176,26 +196,41 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
-          # GitHub does NOT deliver a `*/30` schedule every 30 minutes. Measured 2026-08-21 over this
-          # workflow's own run history: consecutive deliveries a median 52.6 min and a max 89.5 min
-          # apart. A window fixed at the nominal cron interval therefore drops every alert raised
-          # more than that interval before a late run — silently, because the relay is stateless and
-          # has no cursor that could notice a skipped row. So size the window off the ACTUAL elapsed
-          # time since the last successful run instead of off the nominal cron.
+          # GitHub scheduled delivery is best-effort and routinely runs late — never assume a cron
+          # fires exactly on its nominal interval. Historical `*/30`-era measurement (2026-08-21, over
+          # this workflow's run history before the 2026-08-30 move to `0 */2 * * *`): consecutive
+          # deliveries a median 52.6 min and a max 89.5 min apart against a nominal 30-min interval.
+          # A window fixed at the nominal cron interval therefore drops every alert raised more than
+          # that interval before a late run — silently, because the relay is stateless and has no
+          # cursor that could notice a skipped row. So size the window off the ACTUAL elapsed time
+          # since the last successful run instead of off the nominal cron. The fallback/floor below
+          # are sized off the current 2h nominal interval: 240 = one fully missed run (240 min = 2x
+          # the 120-min interval) plus slack; 130 = the 120-min interval plus the same +10 margin the
+          # normal (gap + 10) path below applies.
           # Best-effort BY CONSTRUCTION: no `set -e`, and continue-on-error, so an API/parse failure
           # degrades to a fixed generous window (> the measured max gap) rather than blocking
           # delivery; the Relay step below re-applies the same fallback if this step wrote no output.
           # Caveat this cannot see: the daily orders and weekly heartbeat runs count as successes
           # here although they relay no alerts, so for the alerts run following one of them the
           # computed window is a floor, not proof of gapless coverage.
-          window=100
+          window=240
           last_ts="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/alert-relay.yml/runs?status=success&per_page=1" --jq '.workflow_runs[0].created_at // empty' 2>/dev/null || true)"
           last_epoch="$(date -u -d "$last_ts" +%s 2>/dev/null || true)"
           if [ -n "$last_ts" ] && [[ "$last_epoch" =~ ^[0-9]+$ ]]; then
             gap=$(( ( $(date -u +%s) - last_epoch ) / 60 ))
             if [ "$gap" -ge 0 ]; then
-              window=$(( gap + 10 ))
-              [ "$window" -lt 35 ] && window=35
+              # MARGIN = one full alerts interval + 10, NOT just 10 (2026-08-30). `gap` is measured
+              # from the last SUCCESSFUL run of ANY MODE — and the daily orders run (13:05) and the
+              # Monday heartbeat (13:15) relay NO alerts, yet still reset this anchor. When one of
+              # them is the anchor, `gap` understates how far back coverage must reach by up to a
+              # full alerts interval, silently dropping every alert raised in between (this relay is
+              # stateless — a skipped row is never retried, so a hole is permanent). Brute-forced
+              # over independent per-run delays: margin=10 leaves an 80-min hole; margin=130 leaves
+              # ZERO. Cost is ~2.1x duplicate pushes instead of ~1.1x, which is the tradeoff this
+              # module's docstring already declares: a duplicate ping is a nuisance, a silently
+              # missed critical alert is a safety failure.
+              window=$(( gap + 130 ))
+              [ "$window" -lt 130 ] && window=130
               [ "$window" -gt 1440 ] && window=1440
             fi
           fi
@@ -220,7 +255,7 @@ jobs:
           # Empty (window step errored before writing its output) falls back to the same generous
           # fixed window that step uses; an unset/empty value would make alert_relay.py's
           # int(RELAY_WINDOW_MIN) raise at import and take the whole relay down.
-          RELAY_WINDOW_MIN: ${{ steps.window.outputs.window_min || '100' }}
+          RELAY_WINDOW_MIN: ${{ steps.window.outputs.window_min || '240' }}
         run: python scripts/alert_relay.py
 
       # 2026-07-18 audit — durable failure record (the exact treatment 5 sibling guards already got:

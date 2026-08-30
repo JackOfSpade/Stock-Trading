@@ -28,24 +28,38 @@ name: Golden Scenarios (prose regression)
 #     tests/test_cadence_consistency.py for why the OTHER structural checks in this repo guard their own
 #     parsers the same way (a check that vacuously passes on a broken fixture is worse than no check).
 #
-#   prose-regression MOVED OUT (2026-08-21, owner-directed — the 2026-08-21 usage-cost audit's largest
-#     repo-side Actions finding): the live Gemini decision-diff job that used to run here per push now
-#     runs ONCE DAILY over the FULL scenario suite in .github/workflows/golden-prose-daily.yml. Why:
-#     this workflow fired ~16x/day (Claude_Task_Plan.md is in the paths list and most routine pushes
-#     touch it), ~3.2 billable job-min per run ≈ ~1,540 min/month, AND the first few pushes of each day
-#     exhausted the two QUALITY rungs of the Gemini free-tier ladder (20+20 RPD), so most of the day's
-#     advisory verdicts were silently rendered by the weakest model. One daily full-suite run fits
-#     entirely inside the top rungs. Defense posture is unchanged: the job was ADVISORY ONLY
-#     (continue-on-error, its ::warning:: annotations route nowhere), this schema HARD GATE still runs
-#     per push, and the REAL landing surface for a prose flip has always been D3's GOLDEN-SCENARIO
-#     PROSE-REGRESSION CHECK + AR_orc adjudication (see CLAUDE.md "Known non-issues"), which run daily
-#     anyway — so effective detection latency in the path that actually files queue rows is unchanged.
-#     auto-merge-claude.yml's secondary gate reads this WORKFLOW RUN's conclusion by head_sha; that
-#     conclusion was already schema-validate's alone (the old prose job was continue-on-error), so gate
-#     semantics are byte-identical. The daily file is deliberately NOT in auto-merge's workflow_run
-#     trigger list (it gates nothing and must not wake drains). The advisory posture rules — never a
-#     merge block, never BigQuery write credentials — travel with the job to its new file; do not add
-#     either back HERE or THERE before re-reading CLAUDE.md's golden-scenarios note.
+#   prose-regression RETIRED (2026-08-30, owner-directed — cost + measured zero precision). Full
+#     history in three stages:
+#     (1) ORIGINAL — ran HERE, in this file, a live Gemini decision-diff per triggering push.
+#     (2) MOVED OUT to daily (2026-08-21, owner-directed — the 2026-08-21 usage-cost audit's largest
+#         repo-side Actions finding): re-homed to run ONCE DAILY over the FULL scenario suite in
+#         .github/workflows/golden-prose-daily.yml, because this workflow fired ~16x/day
+#         (Claude_Task_Plan.md is in the paths list and most routine pushes touch it) at ~3.2 billable
+#         job-min/run ≈ ~1,540 min/month, and the first few pushes of each day exhausted the two
+#         QUALITY rungs of the Gemini free-tier ladder (20+20 RPD), so most of the day's advisory
+#         verdicts were silently rendered by the weakest model.
+#     (3) RETIRED outright (2026-08-30): golden-prose-daily.yml (~195 billable min/month) and its
+#         companion gemini-key-health.yml liveness probe (whose only consumer was that job) were
+#         DELETED, not re-homed again, once the daily job's own output showed it was buying zero signal
+#         rather than just costing too much. It reported a decision flip on EVERY run (PA-02, RS-02,
+#         KT-07 among them) while D3's own GOLDEN-SCENARIO PROSE-REGRESSION CHECK, re-evaluating the
+#         SAME scenarios, logged ZERO flips (29 of 33 re-evaluated on both 2026-08-25 and 2026-08-26).
+#         Decisive case: KT-07 flipped on 2026-08-28, but KT-07 is governed SOLELY by
+#         Experiment_Parameters.md, which had ZERO commits in that window — prose that did not change
+#         cannot have regressed, so the flip was judge noise, not signal. It had also degraded
+#         mechanically: its final runs evaluated only 15 of 33 scenarios, the rest skipped on Gemini
+#         free-tier "model ladder exhausted" (HTTP 503).
+#     Defense posture across all three stages was always ADVISORY ONLY (continue-on-error, no BigQuery
+#     write credentials, the daily job's own header said "nothing consumes this workflow's
+#     conclusion") and NEVER a merge block, so retiring it changes nothing downstream of the merge
+#     gate. This schema HARD GATE (below) is and was always the only thing auto-merge-claude.yml's
+#     secondary gate reads off this workflow's conclusion (the prose job, in every stage above, was
+#     continue-on-error) — gate semantics are unaffected. The REAL landing surface for a prose flip
+#     remains, and is now the ONLY one: D3's GOLDEN-SCENARIO PROSE-REGRESSION CHECK + AR_orc's
+#     `prose-regression` adjudication (see CLAUDE.md "Known non-issues") — it runs daily, needs no
+#     Gemini key at all, and its measured false-positive rate on this same scenario set is zero. Do
+#     not re-add a live per-push or per-day Gemini job here or elsewhere before re-reading CLAUDE.md's
+#     golden-scenarios note and this history.
 #
 #   RECONCILED 2026-07-16 (completeness-critic finding N-5 — verified already resolved, no change made
 #     here): that "mechanical follow-up by an autonomous routine" is Claude_Task_Plan.md D3's
