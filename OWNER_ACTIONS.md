@@ -129,7 +129,33 @@ Owner-authorized bug-fix pass (2026-08-31, `alert-emailer-chain`): two independe
 two-step, sequenced, owner-only redeploy cycle every `.gs` change in this file has needed since
 AE-1/AE-2 above — Claude cannot reach `script.google.com`.
 
-## AE-3. Re-paste `alert_emailer.gs` (v9 → v10, timestamp year + inbox-probe token fix), THEN apply the `bigquery/43` MERGE that seeds `expected_version='v10'` for `alert_emailer`
+## AE-3. Re-paste `alert_emailer.gs` (v9 → v10, timestamp year + inbox-probe token fix), THEN apply the `bigquery/43` MERGE that seeds `expected_version='v10'` for `alert_emailer` — [DONE 2026-08-31]
+
+**[DONE 2026-08-31 — both steps, in order, same session.]** (a) v10 was re-pasted into the live
+"Stock-Trading Automation" Apps Script project via Claude in Chrome; the saved file's SHA-256 was
+verified byte-identical to the GitHub source at commit `a980d49be4d80aa39e504e11595610c116126f6c`.
+`Code.gs` was untouched and triggers remained exactly 2 (`runWeeklyReport`, `runAlertCheck`);
+`installAlertTrigger()` was not run. `testAlertCheck()` was then run from the editor to force a
+heartbeat — completed cleanly in 4.84 s at 2026-08-31 18:14:40 UTC (2:14:40 PM America/Toronto),
+logging only "No un-notified alerts (last 168.0 h, plus roster-change notices of any age)"; no
+email was sent because nothing was un-notified. `ops.heartbeat` now carries `alert_emailer` /
+`v10` / note `poll` at 2026-08-31 18:14:44 UTC (the prior beat was `v9` at 15:44:52 UTC).
+(b) With the v10 beat live, the `bigquery/43` MERGE was applied — MERGE only, not the file's
+`CREATE TABLE` or its `state.script_version_drift` view. Because the `alert_emailer` `git_note`
+literal is ~12.5 KB, re-typing it into the MCP client was itself the transcription risk being
+guarded against, so it was applied via a targeted UPDATE that rebuilt the value as
+`CONCAT(SUBSTR(git_note, 1, STRPOS(git_note,' NOTE: do not apply this MERGE live')-1), '<the new
+2187-char v10 tail>')` — transcribing only the genuinely-new tail — and the result was then
+verified by SHA-256 against this file's own literal
+(`0557a2a9fde856b6265f67ecfdff83c00e28dd3d36e21e265356a16ceeaa95b6`, LENGTH 10218) before being
+trusted, which is what makes the apply safe rather than assumed; a future reader re-applying this
+file from scratch should know the live value was verified by hash, not by eyeballing a diff.
+`weekly_report` was deliberately left untouched and remains `v9` (note LENGTH 940), matching this
+file's literal. Verified end state: `state.script_version_drift` reads `alert_emailer`
+expected=v10 / reported=v10 / **drift=FALSE**, and `weekly_report` unchanged at v9/v9/drift=FALSE.
+**Zero `script_version_drift` alerts were raised in `ops.alerts` over the prior 2 days** — the
+transient `drift=TRUE` window between the 18:14:44 UTC paste-heartbeat and this apply (minutes
+later) was short enough that the cadence check never sampled it.
 
 **What changed.**
 

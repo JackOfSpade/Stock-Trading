@@ -42,6 +42,30 @@
 -- it will simply show every source as drift=TRUE (missing version) until both the ALTER and the .gs
 -- paste have happened -- which is the correct fail-closed initial state, not a false alarm, because
 -- monitored gates it off until the first version-bearing beat arrives.
+--
+-- APPLY STATE -- alert_emailer v10 row COMPLETE as of 2026-08-31. Applied from an interactive
+-- operator session per OWNER_ACTIONS.md item AE-3 (now marked DONE): the owner re-pasted
+-- alert_emailer.gs v10 into the live "Stock-Trading Automation" Apps Script project and
+-- testAlertCheck() emitted a v10 heartbeat at 2026-08-31 18:14:44 UTC; only THEN was this file's
+-- MERGE applied against state.expected_script_versions.
+-- APPLY METHOD, non-standard and worth recording: the alert_emailer git_note literal below is
+-- ~12.5 KB, and re-typing that whole literal into the MCP client was itself the transcription
+-- risk being guarded against. Instead an UPDATE rebuilt the value as
+-- CONCAT(SUBSTR(git_note, 1, STRPOS(git_note, ' NOTE: do not apply this MERGE live') - 1),
+-- '<the new v10 tail>') so only the genuinely-new tail was transcribed, then the whole result was
+-- verified by SHA-256 against this file's own literal -- which is what makes the apply safe
+-- rather than assumed. The end state is exactly what applying this file's MERGE verbatim would
+-- have produced.
+-- VERIFIED, not asserted: live state.expected_script_versions.alert_emailer now reads
+-- expected_version='v10', git_note LENGTH 10218, SHA-256
+-- 0557a2a9fde856b6265f67ecfdff83c00e28dd3d36e21e265356a16ceeaa95b6 -- byte-identical to the
+-- alert_emailer git_note literal in the MERGE below (hashed independently and compared).
+-- state.script_version_drift now reads alert_emailer expected=v10 / reported=v10 / drift=FALSE.
+-- weekly_report is UNCHANGED by this apply -- still expected_version='v9', git_note LENGTH 940,
+-- matching the weekly_report literal below; the guarded WHEN MATCHED clause left it a correct
+-- no-op, same as every prior alert_emailer-only apply of this MERGE. Do not re-touch either
+-- string literal below on the strength of this note -- it is a record of what is live, not an
+-- instruction to re-apply.
 
 -- ===== ops.heartbeat schema evolution -- add the version column the .gs beat writes will populate =====
 -- CREATE TABLE IF NOT EXISTS (16_automation_health.sql) will not add a column to a pre-existing table,
