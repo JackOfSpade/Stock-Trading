@@ -81,7 +81,7 @@
 # ALLOCATION CALL + D2's PARK ALLOCATION CONVERSION step), and the AI Research-Significance Screen's
 # two-layer conversion (RS-*, added 2026-07-19 per Redesign C, owner reversal of the same-day DEFER —
 # Operating_Protocols.md §19 / Claude_Task_Plan.md's D1/W2/M2 research-screen calls).
-# 33 cases total (brief calls for 12-20). COUNT CORRECTED 2026-08-20 (D3): this line read "31" and had
+# 34 cases total (brief calls for 12-20; SE-02 added 2026-08-30). COUNT CORRECTED 2026-08-20 (D3): this line read "31" and had
 # been stale since the four RS-* scenarios landed 2026-07-19 — the id numbering has gaps (no RR-10,
 # KT-03, SB-03), so the count is not derivable from the ids and a reader has no way to notice the drift.
 # No CI check asserts this number; keep it in sync by hand when adding or removing a scenario.
@@ -544,6 +544,56 @@ scenarios:
       correlation are not pairs -- they are two independent bets"). 0.42 is below that floor, so the pair
       fails criterion 3 outright even though the narrative thesis, adversarial check, holding period, and
       financing-cost ratio are all otherwise clean. NO-GO.
+
+  # ---- Strategy E entry criterion 3 AFTER Rev 47 (SE-02) ----
+  # Added 2026-08-30, closing D3's `golden_scenario_coverage_gap` info alert (ops.alerts
+  # cd19fdc4-9420-4c38-a418-fdb1c92e0fc4). Strategy.md Rev 47 (owner directive 2026-08-25) dropped entry
+  # criterion 3's ">= 95th percentile" quantitative-divergence anchor as a GATE while retaining the
+  # spread percentile as a recorded observation and as the Pair-prioritization rule's ranking key. SE-01
+  # cannot see that change: it is decided by the >= 0.5 correlation floor (0.42) and never reaches the
+  # percentile question, and its governing_sections scope Strategy.md to canonical `## Strategy E` only,
+  # which never contained the anchor. SE-02 is the complement -- every other criterion clean, correlation
+  # comfortably ABOVE the floor, and the ONLY contested fact is a spread percentile below 95 -- so its
+  # decision turns on criterion 3's percentile clause and nothing else. It additionally scopes the E
+  # PRE-MORTEM's own criteria block (`#### 1. Strategy E thesis and mechanism`), the anchor's only ever
+  # home and the locus a re-addition would land at; scoping to canonical `## Strategy E` alone would make
+  # this fixture blind to exactly the edit it exists to catch.
+  - id: SE-02
+    category: strategy_e_entry
+    situation: >
+      Within the same GICS industry group, laggard company PWR and leader company PWG are proposed as a
+      Strategy E pair. Both legs carry market caps above $10B and 30-day average daily volume above $20M,
+      and both are executable at the pair's AI-chosen risk budget. Today's regime is SPY Trend UP, VIX
+      Regime NORMAL, Breadth State HEALTHY, so E is router-ACTIVATE. The narrative divergence thesis is
+      specific and traceable entirely to 10-K/10-Q/8-K filings, earnings-call transcripts and press
+      releases, with no private-information provenance, and it names one quantitative reconvergence
+      threshold fixed at thesis formation ("PWG misses consensus revenue by >= 3% in either of the next
+      two reported quarters"). The adversarial counter-argument, including the mandatory attack on size,
+      identifies no decisive flaw and judges the loss at the proposed budget acceptable. The short-leg
+      stop distance was derived from this pair's own measured conditions, written down with its
+      justification, and recorded BEFORE the CaR arithmetic that consumes it. Classical-method delegation
+      computes L-S trailing-252-trading-day daily-return correlation at 0.7824 and a beta-adjusted hedge
+      ratio. Max share price / min share price is 1.4, so the spread is computed as a price ratio over the
+      252-trading-day reference window, and the pair's current spread sits at the 65.1st percentile of
+      that distribution -- the highest measured percentile in this session's candidate pool, so it is the
+      top-ranked candidate under the Pair-prioritization rule. Expected holding period to thesis
+      resolution is 4 months. Short-financing cost for the S leg is computed at 6% of thesis expected
+      return. What is the Strategy E GO/NO-GO call on this PWR/PWG pair today?
+    governing_files: [Strategy.md]
+    governing_sections:
+      Strategy.md: ["## Strategy E: Market-neutral narrative-divergence pairs", "#### 1. Strategy E thesis and mechanism"]
+    expected_decision: "GO (admitted at the 65.1st spread percentile; percentile_at_entry is RECORDED as an observation, not tested as a gate)"
+    rationale: >
+      Strategy E entry criterion 3 requires only L-S trailing-252-day correlation >= 0.5 plus
+      beta-adjusted leg sizing; 0.7824 clears the correlation floor and no percentile floor applies to
+      admission. Rev 47 (owner directive 2026-08-25; E pre-mortem rev 13) DROPPED criterion 3's ">= 95th
+      percentile" quantitative divergence anchor as an entry condition while deliberately RETAINING the
+      spread as a computed, recorded observation (percentile_at_entry, now spanning its true 0.00-1.00
+      range) and as the Pair-prioritization rule's ranking key. Criteria 1, 2, 4, 5 and 6 and the Rev 45
+      short-leg-stop rails are all satisfied as stated, so the pair is GO. 65.1% is the exact percentile
+      at which TLN/VST was declined on 2026-08-18 under the then-binding anchor, so this fixture pins the
+      drop at the precise value that used to flip it: re-adding the anchor as a gate turns this NO-GO,
+      which SE-01 (decided by the >= 0.5 correlation floor at 0.42) cannot detect.
 
   # ---- AI Park Allocator daily status-computation rule (PA-*) ----
   # Added 2026-07-18 (PARK_ROUTER_DESIGN.md v2 §10 Phase 0's golden-scenario fixture requirement --

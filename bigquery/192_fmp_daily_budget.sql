@@ -23,6 +23,13 @@
 --
 -- Trailing 45 days, matching 191; both sources are PARTITION BY run_date. Additive — new object,
 -- supersedes nothing.
+--
+-- SUPERSEDED LIVE by bigquery/203_web_call_provider_normalise.sql (2026-08-30) — that file is the
+-- CURRENT canonical definition of state.fmp_daily_budget. The `WHERE provider = 'fmp'` predicate
+-- below is CASE-SENSITIVE and could not see the three `FMP` rows in ops.web_calls, so this counter
+-- under-reported the very cap it exists to watch (2026-08-26 read 24 when the truth was 25;
+-- 2026-08-27 read 21 when the truth was 23). 203 replaces it with LOWER(TRIM(provider)) = 'fmp'
+-- and changes nothing else. Do NOT re-apply this file's view in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.fmp_daily_budget` AS
 WITH fmp AS (
   SELECT run_date, COUNT(*) AS logged_fmp_requests

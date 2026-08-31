@@ -182,6 +182,18 @@ FROM base;
 --
 -- ADVISORY UNTIL A ROUTINE READS IT. Nothing consumes this view on apply. Wiring it into D2a's SWEEP
 -- substep is a separate, deliberate step; until then it is a measurement.
+--
+-- SUPERSEDED LIVE by bigquery/202_sweep_recipient_weights_nomadic_exclusion.sql — current single
+-- source of truth for this view. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation. 202 adds the NOMADIC exclusion this
+-- definition lacks: bigquery/164 was authored before bigquery/167/168 introduced the nomadic concept
+-- later the same day, so this `enabled` CTE (capital_enabled AND is_active, no nomadic term) returned
+-- nomadic C alongside E at sweep_share 0.5 each, while state.regime_capital_sync_pending's own
+-- recipient set (bigquery/168 FIX 7) correctly returned E alone. A session taking the recipient SET
+-- from this view rather than from the pending view credited nomadic C twice — 27.86 on 2026-08-12
+-- (swept straight back out the same run) and 23.68 on 2026-08-18 (still held on 2026-08-30, below the
+-- $25 nomadic de-minimis floor). Raised by D2a as ops.alerts info `sweep_recipient_view_drift`,
+-- 2026-08-27. This view remains a capacity TILT only; ELIGIBILITY is state.regime_capital_sync_pending's.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.sweep_recipient_weights` AS
 WITH enabled AS (
   SELECT e.strategy_code

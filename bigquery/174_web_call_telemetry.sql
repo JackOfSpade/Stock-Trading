@@ -106,6 +106,12 @@ OPTIONS(description="Append-only log of metered external calls, one row per call
 -- table), so has_unreported_runs names the reporting gap instead of hiding it inside a credits
 -- total that reads as complete. A routine that genuinely never touches an external surface
 -- (D2a, OPS0, SL5, ...) sits at run_covered = 0 permanently and correctly.
+--
+-- SUPERSEDED LIVE by bigquery/203_web_call_provider_normalise.sql (2026-08-30) — that file is the
+-- CURRENT canonical definition of state.web_spend_month. It folds the ops.web_calls.provider
+-- vocabulary on read (LOWER/TRIM, with `huggingface` -> `hf`) so case/spelling variants aggregate
+-- into one cell, and makes this view's n_priced_upgrade depth test case-insensitive. The version
+-- below is left byte-unchanged as the DR-rebuild record; do NOT re-apply it live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.web_spend_month` AS
 WITH per_cell AS (
   SELECT
@@ -164,6 +170,13 @@ ORDER BY c.month_start DESC, c.provider, c.credits DESC;
 --       and their whole query string; free-text queries are lowercased and whitespace-collapsed.
 -- Grouping is per (provider, normalised target) so a page pulled by TWO different routines counts
 -- as a duplicate -- cross-routine repetition is the kind least likely to be noticed by either.
+--
+-- SUPERSEDED LIVE by bigquery/203_web_call_provider_normalise.sql (2026-08-30) — that file is the
+-- CURRENT canonical definition of state.web_duplicate_targets. It adds a THIRD normalisation to the
+-- two described above: the provider token itself is folded (LOWER/TRIM, `huggingface` -> `hf`), so
+-- an `fmp` row and an `FMP` row for the same target group together instead of reading as two
+-- singletons. Measured 2026-08-30, that change moves nothing yet (39 groups before and after) —
+-- it is a latent-trap closure. Do NOT re-apply this file's view in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.web_duplicate_targets` AS
 WITH normalised AS (
   SELECT

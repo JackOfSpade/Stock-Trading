@@ -1097,7 +1097,8 @@ def test_group_scenarios_for_batching_real_scenarios_yaml_covers_every_id_exactl
     # KT-05/KT-06 both scope Experiment_Parameters.md to "### Success threshold" + "### Evaluation gate and
     # termination structure", while KT-07 — same file — scopes to "### Kill criteria (per-strategy)" alone),
     # so the text-identity key legitimately produces MANY MORE, smaller groups. Measured 2026-08-17 against
-    # the real, now-mapped file: 20 groups (up from 7) — group COUNT is the one exact-number pin worth
+    # the real, now-mapped file: 20 groups (up from 7), and 21 since SE-02 landed 2026-08-30 (its assembled
+    # governing text is unique, so it forms its own group) — group COUNT is the one exact-number pin worth
     # keeping here (a structural fact about the grouping algorithm, not a byte total that drifts with daily
     # prose edits to Strategy.md/Operating_Protocols.md/Claude_Task_Plan.md).
     scenarios = rg.load_scenarios()
@@ -1105,7 +1106,7 @@ def test_group_scenarios_for_batching_real_scenarios_yaml_covers_every_id_exactl
     all_ids = [sc["id"] for g in groups for sc in g]
     assert sorted(all_ids) == sorted(sc["id"] for sc in scenarios)  # union == every id, no loss
     assert len(all_ids) == len(set(all_ids))  # no duplicates across groups
-    assert len(groups) == 20
+    assert len(groups) == 21  # 20 as measured 2026-08-17; 21 since SE-02 landed 2026-08-30
 
     # Every group must be governing-TEXT-uniform — the new grouping key's actual contract
     # (_governing_text_group_key()'s own docstring: "two scenarios must land in the same group ONLY when
@@ -1900,7 +1901,7 @@ def test_scenarios_for_changed_selects_exactly_the_strategy_md_scenarios():
     # regression in the real coverage, not just in the selection logic against toy data.
     scenarios = rg.load_scenarios()
     strategy_scenario_ids = {sc["id"] for sc in scenarios if "Strategy.md" in (sc.get("governing_files") or [])}
-    assert len(strategy_scenario_ids) == 17  # 17 of the 33 scenarios in scenarios.yaml, measured
+    assert len(strategy_scenario_ids) == 18  # 18 of the 34 scenarios in scenarios.yaml, measured (SE-02 added 2026-08-30)
     assert set(rg.scenarios_for_changed_files(scenarios, ["Strategy.md"])) == strategy_scenario_ids
 
 
@@ -1982,7 +1983,7 @@ def test_main_scenarios_for_changed_prints_ids_and_returns_0(monkeypatch, capsys
     monkeypatch.setattr(sys, "argv", ["run_golden.py", "--scenarios-for-changed", "--changed-file", "Strategy.md"])
     assert rg.main() == 0
     out_lines = capsys.readouterr().out.strip().splitlines()
-    assert len(out_lines) == 17
+    assert len(out_lines) == 18
     assert set(out_lines) <= {sc["id"] for sc in rg.load_scenarios()}
 
 
@@ -2510,7 +2511,7 @@ def test_group_scenarios_for_batching_real_scenarios_yaml_twenty_groups_kt02_alo
     scenarios = rg.load_scenarios()
     assert any(sc.get("governing_sections") for sc in scenarios)  # phase 2 landed (see the placeholder this supersedes)
     groups = rg.group_scenarios_for_batching(scenarios)
-    assert len(groups) == 20  # measured 2026-08-17 against the real, now-mapped file (was 7 pre-mapping)
+    assert len(groups) == 21  # 20 when measured 2026-08-17 against the real, now-mapped file (was 7 pre-mapping); 21 since SE-02 landed 2026-08-30
     all_ids = [sc["id"] for g in groups for sc in g]
     assert sorted(all_ids) == sorted(sc["id"] for sc in scenarios)  # union == every id, no loss
 
