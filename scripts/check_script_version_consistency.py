@@ -15,6 +15,17 @@ Usage:  python scripts/check_script_version_consistency.py    # exit 0 if consis
 """
 import os
 import re
+import sys
+
+# ORGANIZATION FIX (2026-08-31 code-quality pass, contracts#2): this file predates lib.textio.py
+# (2026-07-15 vs 2026-07-29) and its two bare open(path, encoding="utf-8").read() call sites survived
+# the 2026-08-08 whole-repo consolidation pass untouched -- every sibling checker on this audit surface
+# (check_handoff_contracts.py, check_superseded_by_discipline.py, check_superseded_markers.py,
+# check_sq_version_registry.py) already reads through lib.textio.read_text() exclusively. Same
+# sys.path.insert + import idiom those siblings use.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib.report import fail_or_ok
+from lib.textio import read_text
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ALERT_GS = os.path.join(ROOT, "ops", "monitoring", "alert_emailer.gs")
@@ -30,12 +41,12 @@ SCRIPTS = {"alert_emailer": ALERT_GS, "weekly_report": WEEKLY_GS}
 
 
 def parse_gs_version(path):
-    m = GS_VERSION.search(open(path, encoding="utf-8").read())
+    m = GS_VERSION.search(read_text(path))
     return m.group(1) if m else None
 
 
 def parse_seed_versions():
-    txt = open(REGISTRY_SQL, encoding="utf-8").read()
+    txt = read_text(REGISTRY_SQL)
     return dict(SEED_ROW.findall(txt))
 
 
@@ -59,14 +70,13 @@ def main():
                           f"expects '{seed_version}' — bump the seed in the SAME commit that bumps "
                           f"the .gs version const")
 
-    if errors:
-        print("SCRIPT VERSION CONSISTENCY: FAIL\n")
-        for e in errors:
-            print(" - " + e)
-        return 1
-    print(f"SCRIPT VERSION CONSISTENCY: OK — {len(SCRIPTS)} script(s) agree with "
-          f"bigquery/43_script_version_registry.sql's seed.")
-    return 0
+    # REFACTOR (2026-08-31 code-quality pass, cross-cutting#0): shared FAIL/OK block, see
+    # lib/report.py's module docstring.
+    return fail_or_ok(
+        "SCRIPT VERSION CONSISTENCY", errors,
+        f"SCRIPT VERSION CONSISTENCY: OK — {len(SCRIPTS)} script(s) agree with "
+        f"bigquery/43_script_version_registry.sql's seed.",
+    )
 
 
 if __name__ == "__main__":

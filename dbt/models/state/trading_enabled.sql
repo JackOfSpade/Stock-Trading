@@ -15,70 +15,30 @@
 -- passed — but the moment that branch fired, dbt_parity.py would have reported real drift and failed CI
 -- on a purely cosmetic string. The message below is byte-identical to the canonical file's.
 -- Keep all SIX halt_reason strings in lockstep with 176 when either side changes.
+-- ORGANIZATION FIX (2026-08-31 code-quality pass, dbt#1/dbt#2): halt_echo_md/halt_echo_mr now come
+-- from the shared dbt/macros/halt_echo.sql macro (was byte-identical copy-pasted CTE text here and in
+-- trading_enabled_mechanical.sql/b3_trading_enabled_check.sql — dbt#2), and the `al`/`pr` CTEs below
+-- now use source('ops','alerts') / ref('position_reconciliation') instead of hardcoded
+-- `stock-trading-498512.ops.alerts` / `...state.position_reconciliation` literals — both already
+-- declared (sources.yml / dbt/models/state/position_reconciliation.sql) but bypassed here, which kept
+-- this model (and system_health/trading_enabled_mechanical, which read its data) OUT of
+-- `dbt list --select state.position_reconciliation+`'s downstream set (dbt#1). Purely a
+-- compiled-SQL-identical substitution — b3_trading_enabled_check.sql already does this for the same
+-- tables with zero drift.
 WITH ctrl AS (
   SELECT ARRAY_AGG(STRUCT(halt_all, reason, mode) ORDER BY control_ts DESC LIMIT 1)[SAFE_OFFSET(0)] AS latest
   FROM {{ source('ops', 'trading_control') }}
 ),
 f AS (SELECT marks_fresh, engine_fresh FROM {{ ref('freshness') }}),
-halt_echo_md AS (
-  -- missing_dependency alerts that are pure fallout of a same-day, still-open trading halt:
-  -- every dep in payload.missing_deps has an OPEN trading_halted alert (source = dep) whose
-  -- Denver date equals this alert's payload.run_date. Fail-closed: any parse failure or
-  -- unmatched dep keeps the alert blocking, and a NULL alert_id is excluded outright — left
-  -- in, it would make the downstream blocking-criticals NOT IN return NULL for every row and
-  -- fail the gate OPEN. Delimiter ', ' matches sp_assert_deps' STRING_AGG(d, ', ') and
-  -- sp_auto_resolve_alerts Rule 1's SPLIT.
-  SELECT a.alert_id
-  FROM `stock-trading-498512.ops.alerts` a,
-       UNNEST(SPLIT(JSON_VALUE(a.payload, '$.missing_deps'), ', ')) AS dep
-  LEFT JOIN `stock-trading-498512.ops.alerts` th
-    ON th.category = 'trading_halted'
-   AND NOT th.resolved
-   AND th.source = dep
-   AND DATE(th.alert_ts, 'America/Denver') =
-       SAFE.PARSE_DATE('%Y-%m-%d', JSON_VALUE(a.payload, '$.run_date'))
-  WHERE a.alert_id IS NOT NULL
-    AND NOT a.resolved
-    AND a.severity = 'critical'
-    AND a.category = 'missing_dependency'
-  GROUP BY a.alert_id
-  HAVING LOGICAL_AND(th.alert_id IS NOT NULL)
-),
-halt_echo_mr AS (
-  -- 'missed_run' critical alerts that are pure fallout of an already-known trading-gate halt.
-  -- (A) reuses Rule 2's completion test; (B) correlates the latest halted attempt to a
-  -- trading_halted alert within the load-bearing 24-hour bound from bigquery/107.
-  SELECT a.alert_id
-  FROM `stock-trading-498512.ops.alerts` a,
-       UNNEST(JSON_QUERY_ARRAY(a.payload)) AS item
-  LEFT JOIN `stock-trading-498512.ops.run_log` r
-    ON r.routine = JSON_VALUE(item, '$.routine') AND r.status = 'completed'
-       AND r.run_date >= SAFE.PARSE_DATE('%Y-%m-%d', JSON_VALUE(item, '$.today'))
-  LEFT JOIN (
-    SELECT routine, MAX(log_ts) AS last_halt_ts
-    FROM `stock-trading-498512.ops.run_log`
-    WHERE status = 'halted'
-    GROUP BY routine
-  ) hr ON hr.routine = JSON_VALUE(item, '$.routine')
-  LEFT JOIN `stock-trading-498512.ops.alerts` th
-    ON th.category = 'trading_halted'
-       AND hr.last_halt_ts IS NOT NULL
-       AND ABS(TIMESTAMP_DIFF(th.alert_ts, hr.last_halt_ts, HOUR)) <= 24
-  WHERE a.alert_id IS NOT NULL
-    AND NOT a.resolved
-    AND a.severity = 'critical'
-    AND a.category = 'missed_run'
-  GROUP BY a.alert_id
-  HAVING LOGICAL_AND(r.routine IS NOT NULL OR th.alert_id IS NOT NULL)
-),
+{{ halt_echo() }}
 al AS (
   SELECT COUNTIF(NOT resolved AND severity = 'critical'
     AND category NOT IN ('trading_halted', 'staleness')
     AND alert_id NOT IN (SELECT alert_id FROM halt_echo_md)
     AND alert_id NOT IN (SELECT alert_id FROM halt_echo_mr)) AS blocking_criticals
-  FROM `stock-trading-498512.ops.alerts`
+  FROM {{ source('ops', 'alerts') }}
 ),
-pr AS (SELECT COALESCE(LOGICAL_OR(drifted), FALSE) AS drift FROM `stock-trading-498512.state.position_reconciliation`),
+pr AS (SELECT COALESCE(LOGICAL_OR(drifted), FALSE) AS drift FROM {{ ref('position_reconciliation') }}),
 dd AS (SELECT breach_hard, drawdown_from_peak, snapshot_stale FROM {{ ref('book_drawdown_watch') }})
 SELECT
   NOT COALESCE(ctrl.latest.halt_all, FALSE)

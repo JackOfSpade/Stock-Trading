@@ -147,7 +147,15 @@ jobs:
             exit 1
           fi
           echo "Sweeping ${#existing[@]} file(s)…"
-          if python scripts/check_sql_dryrun.py "${existing[@]}" | tee /tmp/sweep.txt; then
+          # BUG FIX (2026-08-31 code-quality pass): add 2>&1 so a checker crash's traceback lands in
+          # sweep.txt instead of vanishing to the job log alone -- without it, an uncaught exception in
+          # check_sql_dryrun.py prints only to stderr, pipefail correctly fails this `if`, but
+          # /tmp/sweep.txt is left 0 bytes, so the "Open/refresh finding issue" step's
+          # `detail=$(head -c 4000 /tmp/sweep.txt)` below becomes "" -- which used to silently drop the
+          # ops.ci_findings row (see scripts/ci_finding.sh's matching fix). Mirrors live-sql-parity.yml's
+          # `check_live_sql_parity.py ... 2>&1 | tee /tmp/parity_out.txt`, which was never vulnerable to
+          # this precisely because it already redirects stderr into the tee'd file.
+          if python scripts/check_sql_dryrun.py "${existing[@]}" 2>&1 | tee /tmp/sweep.txt; then
             echo "result=ok" >> "$GITHUB_OUTPUT"
           else
             msg="🧩 Stock-Trading SQL sweep FAILED — a bigquery/*.sql file has a PARSE error and would abort on apply (DR rebuild / re-apply). This file did not change recently, so ci.yml's path-gated gate never saw it. $(grep -cE '✗ (SYNTAX ERROR|NO-FROM-WHERE) \(blocks merge\)' /tmp/sweep.txt || true) file(s) affected; see the run log."
@@ -200,15 +208,16 @@ jobs:
           # BigQuery-side landing surface. Same WIF auth + table-scoped gh-ci-runner@ dataEditor
           # grant this job already relies on; FAIL-LOUD on INSERT failure (a dead bridge must not
           # hide inside an already-red run as "just the sweep finding").
-          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          # 2026-08-31 code-quality pass (shell-workflows#0): both VALUES-row inserts below now go
+          # through scripts/ci_finding.sh, which builds its own run_url — the shell $run_url var
+          # this step used to define is gone with them (nothing else in this step needed it).
           grep -E '✗ (SYNTAX ERROR|NO-FROM-WHERE) \(blocks merge\):' /tmp/sweep.txt | sed -E 's/.*\(blocks merge\): //' > /tmp/bad_files.txt || true
           if [ ! -s /tmp/bad_files.txt ]; then
             # Failure with ZERO per-file blocking findings = the checker's fail-closed canary path (the
             # environment could not prove it detects syntax errors) — no files to key on, so land ONE
             # aggregate not-verified row, same convention as live-sql-parity's zero-verification key.
             detail=$(head -c 4000 /tmp/sweep.txt)
-            # shellcheck disable=SC2016 # single-quoted intentionally: see below.
-            if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_detail:STRING:${detail}" --parameter="p_url:STRING:${run_url}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("sql-dryrun-sweep","sql_dryrun_sweep","open",@p_detail,@p_url)'; then
+            if ! scripts/ci_finding.sh "sql-dryrun-sweep" "sql_dryrun_sweep" "open" "$detail"; then
               echo "::error::ops.ci_findings not-verified INSERT FAILED (verify the gh-ci-runner@ dataEditor grant on ops.ci_findings)."
               exit 1
             fi
@@ -220,9 +229,7 @@ jobs:
             # Safe because no bigquery/*.sql path contains a colon.
             key="${key%%:[0-9]*}"
             errdetail=$(printf '%s' "${line#* :: }" | head -c 900)
-            # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted BigQuery
-            # identifier and @p_* named parameters must stay literal, not shell-expanded.
-            if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_key:STRING:${key}" --parameter="p_detail:STRING:parse error on dry-run: ${errdetail}" --parameter="p_url:STRING:${run_url}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("sql-dryrun-sweep",@p_key,"open",@p_detail,@p_url)'; then
+            if ! scripts/ci_finding.sh "sql-dryrun-sweep" "$key" "open" "parse error on dry-run: ${errdetail}"; then
               echo "::error::ops.ci_findings open-row INSERT FAILED for ${key} — the sweep's BigQuery-side landing surface is broken (verify the gh-ci-runner@ dataEditor grant on ops.ci_findings)."
               exit 1
             fi

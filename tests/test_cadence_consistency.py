@@ -296,6 +296,17 @@ def _cadence_ids_from_yaml(cadence_path):
     return [r["id"] for r in (doc.get("routines") or [])]
 
 
+def _cadence_deadline_from_yaml(cadence_path):
+    """cadence_watch_deadline_local read directly out of a fixture cadence.yaml file -- same call-time-
+    independence rationale as _cadence_ids_from_yaml above (this is called from _patch_fixture_paths()
+    itself while cc.CADENCE is still being patched, so it must not depend on that patch having landed).
+    Used to DERIVE the fixture bigquery/*.sql deadline-guard literal from cadence.yaml's own value
+    (cadence#0, 2026-08-31 code-quality pass) instead of a hardcoded "21:00" that only ever matched by
+    coincidence."""
+    doc = yaml.safe_load(open(cadence_path, encoding="utf-8")) or {}
+    return doc.get("cadence_watch_deadline_local")
+
+
 def _write_stalled_runs_fixture(tmp_path, ids, filename="900_test_stalled_runs.sql"):
     """Writes a canonical-shaped `CREATE OR REPLACE VIEW ...state.stalled_runs` definition into
     tmp_path/filename, with a `cls` CTE UNNEST([...]) STRUCT list carrying exactly `ids` -- the first
@@ -324,20 +335,62 @@ def _write_stalled_runs_fixture(tmp_path, ids, filename="900_test_stalled_runs.s
     return f
 
 
+def _write_cadence_watch_fixture(tmp_path, deadline, filename="901_test_cadence_watch.sql"):
+    """Writes a canonical-shaped `CREATE OR REPLACE VIEW ...state.cadence_watch` definition into
+    tmp_path/filename, whose deadline-guard TIME literal is DERIVED from `deadline` (the fixture
+    cadence.yaml's own cadence_watch_deadline_local, via _cadence_deadline_from_yaml) rather than
+    hardcoded -- so check D-extended's canonical-file scan (find_canonical_cadence_watch_file /
+    parse_canonical_deadline_sql), which walks BIGQUERY_DIR, stays clean against THIS fixture instead
+    of the real, live bigquery/ tree (cadence#0, 2026-08-31 code-quality pass: that unpatched walk cost
+    ~19.7s of this file's ~21s runtime AND coupled ~55 fixture tests to the real ops/cadence.yaml's
+    deadline value, since every fixture here hardcoded "21:00" only because it happened to match).
+    Mirrors _write_stalled_runs_fixture's shape/rationale for check O, one object over. The chosen
+    leading number (901) never collides with 900 (_write_stalled_runs_fixture's default) or any bare
+    `NN.sql` fixture this module writes elsewhere into tmp_path (those don't match numbered_sql_files()'s
+    `NN_description.sql` pattern -- see _write_stalled_runs_fixture's own docstring). Returns the
+    written Path."""
+    f = tmp_path / filename
+    f.write_text(
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.cadence_watch` AS\n"
+        "SELECT e.today, e.routine,\n"
+        "  (\n"
+        "   NOT e.started\n"
+        f"   AND DATETIME(CURRENT_TIMESTAMP(), 'America/Denver') >= DATETIME(e.today, TIME '{deadline}:00')\n"
+        "  ) AS needs_attention\n"
+        "FROM state.cadence_expected_today e;\n"
+    )
+    return f
+
+
 def _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql):
     monkeypatch.setattr(cc, "PLAN", str(plan))
     monkeypatch.setattr(cc, "CADENCE", str(cadence))
     monkeypatch.setattr(cc, "CADENCE_SQL", str(cadence_sql))
     monkeypatch.setattr(cc, "CATALOG_SQL", str(catalog_sql))
+    # check D-extended: point BIGQUERY_DIR itself at this SAME tmp_path fixture directory, and drop in
+    # a canonical state.cadence_watch definition whose deadline-guard TIME literal is DERIVED from
+    # `cadence`'s own cadence_watch_deadline_local (via _cadence_deadline_from_yaml) -- so check D-
+    # extended's find_canonical_cadence_watch_file()/parse_canonical_deadline_sql() scan THIS fixture
+    # instead of the REAL, live bigquery/ tree (cadence#0, 2026-08-31 code-quality pass). Before this,
+    # BIGQUERY_DIR was left unpatched here and every one of this shared fixture's ~55 cc.main() callers
+    # walked the real 205-file bigquery/ directory on every run (measured ~19.7s of this file's ~21s
+    # total) AND every fixture's cadence_watch_deadline_local had to hardcode "21:00" only because it
+    # happened to match ops/cadence.yaml's real, live value -- a config change there would have broken
+    # ~55 unrelated tests at once with a confusing "canonical file" drift message. Patched independently
+    # of STALLED_RUNS_BIGQUERY_DIR below (own fixture file, own DDL object/regex, own leading number) so
+    # the two isolation fixes cannot collide.
+    monkeypatch.setattr(cc, "BIGQUERY_DIR", str(tmp_path))
+    _write_cadence_watch_fixture(tmp_path, _cadence_deadline_from_yaml(cadence))
     # check O: point STALLED_RUNS_BIGQUERY_DIR (a constant kept SEPARATE from BIGQUERY_DIR -- see its
-    # own comment in check_cadence_consistency.py) at this SAME tmp_path fixture directory, and drop in
-    # a canonical state.stalled_runs definition whose `cls` CTE lists EXACTLY the routine ids currently
-    # in `cadence` -- so check O stays silently clean by default for every OTHER check's fixture below,
-    # the same way check D-extended's real-repo coincidence keeps cadence_watch_deadline_local clean
-    # today (that check is deliberately left UNPATCHED here, still scanning the real bigquery/
-    # directory -- see STALLED_RUNS_BIGQUERY_DIR's own comment for why). Tests that want to exercise
-    # check O itself overwrite this fixture file (_write_stalled_runs_fixture) or cadence.yaml's
-    # routine set afterwards.
+    # own comment in check_cadence_consistency.py) at this SAME tmp_path fixture directory too (both
+    # constants end up equal, mirroring production -- see STALLED_RUNS_BIGQUERY_DIR's own comment), and
+    # drop in a canonical state.stalled_runs definition whose `cls` CTE lists EXACTLY the routine ids
+    # currently in `cadence` -- so check O stays silently clean by default for every OTHER check's
+    # fixture below. Tests that want to exercise check O itself overwrite this fixture file
+    # (_write_stalled_runs_fixture) or cadence.yaml's routine set afterwards; tests that want to
+    # exercise check D-extended itself overwrite the cadence_watch fixture above
+    # (_write_cadence_watch_fixture) or cadence.yaml's deadline afterwards. Either override can diverge
+    # BIGQUERY_DIR/STALLED_RUNS_BIGQUERY_DIR from each other without disturbing the other check's fixture.
     monkeypatch.setattr(cc, "STALLED_RUNS_BIGQUERY_DIR", str(tmp_path))
     _write_stalled_runs_fixture(tmp_path, _cadence_ids_from_yaml(cadence))
     # check N's mirror scan is now resolved at call time (the model_mirror_files()

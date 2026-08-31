@@ -230,6 +230,17 @@ jobs:
               # module's docstring already declares: a duplicate ping is a nuisance, a silently
               # missed critical alert is a safety failure.
               window=$(( gap + 130 ))
+              # DEAD TODAY, KEPT ON PURPOSE (2026-08-31 code-quality pass, shell-workflows#3): with
+              # MARGIN=130 above and gap already proven >= 0 by the enclosing `if`, `window = gap +
+              # 130` can never be < 130 -- this floor cannot fire against today's margin. Left in
+              # place as a guard against a future margin reduction, not deleted: if a later edit
+              # shrinks MARGIN back toward the old margin=10 (the exact regression the brute-force
+              # analysis above found reopens an 80-min alert-delivery hole), this line silently
+              # re-enforces the 130-min minimum instead of the hole coming back with nothing to catch
+              # it -- cheap insurance against exactly the class of accidental revert this margin
+              # value has already had once (2026-08-30 retune). Mirrors the `-gt 1440` cap two lines
+              # below, which IS reachable today; this one just isn't, by construction, until MARGIN
+              # changes.
               [ "$window" -lt 130 ] && window=130
               [ "$window" -gt 1440 ] && window=1440
             fi
@@ -290,8 +301,11 @@ jobs:
             gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body-file /tmp/body.md
           fi
           # CI-findings bridge (same non-fatal pattern as the sibling guards).
-          # shellcheck disable=SC2016 # single-quoted intentionally: backtick identifier + @p_* params stay literal.
-          bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_key:STRING:relay_${MODE}" --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("alert-relay",@p_key,"open","relay run failed — see issue/run",@p_url)' || echo "::warning::ops.ci_findings insert failed — GH issue path unaffected."
+          # 2026-08-31 code-quality pass (shell-workflows#0): the VALUES-row insert itself now
+          # lives in scripts/ci_finding.sh (tests/test_ci_finding.sh pins its argv) — only the
+          # fail-soft `|| echo ::warning::` wrapper stays per-call, since it varies by workflow.
+          scripts/ci_finding.sh "alert-relay" "relay_${MODE}" "open" "relay run failed — see issue/run" \
+            || echo "::warning::ops.ci_findings insert failed — GH issue path unaffected."
 
       - name: Close finding issue if resolved (same mode only)
         if: always() && steps.guard.outputs.skip == 'false' && steps.relay.outcome == 'success'

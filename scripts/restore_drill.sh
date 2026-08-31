@@ -18,6 +18,10 @@
 #      SCRATCH (default events_restore_drill), DATE (default = newest dt= partition found in the bucket).
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=bq_csv.sh
+source "$SCRIPT_DIR/bq_csv.sh"
+
 PROJECT="${PROJECT:-stock-trading-498512}"
 BUCKET="${BUCKET:-gs://stock-trading-backups}"
 BUCKET="${BUCKET%/}"
@@ -27,18 +31,22 @@ KEEP="${KEEP:-0}"
 command -v bq >/dev/null || { echo "bq CLI not found (install Google Cloud SDK)"; exit 1; }
 command -v gcloud >/dev/null || { echo "gcloud CLI not found (install Google Cloud SDK)"; exit 1; }
 
-bqq() { bq --project_id="$PROJECT" query --use_legacy_sql=false --format=csv --quiet --headless --max_rows=100000 "$1" | tail -n +2; }
+# bqq(): thin wrapper kept local (used below for the per-table restored/live COUNT(*) queries) --
+# delegates to the shared bq_csv_query_headless (scripts/bq_csv.sh, extracted 2026-08-31 --
+# shell-workflows#1), which is the exact invocation this used to hand-type inline.
+bqq() { bq_csv_query_headless "$PROJECT" "$1"; }
 
 # Tables to restore = every base table in the live events dataset.
-# NOTE (codebase audit 2026-07-26): do NOT rewrite this back to `mapfile -t TABLES < <(bqq ...)`.
+# NOTE (codebase audit 2026-07-26): do NOT rewrite this back to `mapfile -t TABLES < <(bq_list_events_tables ...)`.
 # Under `set -euo pipefail`, bash only checks mapfile's OWN exit status here, not the process
-# substitution's -- a failing `bqq` (bad PROJECT, revoked IAM, etc.) would NOT trip `set -e` and
+# substitution's -- a failing query (bad PROJECT, revoked IAM, etc.) would NOT trip `set -e` and
 # the drill would silently fall through to the empty-array guard below instead of aborting loudly
 # with the underlying `bq` error. Confirmed empirically: `f(){ echo line1; return 1; }; mapfile -t
-# ARR < <(f)` does not abort. Its sibling scripts/backup_events.sh (~lines 29-32) already uses the
-# direct-assignment idiom below for the identical query, which DOES propagate a `bqq` failure
+# ARR < <(f)` does not abort. Its sibling scripts/backup_events.sh already uses the direct-
+# assignment idiom below for the identical query -- both now literally the same
+# bq_list_events_tables() call (2026-08-31, shell-workflows#1) -- which DOES propagate a failure
 # straight into `set -e`. Mirror it here so both scripts fail closed the same way.
-TABLES_RAW="$(bqq "SELECT table_name FROM \`$PROJECT.events.INFORMATION_SCHEMA.TABLES\` WHERE table_type='BASE TABLE' ORDER BY table_name")"
+TABLES_RAW="$(bq_list_events_tables "$PROJECT")"
 # Check the raw string BEFORE mapfile, not just the array after: `mapfile -t TABLES <<< ""` does
 # NOT yield a zero-length array -- the here-string appends a trailing newline, so bash reads one
 # empty line and TABLES ends up with count=1 containing "" (verified empirically, codebase audit

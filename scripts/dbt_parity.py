@@ -32,11 +32,22 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.bq_json import run_bq_query
+from lib.sql_files import DBT_DATASETS
 from lib.textio import read_text
 
 PROJECT = "stock-trading-498512"
 COMPILED_ROOT = os.path.join("dbt", "target", "compiled", "stock_trading", "models")
-DATASET_FOLDERS = ("state", "perf", "analytics")   # folder name == BigQuery dataset
+# DEDUP (sql-parity#0, 2026-08-31 code-quality pass): this used to be its own locally-declared
+# tuple, `("state", "perf", "analytics")`, duplicating check_dbt_view_coverage.py's `DATASETS` —
+# same three datasets, different name, different order, unconsolidated. Now shared via
+# scripts/lib/sql_files.py's DBT_DATASETS (see that module's docstring for why the ELEMENT ORDER
+# is load-bearing here: compiled_models() drives this tuple as the model-processing order, and
+# main() aggregates the printed skipped/errors/diffs lists in that same order for a deterministic
+# report — DBT_DATASETS preserves this file's original order for exactly that reason). Kept under
+# the local name DATASET_FOLDERS (folder name == BigQuery dataset) rather than importing
+# DBT_DATASETS bare, since every use site below already reads that name and tests/test_dbt_parity.py
+# (out of scope for this pass) asserts against `dp.DATASET_FOLDERS`.
+DATASET_FOLDERS = DBT_DATASETS
 # Columns generated fresh on every evaluation (CURRENT_TIMESTAMP) — excluded from row compare.
 VOLATILE_COLS = {"checked_at"}
 

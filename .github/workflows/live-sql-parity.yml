@@ -160,11 +160,10 @@ jobs:
                        | sed -E 's/^(Failure|Error) in test //' | sort -u | paste -sd',' - || true)"
             [ -n "$failed" ] || failed="see run log (could not parse test names)"
             detail="B3 live-data invariant failure(s): ${failed}"
-            # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted BigQuery
-            # table name must not be shell-expanded and @p_* are BigQuery named parameters, not shell vars.
-            if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false \
-                 --parameter="p_detail:STRING:${detail}" --parameter="p_url:STRING:${run_url}" \
-                 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("b3-invariants","b3_invariants","open",@p_detail,@p_url)'; then
+            # 2026-08-31 code-quality pass (shell-workflows#0): VALUES-row insert extracted to
+            # scripts/ci_finding.sh (it builds its own run_url; the shell $run_url var above is
+            # still needed by the auto-resolve INSERT..SELECT in the else branch below).
+            if ! scripts/ci_finding.sh "b3-invariants" "b3_invariants" "open" "$detail"; then
               echo "::error::Could not record the B3 finding to ops.ci_findings — the violation above would otherwise reach nobody. Check gh-ci-runner@'s table-scoped dataEditor grant on ops.ci_findings (RUNBOOK §6)."
               exit 1
             fi
@@ -277,9 +276,10 @@ jobs:
             # healed (or was created) today would incorrectly stay open forever. Three distinct wrongs
             # from one un-widened guard, not just one.
             detail=$(head -c 4000 /tmp/parity_out.txt)
-            # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted BigQuery
-            # identifier and @p_* named parameters must stay literal, not shell-expanded.
-            if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_detail:STRING:${detail}" --parameter="p_url:STRING:${run_url}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("live-sql-parity","live_sql_parity","open",@p_detail,@p_url)'; then
+            # 2026-08-31 code-quality pass (shell-workflows#0): VALUES-row insert extracted to
+            # scripts/ci_finding.sh (it builds its own run_url; the shell $run_url var above is
+            # still needed by the ARRAY-parameter auto-resolve INSERT..SELECT further below).
+            if ! scripts/ci_finding.sh "live-sql-parity" "live_sql_parity" "open" "$detail"; then
               echo "::error::ops.ci_findings open-row INSERT FAILED on a DRIFT run — the DECLARED single delivery path for live-sql-parity drift (bigquery/67) is broken (WIF is present; verify the gh-ci-runner@ dataEditor grant on ops.ci_findings). Failing the job so a dead bridge is visible, not swallowed."
               exit 1
             fi
@@ -290,8 +290,9 @@ jobs:
                 src=$(jq -r ".findings[$i].source_file" /tmp/findings.json)
                 typ=$(jq -r ".findings[$i].object_type" /tmp/findings.json)
                 detail="live definition does NOT match the final-effective definition in ${src} (${typ})"
-                # shellcheck disable=SC2016 # single-quoted intentionally: see above.
-                if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_key:STRING:${key}" --parameter="p_detail:STRING:${detail}" --parameter="p_url:STRING:${run_url}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("live-sql-parity",@p_key,"open",@p_detail,@p_url)'; then
+                # 2026-08-31 code-quality pass (shell-workflows#0): VALUES-row insert extracted to
+                # scripts/ci_finding.sh.
+                if ! scripts/ci_finding.sh "live-sql-parity" "$key" "open" "$detail"; then
                   echo "::error::ops.ci_findings open-row INSERT FAILED for ${key} on a DRIFT run — the DECLARED single delivery path for live-sql-parity drift (bigquery/67) is broken (WIF is present; verify the gh-ci-runner@ dataEditor grant on ops.ci_findings). Failing the job so a dead bridge is visible, not swallowed."
                   exit 1
                 fi
@@ -306,8 +307,9 @@ jobs:
                 key=$(jq --argjson i "$i" -r '.missing_objects[$i] | capture("^(?<key>\\S+) \\(") | .key' /tmp/findings.json)
                 line=$(jq --argjson i "$i" -r '.missing_objects[$i]' /tmp/findings.json)
                 detail="MISSING: ${line}"
-                # shellcheck disable=SC2016 # single-quoted intentionally: see above.
-                if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_key:STRING:${key}" --parameter="p_detail:STRING:${detail}" --parameter="p_url:STRING:${run_url}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("live-sql-parity",@p_key,"open",@p_detail,@p_url)'; then
+                # 2026-08-31 code-quality pass (shell-workflows#0): VALUES-row insert extracted to
+                # scripts/ci_finding.sh.
+                if ! scripts/ci_finding.sh "live-sql-parity" "$key" "open" "$detail"; then
                   echo "::error::ops.ci_findings open-row INSERT FAILED for ${key} (missing object) on a DRIFT run — the DECLARED single delivery path for live-sql-parity findings (bigquery/67) is broken (WIF is present; verify the gh-ci-runner@ dataEditor grant on ops.ci_findings). Failing the job so a dead bridge is visible, not swallowed."
                   exit 1
                 fi
@@ -400,12 +402,9 @@ jobs:
         if: always() && steps.guard.outputs.skip == 'false'
         run: |
           set -uo pipefail
-          # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted BigQuery
-          # identifier and @p_* named parameters must stay literal, not shell-expanded.
-          if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false \
-            --parameter="p_detail:STRING:bridge alive; parity result=${{ steps.parity.outputs.result }}" \
-            --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("live-sql-parity","__run_marker__","resolved",@p_detail,@p_url)'; then
+          # 2026-08-31 code-quality pass (shell-workflows#0): VALUES-row insert extracted to
+          # scripts/ci_finding.sh.
+          if ! scripts/ci_finding.sh "live-sql-parity" "__run_marker__" "resolved" "bridge alive; parity result=${{ steps.parity.outputs.result }}"; then
             echo "::error::ops.ci_findings liveness-marker INSERT FAILED — cadence_check's ci_findings_bridge_stale detector will read this bridge as DEAD (WIF is present; verify the gh-ci-runner@ dataEditor grant on ops.ci_findings). Failing the job so a dead bridge is visible, not swallowed."
             exit 1
           fi

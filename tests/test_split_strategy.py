@@ -311,3 +311,29 @@ def test_build_promoted_candidate_does_generate_a_slice(tmp_path, monkeypatch):
     )
     assert "02_strategy_f.md" in files
     assert "promoted body" in files["02_strategy_f.md"]
+
+
+# ---- CRLF round-trip (tooling-misc#2) -----------------------------------------------------------
+
+def test_crlf_source_round_trips_unchanged_through_split_and_check(tmp_path, monkeypatch):
+    # BUG FIX (tooling-misc#2, code-quality pass 2026-08-31): read_text() silently normalized a CRLF
+    # source to LF before split() ever saw it, so a CRLF Strategy.md would generate an LF slice while
+    # --check still reported clean (both sides of that comparison ran through the same lossy read) --
+    # contradicting split()'s own "byte-identical for today's tree" claim. Build Strategy.md with real
+    # \r\n line endings on disk (write_bytes, not write_text, so nothing translates them away before
+    # the script even runs) and confirm the CRLFs survive both write and --check.
+    src = tmp_path / "Strategy.md"
+    src.write_bytes(_fixture_text().replace("\n", "\r\n").encode("utf-8"))
+    outdir = tmp_path / "strategy"
+    monkeypatch.setattr(ss, "SRC", str(src))
+    monkeypatch.setattr(ss, "OUTDIR", str(outdir))
+
+    assert ss.main([]) == 0
+    section_one = (outdir / "01_section_one.md").read_bytes()
+    assert b"\r\n" in section_one
+    assert b"Body of section one." in section_one
+    assert b"\r\r\n" not in section_one   # no accidental double-CR from a translate-then-rewrite round trip
+
+    # The generative claim under test: --check on the CRLF source against the CRLF slices it just
+    # wrote is clean, not merely non-crashing.
+    assert ss.main(["--check"]) == 0

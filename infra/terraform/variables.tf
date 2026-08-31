@@ -37,10 +37,25 @@ variable "budget_amount_usd" {
     Monthly budget cap (USD) for the project. Vertex embeddings / Gemini /
     AI.FORECAST are the only billed pieces and are pennies, but the unattended
     scheduled jobs should be capped (ops/RUNBOOK.md §2). Used only when
-    billing_account is set.
+    billing_account is set. WHOLE DOLLARS ONLY — budget.tf's
+    amount.specified_amount.units is a Money-proto integer-part string field
+    (no nanos are set), so a fractional value like 5.50 would either fail
+    provider-side validation or silently drop the cents.
   EOT
   type        = number
   default     = 5
+
+  # BUG FIX (2026-08-31 code-quality pass): budget.tf does
+  # `units = tostring(var.budget_amount_usd)` with no rounding, so an
+  # unvalidated fractional input (e.g. 5.50, a plausible dollar amount and
+  # nothing above forbade it) would produce a non-integer string for a field
+  # that requires a bare integer. Enforce whole-number here instead of
+  # changing the type, since `number` must stay to accept an unquoted literal
+  # in terraform.tfvars.
+  validation {
+    condition     = var.budget_amount_usd == floor(var.budget_amount_usd)
+    error_message = "budget_amount_usd must be a whole number (budget.tf's units field is a whole-currency string; fractional cents belong in a nanos field this module never sets)."
+  }
 }
 
 variable "billing_account" {

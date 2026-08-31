@@ -14,7 +14,7 @@ import warnings
 
 import pytest
 
-from lib.textio import load_yaml, read_bytes, read_text
+from lib.textio import load_yaml, read_bytes, read_text, read_text_preserving_newlines
 
 
 def test_read_text_and_read_bytes_agree_on_a_utf8_file_with_non_ascii_content(tmp_path):
@@ -34,6 +34,33 @@ def test_read_bytes_preserves_exact_bytes_not_a_decode_reencode(tmp_path):
     p = tmp_path / "crlf.md"
     p.write_bytes(raw)
     assert read_bytes(str(p)) == raw
+
+
+def test_read_text_preserving_newlines_does_not_collapse_crlf(tmp_path):
+    # Same failure mode test_read_bytes_preserves_exact_bytes_not_a_decode_reencode guards against
+    # (module docstring, point 1) but for the decoded-text sibling: if this were ever implemented as
+    # `read_text(path)` (or a bare `open(...).read()`), the \r\n here would silently collapse to \n on
+    # read (tooling-misc#2, code-quality pass 2026-08-31 — the exact bug class already fixed once in
+    # scripts/adversarial_review_storage.py::parse_legacy_review, which this function mirrors).
+    raw = "line one\r\nline two\r\n".encode("utf-8")
+    p = tmp_path / "crlf.md"
+    p.write_bytes(raw)
+    assert read_text_preserving_newlines(str(p)) == "line one\r\nline two\r\n"
+
+
+def test_read_text_preserving_newlines_agrees_with_read_text_on_lf_only_content(tmp_path):
+    # For content with no \r bytes at all, the two readers must return identical strings -- this
+    # isn't a special-purpose "CRLF mode", it's the same text minus read_text()'s universal-newline
+    # translation step, which is a no-op when there is nothing for it to translate.
+    text = "spec_hash café — 日本語 \U0001F600\n"
+    p = tmp_path / "unicode.md"
+    p.write_text(text, encoding="utf-8")
+    assert read_text_preserving_newlines(str(p)) == read_text(str(p)) == text
+
+
+def test_read_text_preserving_newlines_raises_for_a_missing_file(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        read_text_preserving_newlines(str(tmp_path / "nope.md"))
 
 
 def test_read_text_raises_for_a_missing_file(tmp_path):

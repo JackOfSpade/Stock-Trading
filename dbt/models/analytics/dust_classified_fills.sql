@@ -4,10 +4,18 @@
 -- The legacy branch preserves the two 2026-07-20 classifications, whose original
 -- decision rows predate that key. It is deliberately frozen to the two observed
 -- fill signatures and emits nothing if either signature is ambiguous.
+-- Canonical source: bigquery/144_decision_log_correction_consumers.sql section (4), which SUPERSEDES
+-- bigquery/123_drip_dust_campaign_exclusion.sql's definition of this object.
+--
+-- BUG FIX (2026-08-31 code-quality pass, dbt#0): the `decisions` CTE reads state.decision_log_current,
+-- not raw events.decision_log — bigquery/144 moved the canonical body onto the anti-joined view,
+-- upstream of the priority/dust_id QUALIFY tie-break (which has no defined preference for a
+-- correction row). Dormant today (no drip-dust classification has been corrected) — structural
+-- hardening, same as the live view's own header says.
 
 WITH decisions AS (
   SELECT entry_id, entry_date, ticker, fields
-  FROM {{ source('events', 'decision_log') }}
+  FROM {{ source('state_external', 'decision_log_current') }}
   WHERE entry_type = 'drip-dust'
 ),
 exact_classifications AS (

@@ -41,9 +41,12 @@ CHECKS
        `COUNT(*) FROM state.strategy_roster ... WHERE r.is_active AND r.adopted_date <= cf.flow_date`
        instead. FAIL naming file:line. (bigquery/04_analytics.sql is the SUPERSEDED/dead strategy_nav — it
        is EXEMPT from this hard check; it should carry an explicit dead-code marker so its stale literal is
-       never mistaken for live.) The adjacency guard resolves simple `<col> AS <alias>` bindings
-       (_money_alias_names(), codebase audit 2026-07-26) so a divisor fed by an ALIASED money column (e.g.
-       `cf.amount AS raw` ... `SUM(raw) / 5`) is still caught — see that function's docstring for the hole
+       never mistaken for live.) The adjacency guard resolves simple `<col> AS <alias>` bindings and a
+       narrow `SUM(<col>) AS <alias>` / `ROUND(SUM(<col>), N) AS <alias>` aggregate form
+       (_money_alias_names(), codebase audit 2026-07-26; aggregate form added roster#3, 2026-08-31) so a
+       divisor fed by an ALIASED money column (e.g. `cf.amount AS raw` ... `SUM(raw) / 5`, or an aggregated
+       alias like `SUM(cf.amount) AS running_total` ... `running_total / 5`) is still caught — see that
+       function's docstring for the hole
        this closes.
 
   R-C  COUNT-AGNOSTIC dbt RECONCILE TEST. dbt/tests/assert_cash_flows_reconcile.sql must not hardcode the
@@ -167,8 +170,25 @@ CHECKS
        located at all (bigquery/166 missing, or its INSERT/UNNEST shape changes), this check prints a NOTE
        saying so instead of failing or crashing.
 
+  R-M  SPEC-HASH MODULE LIST vs REAL IMPORT GRAPH (added 2026-08-31, code-quality pass, finding roster#2).
+       spec_hash_inputs()'s module_paths_by_code dict (this file) is a HAND-MAINTAINED list of
+       which strategy_math/ module(s) each spec-locked code's math hashes cover -- and this exact class of
+       list already rotted once (spec_hash_inputs()'s own docstring: common.py was "silently omitted from
+       the original hash" until the 2026-07-11 adversarial self-audit caught it by inspection, not by any
+       mechanical guard). This check ast-parses (NEVER imports) each covered code's own hashed module(s)
+       for their real `from .X import ...` / `from strategy_math.X import ...` statements and prints a
+       visible, NON-blocking NOTE naming any strategy_math/ submodule a code's hashed files actually import
+       but module_paths_by_code does not list -- same rationale as R-F's own NOTE-only branch and R-L
+       above: this is a coverage-completeness check on a hand-maintained MAPPING, not proof any strategy's
+       CURRENTLY recorded spec_hash is wrong (an edit to the code's own file that ADDS the untracked import
+       already changes that file's bytes, so R-F's ordinary hash-mismatch check independently catches THAT
+       moment; what R-M additionally catches is a LATER edit to the now-depended-on-but-untracked module,
+       which R-F alone would never see). Hard-failing here would turn an ordinary future shared-module
+       refactor into a surprise CI break unconnected to any actual spec_hash mismatch.
+
 Usage:  python scripts/check_roster_consistency.py        # exit 0 if consistent, 1 + diff if not
 """
+import ast
 import glob
 import hashlib
 import os
@@ -333,11 +353,31 @@ BARE_LITERAL = re.compile(r"\[\s*(['\"])[A-Z]{1,3}\1\s*[,\]]")
 FIXED_DIVISOR = re.compile(r"/\s*\d+\b")
 # A SIMPLE `<col> AS <alias>` binding — one identifier, optionally table-qualified (`cf.amount`), followed
 # by `AS <alias>` (case-insensitive). Deliberately restricted to a single bare identifier on the source
-# side (NOT an arbitrary expression like `SUM(amount) AS total` or `a + b AS x`) so alias resolution stays
-# the same precise instrument the audit asked for, rather than a blind widen that would start crediting
-# any expression merely mentioning a money column as "the" money value (R-B / R-C, codebase audit
-# 2026-07-26 — see _money_alias_names()).
+# side (NOT an arbitrary expression like `a + b AS x`) so alias resolution stays the same precise
+# instrument the audit asked for, rather than a blind widen that would start crediting any expression
+# merely mentioning a money column as "the" money value (R-B / R-C, codebase audit 2026-07-26 — see
+# _money_alias_names()). The one narrow exception — `SUM(<col>) AS <alias>` / `ROUND(SUM(<col>), N) AS
+# <alias>` — is resolved separately by MONEY_ALIAS_AGG_BINDING / MONEY_ALIAS_ROUND_SUM_BINDING below
+# (roster#2 code-quality pass, 2026-08-31): a money column aggregated into an alias before a divisor sees
+# it is at least as ordinary a restyle as the bare-column case this regex already covers.
 MONEY_ALIAS_BINDING = re.compile(r"(?:[A-Za-z_]\w*\.)?([A-Za-z_]\w*)\s+AS\s+([A-Za-z_]\w*)", re.I)
+# BUG FIX (roster#3, code-quality pass 2026-08-31 — CI-BLOCKING fixed-divisor fail-open hole, VERIFIED
+# CONFIRMED against a scratch repo copy): MONEY_ALIAS_BINDING's source side is a single bare identifier,
+# so it structurally cannot match `SUM(cf.amount) AS total_deposits` — an ordinary aggregation restyle,
+# not a contrived pattern (bigquery/22_cash_flows.sql:180 already ships the ROUND(SUM(...)) shape below,
+# `ROUND(SUM(amount),2) AS total_deposits`). Left unresolved, a divisor fed by an aggregate-sourced money
+# alias whose name avoids every marker substring (e.g. `running_total`, as the auditor's own reproduction
+# used) reopens the exact hardcoded-roster-size equal-split hole R-B/R-C exist to forbid, with CI green
+# throughout — reproduced end-to-end: `WITH renamed AS (SELECT SUM(cf.amount) AS running_total FROM
+# cash_flows cf) SELECT running_total / 5 ...` printed "ROSTER CONSISTENCY: OK" against the pre-fix code.
+# These two patterns resolve ONLY the narrow `SUM(...)` / `ROUND(SUM(...), N)` aggregate shapes — not an
+# arbitrary arithmetic expression — for the same false-positive reason MONEY_ALIAS_BINDING itself stays
+# narrow (see its own comment above): a blind widen to "any expression mentioning a money column" would
+# start crediting unrelated derived values as money-adjacent, reopening a different false-negative class.
+MONEY_ALIAS_AGG_BINDING = re.compile(
+    r"SUM\(\s*(?:[A-Za-z_]\w*\.)?([A-Za-z_]\w*)\s*\)\s+AS\s+([A-Za-z_]\w*)", re.I)
+MONEY_ALIAS_ROUND_SUM_BINDING = re.compile(
+    r"ROUND\(\s*SUM\(\s*(?:[A-Za-z_]\w*\.)?([A-Za-z_]\w*)\s*\)\s*,\s*\d+\s*\)\s+AS\s+([A-Za-z_]\w*)", re.I)
 # BigQuery type names, excluded from ever being captured as the ALIAS half of a MONEY_ALIAS_BINDING.
 # WHY (codebase audit 2026-07-26, adversarial review of this same fix): `<x> AS <y>` is also the shape of
 # a type cast, so `CAST(cf.amount AS NUMERIC)` matched with source="amount", alias="NUMERIC" — which
@@ -427,8 +467,9 @@ def _divisor_context(txt, m):
 
 def _money_alias_names(txt, markers):
     """R-B / R-C (codebase audit 2026-07-26 — CI-BLOCKING fixed-divisor fail-open hole): the set of alias
-    names in `txt` that a MONEY_ALIAS_BINDING (`<col> AS <alias>`) traces back, transitively, to one of
-    `markers` (e.g. {"amount"} for R-B; {"amount","cash_flow","deposit"} for R-C).
+    names in `txt` that a MONEY_ALIAS_BINDING (`<col> AS <alias>`), MONEY_ALIAS_AGG_BINDING (`SUM(<col>)
+    AS <alias>`), or MONEY_ALIAS_ROUND_SUM_BINDING (`ROUND(SUM(<col>), N) AS <alias>`) traces back,
+    transitively, to one of `markers` (e.g. {"amount"} for R-B; {"amount","cash_flow","deposit"} for R-C).
 
     THE HOLE THIS CLOSES: _divisor_context()'s adjacency window only sees the divisor's own source
     line(s); it never looks at where the money value going into `SUM(...)` originally came from. An
@@ -451,13 +492,18 @@ def _money_alias_names(txt, markers):
     actually IN that window really does trace back to a money column somewhere in the same file, not
     merely because some other line happens to also mention "amount".
 
-    Deliberately restricted to SIMPLE bindings (MONEY_ALIAS_BINDING requires exactly one bare identifier,
-    optionally table-qualified, before `AS`) — an aggregate or arithmetic expression (`SUM(amount) AS
-    total`, `a+b AS x`) is NOT resolved, so this stays "the alias's origin column", not "anything that
-    mentions a money column anywhere in its expression" (which would start crediting unrelated derived
-    values as money-adjacent and reopen a different false-negative class). Resolution is transitive via a
-    fixed-point loop (`cf.amount AS raw` then `raw AS raw2` resolves raw2 too), because a multi-hop rename
-    is no less a restyle than a single hop.
+    Deliberately restricted to SIMPLE bindings PLUS one narrow aggregate shape — MONEY_ALIAS_BINDING
+    requires exactly one bare identifier, optionally table-qualified, before `AS`; MONEY_ALIAS_AGG_BINDING
+    / MONEY_ALIAS_ROUND_SUM_BINDING (roster#2 code-quality pass, 2026-08-31 — closing the aggregate-alias
+    fail-open hole roster#3 found the same pass) additionally resolve `SUM(<col>) AS <alias>` and
+    `ROUND(SUM(<col>), N) AS <alias>`, the two aggregation shapes this repo's own SQL actually ships
+    (bigquery/22_cash_flows.sql:180). An arbitrary OTHER arithmetic expression (`a+b AS x`, `amount * 1.1
+    AS x`) is still NOT resolved, so this stays "the alias's origin column (optionally summed)", not
+    "anything that mentions a money column anywhere in its expression" (which would start crediting
+    unrelated derived values as money-adjacent and reopen a different false-negative class). Resolution is
+    transitive via a fixed-point loop (`cf.amount AS raw` then `raw AS raw2` resolves raw2 too, and
+    `SUM(cf.amount) AS running_total` then `running_total AS rt2` resolves rt2 too), because a multi-hop
+    rename is no less a restyle than a single hop.
 
     File-scoped (re-scans the whole file text, like every other regex check here) rather than
     statement-scoped: DERIVED_LIVE_SQL / DBT_RECONCILE are each a single focused file with one cash-flow
@@ -499,8 +545,13 @@ def _money_alias_names(txt, markers):
     # Drop type-cast matches: `CAST(cf.amount AS NUMERIC)` has the same `<x> AS <y>` shape as a column
     # alias, and crediting the TYPE KEYWORD as a money alias would false-trip this CI-BLOCKING gate on any
     # unrelated divisor elsewhere in the file that happens to sit near another cast to the same type
-    # (SQL_TYPE_NAMES, codebase audit 2026-07-26 — adversarial review of this fix).
+    # (SQL_TYPE_NAMES, codebase audit 2026-07-26 — adversarial review of this fix). Same filter applied to
+    # the two aggregate-shaped binding patterns (roster#3, 2026-08-31) — a `SUM(...) AS <type>` shape is
+    # not realistic SQL, but staying consistent with the bare-binding filter costs nothing.
     bindings = [(s, a) for s, a in MONEY_ALIAS_BINDING.findall(txt) if a.lower() not in SQL_TYPE_NAMES]
+    bindings += [(s, a) for s, a in MONEY_ALIAS_AGG_BINDING.findall(txt) if a.lower() not in SQL_TYPE_NAMES]
+    bindings += [(s, a) for s, a in MONEY_ALIAS_ROUND_SUM_BINDING.findall(txt)
+                 if a.lower() not in SQL_TYPE_NAMES]
     changed = True
     while changed:
         changed = False
@@ -666,6 +717,96 @@ def compute_spec_hash(code, inputs=None):
     for module_path in module_paths:
         h.update(read_bytes(module_path))
     return h.hexdigest()
+
+
+def _local_strategy_math_imports(module_path):
+    """R-M helper (roster#2, code-quality pass 2026-08-31): the set of `strategy_math/<name>.py` paths
+    `module_path` imports from, discovered via ast.parse() — NEVER by importing the module. This is a CI
+    checker, not a runtime consumer, and executing arbitrary module-level code from a checker (side
+    effects, missing runtime deps) has no business happening here; ast.parse() reads the syntax tree
+    without running a single line of it.
+
+    Recognizes both spellings a caller could use: a RELATIVE import from INSIDE the strategy_math/ package
+    itself (`from .common import days_between`, or the bare `from . import common, strategy_a` form each
+    imported NAME is itself a submodule — mirrors strategy_math/__init__.py's own import line), and the
+    equivalent ABSOLUTE spelling (`from strategy_math.common import ...` / `from strategy_math import
+    common`) — the only form a module OUTSIDE the package could ever use, since a relative import requires
+    being inside it (c_options_math.py, C's math module, lives at repo root, not inside strategy_math/).
+
+    Returns an empty set for a module that does not exist or fails to parse — the caller's own
+    file-existence / R-F checks already report that condition elsewhere; this helper stays silent rather
+    than raising a second, redundant error over the same missing/malformed file."""
+    if not os.path.exists(module_path):
+        return set()
+    try:
+        tree = ast.parse(read_text(module_path), filename=module_path)
+    except SyntaxError:
+        return set()
+    found = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ImportFrom):
+            continue
+        if node.level == 1:
+            # from .<name> import ... (module=<name>), or the bare from . import <name1>, <name2>
+            # (module=None — each imported NAME is itself a submodule).
+            names = [node.module] if node.module else [alias.name for alias in node.names]
+        elif node.module == "strategy_math":
+            names = [alias.name for alias in node.names]
+        elif node.module and node.module.startswith("strategy_math."):
+            names = [node.module.split(".", 1)[1]]
+        else:
+            continue
+        found.update(os.path.join(STRATEGY_MATH_DIR, f"{name}.py") for name in names if name)
+    found.discard(module_path)   # a module never depends on itself
+    return found
+
+
+def spec_hash_module_coverage_gaps(spec_inputs=None):
+    """R-M: DETECTIVE check (roster#2, code-quality pass 2026-08-31) that spec_hash_inputs()'s
+    hand-maintained module_paths_by_code entry for each spec-hash-covered code lists every strategy_math/
+    submodule that code's OWN hashed module(s) actually import today — real import graph via
+    _local_strategy_math_imports(), not trust that the hand list kept up.
+
+    THE GAP THIS CLOSES: spec_hash_inputs()'s own docstring already records this exact failure class
+    happening once — common.py was "silently omitted from the original hash" until the 2026-07-11
+    adversarial self-audit caught it by inspection, not by any mechanical guard. If a FUTURE refactor
+    extracts a new shared helper (e.g. strategy_math/sizing.py) and strategy_d.py starts importing it,
+    module_paths_by_code['D'] needs a matching hand-edit — nothing catches the omission today. Editing
+    strategy_d.py to ADD that import statement already changes strategy_d.py's own bytes, so R-F's ordinary
+    hash-mismatch check independently catches THAT one moment (an honest operator recomputes and updates
+    spec_hash right then). What R-F alone would never see is a LATER edit to sizing.py itself: sizing.py is
+    not in module_paths_by_code['D'], so it is not one of the files compute_spec_hash() reads, and D's
+    spec_hash stays valid forever regardless of what happens inside a module D's own code now depends on —
+    a silent violation of the terminate-and-restart-as-new doctrine.
+
+    NON-BLOCKING BY DESIGN, mirroring R-F's own NOTE-only branch for a spec-locked code with no
+    spec_hash_inputs() entry at all (see spec_hash_inputs()'s docstring) and R-L's identical rationale:
+    this is a coverage-completeness check on a HAND-MAINTAINED MAPPING, not proof that any strategy's
+    CURRENTLY recorded spec_hash is wrong today — module_paths_by_code and the real import graph agree
+    right now (verified: A/B/D/E each import only `.common`, already listed; C's c_options_math.py is
+    self-contained and imports nothing from strategy_math/, matching its empty expectation). Hard-failing
+    here would turn an ordinary future shared-module refactor into a surprise CI break disconnected from
+    any actual spec_hash mismatch — the same "de facto gate" concern CLAUDE.md's SISA settled decision
+    raises for R-F's sibling NOTE branch.
+
+    Returns a list of NOTE strings (empty when every covered code's declared module list already includes
+    everything its own hashed modules import)."""
+    spec_inputs = spec_inputs if spec_inputs is not None else spec_hash_inputs()
+    out = []
+    for code, (_md_path, module_paths) in sorted(spec_inputs.items()):
+        declared = set(module_paths)
+        actual = set()
+        for module_path in module_paths:
+            actual |= _local_strategy_math_imports(module_path)
+        missing = sorted(os.path.relpath(p, ROOT) for p in (actual - declared))
+        if missing:
+            out.append(
+                f"R-M: strategy {code!r}'s spec_hash_inputs() module list "
+                f"{[os.path.relpath(p, ROOT) for p in module_paths]} does not include {missing} — at "
+                f"least one of those hashed modules imports it directly (ast-verified), so a future edit "
+                f"to {missing} would NOT move {code}'s recorded spec_hash. Add it to "
+                f"module_paths_by_code[{code!r}] in spec_hash_inputs().")
+    return out
 
 
 def arsenal_rails_sql_consts():
@@ -1235,6 +1376,12 @@ def main():
                 f"strategy with no human step, and hard-failing here would turn this hand-maintained seed "
                 f"into a de facto CI gate on autonomous strategy adoption (CLAUDE.md's settled decision "
                 f"forbids that — same rationale as R-F's own NOTE-only branch).")
+
+    # ---- R-M: spec_hash_inputs()'s hand-maintained module list covers each hashed module's REAL import
+    # graph (2026-08-31 code-quality pass, roster#2) -- see spec_hash_module_coverage_gaps() docstring for
+    # the silent spec-hash blind-spot class this detects and why it stays non-blocking, same rationale as
+    # R-F's own NOTE-only branch / R-L above. Reuses spec_inputs already computed for R-F above.
+    notes.extend(spec_hash_module_coverage_gaps(spec_inputs))
 
     # ---- report ----
     if errors:

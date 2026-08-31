@@ -37,6 +37,7 @@ REAL_STRATEGY_DIR = rc.STRATEGY_DIR
 REAL_STRATEGY_MATH_DIR = rc.STRATEGY_MATH_DIR
 REAL_C_OPTIONS_MATH = rc.C_OPTIONS_MATH
 REAL_SCENARIOS_YAML = rc.SCENARIOS_YAML
+REAL_DECLARED_FREQUENCY_SQL = rc.DECLARED_FREQUENCY_SQL
 
 
 @pytest.fixture
@@ -84,6 +85,13 @@ def repo_copy(tmp_path, monkeypatch):
         shutil.copy(src, dst)
         derived_copies.append(str(dst))
     monkeypatch.setattr(rc, "DERIVED_LIVE_SQL", derived_copies)
+
+    # bigquery/166 (R-L's declared-frequency seed source) — a separately monkeypatchable copy, mirroring
+    # ARSENAL_SQL above, so a shape-rot / coverage-gap test can mutate it without touching the real repo
+    # file (roster#1 test-quality fix, 2026-08-31 code-quality pass — R-L previously had zero test coverage).
+    freq_dst = dst_root / "bigquery" / os.path.basename(REAL_DECLARED_FREQUENCY_SQL)
+    shutil.copy(REAL_DECLARED_FREQUENCY_SQL, freq_dst)
+    monkeypatch.setattr(rc, "DECLARED_FREQUENCY_SQL", str(freq_dst))
 
     (dst_root / "dbt_tests").mkdir()
     dbt_dst = dst_root / "dbt_tests" / "assert_cash_flows_reconcile.sql"
@@ -961,6 +969,85 @@ def test_type_cast_exclusion_does_not_reopen_the_alias_hole(repo_copy):
     assert rc.main() == 1
 
 
+# ---- R-B/R-C: the AGGREGATE-sourced money-alias fail-open hole (roster#3, code-quality pass 2026-08-31,
+#      VERIFIED CONFIRMED). MONEY_ALIAS_BINDING only resolves a SIMPLE `<col> AS <alias>` binding — its
+#      source side must be a single bare identifier — so it structurally cannot match `SUM(cf.amount) AS
+#      total_deposits`, an ordinary aggregation restyle, not a contrived pattern
+#      (bigquery/22_cash_flows.sql:180 already ships the ROUND(SUM(...)) shape live today). Left
+#      unresolved, a divisor fed by an aggregate-sourced money alias whose name avoids every marker
+#      substring sails through R-B/R-C clean — reproduced end-to-end against the pre-fix code (see
+#      MONEY_ALIAS_AGG_BINDING's comment). These fixtures pin the fix
+#      (MONEY_ALIAS_AGG_BINDING / MONEY_ALIAS_ROUND_SUM_BINDING). ----
+def test_fixed_divisor_via_aggregate_alias_in_derived_sql_is_caught(repo_copy):
+    """The exact reproduction from the finding: `SUM(cf.amount) AS running_total` then
+    `running_total / 5` — 'running_total' contains none of R-B's marker substrings, so only alias
+    resolution (not the direct substring check) can catch this."""
+    target = next(p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql"))
+    txt = _read(target)
+    _write(target, txt + (
+        "\n-- regression: money value reaches the divisor via an AGGREGATE alias (SUM), not a bare column\n"
+        "WITH renamed AS (\n"
+        "  SELECT SUM(cf.amount) AS running_total\n"
+        "  FROM cash_flows cf\n"
+        ")\n"
+        "SELECT running_total\n"
+        "  / 5 AS equal_split\n"
+        "FROM renamed;\n"
+    ))
+    assert rc.main() == 1
+
+
+def test_fixed_divisor_via_aggregate_alias_in_dbt_reconcile_is_caught(repo_copy):
+    """Same aggregate-alias fail-open, R-C side (dbt reconcile test)."""
+    p = rc.DBT_RECONCILE
+    txt = _read(p)
+    _write(p, txt + (
+        "\n-- regression: same aggregate-alias restyle in the dbt reconcile test\n"
+        "WITH renamed AS (\n"
+        "  SELECT SUM(cf.amount) AS running_total FROM cash_flows cf\n"
+        ")\n"
+        "SELECT running_total\n"
+        "  / 5 AS expected_share\n"
+        "FROM renamed;\n"
+    ))
+    assert rc.main() == 1
+
+
+def test_fixed_divisor_via_round_sum_alias_is_caught(repo_copy):
+    """The ROUND(SUM(...)) shape this repo actually ships (bigquery/22_cash_flows.sql:180's
+    `ROUND(SUM(amount),2) AS total_deposits`) must resolve too, not just bare SUM(...)."""
+    target = next(p for p in rc.DERIVED_LIVE_SQL if p.endswith("22_cash_flows.sql"))
+    txt = _read(target)
+    _write(target, txt + (
+        "\n-- regression: ROUND(SUM(...)) aggregate alias, the exact shape bigquery/22 already ships\n"
+        "WITH renamed AS (\n"
+        "  SELECT ROUND(SUM(amount),2) AS grand_total\n"
+        "  FROM cash_flows\n"
+        ")\n"
+        "SELECT grand_total\n"
+        "  / 5 AS equal_split\n"
+        "FROM renamed;\n"
+    ))
+    assert rc.main() == 1
+
+
+def test_aggregate_alias_over_unrelated_column_does_not_false_fail(repo_copy):
+    """The aggregate-alias fix must not start crediting SUM(...) over an UNRELATED (non-money) column as
+    money-adjacent, mirroring test_unrelated_alias_near_unrelated_divisor_does_not_false_fail above."""
+    target = next(p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql"))
+    txt = _read(target)
+    _write(target, txt + (
+        "\n-- SUM over an unrelated (non-money) column must not be treated as money\n"
+        "WITH renamed AS (\n"
+        "  SELECT SUM(strategy_count) AS n FROM active\n"
+        ")\n"
+        "SELECT n\n"
+        "  / 5 AS not_a_money_split\n"
+        "FROM renamed;\n"
+    ))
+    assert rc.main() == 0
+
+
 # ---- R-E: the cooldown_days sub-block (a SEPARATE comparison loop from the top-level rails) —
 #      both the mismatch and the missing-key vacuous-pass directions (2026-07-17 audit) ----
 def test_cooldown_rail_disagreement_is_caught(repo_copy):
@@ -1319,6 +1406,133 @@ def test_slicemap_reads_last_section_to_eof(tmp_path, monkeypatch):
     )
     monkeypatch.setattr(rc, "PLAN", str(plan))
     assert rc.slicemap_codes() == {"A", "B"}
+
+
+# =====================================================================================================
+# R-L: declared-frequency seed coverage (added 2026-08-11) had ZERO test coverage — roster#1, code-quality
+# pass 2026-08-31. Mirrors the R-A UNNEST_SEED_BLOCK / R-E RAIL_CONST regex-rot precedent: (1) a happy-path
+# check against the real fixture, (2) a shape-rot guard so a regex that stops matching degrades LOUDLY (a
+# visible NOTE), not silently, and (3) a coverage-gap guard naming the specific missing code.
+# =====================================================================================================
+def test_declared_frequency_seed_codes_happy_path():
+    # Direct unit-level check against the REAL repo file (roster_active_codes() also currently == this
+    # set today) — mirrors seed_active_codes()'s own precedent of an un-fixtured direct-repo assertion.
+    assert rc.declared_frequency_seed_codes() == {"A", "B", "C", "D", "E"}
+
+
+def test_declared_frequency_seed_block_shape_rot_is_caught(repo_copy, capsys):
+    # Break the block's own anchor (the `AS seed` alias DECLARED_FREQUENCY_SEED_BLOCK requires) so the
+    # regex no longer matches at all — declared_frequency_seed_codes() must return None (not silently
+    # empty), and main() must print the "could not locate" NOTE rather than going dark with zero signal.
+    p = rc.DECLARED_FREQUENCY_SQL
+    txt = _read(p)
+    assert "]) AS seed" in txt, "fixture assumption about bigquery/166's seed block alias drifted"
+    _write(p, txt.replace("]) AS seed", "]) AS renamed_seed"))
+    assert rc.declared_frequency_seed_codes() is None
+    rc_code = rc.main()
+    out = capsys.readouterr().out
+    assert rc_code == 0, "R-L is non-blocking by design (CLAUDE.md SISA posture) — must not fail the build"
+    assert "R-L" in out and "could not locate" in out
+
+
+def test_declared_frequency_seed_coverage_gap_is_caught(repo_copy, capsys):
+    # Remove strategy E's seed STRUCT row entirely (E stays roster-active per every other surface) — the
+    # NOTE must name E specifically, non-blocking (exit 0), matching R-F's own NOTE-only branch.
+    p = rc.DECLARED_FREQUENCY_SQL
+    txt = _read(p)
+    old = ("  STRUCT('E', '6-12 pair theses per year (12-24 trades counting both legs).', "
+           "'strategy/07_strategy_e.md:68', FALSE)\n")
+    assert old in txt, "fixture assumption about bigquery/166's E seed row shape drifted"
+    _write(p, txt.replace(old, ""))
+    assert rc.declared_frequency_seed_codes() == {"A", "B", "C", "D"}
+    rc_code = rc.main()
+    out = capsys.readouterr().out
+    assert rc_code == 0, "R-L is non-blocking by design — a coverage gap must not fail the build"
+    assert "R-L" in out and "'E'" in out and "state.strategy_declared_frequency" in out
+
+
+# =====================================================================================================
+# R-M: spec_hash_inputs()'s hand-maintained module list vs each hashed module's REAL import graph —
+# roster#2, code-quality pass 2026-08-31.
+# =====================================================================================================
+def test_local_strategy_math_imports_recognizes_absolute_form(tmp_path):
+    """_local_strategy_math_imports() must recognize the ABSOLUTE import spelling (`from strategy_math.X
+    import ...` / `from strategy_math import X`) — the only form a module OUTSIDE the strategy_math/
+    package (like c_options_math.py, which lives at repo root) could ever use, since a relative import
+    requires being inside the package."""
+    mod = tmp_path / "outside_pkg.py"
+    mod.write_text(
+        "from strategy_math.common import days_between\nfrom strategy_math import strategy_a\n",
+        encoding="utf-8",
+    )
+    found = rc._local_strategy_math_imports(str(mod))
+    assert found == {
+        os.path.join(rc.STRATEGY_MATH_DIR, "common.py"),
+        os.path.join(rc.STRATEGY_MATH_DIR, "strategy_a.py"),
+    }
+
+
+def test_local_strategy_math_imports_recognizes_relative_bare_form(tmp_path, monkeypatch):
+    """The `from . import common, strategy_a` bare-relative form (no explicit dotted module) must resolve
+    each imported NAME as its own submodule, mirroring strategy_math/__init__.py's own import line."""
+    monkeypatch.setattr(rc, "STRATEGY_MATH_DIR", str(tmp_path))
+    mod = tmp_path / "inside_pkg.py"
+    mod.write_text("from . import common, strategy_a\n", encoding="utf-8")
+    found = rc._local_strategy_math_imports(str(mod))
+    assert found == {str(tmp_path / "common.py"), str(tmp_path / "strategy_a.py")}
+
+
+def test_local_strategy_math_imports_ignores_unrelated_and_missing_modules(tmp_path):
+    """A stdlib import and a from-elsewhere-package import must not be mistaken for a strategy_math/
+    dependency, and a module path that does not exist must return an empty set rather than crash (the
+    caller's own R-F file-existence check already reports a missing hashed module elsewhere)."""
+    mod = tmp_path / "mixed_imports.py"
+    mod.write_text("import math\nfrom dataclasses import dataclass\nfrom typing import List\n",
+                    encoding="utf-8")
+    assert rc._local_strategy_math_imports(str(mod)) == set()
+    assert rc._local_strategy_math_imports(str(tmp_path / "does_not_exist.py")) == set()
+
+
+def test_module_coverage_gap_is_empty_against_the_real_repo():
+    """Sanity: today's real repo has zero R-M coverage gaps — A/B/D/E each import only
+    strategy_math/common.py (already listed in module_paths_by_code), and C's c_options_math.py imports
+    nothing from strategy_math/ at all (self-contained, per its own docstring)."""
+    assert rc.spec_hash_module_coverage_gaps() == []
+
+
+def test_module_coverage_gap_detects_untracked_import(repo_copy):
+    """spec_hash_module_coverage_gaps() must name the code + missing module when a spec-hash-covered
+    strategy's own hashed file imports a strategy_math/ submodule that module_paths_by_code does not list
+    — reproduces the exact drift class spec_hash_inputs()'s own docstring records already happened once
+    (common.py silently omitted from the original hash until the 2026-07-11 adversarial self-audit caught
+    it by inspection, not by any mechanical guard)."""
+    p = os.path.join(rc.STRATEGY_MATH_DIR, "strategy_a.py")
+    txt = _read(p)
+    assert "from .common import days_between" in txt, "fixture assumption about strategy_a.py's import drifted"
+    _write(p, txt + "\nfrom .sizing import position_size  # test-only untracked import\n")
+    gaps = rc.spec_hash_module_coverage_gaps()
+    assert any("'A'" in g and "sizing.py" in g for g in gaps)
+
+
+def test_module_coverage_gap_note_is_non_blocking_even_after_spec_hash_is_kept_current(repo_copy, capsys):
+    """R-M is non-blocking (main() == 0) even in the case that would make it matter most: the operator
+    dutifully recomputed A's spec_hash after adding the untracked import (so R-F itself reports clean),
+    but module_paths_by_code['A'] was never told about the new module — the exact silent spec-hash
+    blind-spot R-M exists to surface as a visible NOTE, not a build failure (mirrors R-F's own NOTE-only
+    branch for a spec-locked code missing a spec_hash_inputs() entry entirely)."""
+    p = os.path.join(rc.STRATEGY_MATH_DIR, "strategy_a.py")
+    txt = _read(p)
+    assert "from .common import days_between" in txt, "fixture assumption about strategy_a.py's import drifted"
+    _write(p, txt + "\nfrom .sizing import position_size  # test-only untracked import\n")
+    # Recompute + write the now-correct spec_hash for A so R-F itself reports clean, isolating R-M's note.
+    new_hash = rc.compute_spec_hash("A")
+    roster_txt = _read(rc.ROSTER)
+    _old_line, old_hash = _first_spec_hash_line(roster_txt)
+    _write(rc.ROSTER, roster_txt.replace(old_hash, new_hash))
+    rc_code = rc.main()
+    out = capsys.readouterr().out
+    assert rc_code == 0, "R-M must not fail the build on its own"
+    assert "R-M" in out and "'A'" in out and "sizing.py" in out
 
 
 if __name__ == "__main__":

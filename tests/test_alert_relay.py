@@ -246,23 +246,30 @@ def test_main_heartbeat_mode_success_returns_zero(monkeypatch):
 
 # ---- post(): ntfy.sh gets a plain-text body, everything else keeps the JSON shape (OAE-6) -------
 
-def test_post_ntfy_url_sends_plain_text_body(monkeypatch):
-    monkeypatch.setattr(ar, "WEBHOOK_URL", "https://ntfy.sh/stock-trading-testtopic")
-    captured = {}
+# DEDUP FIX (2026-08-31 code-quality pass): the two tests below each used to define their own
+# byte-identical local `_FakeResp` class + `_fake_urlopen` closure. Hoisted to module level, one
+# definition reused by both -- mirroring tests/test_golden_scenarios_runner.py's module-level
+# `_FakeResp`, which solves this same "fake the urlopen() response" problem the same way.
+class _FakeResp:
+    status = 200
+    def __enter__(self):
+        return self
+    def __exit__(self, *a):
+        return False
 
-    class _FakeResp:
-        status = 200
-        def __enter__(self):
-            return self
-        def __exit__(self, *a):
-            return False
 
+def _capturing_urlopen(captured):
     def _fake_urlopen(req, timeout=None):
         captured["data"] = req.data
         captured["headers"] = dict(req.header_items())
         return _FakeResp()
+    return _fake_urlopen
 
-    monkeypatch.setattr(ar.urllib.request, "urlopen", _fake_urlopen)
+
+def test_post_ntfy_url_sends_plain_text_body(monkeypatch):
+    monkeypatch.setattr(ar, "WEBHOOK_URL", "https://ntfy.sh/stock-trading-testtopic")
+    captured = {}
+    monkeypatch.setattr(ar.urllib.request, "urlopen", _capturing_urlopen(captured))
     status = ar.post("hello from the test")
     assert status == 200
     assert captured["data"] == b"hello from the test"
@@ -272,20 +279,7 @@ def test_post_ntfy_url_sends_plain_text_body(monkeypatch):
 def test_post_non_ntfy_url_still_sends_json_body(monkeypatch):
     monkeypatch.setattr(ar, "WEBHOOK_URL", "https://example.invalid/hook")
     captured = {}
-
-    class _FakeResp:
-        status = 200
-        def __enter__(self):
-            return self
-        def __exit__(self, *a):
-            return False
-
-    def _fake_urlopen(req, timeout=None):
-        captured["data"] = req.data
-        captured["headers"] = dict(req.header_items())
-        return _FakeResp()
-
-    monkeypatch.setattr(ar.urllib.request, "urlopen", _fake_urlopen)
+    monkeypatch.setattr(ar.urllib.request, "urlopen", _capturing_urlopen(captured))
     ar.post("hello")
     assert json.loads(captured["data"]) == {"text": "hello"}
     assert captured["headers"]["Content-type"] == "application/json"

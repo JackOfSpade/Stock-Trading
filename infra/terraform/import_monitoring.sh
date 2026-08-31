@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 # Adopt the Console-created scheduler heartbeat monitors into Terraform state, so
 # infra/terraform/monitoring.tf OWNS the log metrics + alert policies + email channel
-# (freshness, backup, cadence) that previously lived ONLY in the Console — the exact
-# gap that caused the 2026-06-20 false alarm (ops/RUNBOOK.md §19). Idempotent: an
-# address already in state is skipped, and a failed single import does not abort the rest.
+# (freshness, backup, cadence, integrity_check, ops_export — all five active keys of
+# local.scheduler_absence_monitors; CORRECTED 2026-08-31, this used to list only three,
+# but the other two ship with non-empty config_id defaults and so are active for_each
+# entries too, per monitoring.tf's own header) that previously lived ONLY in the
+# Console — the exact gap that caused the 2026-06-20 false alarm (ops/RUNBOOK.md §19).
+# Idempotent: an address already in state is skipped, and a failed single import does
+# not abort the rest.
 #
 # WHERE TO RUN: from infra/terraform/, in a GCP-authenticated shell with Terraform +
 # gcloud installed (e.g. Cloud Shell). It CANNOT run in a Claude session container
@@ -76,13 +80,28 @@ import_policy() { # $1 = terraform address, $2 = policy display_name
 import_if_absent 'google_logging_metric.scheduler_run["freshness"]' freshness_scheduled_run
 import_if_absent 'google_logging_metric.scheduler_run["backup"]'    backup_scheduled_run
 import_if_absent 'google_logging_metric.scheduler_run["cadence"]'   cadence_scheduled_run
+# BUG FIX (2026-08-31 code-quality pass): integrity_check/ops_export were missing here even
+# though monitoring.tf's local.scheduler_absence_monitors map (and this script's own header,
+# above) has always included them — both ship with non-empty hardcoded config_id defaults, so
+# they are ACTIVE for_each keys today, not skipped. Without importing these two, the script's
+# own promised "terraform plan: 0 changes" was false: plan would propose creating a second copy
+# of resources that already exist live in the Console, and apply would fail on name collision.
+import_if_absent 'google_logging_metric.scheduler_run["integrity_check"]' integrity_check_scheduled_run
+import_if_absent 'google_logging_metric.scheduler_run["ops_export"]'      ops_export_scheduled_run
 
 # 2) Alert policies — resolved to projects/<num>/alertPolicies/<id> by display name.
 import_policy 'google_monitoring_alert_policy.scheduler_absent["freshness"]' "Freshness scheduler absent >25h"
 import_policy 'google_monitoring_alert_policy.scheduler_absent["backup"]'    "Backup scheduler absent >25h"
 import_policy 'google_monitoring_alert_policy.scheduler_absent["cadence"]'   "Cadence scheduler absent >25h"
+# BUG FIX (2026-08-31 code-quality pass): see the matching log-metric fix above — same two
+# monitors, missing alert-policy import. Display names per monitoring.tf's
+# local.scheduler_absence_monitors["integrity_check"/"ops_export"].alert_display_name.
+import_policy 'google_monitoring_alert_policy.scheduler_absent["integrity_check"]' "Integrity-check scheduler absent >25h"
+import_policy 'google_monitoring_alert_policy.scheduler_absent["ops_export"]'      "ops-export scheduler absent >25h"
 
-# 3) Email notification channel — resolved by email label, shared by all three policies.
+# 3) Email notification channel — resolved by email label, shared by all five policies
+# (updated 2026-08-31 to match the two policies added above; see monitoring.tf's
+# local.scheduler_alert_channels, which every scheduler_absent[*] policy notifies).
 channel_name="$(gcloud alpha monitoring channels list \
   --project="$PROJECT_ID" \
   --filter="type=email AND labels.email_address=\"$CHANNEL_EMAIL\"" \

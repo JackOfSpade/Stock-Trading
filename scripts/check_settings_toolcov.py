@@ -27,16 +27,18 @@ coverage; it only proves the full-token subset is covered.
 
 Usage:  python scripts/check_settings_toolcov.py    # exit 0 if covered, 1 + diff if not
 """
-import json
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # Shared with scripts/check_connector_tools.py -- the two gates sit on opposite sides of the same
 # "what is an mcp__ tool token" question and must never disagree. See lib/mcp_tokens.py for why the
-# two byte-identical private copies this replaced were a drift hazard (quality pass 2026-08-22).
-# Re-exported under this module's own name so `stc.MCP_TOKEN` keeps working for callers and tests.
-from lib.mcp_tokens import MCP_TOKEN
+# two byte-identical private copies this replaced were a drift hazard (quality pass 2026-08-22), and
+# for load_allow_entries(), which replaced this file's own byte-identical copy of the
+# open/json.load/permissions.allow extraction check_connector_tools.py also carried (cross-cutting#1,
+# 2026-08-31 code-quality pass). Re-exported under this module's own name so `stc.MCP_TOKEN` keeps
+# working for callers and tests.
+from lib.mcp_tokens import MCP_TOKEN, load_allow_entries
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TASK_PLAN = os.path.join(ROOT, "Claude_Task_Plan.md")
@@ -69,18 +71,19 @@ def load_allowlist():
     That strictness is intentional and must not be relaxed — the harness does not expand such grants
     into per-tool approvals at call time, so honoring them here would pass a tool that would still
     stall an unattended session (a false negative). Every tool a routine calls must be listed explicitly.
+
+    Delegates the actual read/parse to lib.mcp_tokens.load_allow_entries(mcp_only=True) -- shared
+    with check_connector_tools.py's load_allow_set(), which used to carry a byte-identical copy of
+    this open/json.load/`.get("permissions", {}).get("allow", [])` extraction (cross-cutting#1,
+    2026-08-31 code-quality pass). `mcp_only=True` there keeps this function's own filtering intact:
+    `isinstance(a, str)` guards a malformed non-string entry (e.g. a dict) so this gate reports
+    cleanly instead of crashing with a TypeError; the fullmatch filter drops non-tool permission
+    strings (e.g. Bash(...)) and any `mcp__Server__*` WILDCARD grant. A bare server-level
+    `mcp__Server` entry is shape-indistinguishable from a tool token and is kept by this filter, but
+    it can never satisfy a referenced `mcp__Server__tool` because coverage is an exact-string
+    membership test — so the strictness the paragraph above describes holds either way.
     """
-    with open(SETTINGS_JSON, encoding="utf-8") as f:
-        data = json.load(f)
-    allow = data.get("permissions", {}).get("allow", [])
-    # Keep only entries that are exact MCP tool tokens. `isinstance(a, str)` guards a malformed
-    # non-string entry (e.g. a dict) so this gate reports cleanly instead of crashing with a
-    # TypeError; the fullmatch filter drops non-tool permission strings (e.g. Bash(...)) and any
-    # `mcp__Server__*` WILDCARD grant. A bare server-level `mcp__Server` entry is shape-
-    # indistinguishable from a tool token and is kept by this filter, but it can never satisfy a
-    # referenced `mcp__Server__tool` because coverage is an exact-string membership test — so the
-    # strictness the docstring above describes holds either way.
-    return {a for a in allow if isinstance(a, str) and MCP_TOKEN.fullmatch(a)}
+    return load_allow_entries(SETTINGS_JSON, mcp_only=True)
 
 
 def main():

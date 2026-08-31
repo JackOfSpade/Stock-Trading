@@ -13,6 +13,10 @@
 # Usage:  BUCKET=gs://my-bucket scripts/backup_events.sh
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=bq_csv.sh
+source "$SCRIPT_DIR/bq_csv.sh"
+
 PROJECT="${PROJECT:-stock-trading-498512}"
 BUCKET="${BUCKET:?Set BUCKET, e.g. BUCKET=gs://stock-trading-backups}"
 STAMP="$(date -u +%Y-%m-%d)"
@@ -22,14 +26,13 @@ command -v bq >/dev/null || { echo "bq CLI not found (install Google Cloud SDK)"
 # Every table in the append-only events dataset (the irreplaceable substrate).
 # INFORMATION_SCHEMA.TABLES, not `bq ls`'s human-readable text output -- immune to a future bq
 # CLI output-format change (header-count/column-order), unlike the columnar-text-parse this
-# replaced. Matches restore_drill.sh's own table-enumeration query exactly, including the explicit
-# --max_rows: bq's built-in default is 100 rows, which would silently drop the alphabetically-last
-# tables once the dataset grows past 100 -- the same silent-incompleteness class the guard below
-# exists for.
-TABLES="$(bq --project_id="$PROJECT" query --use_legacy_sql=false --format=csv --quiet --headless \
-          --max_rows=100000 \
-          "SELECT table_name FROM \`${PROJECT}.events.INFORMATION_SCHEMA.TABLES\` WHERE table_type='BASE TABLE' ORDER BY table_name" \
-          | tail -n +2)"
+# replaced. bq_list_events_tables() (scripts/bq_csv.sh, extracted 2026-08-31 -- shell-workflows#1)
+# is the SAME function scripts/restore_drill.sh calls for its own table enumeration, so the two
+# scripts can no longer drift the way a hand-copied comment promise could not actually prevent;
+# see that file's header for the --max_rows=100000 rationale (bq's built-in default is 100 rows,
+# which would silently drop the alphabetically-last tables once the dataset grows past 100 -- the
+# same silent-incompleteness class the guard below exists for).
+TABLES="$(bq_list_events_tables "$PROJECT")"
 
 # A genuinely-empty events dataset, a wrong PROJECT, or a query that succeeds with zero rows
 # would otherwise silently back up ZERO tables and still print "Done." with exit 0 (2026-07-14

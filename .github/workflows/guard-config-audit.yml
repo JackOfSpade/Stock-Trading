@@ -178,9 +178,9 @@ jobs:
           # (OWNER_ACTIONS.md); GH issue path above is unaffected either way.
           if [ "$WIF_LIVE" = "true" ]; then
             detail=$(head -c 4000 /tmp/loadbearing.txt)
-            # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted BigQuery
-            # identifiers and @p_detail/@p_url named parameters must stay literal, not shell-expanded.
-            bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_detail:STRING:${detail}" --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("guard-config-audit","guard_config","open",@p_detail,@p_url)' || echo "::warning::ops.ci_findings insert failed — bridge inactive until the gh-ci-runner@ grant lands (OWNER_ACTIONS.md); GH issue path unaffected."
+            # 2026-08-31 code-quality pass (shell-workflows#0): VALUES-row insert extracted to
+            # scripts/ci_finding.sh; this call keeps its own fail-soft wrapper.
+            scripts/ci_finding.sh "guard-config-audit" "guard_config" "open" "$detail" || echo "::warning::ops.ci_findings insert failed — bridge inactive until the gh-ci-runner@ grant lands (OWNER_ACTIONS.md); GH issue path unaffected."
           fi
           exit 1   # surface red in the Actions tab too
 
@@ -212,7 +212,7 @@ jobs:
           # own WIF auth ran) so a manually-closed GH issue never strands an open ops.ci_findings row.
           # Non-fatal until the grant lands; skipped cleanly (no bq CLI) when WIF vars are unset.
           if [ "$WIF_LIVE" = "true" ]; then
-            # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted BigQuery
-            # identifier and @p_url named parameter must stay literal, not shell-expanded.
-            bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("guard-config-audit","guard_config","resolved","audit clean this run",@p_url)' || echo "::warning::ops.ci_findings resolved-row insert failed — bridge inactive until the gh-ci-runner@ grant lands; GH issue path unaffected."
+            # 2026-08-31 code-quality pass (shell-workflows#0): VALUES-row insert extracted to
+            # scripts/ci_finding.sh; this call keeps its own fail-soft wrapper.
+            scripts/ci_finding.sh "guard-config-audit" "guard_config" "resolved" "audit clean this run" || echo "::warning::ops.ci_findings resolved-row insert failed — bridge inactive until the gh-ci-runner@ grant lands; GH issue path unaffected."
           fi

@@ -1,6 +1,7 @@
 -- Parallel-run dbt port of bigquery/116_decision_record_analyzability.sql section (B):
--- analytics.thesis_outcomes — canonical source is that file until owner cutover (was
--- bigquery/102_pyramid_aware_lifecycle.sql).
+-- analytics.thesis_outcomes — canonical source is bigquery/144_decision_log_correction_consumers.sql
+-- section (3) (which SUPERSEDES bigquery/123_drip_dust_campaign_exclusion.sql, which superseded 116,
+-- which superseded bigquery/102_pyramid_aware_lifecycle.sql) until owner cutover.
 -- One row per thesis-construction decision, joined to its position outcome (realized P&L from
 -- the curated fills) + the prevailing fundamental regime. `was_profitable` is the supervised
 -- label for the future conviction model — NULL until the position CLOSES (open positions are
@@ -37,6 +38,14 @@
 --      percent) -- substrate for analytics.conviction_pct_calibration.
 -- New columns are appended LAST (is_go_family, conviction_pct, conviction_pct_normalized,
 -- campaign_key, paired_by_fk) so existing column order / any positional consumer is unaffected.
+--
+-- BUG FIX (2026-08-31 code-quality pass, dbt#0): the `theses` CTE reads state.decision_log_current,
+-- not raw events.decision_log — bigquery/144 (2026-08-06) moved the canonical body onto the
+-- anti-joined view specifically because an entry-type-preserving correction to a thesis-construction
+-- row would otherwise double the GO it corrects (bigquery/144's header names the live 38ff17a6 /
+-- ba8a060c MDT correction as the concrete case). This dbt port had been left reading the raw table
+-- for 25 days with zero CI coverage of the gap (scripts/check_superseded_by_discipline.py only scans
+-- bigquery/, never dbt/).
 
 WITH theses AS (
   SELECT entry_id, entry_date, strategy, ticker, conviction, conviction_pct, sub_pattern, decision, title,
@@ -49,7 +58,7 @@ WITH theses AS (
     -- Scale-normalized conviction probability. SEVEN historical rows stored a 0-1 fraction where the
     -- other 70 stored 0-100 percent; 0 is left alone (0 is 0 on either scale).
     IF(conviction_pct > 0 AND conviction_pct <= 1, conviction_pct * 100, conviction_pct) AS conviction_pct_normalized
-  FROM {{ source('events', 'decision_log') }}
+  FROM {{ source('state_external', 'decision_log_current') }}
   WHERE entry_type IN ('thesis-construction', 'thesis')
 ),
 regime_axis AS (

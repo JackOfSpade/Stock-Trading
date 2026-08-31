@@ -15,6 +15,7 @@ import bisect
 import os
 
 from lib.sql_files import (
+    DBT_DATASETS,
     OBJECT_DDL,
     line_offsets,
     normalize_kind,
@@ -242,6 +243,24 @@ def test_object_ddl_table_function_is_not_shadowed_by_the_shorter_table_alternat
     m = OBJECT_DDL.search(ddl)
     assert m is not None
     assert normalize_kind(m.group(1)) == "TABLE FUNCTION"
+
+
+# ---- DBT_DATASETS: shared by dbt_parity.py (as DATASET_FOLDERS) and check_dbt_view_coverage.py -----
+# (as DATASETS) (sql-parity#0 dedup, 2026-08-31 code-quality pass)
+
+def test_dbt_datasets_contains_exactly_the_three_covered_datasets():
+    assert set(DBT_DATASETS) == {"state", "perf", "analytics"}
+
+
+def test_dbt_datasets_preserves_dbt_parity_original_order():
+    # ORDER PIN: dbt_parity.py's compiled_models() drives this tuple as the model-PROCESSING
+    # order, and its main() aggregates the printed skipped/errors/diffs lists in that same order
+    # (see check_one_model()'s docstring) for a deterministic report — so a reordering here would
+    # silently reorder that report. check_dbt_view_coverage.py is order-indifferent (every use is
+    # a for-loop into a `set` or an `in` test, and every printed list already goes through
+    # `sorted()`), so this pins dbt_parity.py's pre-consolidation order, ("state", "perf",
+    # "analytics"), not the alphabetically-tidier one check_dbt_view_coverage.py used to have.
+    assert DBT_DATASETS == ("state", "perf", "analytics")
 
 
 def test_object_ddl_ignores_if_not_exists_and_a_different_project():

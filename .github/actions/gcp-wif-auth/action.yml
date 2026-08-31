@@ -4,10 +4,16 @@ description: >-
   setup (google-github-actions/setup-gcloud@v3) — the boilerplate shared by every workflow that talks
   to GCP as the read-only WIF CI identity (ops/RUNBOOK.md §6). Extracted 2026-07-04 (code-quality
   audit): this exact "gate on WIF vars -> auth -> setup-gcloud" triptych was duplicated near-verbatim
-  across 7 workflow occurrences (alert-relay.yml; ci.yml's dbt-parity + sql-validate jobs;
-  dashboard.yml; keyless-sa-audit.yml; offsite-backup.yml; wif-binding-audit.yml).
+  across 7 workflow occurrences at the time (alert-relay.yml; ci.yml's then-separate dbt-parity +
+  sql-validate jobs; dashboard.yml; keyless-sa-audit.yml; offsite-backup.yml; wif-binding-audit.yml).
+  COUNT UPDATED (2026-08-31 code-quality pass): 12 workflow files call this action today — confirmed
+  via `grep -rl 'uses: ./.github/actions/gcp-wif-auth' .github/workflows/*.yml` — alert-relay.yml,
+  auto-merge-claude.yml, ci.yml (once, inside the single warehouse-validation job; the dbt-parity and
+  sql-validate jobs above were merged away by the 2026-07-30 job consolidation, CLAUDE.md), dashboard.yml,
+  guard-config-audit.yml, keyless-sa-audit.yml, live-sql-parity.yml, offsite-backup.yml,
+  owner-actions-verify.yml, sql-dryrun-sweep.yml, stranded-branch-check.yml, wif-binding-audit.yml.
 #
-# CALLER CONTRACT: each of the 7 call sites has its OWN distinct extra gating condition (an opt-in
+# CALLER CONTRACT: each of the 12 call sites has its OWN distinct extra gating condition (an opt-in
 # repo var, a secret, a mode) beyond "are the WIF vars set" — those stay in the calling workflow's own
 # guard step, unchanged. A composite action cannot set a job-level `if:` from inside itself, so the
 # caller should keep gating the step that `uses:` this action (e.g.

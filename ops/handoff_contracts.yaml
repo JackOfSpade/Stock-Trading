@@ -112,6 +112,17 @@ excluded_queues:
 # for this check to assert about it either way.
 required_column_naming:
   write_targets:
+    # BUG FIX (2026-08-31 code-quality pass, contracts#0): CREATE_TABLE_RE used to be hardcoded to
+    # (events|ops), so every analytics./perf./state. table below was structurally invisible to CHECK
+    # B's completeness sweep -- these entries are the newly-surfaced tables classified after widening
+    # the regex (scripts/check_handoff_contracts.py). See the CHECK B docstring's own comment on the
+    # widened alternation for why analytics.review_embeddings/decision_embeddings (CREATE ... AS, no
+    # parenthesized column list) and the events_restore_drill FORMAT-string LIKE table still don't
+    # match -- neither has anything for this check to see either way.
+    - table: analytics.deployed_twr_forecast
+      why: "M5 STEP 2/4 literally composes run_date = CURRENT_DATE('America/Denver') and series ('deployed_unit_value'|'excess_vs_sgov'|a macro metric name) on every INSERT INTO analytics.deployed_twr_forecast (bigquery/06_forecast.sql); both required columns are already named at the M5 write-site text."
+    - table: analytics.strategy_incubation_perf
+      why: "SL3's own analytics.strategy_incubation_perf WRITE CONTRACT bullet (2026-08-19 diligence sweep) already pins this table's three NOT NULL columns -- strategy_code, phase ('shadow'|'paper', a literal SL3 chooses per write) and incubation_day -- as SL3's exclusive write surface; the CREATE_TABLE_RE gap this fix closes is exactly what kept CHECK B from ever being able to verify that pin."
     - table: events.cash_flow_candidates
       why: "D2a's withdrawal-detection FIRST PASS composes this row directly (status/direction/amount literals)."
     - table: events.cash_flows
@@ -142,6 +153,19 @@ required_column_naming:
       why: "SL2 route (C) authors the post-mortem record on a TERMINATED transition."
     - table: events.strategy_research_leads
       why: "SL1 STEP 2 and A3's arsenal-handoff bullet write research leads here (the WRITE CONTRACT pinned 2026-08-19, defect instance 6)."
+    - table: state.expected_scheduled_query_versions
+      why: "D3's monitor-promotion step bumps 'the matching state.expected_scheduled_query_versions row (bigquery/63)' in the same commit as a live procedure re-apply; sq_name/expected_version are the row's own NOT NULL columns and both already appear in Claude_Task_Plan.md's D3 drift-check text (state.scheduled_query_version_drift read)."
+    - table: state.param_change_provenance
+      why: >
+        W5's CALIBRATION-PARAMETER REVIEW bullet (loop calibration_parameter_carveout) does a literal,
+        hand-composed INSERT (never SP-wrapped) of a REVERT or CHANGE row into this table on every
+        auto-revert / self-apply cycle -- exactly the ENUM/KEY-literal shape this check exists to
+        catch. CLOSED (2026-08-31 code-quality pass, contracts#2): that bullet now pins param_key and
+        change_type by name, with change_type's three allowed literals ('SHADOW'/'CHANGE'/'REVERT')
+        spelled out inline; change_key was already named elsewhere in Claude_Task_Plan.md (for other
+        tables' idempotency keys). CHECK B verifies all three required columns by name now.
+    - table: state.strategy_candidates
+      why: "D1 (FRONTIER-LLM CAPABILITY CHECK), Q1, Q3, A3, and SL1 each compose candidate_code as a literal collision-free provisional code ('next free provisional code not present in state.strategy_candidates or state.strategy_roster') when writing a NEW row; source_routine/status/etc. are all nullable, so candidate_code is this table's only required column."
     - table: ops.account_snapshot
       why: "D2a's account-snapshot bullet composes this row directly (INSERT INTO ops.account_snapshot)."
     - table: ops.catchup_refire_log
@@ -202,6 +226,8 @@ required_column_naming:
   # Tables that DO carry at least one NOT NULL/no-default column but are deliberately OUT OF SCOPE
   # for this check -- named explicitly (never silently dropped) per the SCOPE METHODOLOGY note above.
   excluded_tables:
+    - table: analytics.theater_judge
+      why: "review_id is computed entirely inside ops.sp_score_theater's own MERGE ... USING (SELECT g.review_id ... FROM events.adversarial_reviews ...) logic (bigquery/11_theater_judge.sql, superseded live by bigquery/143) -- SL5/AR_orc/W5 all invoke it as a bare zero-argument CALL ops.sp_score_theater(), never composing review_id as free text against the schema; same class as ops.monitor_health_history below."
     - table: events.daily_marks
       why: "Connector/FMP price-mark ingestion mirror (D2a) -- relays external quotes, composes no business-rule literal."
     - table: events.hf_capability_captures
@@ -240,6 +266,14 @@ required_column_naming:
       why: "Internal locking primitive (bigquery/126_dust_operational_hardening.sql), same class as ops.adversarial_review_write_mutex."
     - table: ops.park_control
       why: "Owner/infra control-plane toggle, same class as ops.capital_control."
+    - table: perf.strategy_daily
+      why: "as_of_date/strategy are computed entirely inside ops.sp_recompute_engine's own SELECT logic (bigquery/124_dust_excluded_from_closed_trades.sql) from analytics.strategy_daily_returns/analytics.sgov_daily_return -- D2 calls the zero-argument ops.sp_daily_refresh()/sp_recompute_engine(), never composing these columns as free text; same class as ops.monitor_health_history above."
+    - table: state.calibration_param_registry
+      why: "No INSERT/MERGE against this table exists anywhere in bigquery/*.sql today (its own header comment: 'a change is a new-value edit to this seed [version-controlled], never an ad-hoc write') and it has zero mentions anywhere in Claude_Task_Plan.md -- there is no identifiable writer, routine or otherwise, to hold to a naming requirement."
+    - table: state.expected_script_versions
+      why: "Bumped by a guarded MERGE embedded directly in bigquery/43_script_version_registry.sql's own text ('Bump the version strings here in the SAME commit that bumps the .gs SCRIPT_VERSION constants') -- maintained by convention whenever the owner redeploys an out-of-band Apps Script, never by a routine in Claude_Task_Plan.md; zero mentions of this table anywhere in the plan."
+    - table: state.strategy_declared_frequency
+      why: "One-time seed written directly in bigquery/166_capital_dormancy_sweep.sql ('INSERT ... SELECT * FROM UNNEST([...]) WHERE NOT EXISTS'), sourced verbatim from each strategy/0N_*.md's own 'Declared expected frequency' section -- the file's own MAINTENANCE comment says a newly-adopted strategy needs a row added the same way (a file edit, re-applied), never by a routine at runtime."
 
 # ============================================================================================
 # CHECK C -- row_handoffs: a handoff carried by a ROW IN A TABLE, not by a queue lane.

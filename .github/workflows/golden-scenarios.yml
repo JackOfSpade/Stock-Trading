@@ -70,8 +70,12 @@ name: Golden Scenarios (prose regression)
 #
 #   COST-SCOPED 2026-07-30 — HISTORY: applied to the prose-regression job while it lived in this file;
 #   since the 2026-08-21 move its daily replacement runs the FULL suite (one run/day needs no diff
-#   scoping), so the machinery below survives only as run_golden.py's --scenarios-for-changed flags,
-#   which D3's own prose-regression step still uses. (cost audit — this workflow measured ~2,251 billable CI min/month, the single
+#   scoping), so the machinery below survives only as run_golden.py's --scenarios-for-changed flag/
+#   scenarios_for_changed_files() — CORRECTED (2026-08-31 code-quality pass): D3's own prose-regression
+#   step does NOT call this flag or this function; D3 recomputes the same idea inline, per scenario, via
+#   `git log --since=<D3's last run> -- <that scenario's governing_files>` (Claude_Task_Plan.md). This
+#   flag has no production caller today — it survives only as a unit-tested utility
+#   (tests/test_golden_scenarios_runner.py). (cost audit — this workflow measured ~2,251 billable CI min/month, the single
 #   largest line item in the repo's Actions bill: the push path filter below is FILE-level (any one of
 #   Strategy.md / Operating_Protocols.md / Claude_Task_Plan.md / tests/golden_scenarios/**), but the
 #   `prose-regression` job used to call --live with NO --scenario filter — i.e. it re-evaluated ALL 31

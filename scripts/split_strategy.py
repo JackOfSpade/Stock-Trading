@@ -25,8 +25,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.md_fence import fence_mask
-from lib.slice_writer import check_or_write_slices, slugify
-from lib.textio import read_text
+from lib.slice_writer import dedupe_slice_name, run_split_cli, slugify
+from lib.textio import read_text_preserving_newlines
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "Strategy.md")
@@ -75,7 +75,12 @@ def split(text: str):
 
 
 def build():
-    text = read_text(SRC)
+    # BUG FIX (tooling-misc#2, code-quality pass 2026-08-31): read_text() would silently normalize a
+    # CRLF/bare-\r source line to \n before split() ever sees it, undermining this script's own
+    # "byte-identical for today's tree" claim above -- the exact bug class
+    # scripts/adversarial_review_storage.py::parse_legacy_review already found and fixed for its own
+    # reader. Paired with lib/slice_writer.py's newline="" read/write.
+    text = read_text_preserving_newlines(SRC)
     preamble, sections = split(text)
     # A '## Strategy <code> [CANDIDATE]' section generates NO slice AND does not consume a slice
     # number (added 2026-08-25, SL5 diligence sweep). This mirrors check_roster_consistency.py's
@@ -114,10 +119,10 @@ def build():
              "| _(preamble: title + intro)_ | `00_preamble.md` |\n"]
     used = set()
     for i, (title, body) in enumerate(sections, 1):
-        name = f"{i:02d}_{slug(title)}.md"
-        while name in used:
-            name = name[:-3] + "_.md"
-        used.add(name)
+        # dedupe_slice_name: shared with split_task_plan.py's identical collision guard
+        # (tooling-misc#0) -- see test_build_collision_suffix_loop_is_never_triggered_by_the_index_prefix
+        # for why the index prefix already makes this loop unreachable via the normal build() path.
+        name = dedupe_slice_name(f"{i:02d}_{slug(title)}.md", used)
         files[name] = HEADER + body
         index.append(f"| {title} | `{name}` |\n")
     files["INDEX.md"] = "".join(index)
@@ -125,21 +130,19 @@ def build():
 
 
 def main(argv):
-    check = "--check" in argv
-    files = build()
-    return check_or_write_slices(
-        files,
+    # CLEANUP (tooling-misc#0, code-quality pass 2026-08-31): this check/build/write dispatch used to
+    # be hand-written here AND in split_task_plan.py's main(), identically except for five message
+    # strings — now the one shared body, in lib/slice_writer.py, parameterized by this script's own
+    # identity.
+    return run_split_cli(
+        argv,
+        build,
         outdir=OUTDIR,
-        check=check,
+        outdir_label="strategy/",
+        source_name="Strategy.md",
+        script_name="split_strategy.py",
+        unit_noun="section",
         hand_maintained=HAND_MAINTAINED,
-        stale_message="STALE slices (run scripts/split_strategy.py): ",
-        orphan_message=(
-            "ORPHANED slice file(s) — no longer produced by any current Strategy.md heading "
-            "(a section was likely renamed/removed; delete these or the check will keep failing): "
-        ),
-        orphan_warning="WARNING: orphaned slice file(s) present (not written by this run, not hand-maintained): ",
-        ok_message="strategy/ slices are in sync with Strategy.md",
-        wrote_message=f"Wrote {len(files)} files to strategy/",
     )
 
 

@@ -93,7 +93,7 @@ except ImportError:
     raise SystemExit(2) from None
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.mcp_tokens import MCP_TOKEN
+from lib.mcp_tokens import MCP_TOKEN, load_allow_entries
 from lib.textio import load_yaml, read_text
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -187,12 +187,14 @@ def check1_manifest_validity(connectors, findings):
 
 def load_allow_set():
     """The raw string entries of .claude/settings.json's permissions.allow -- not filtered to mcp__
-    tokens here (CHECK5 filters via MCP_ALLOW_TOKEN itself), so a malformed non-string entry is simply
-    not an mcp__ token and is naturally skipped downstream rather than crashing a regex match."""
-    with open(SETTINGS_JSON, encoding="utf-8") as f:
-        data = json.load(f)
-    allow = data.get("permissions", {}).get("allow", [])
-    return {a for a in allow if isinstance(a, str)}
+    tokens here (CHECK5 filters via MCP_TOKEN itself), so a malformed non-string entry is simply
+    not an mcp__ token and is naturally skipped downstream rather than crashing a regex match.
+
+    Delegates the actual read/parse to lib.mcp_tokens.load_allow_entries() -- shared with
+    check_settings_toolcov.py's load_allowlist(), which used to carry a byte-identical copy of this
+    open/json.load/`.get("permissions", {}).get("allow", [])` extraction (cross-cutting#1, 2026-08-31
+    code-quality pass)."""
+    return load_allow_entries(SETTINGS_JSON)
 
 
 def check2_required_allowlisted(connectors, allow_set, findings):

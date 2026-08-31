@@ -37,7 +37,18 @@ import yaml
 
 
 def read_text(path):
-    """Whole file decoded as UTF-8. The one spelling for "read this repo file as text"."""
+    """Whole file decoded as UTF-8. The one spelling for "read this repo file as text".
+
+    NOT byte-identical: this uses Python's default universal-newline translation, so a source CRLF
+    (or bare \\r) silently becomes \\n. Fine for callers that immediately `.split("\n")` or
+    `.splitlines()` this function's own return value — they want LF-normalized lines, not a
+    byte-exact copy (a call-site count isn't pinned here on purpose: it was wrong the moment it was
+    first written this same pass, having been eyeballed against a broader grep than genuine
+    read_text()-chained call sites, and any count frozen in prose goes stale on the next such call
+    site added or removed). A caller that promises a byte-identical round-trip of its source (e.g. a
+    generator whose own `--check` claims byte-identity) must use read_text_preserving_newlines()
+    below instead — see tooling-misc#2, same pass.
+    """
     with open(path, encoding="utf-8") as f:
         return f.read()
 
@@ -48,6 +59,24 @@ def read_bytes(path):
     disk, not a re-encoding of them)."""
     with open(path, "rb") as f:
         return f.read()
+
+
+def read_text_preserving_newlines(path):
+    """Whole file decoded as UTF-8 with NO newline translation — a CRLF or bare \\r on disk comes
+    back exactly as \\r\\n or \\r, not silently collapsed to \\n.
+
+    Same fix, same reasoning, as scripts/adversarial_review_storage.py's parse_legacy_review(),
+    which reads `path.read_bytes().decode("utf-8")` instead of `Path.read_text()` specifically
+    because (that function's own comment) "Path.read_text() uses universal-newline translation,
+    which would turn a canonical CRLF body into LF before its audit hash or repair write." read_text()
+    above has the identical blind spot: split_task_plan.py and split_strategy.py both ingest their
+    source file through it while their own docstrings claim `--check` proves a byte-identical slice
+    tree — a claim that CRLF content would silently falsify, since both sides of that comparison
+    would run through the same lossy read and stay agreeing-but-wrong. Use this reader (paired with
+    lib/slice_writer.py's newline="" write/check-read) for any caller that makes that promise
+    (tooling-misc#2, code-quality pass 2026-08-31).
+    """
+    return read_bytes(path).decode("utf-8")
 
 
 def load_yaml(path, missing=None):

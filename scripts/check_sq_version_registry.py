@@ -54,6 +54,7 @@ import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib.report import fail_or_ok
 from lib.sql_files import (
     line_offsets, numbered_sql_files, resolve_canonical, strip_sql_comments,
 )
@@ -262,16 +263,16 @@ def main():
                 f"— bump the registry MERGE seed in the SAME commit that bumps the heartbeat literal"
             )
 
-    if errors:
-        print("SCHEDULED-QUERY VERSION REGISTRY: FAIL\n")
-        for e in sorted(errors):
-            print(" - " + e)
-        return 1
-    print(
+    # REFACTOR (2026-08-31 code-quality pass, cross-cutting#0): shared FAIL/OK block, see
+    # lib/report.py's module docstring. sort=True reproduces the `sorted(errors)` this checker's
+    # `errors` list needed at print time (it's assembled out of several independent scan passes, not
+    # already in report order).
+    return fail_or_ok(
+        "SCHEDULED-QUERY VERSION REGISTRY", errors,
         f"SCHEDULED-QUERY VERSION REGISTRY: OK — {len(winners)} ops.sp_sq_* procedure(s) agree with "
-        f"{REGISTRY_REL}'s registry (apply-in-order winner resolved for each)."
+        f"{REGISTRY_REL}'s registry (apply-in-order winner resolved for each).",
+        sort=True,
     )
-    return 0
 
 
 if __name__ == "__main__":

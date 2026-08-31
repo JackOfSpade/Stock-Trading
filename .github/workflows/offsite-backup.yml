@@ -115,8 +115,9 @@ jobs:
           fi
           # CI-findings bridge (same non-fatal pattern as the sibling guards). gcloud/bq are available
           # from the WIF auth step above (it must have succeeded for the mirror step to have run).
-          # shellcheck disable=SC2016 # single-quoted intentionally: backtick identifier + @p_url stay literal.
-          bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("offsite-backup","offsite_mirror","open","gcloud storage rsync to the off-project destination failed — off-site copy stale",@p_url)' || echo "::warning::ops.ci_findings insert failed — GH issue path unaffected."
+          # 2026-08-31 code-quality pass (shell-workflows#0): VALUES-row insert extracted to
+          # scripts/ci_finding.sh; this call keeps its own fail-soft wrapper.
+          scripts/ci_finding.sh "offsite-backup" "offsite_mirror" "open" "gcloud storage rsync to the off-project destination failed — off-site copy stale" || echo "::warning::ops.ci_findings insert failed — GH issue path unaffected."
 
       - name: Close finding issue if resolved
         if: always() && steps.guard.outputs.skip == 'false' && steps.mirror.outcome == 'success'

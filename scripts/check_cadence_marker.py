@@ -39,8 +39,12 @@ Usage:  python scripts/check_cadence_marker.py    # exit 0 if consistent, 1 + di
 import os
 import re
 import subprocess
-from datetime import datetime
+import sys
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib.report import fail_or_ok
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -122,12 +126,31 @@ def write_dt(base, rel_path):
 
 
 def expected_marker(cadence, offset, dt):
-    """The marker a file of this cadence class, written at `dt`, must carry."""
+    """The marker a file of this cadence class, written at `dt`, must carry.
+
+    DEFENSIVE FIX (2026-08-31 code-quality pass, cadence#4): daily and weekly used to silently
+    IGNORE `offset` and always return the marker for the period CONTAINING `dt`, unlike monthly/
+    quarterly/annual, which explicitly branch on `offset == "prior"`. Every LIVE CADENCE_FILES entry
+    for daily/weekly is offset="current" today (verified: zero daily+"prior" and zero weekly+"prior"
+    entries above), and Claude_Task_Plan.md's own File-write-conventions section documents weekly as
+    a single global "always current, never look-ahead" rule rather than a per-routine choice the way
+    monthly/quarterly is -- so this was dormant, not a live bug (a 2026-08-31 adversarial re-check
+    of the original finding confirmed exactly that and REFUTED the live-impact claim). It is made
+    total anyway, purely defensively: monthly/quarterly already show a retrospective variant is a
+    foreseeable addition for a NEW routine, and a future ("weekly", "prior") or ("daily", "prior")
+    CADENCE_FILES entry must compute the right marker instead of silently falling through to the
+    CURRENT period's -- reproducing, for daily/weekly, the exact undetected-for-a-month 2026-07-01
+    M1b mis-stamp this whole checker exists to catch. Zero behavior change for any offset="current"
+    call (every call today): tests/test_check_cadence_marker.py pins both the unchanged current-
+    period behavior and the new prior-period arithmetic."""
     d = dt.date()
     if cadence == "daily":
-        # Daily files have no "prior" variant in the conventions table.
+        if offset == "prior":
+            d = d - timedelta(days=1)
         return d.isoformat()
     if cadence == "weekly":
+        if offset == "prior":
+            d = d - timedelta(weeks=1)
         iso_year, iso_week, _ = d.isocalendar()
         return f"{iso_year}-W{iso_week:02d}"
     if cadence == "monthly":
@@ -190,23 +213,23 @@ def main():
                 f"catch — it went undetected for a month until M4's freshness gate halted on it."
             )
 
-    if errors:
-        print("CADENCE MARKER: FAIL\n")
-        for e in errors:
-            print(" - " + e)
-        return 1
-
+    # REFACTOR (2026-08-31 code-quality pass, cross-cutting#0): shared FAIL/OK block, see
+    # lib/report.py's module docstring. `ok_line` is picked from the same three branches as before;
+    # computing it unconditionally (rather than only in the former no-errors branch) is a no-op on a
+    # FAIL run, since `base`/`shaped`/`period_checked` are all already set by the loop above
+    # regardless of whether `errors` ended up non-empty, and fail_or_ok() never looks at `ok_line`
+    # when `errors` is non-empty.
     if base is None:
-        print(f"CADENCE MARKER: OK — {shaped} marker(s) well-formed. Period check SKIPPED: no diff "
-              f"base (shallow clone grafted at HEAD, or a root commit). If this appears in CI, give "
-              f"the job `fetch-depth: 0` so the period check actually runs.")
+        ok_line = (f"CADENCE MARKER: OK — {shaped} marker(s) well-formed. Period check SKIPPED: no "
+                   f"diff base (shallow clone grafted at HEAD, or a root commit). If this appears in "
+                   f"CI, give the job `fetch-depth: 0` so the period check actually runs.")
     elif period_checked:
-        print(f"CADENCE MARKER: OK — {shaped} marker(s) well-formed; period verified for the "
-              f"{len(period_checked)} changed in this push ({', '.join(sorted(period_checked))}).")
+        ok_line = (f"CADENCE MARKER: OK — {shaped} marker(s) well-formed; period verified for the "
+                   f"{len(period_checked)} changed in this push ({', '.join(sorted(period_checked))}).")
     else:
-        print(f"CADENCE MARKER: OK — {shaped} marker(s) well-formed; no marker changed in this push, "
-              f"so no period check was owed.")
-    return 0
+        ok_line = (f"CADENCE MARKER: OK — {shaped} marker(s) well-formed; no marker changed in this "
+                   f"push, so no period check was owed.")
+    return fail_or_ok("CADENCE MARKER", errors, ok_line)
 
 
 if __name__ == "__main__":

@@ -56,6 +56,7 @@ except ImportError:
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.md_fence import fence_mask
+from lib.report import fail_or_ok
 from lib.textio import load_yaml, read_text
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -147,6 +148,55 @@ def files_for(rule):
     if rule.get("file"):
         return [rule["file"]]
     return []
+
+
+# PERF FIX (2026-08-31 code-quality pass, prose-scope#0): check_rule() runs once per invariant and
+# check_adversarial_review_storage() runs once more, and ops/prose_invariants.yaml routinely names
+# the SAME physical file across many rules (19 of 21 rules name Claude_Task_Plan.md, 6 name
+# Strategy.md). Instrumenting a real end-to-end run showed Claude_Task_Plan.md alone read from disk
+# and re-split 20 times, and without_strikethrough() -- a pure function of file content -- recomputed
+# 5-6 times for the CaR-envelope rules that share the identical 8-file `files:` list. These three
+# dicts memoize the split lines, the strikethrough-filtered variant, and the fence mask per absolute
+# path so each is computed at most once per run. Keyed on bare path (not mtime/size) because the
+# cache is fully cleared at the top of every main() call -- see _clear_file_caches() -- which is the
+# only entry point that populates it, including in the test suite, which calls main() many times in
+# one process and sometimes rewrites the very same fixture path with different content between calls.
+_LINES_CACHE = {}
+_VISIBLE_CACHE = {}
+_FENCE_CACHE = {}
+
+
+def get_lines(path):
+    """``read_text(path).split("\\n")``, memoized per path for the duration of one run."""
+    if path not in _LINES_CACHE:
+        _LINES_CACHE[path] = read_text(path).split("\n")
+    return _LINES_CACHE[path]
+
+
+def get_visible_lines(path, lines):
+    """``without_strikethrough(lines)``, memoized per path for the duration of one run."""
+    if path not in _VISIBLE_CACHE:
+        _VISIBLE_CACHE[path] = without_strikethrough(lines)
+    return _VISIBLE_CACHE[path]
+
+
+def get_fence_mask(path, lines):
+    """``fence_mask(lines)``, memoized per path for the duration of one run."""
+    if path not in _FENCE_CACHE:
+        _FENCE_CACHE[path] = fence_mask(lines)
+    return _FENCE_CACHE[path]
+
+
+def _clear_file_caches():
+    """Reset every per-run file cache. MUST be called at the top of main() (not at import time):
+    the test suite calls main() many times in one process, sometimes rewriting the exact same
+    fixture path with different content between calls (e.g.
+    test_rev19_direct_cap_rule_allows_clean_struck_history_but_not_mixed_live_line reassigns
+    files["Strategy.md"] and calls _run() twice against the same tmp_path). A cache that outlived a
+    single main() call would silently serve the FIRST call's file content to the SECOND."""
+    _LINES_CACHE.clear()
+    _VISIBLE_CACHE.clear()
+    _FENCE_CACHE.clear()
 
 
 def nearest_heading(lines, idx, in_fence=None):
@@ -254,8 +304,8 @@ def check_rule(rule, errors):
         if not os.path.exists(path):
             errors.append(f"[{rid}] {rel}: file not found (rule targets a missing file)")
             continue
-        lines = read_text(path).split("\n")
-        match_lines = without_strikethrough(lines) if ignore_strikethrough else lines
+        lines = get_lines(path)
+        match_lines = get_visible_lines(path, lines) if ignore_strikethrough else lines
         units = list(match_units(match_lines, paragraph_mode, wrapped_lines))
 
         if has_require:
@@ -266,8 +316,8 @@ def check_rule(rule, errors):
             continue
 
         # forbid: report every non-exempt matching line. The fence mask is only needed for
-        # exempt_sections (nearest_heading) and is computed once per file, lazily.
-        in_fence = fence_mask(lines) if exempt_sections else None
+        # exempt_sections (nearest_heading) and is computed at most once per file per run, lazily.
+        in_fence = get_fence_mask(path, lines) if exempt_sections else None
         reported_lines = set()
         for i, end_i, match_line in units:
             m = pat.search(match_line)
@@ -350,8 +400,8 @@ def check_adversarial_review_storage(errors):
         if not os.path.exists(path):
             # Unit fixtures purposefully create only the document needed for their assertion.
             continue
-        lines = read_text(path).split("\n")
-        visible_lines = without_strikethrough(lines)
+        lines = get_lines(path)
+        visible_lines = get_visible_lines(path, lines)
         # Cadence YAML often wraps a long `writes:` list, and prose can soft-wrap a hand-off. Reuse
         # the ordinary soft-wrap matcher so either form cannot bypass this guard. Findings are keyed
         # by every physical line of the unit that raised them, so a two-line soft-wrap window
@@ -392,6 +442,10 @@ def check_adversarial_review_storage(errors):
 
 
 def main():
+    # PERF FIX (2026-08-31 code-quality pass, prose-scope#0): drop any per-file cache left over from
+    # a PRIOR main() call before this one populates its own -- see _clear_file_caches()'s docstring
+    # for why this must run at the top of main() specifically, not once at import time.
+    _clear_file_caches()
     rules = load_spec()
     if not rules:
         print("PROSE INVARIANTS: no rules found in ops/prose_invariants.yaml — nothing to check.")
@@ -409,19 +463,20 @@ def main():
         check_rule(rule, errors)
     check_adversarial_review_storage(errors)
 
-    if errors:
-        print("PROSE INVARIANTS: FAIL\n")
-        for e in errors:
-            print(" - " + e)
-        print("\nFix the prose (redirect the retired instruction per Operating_Protocols.md §15 / the "
-              "relevant cutover), OR — if the mechanism genuinely changed — update ops/prose_invariants.yaml "
-              "in the SAME commit. See that file's header.")
-        return 1
-
+    # REFACTOR (2026-08-31 code-quality pass, cross-cutting#0): shared FAIL/OK block, see
+    # lib/report.py's module docstring. `n_files` is computed unconditionally here (previously only
+    # in the former no-errors branch) purely to feed the single fail_or_ok() call below; files_for()
+    # is a pure dict lookup with no I/O, so computing it even on a FAIL run (where fail_or_ok then
+    # never looks at ok_line) changes nothing observable.
     n_files = sum(len(files_for(r)) for r in rules)
-    print(f"PROSE INVARIANTS: OK — {len(rules)} invariants checked across {n_files} file-targets; "
-          f"no retired-instruction phrasing present.")
-    return 0
+    return fail_or_ok(
+        "PROSE INVARIANTS", errors,
+        f"PROSE INVARIANTS: OK — {len(rules)} invariants checked across {n_files} file-targets; "
+        f"no retired-instruction phrasing present.",
+        hint=("Fix the prose (redirect the retired instruction per Operating_Protocols.md §15 / the "
+              "relevant cutover), OR — if the mechanism genuinely changed — update ops/prose_invariants.yaml "
+              "in the SAME commit. See that file's header."),
+    )
 
 
 if __name__ == "__main__":

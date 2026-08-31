@@ -208,3 +208,29 @@ def test_main_non_check_warns_about_orphan_but_still_returns_0(tmp_path, monkeyp
     (outdir / "ZZ_ghost.md").write_text("stale leftover", encoding="utf-8")
     assert stp.main([]) == 0
     assert "WARNING: orphaned slice file(s)" in capsys.readouterr().out
+
+
+# ---- CRLF round-trip (tooling-misc#2) -----------------------------------------------------------
+
+def test_crlf_source_round_trips_unchanged_through_split_and_check(tmp_path, monkeypatch):
+    # BUG FIX (tooling-misc#2, code-quality pass 2026-08-31): read_text() silently normalized a CRLF
+    # source to LF before split() ever saw it, so a CRLF Claude_Task_Plan.md would generate an LF
+    # slice while --check still reported clean (both sides of that comparison ran through the same
+    # lossy read) -- contradicting this script's own "--check proves ... byte-identical" claim. Build
+    # a plan with real \r\n line endings on disk (write_bytes, not write_text, so nothing translates
+    # them away before the script even runs) and confirm the CRLFs survive both write and --check.
+    src = tmp_path / "Claude_Task_Plan.md"
+    src.write_bytes(_two_group_plan().replace("\n", "\r\n").encode("utf-8"))
+    outdir = tmp_path / "task_plan"
+    monkeypatch.setattr(stp, "SRC", str(src))
+    monkeypatch.setattr(stp, "OUTDIR", str(outdir))
+
+    assert stp.main([]) == 0
+    d1 = (outdir / "D1.md").read_bytes()
+    assert b"\r\n" in d1
+    assert b"## D1. First daily" in d1
+    assert b"\r\r\n" not in d1   # no accidental double-CR from a translate-then-rewrite round trip
+
+    # The generative claim under test: --check on the CRLF source against the CRLF slices it just
+    # wrote is clean, not merely non-crashing.
+    assert stp.main(["--check"]) == 0

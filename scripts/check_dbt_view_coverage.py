@@ -32,7 +32,7 @@ except ImportError:
     raise SystemExit(2) from None
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.sql_files import numbered_sql_files, strip_sql_comments
+from lib.sql_files import DBT_DATASETS, numbered_sql_files, strip_sql_comments
 from lib.textio import load_yaml, read_text
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -41,7 +41,17 @@ DBT_MODELS_DIR = os.path.join(ROOT, "dbt", "models")
 DBT_SOURCES_YML = os.path.join(ROOT, "dbt", "models", "sources.yml")
 
 # dataset folder name == BigQuery dataset name, for both bigquery/*.sql views and dbt/models/*/*.sql.
-DATASETS = ("state", "analytics", "perf")
+# DEDUP (sql-parity#0, 2026-08-31 code-quality pass): this used to be its own locally-declared
+# tuple, `("state", "analytics", "perf")`, duplicating dbt_parity.py's `DATASET_FOLDERS` — same
+# three datasets, different name, different order. Now shared via scripts/lib/sql_files.py's
+# DBT_DATASETS. The element order below (state, perf, analytics — dbt_parity.py's original order,
+# not this file's prior alphabetical-ish one) is a no-op for THIS script: every use of DATASETS
+# here is a for-loop feeding a `set` or an `in` membership test, and every dataset-bearing list
+# this script prints is already routed through `sorted()` at the print site (main()'s
+# `uncovered = sorted(live - covered)`), so this script's observable output does not depend on
+# iteration order — see sql_files.py's docstring for the caller (dbt_parity.py) that DOES depend
+# on it, which is why that caller's order was the one kept.
+DATASETS = DBT_DATASETS
 
 VIEW_DDL = re.compile(
     r"CREATE\s+OR\s+REPLACE\s+VIEW\s+`stock-trading-498512\.(state|analytics|perf)\.(\w+)`",

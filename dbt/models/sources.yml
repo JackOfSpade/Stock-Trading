@@ -512,6 +512,34 @@ sources:
         columns:
           - name: is_healthy
             description: TRUE when decision embeddings are in sync (0 missing / 0 error / 0 dup).
+
+      # Added 2026-08-31 (dbt#0 code-quality pass). decision_log_current is a plain CREATE OR REPLACE
+      # VIEW with no remote-model dependency -- unlike every other entry in this source it COULD be
+      # dbt-owned -- but is declared as a source rather than ported as a model for now: the fix this
+      # closes (analytics.weekly_activity / thesis_outcomes / dust_classified_fills were still reading
+      # raw events.decision_log directly, 25 days after bigquery/144 moved their canonical bodies onto
+      # this view -- see those 3 files' headers) only needs those 3 models to READ the anti-joined row
+      # set; building the view itself in dbt is a separate, unrequested scope expansion.
+      - name: decision_log_current
+        description: >
+          THE canonical final-effective events.decision_log row set (bigquery/144_decision_log_correction_consumers.sql
+          section (1)): `SELECT * FROM events.decision_log WHERE entry_id NOT IN (SELECT superseded_by
+          FROM events.decision_log WHERE superseded_by IS NOT NULL)`. Exists because a superseded_by
+          correction landing inside a reader's window otherwise double-counts both the obsolete row and
+          its replacement (bigquery/144's header: 3 corrections existed live on 2026-08-06, all three
+          obsolete targets still in the table). decision_log's consumer population is deliberately
+          HETEROGENEOUS, not uniformly filtered -- bigquery/144's header allowlists state.freshness (a
+          correction append IS proof of a write; filtering would report a correction-only day as
+          STALE), state.embedding_health / state.embedding_scale_watch and analytics.decision_embeddings
+          (need the TRUE physical row count / the raw substrate), and ops.sp_log_decision (the writer)
+          to keep reading the RAW events.decision_log table for reasons specific to each. Same schema
+          as events.decision_log (see that source table's column docs above) minus the superseded rows.
+        columns:
+          - name: entry_id
+            description: Primary key. A row whose entry_id is itself named by some other row's superseded_by is excluded here.
+          - name: entry_date
+            description: Operating date of the entry (partition key). NOT decision_date.
+
       # Strategy Arsenal roster views (rev 2026-07-10 — Strategy Arsenal autonomy conversion, owner
       # directive). Created by bigquery/35_strategy_arsenal.sql (event-sourced from
       # events.strategy_lifecycle); dbt does NOT own them, but the strategy_nav model reads them for the

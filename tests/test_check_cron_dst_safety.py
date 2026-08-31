@@ -307,6 +307,44 @@ def test_deadline_is_read_from_cadence_not_hardcoded(tmp_path, monkeypatch):
     assert cs.check() == 1
 
 
+def test_malformed_deadline_fails_loud_not_with_a_bare_traceback(tmp_path, monkeypatch):
+    # REGRESSION (cadence#5, 2026-08-31 code-quality pass). An UNQUOTED "21:00" in ops/cadence.yaml
+    # YAML-parses as the base-60 sexagesimal int 1260, not the string "21:00" -- a documented,
+    # repeated trap in this exact repo (see write_cadence()'s own always-quoted convention above).
+    # load_cadence() used to unpack `str(deadline).split(":")` with no shape check, which on this
+    # input raised an opaque `ValueError: not enough values to unpack (expected 2, got 1)` -- no
+    # field or file name attached. Confirm it now fails loud with a clear, actionable diagnostic
+    # (the same message check_cadence_consistency.py already gives for this exact field) instead of
+    # a bare traceback.
+    path = tmp_path / "cadence.yaml"
+    path.write_text(
+        "cadence_watch_deadline_local: 21:00\n"  # deliberately UNQUOTED -- the trap
+        "routines:\n"
+        "  - id: GUI\n"
+        "    monitor_class: weekly_sun\n"
+        "    expected_trigger:\n"
+        "      recurrence: weekly\n"
+        '      time_local: "00:00"\n'
+        "      enabled: true\n"
+    )
+    monkeypatch.setattr(cs, "CADENCE", path)
+    with pytest.raises(SystemExit) as exc_info:
+        cs.load_cadence()
+    assert "cadence_watch_deadline_local must be a quoted" in str(exc_info.value)
+    assert "1260" in str(exc_info.value)
+
+
+def test_wellformed_quoted_deadline_still_loads(tmp_path, monkeypatch):
+    # The paired positive case for the fix above: a properly quoted deadline still loads fine, with
+    # no change to the common path the new shape guard sits in front of.
+    path = tmp_path / "cadence.yaml"
+    path.write_text('cadence_watch_deadline_local: "21:00"\nroutines:\n')
+    monkeypatch.setattr(cs, "CADENCE", path)
+    routines, deadline_local = cs.load_cadence()
+    assert routines == []
+    assert deadline_local == (21, 0)
+
+
 # ---- period classes -------------------------------------------------------------------------
 
 def test_monthly_shifted_off_its_day_is_caught(tmp_path, monkeypatch, capsys):

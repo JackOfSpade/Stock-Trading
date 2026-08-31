@@ -25,17 +25,34 @@ text IS what dbt would run. Anything else is printed as a unified diff for a hum
 Usage: verify_port.py <model_name> [<model_name> ...]
 """
 import difflib
+import importlib.util
 import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO, "scripts"))
-sys.path.insert(0, os.path.join(REPO, "tests"))
-from conftest import load_module_from_path  # noqa: E402
 
-P = load_module_from_path("check_live_sql_parity", "scripts", "check_live_sql_parity.py")
+
+def _load_module_from_path(name, *rel_parts):
+    """Local copy of tests/conftest.py's load_module_from_path (bug fix, 2026-08-31 code-quality
+    pass): this was previously `from conftest import load_module_from_path` after inserting
+    tests/ onto sys.path, making this the only scripts/ file that reaches into tests/ -- and
+    tests/conftest.py does `import pytest` at module scope, so it pulled in a hard pytest
+    dependency purely as a side effect of wanting this ~6-line helper. Every sibling checker
+    (check_live_sql_parity.py, dbt_parity.py, check_dbt_view_coverage.py, check_sql_dryrun.py) is
+    self-contained; this restores that."""
+    path = os.path.join(REPO, *rel_parts)
+    spec = importlib.util.spec_from_file_location(name, path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+P = _load_module_from_path("check_live_sql_parity", "scripts", "check_live_sql_parity.py")
 FINAL = P.find_final_definitions()
 
 
@@ -65,8 +82,30 @@ def compiled_path(model):
     return None, None
 
 
+def resolve_profiles_dir():
+    """DBT_PROFILES_DIR to run `dbt compile` under: respect an already-set env var, else
+    materialize dbt/profiles.ci.yml -- the single checked-in CI profile ci.yml's `dbt` and
+    `dbt-parity` jobs already treat as canonical (see that file's own header) -- into a fresh
+    tempdir as profiles.yml.
+
+    BUG FIX (2026-08-31 code-quality pass): this used to hardcode DBT_PROFILES_DIR="/tmp/dbtprof",
+    a path nothing in the repo ever created or populated (`grep -rn dbtprof .` had exactly one
+    hit: that line) -- `dbt compile` failed immediately with "Invalid value for '--profiles-dir'"
+    on any checkout without a coincidentally pre-existing /tmp/dbtprof. Every other dbt-invoking
+    path (ci.yml, live-sql-parity.yml) instead does
+    `mkdir -p ~/.dbt && cp dbt/profiles.ci.yml ~/.dbt/profiles.yml`; this mirrors that convention
+    with a private tempdir rather than the shared ~/.dbt so two concurrent porting sessions can't
+    race on the same profiles.yml."""
+    existing = os.environ.get("DBT_PROFILES_DIR")
+    if existing:
+        return existing
+    profiles_dir = tempfile.mkdtemp(prefix="dbtprof-")
+    shutil.copy(os.path.join(REPO, "dbt", "profiles.ci.yml"), os.path.join(profiles_dir, "profiles.yml"))
+    return profiles_dir
+
+
 def main(models):
-    env = dict(os.environ, DBT_PROFILES_DIR="/tmp/dbtprof")
+    env = dict(os.environ, DBT_PROFILES_DIR=resolve_profiles_dir())
     r = subprocess.run(
         ["dbt", "compile", "--target", "ci", "--select", " ".join(models)],
         cwd=os.path.join(REPO, "dbt"), env=env, capture_output=True, text=True, timeout=600)

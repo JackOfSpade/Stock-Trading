@@ -104,6 +104,47 @@ def test_required_not_null_columns_ignores_constraint_words_inside_a_description
     assert ch.required_not_null_columns(body) == ["b"]
 
 
+# ---- CREATE_TABLE_RE / parse_create_table_bodies ---------------------------------------------
+
+def test_parse_create_table_bodies_covers_every_dataset_the_check_scopes(tmp_path):
+    """BUG FIX regression (2026-08-31 code-quality pass, contracts#0): CREATE_TABLE_RE used to be
+    hardcoded to the (events|ops) dataset alternation, so a state/analytics/perf CREATE TABLE was
+    structurally invisible to CHECK B's completeness sweep (a live instance: state.param_change_
+    provenance's change_key/param_key/change_type NOT NULL columns could never be flagged). Pin that
+    every dataset this check now scopes actually parses, so a future narrowing of the alternation
+    fails here rather than silently reopening the gap the widened regex was written to close."""
+    d = tmp_path / "bigquery"
+    d.mkdir()
+    (d / "01_fixture.sql").write_text(
+        "CREATE TABLE IF NOT EXISTS `stock-trading-498512.events.e_fixture` (a STRING NOT NULL);\n"
+        "CREATE TABLE IF NOT EXISTS `stock-trading-498512.ops.o_fixture` (a STRING NOT NULL);\n"
+        "CREATE TABLE IF NOT EXISTS `stock-trading-498512.state.s_fixture` (a STRING NOT NULL);\n"
+        "CREATE TABLE IF NOT EXISTS `stock-trading-498512.analytics.a_fixture` (a STRING NOT NULL);\n"
+        "CREATE TABLE IF NOT EXISTS `stock-trading-498512.perf.p_fixture` (a STRING NOT NULL);\n",
+        encoding="utf-8",
+    )
+    bodies = ch.parse_create_table_bodies(str(d))
+    assert set(bodies) == {
+        ("events", "e_fixture"), ("ops", "o_fixture"), ("state", "s_fixture"),
+        ("analytics", "a_fixture"), ("perf", "p_fixture"),
+    }
+
+
+def test_parse_create_table_bodies_ignores_create_table_as_select(tmp_path):
+    """CREATE ... TABLE ... AS SELECT (a CTAS -- e.g. the real analytics.review_embeddings /
+    analytics.decision_embeddings) has no parenthesized column list, so widening CREATE_TABLE_RE's
+    dataset alternation must not start matching it: there is no column list for this check to read a
+    NOT NULL/no-default column out of, and the real repo relies on that (neither table is classified
+    in ops/handoff_contracts.yaml)."""
+    d = tmp_path / "bigquery"
+    d.mkdir()
+    (d / "01_fixture.sql").write_text(
+        "CREATE OR REPLACE TABLE `stock-trading-498512.analytics.ctas_fixture` AS SELECT 1 AS a;\n",
+        encoding="utf-8",
+    )
+    assert ch.parse_create_table_bodies(str(d)) == {}
+
+
 # ---- parse_allowed_map ----------------------------------------------------------------------
 
 def _sql(tmp_path, text):

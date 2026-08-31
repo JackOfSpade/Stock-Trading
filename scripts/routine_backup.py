@@ -400,6 +400,18 @@ def _core_instruction(instruction):
 
 def _trigger_id_match(tid, trigger_ids_doc):
     """rid whose ops/trigger_ids.json entry carries this trigger_id, or None."""
+    # BUG FIX (routine-backup#1, 2026-08-31 code-quality pass): guard tid=None before the loop,
+    # mirroring _instruction_match()'s `if not core: return None` below. Without this, an id-less
+    # raw trigger (normalize_trigger() yields trigger_id=None when the RemoteTrigger payload has no
+    # id/trigger_id field) false-matched any trigger_ids.json entry that ALSO lacks a trigger_id key
+    # via `(entry or {}).get("trigger_id") == tid` collapsing to `None == None` -- a null-coalescing
+    # accident, not a real match. Reproduced: _trigger_id_match(None, {"W5": {"verified_via":
+    # "chrome"}}) returned "W5". Because match_routine_id() returns unconditionally on a trigger_id
+    # hit (B5, trigger_id is "ground truth"), that accident let ingest() silently overwrite the real
+    # stored W5 entry with the id-less trigger's garbage data -- match_conflict() never fires because
+    # only one side (the accidental one) resolves, so there's nothing for it to disagree with.
+    if tid is None:
+        return None
     for rid, entry in trigger_ids_doc.items():
         if rid == "_meta":
             continue
@@ -1088,14 +1100,22 @@ def check():
     """Validate ops/routine_backup.json with NO network: (1) valid JSON, every ops/cadence.yaml
     routine has an entry; (2) each entry's instruction == ops/triggers.json's instruction + ADDENDUM
     (except OPS2, no ADDENDUM per the documented exception) + SCOPE_ADDENDUM (always, no exception);
-    (3) each entry's trigger_id matches
-    ops/trigger_ids.json; (4) every referenced profile exists (checked for EVERY entry, not just
-    cadence-known ones); (5) every entry has exactly one of cron_expression/run_once_at (B1), with a
-    parseable timezone-qualified one-shot timestamp; (6) every entry's EFFECTIVE resolved fields
-    (profile + overrides) are real, non-empty recovery data, not just a profile name that happens to
-    exist (B3); and (7) a fleet routine can never retain a TO_POPULATE schedule that restore refuses.
-    Prints per-error ' - ' bullet lines and a FAIL/OK
-    summary, mirroring scripts/check_cadence_consistency.py's conventions. Returns 0/1."""
+    (3) each cadence routine's trigger_id matches ops/trigger_ids.json -- AND ops/trigger_ids.json
+    must actually carry a trigger_id for it (routine-backup#2, 2026-08-31 code-quality pass: a
+    missing/incomplete trigger_ids.json entry used to skip the comparison silently instead of
+    flagging it, so an already-wrong stored trigger_id was never checked against anything); (4)
+    every referenced profile exists (checked for EVERY entry, not just cadence-known ones); (5)
+    every entry has exactly one of cron_expression/run_once_at (B1), with a parseable
+    timezone-qualified one-shot timestamp; (5b) a run_once_at that parses but is already in the past
+    -- the exact thing restore()'s _one_shot_restore_error() refuses to restore -- is reported as a
+    WARNING (routine-backup#0, 2026-08-31 code-quality pass: printed, but does not fail this check;
+    see that warning's own inline comment below for why it stops short of being an error); (6) every
+    entry's EFFECTIVE resolved fields (profile + overrides) are real, non-empty recovery data, not
+    just a profile name that happens to exist (B3); and (7) a fleet routine can never retain a
+    TO_POPULATE schedule that restore refuses.
+    Prints per-error ' - ' bullet lines, any WARNINGS block, and a FAIL/OK
+    summary, mirroring scripts/check_cadence_consistency.py's conventions. Returns 0/1 (warnings never
+    affect the return code)."""
     rel = os.path.relpath(BACKUP_PATH, ROOT)
     if not os.path.exists(BACKUP_PATH):
         print(f"ROUTINE BACKUP CHECK: FAIL\n\n - {rel} does not exist")
@@ -1109,6 +1129,7 @@ def check():
     profiles = doc.get("profiles") or {}
     routines = doc.get("routines") or {}
     errors = []
+    warnings = []  # non-fatal: printed, never change the return code (see (5b) above)
 
     cadence_doc = load_yaml(CADENCE_PATH)
     cad_ids = sorted({r["id"] for r in cadence_routines(cadence_doc) if r.get("id")})
@@ -1133,6 +1154,23 @@ def check():
         if entry.get("run_once_at") and _parse_rfc3339_utc(entry["run_once_at"]) is None:
             errors.append(f"{rid}: run_once_at must be a timezone-qualified RFC3339 timestamp "
                           f"({entry['run_once_at']!r})")
+        elif entry.get("run_once_at"):
+            # BUG FIX (routine-backup#0, 2026-08-31 code-quality pass): check() used to only confirm
+            # run_once_at PARSES, never that it's still in the FUTURE -- even though restore() has a
+            # dedicated helper for exactly that, _one_shot_restore_error(), which refuses to restore
+            # a past one-shot ("the API rejects past one-shot schedules"). Reusing that same helper
+            # here means the two paths can never diverge again. Reproduced live: both committed
+            # personal_* entries carry run_once_at=2026-08-01T12:52:00Z (now a month stale), and
+            # `check` printed OK while `restore(["personal_..."])` on the same file immediately
+            # refused. Reported as a WARNING, not an error: unlike a mismatched trigger_id or a
+            # missing profile, there is no unambiguously correct value to hand-edit in here -- these
+            # two entries are DISABLED one-shot personal routines with no operator-supplied "next
+            # run" date on record, so turning this into a hard failure would make `check` permanently
+            # red against real, already-landed data for a fix that isn't actionable without operator
+            # input. A WARNING still closes the "never flags it at all" gap the finding raised.
+            stale = _one_shot_restore_error(rid, entry)
+            if stale:
+                warnings.append(stale)
     # A cadence/fleet entry with this sentinel is not restorable, so it must never be CI-green.
     for rid in cad_ids:
         if (routines.get(rid) or {}).get("cron_expression") == CRON_UNCONFIRMED:
@@ -1165,7 +1203,20 @@ def check():
             continue
         want_tid = (trigger_ids_doc.get(rid) or {}).get("trigger_id")
         have_tid = entry.get("trigger_id")
-        if want_tid is not None and have_tid != want_tid:
+        if want_tid is None:
+            # BUG FIX (routine-backup#2, 2026-08-31 code-quality pass): a missing ops/trigger_ids.json
+            # entry for `rid`, OR one present but missing the `trigger_id` field, used to make want_tid
+            # None and skip the whole comparison below -- so have_tid (whatever ops/routine_backup.json
+            # stores, however wrong) was never checked against anything. That's exactly the blind spot
+            # that let a _trigger_id_match(None, ...) false-match (routine-backup#1) or a hand-edit typo
+            # in ops/trigger_ids.json go undetected by CI indefinitely. ops/trigger_ids.json is hand-
+            # maintained (cmd_restore's own printed instruction: "record the returned trig_... id in
+            # ops/trigger_ids.json"), so an incomplete entry is a realistic input, not hypothetical.
+            # Verified this does not turn CI red today: the live ops/trigger_ids.json already has all
+            # 32 cadence routines populated with a non-empty trigger_id.
+            errors.append(f"{rid}: no trigger_id recorded in ops/trigger_ids.json for this cadence "
+                          "routine -- can't cross-check the stored trigger_id against anything")
+        elif have_tid != want_tid:
             errors.append(f"{rid}: trigger_id mismatch -- ops/trigger_ids.json='{want_tid}' vs "
                           f"{rel}='{have_tid}'")
 
@@ -1173,9 +1224,19 @@ def check():
         print("ROUTINE BACKUP CHECK: FAIL\n")
         for e in errors:
             print(" - " + e)
+        if warnings:
+            print("\nWARNINGS (non-fatal -- do not affect this check's exit code):")
+            for w in warnings:
+                print(" - " + w)
         print(f"\nFix {rel} (hand-edit, or re-run `python scripts/routine_backup.py ingest <file>` "
               f"against a fresh RemoteTrigger list/get response) so all checks pass, then re-run.")
         return 1
+
+    if warnings:
+        print("ROUTINE BACKUP CHECK WARNINGS (non-fatal -- do not affect this check's exit code):")
+        for w in warnings:
+            print(" - " + w)
+        print()
 
     print(f"ROUTINE BACKUP CHECK: OK — {len(cad_ids)} cadence routines present, instructions and "
           f"trigger_ids match, all {len(profiles)} referenced profile(s) resolve with real recovery "

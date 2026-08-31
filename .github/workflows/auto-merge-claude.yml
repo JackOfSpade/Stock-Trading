@@ -553,6 +553,8 @@ jobs:
           run_check bash tests/test_auto_merge_logic.sh
           run_check bash tests/test_resolve_diff_base.sh
           run_check bash tests/test_notify_webhook.sh
+          run_check bash tests/test_ci_finding.sh
+          run_check bash tests/test_bq_csv.sh
           run_check node ops/weekly_report/test_pure_helpers.js
           if [ "$fail" -eq 0 ]; then
             echo "result=ok" >> "$GITHUB_OUTPUT"
@@ -591,18 +593,14 @@ jobs:
         # Reuses the job's existing WIF auth (steps.wif_guard.outputs.skip, set near the top of this
         # job) exactly like the routine_commit_markers insert above — no new IAM grant needed
         # (gh-ci-runner@ already holds table-scoped dataEditor on ops.ci_findings, OWNER_ACTIONS.md item
-        # G). Named @p_* parameters only, never shell-interpolated into the SQL string, matching every
-        # other bq query call in this file and in live-sql-parity.yml.
+        # G). 2026-08-31 code-quality pass (shell-workflows#0): the VALUES-row insert itself now lives
+        # in scripts/ci_finding.sh, which builds run_url from GitHub's own default env vars — no shell
+        # run_url var needed here any more.
         if: always() && steps.wif_guard.outputs.skip == 'false' && steps.merge.outputs.did_merge == 'true' && steps.postmerge.outputs.result == 'fail'
         run: |
           set -uo pipefail
           detail="post-merge coverage check (pytest + consistency checkers + node helper tests) failed against main's merged tip $(git rev-parse HEAD) -- see the run for which check(s)."
-          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted BigQuery
-          # identifier and @p_* named parameters must stay literal, not shell-expanded.
-          bq query --project_id=stock-trading-498512 --use_legacy_sql=false \
-            --parameter="p_detail:STRING:${detail}" --parameter="p_url:STRING:${run_url}" \
-            'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("auto-merge-main","postmerge_coverage","open",@p_detail,@p_url)' \
+          scripts/ci_finding.sh "auto-merge-main" "postmerge_coverage" "open" "$detail" \
             || echo "::warning::ops.ci_findings open-row insert failed for postmerge_coverage -- GH issue path unaffected."
 
       - name: ops.ci_findings — resolved row (post-merge coverage check clean)

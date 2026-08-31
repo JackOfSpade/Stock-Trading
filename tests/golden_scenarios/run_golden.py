@@ -83,12 +83,17 @@ Usage:
   python tests/golden_scenarios/run_golden.py --live [--scenario ID ...]   # needs GEMINI_API_KEY
   python tests/golden_scenarios/run_golden.py --scenarios-for-changed [--changed-file PATH ...]
       Utility mode (no network): prints, one per line, the ids of scenarios whose governing_files
-      intersect the given --changed-file path(s), then exits — no offline/live run. Used by
-      golden-scenarios.yml's `prose-regression` job (2026-07-30 cost-scoping) to compute the
-      --scenario filter for --live from the push's changed files, so a push only re-evaluates the
-      scenarios actually governed by what changed instead of all of them on every push. See
+      intersect the given --changed-file path(s), then exits — no offline/live run. Originally added
+      (2026-07-30 cost-scoping) for golden-scenarios.yml's now-retired `prose-regression` job to compute
+      the --scenario filter for --live from the push's changed files. CORRECTED (2026-08-31 code-quality
+      pass): that job no longer exists (moved to golden-prose-daily.yml on 2026-08-21, that whole file
+      deleted 2026-08-30) and D3's GOLDEN-SCENARIO PROSE-REGRESSION CHECK — the routine that replaced it
+      as the real landing surface — does NOT call this function or this CLI flag; D3 recomputes the same
+      idea itself inline, per scenario, via `git log --since=<D3's last run> -- <that scenario's
+      governing_files>` (Claude_Task_Plan.md). This mode currently has NO production caller — it exists
+      only as a unit-tested utility (tests/test_golden_scenarios_runner.py). See
       scenarios_for_changed_files() for the fail-open rules (no --changed-file at all, or a change
-      under tests/golden_scenarios/ itself, both select EVERY scenario id).
+      under tests/golden_scenarios/ itself, both select EVERY scenario id) in case a future caller adopts it.
 """
 import argparse
 import hashlib
@@ -171,9 +176,13 @@ CATEGORY_TOKENS = {
 # run-level summary line (wall-clock, total attempts, 429s by kind, total tokens sent INCLUDING every
 # retry, and seconds spent sleeping split by pacing / RPM-retry / rewind-cooldown). All of it stays on
 # stderr, like the existing `::notice::`/`::warning::` annotations, and all prints in the live path pass
-# flush=True so a killed/timed-out job still leaves a readable trail (this file also relies on the
-# workflow's PYTHONUNBUFFERED=1 — see golden-scenarios.yml's `prose-regression` job — for the same reason
-# when stdout/stderr aren't already line-buffered under CI's non-tty runner).
+# flush=True so a killed/timed-out job still leaves a readable trail — belt-and-suspenders alongside a
+# workflow-level PYTHONUNBUFFERED=1 when stdout/stderr aren't already line-buffered under a non-tty
+# runner. CORRECTED (2026-08-31 code-quality pass): the `prose-regression` job this comment used to cite
+# no longer exists in golden-scenarios.yml (moved to golden-prose-daily.yml on 2026-08-21, that whole
+# file deleted 2026-08-30) — `grep -n PYTHONUNBUFFERED .github/workflows/*.yml` currently matches
+# nothing, so --live (manual-only now) is not run by any surviving workflow, and flush=True above is
+# what actually keeps live-mode output ordered today.
 #
 # EXTENDED 2026-08-17, same day (RPM-retry retune, CI run 32060180247 — this initial telemetry is what
 # made that run's 2021s-of-2998s-asleep-in-RPM-retry finding measurable at all; see the comment above
@@ -303,8 +312,13 @@ DECISION: <one of {allowed_decisions}>
 RATIONALE: <one sentence citing the specific rule/section/threshold you applied>
 """
 
-QUEUE_INSERT_TEMPLATE = """-- SPEC ONLY — never executed by this script (no BigQuery write credentials in CI; a routine with
--- write access may choose to file this for real). review_type='prose-regression' per ITEM 20.
+QUEUE_INSERT_TEMPLATE = """-- SPEC ONLY — never executed by this script (no BigQuery write credentials in CI) and not filed
+-- verbatim by any routine either: D3's GOLDEN-SCENARIO PROSE-REGRESSION CHECK (Claude_Task_Plan.md) is
+-- the actual filer, and since its 2026-08-27 "COLUMN-vs-PAYLOAD PLACEMENT CORRECTED" clause its real
+-- INSERT uses a DIFFERENT, now-authoritative column set (adds `due_date`/`artifact_path`; `payload` is
+-- built via PARSE_JSON(TO_JSON_STRING(STRUCT(...))), not a `JSON '<literal>'`) — CORRECTED (2026-08-31
+-- code-quality pass): treat Claude_Task_Plan.md as the authority on the real write, not this template.
+-- review_type='prose-regression' per ITEM 20.
 -- {{scenario_id}}/{{note}}/{{payload_json}} below are ALREADY SQL-escaped by build_queue_insert_sql() —
 -- do not .format() this template directly with raw values (see that function's docstring, 2026-08-17 fix).
 INSERT INTO `stock-trading-498512.events.queue_events`
@@ -349,8 +363,12 @@ def build_queue_insert_sql(scenario_id, expected, actual, governing_files):
     `note` text — are each SQL-escaped exactly once (_sql_single_quote_escape) before being embedded in
     their own `'...'` SQL literals. Still print-only / never executed (unchanged, deliberate — see the
     module docstring's --live section and CLAUDE.md's "golden-scenarios.yml" non-issue note); this fix is
-    about the printed text being genuinely valid SQL+JSON if a routine with write access ever runs it, not
-    about wiring up an execution path here."""
+    about the printed text being genuinely valid SQL+JSON for whoever reads this annotation, not about
+    wiring up an execution path here. CORRECTED (2026-08-31 code-quality pass): no routine actually files
+    this template verbatim — D3's GOLDEN-SCENARIO PROSE-REGRESSION CHECK is the real filer and, per
+    QUEUE_INSERT_TEMPLATE's own header above, uses a different (and now-authoritative) column/payload
+    convention; this template's job is just to print a syntactically-valid illustration, not to match
+    D3's live write."""
     payload_json = json.dumps({
         "review_type": "prose-regression",
         "scenario_id": scenario_id,
@@ -564,7 +582,14 @@ def validate_offline(scenarios):
                     try:
                         with open(full_path, encoding="utf-8") as fh:
                             file_text = fh.read()
-                    except OSError as exc:
+                    # BUG FIX (2026-08-31 code-quality pass): UnicodeDecodeError is a ValueError
+                    # subclass, not an OSError, so a governing file with invalid UTF-8 bytes (e.g. a
+                    # stray non-UTF-8 paste into Strategy.md/Operating_Protocols.md/Claude_Task_Plan.md/
+                    # Experiment_Parameters.md) used to escape this handler and crash validate_offline()
+                    # with a raw traceback instead of the clean, listed schema error below — exactly the
+                    # failure mode main()'s own `except (OSError, ValueError, yaml.YAMLError)` around
+                    # load_scenarios() already guards against for the same kind of read.
+                    except (OSError, UnicodeDecodeError) as exc:
                         errors.append(
                             f"{label}: could not read '{gf}' to validate governing_sections anchors: {exc}"
                         )
@@ -2110,10 +2135,13 @@ def main():
         return 1
 
     if args.scenarios_for_changed:
-        # Pure utility mode: no offline schema gate, no network. Callers that need a validated
-        # scenarios.yaml before trusting this output already get that for free — golden-scenarios.yml's
-        # `prose-regression` job only runs `needs: schema-validate`, so by the time this mode is invoked
-        # there, the offline hard gate already passed for this SHA.
+        # Pure utility mode: no offline schema gate, no network. CORRECTED (2026-08-31 code-quality
+        # pass): this used to say golden-scenarios.yml's `prose-regression` job invokes this mode with
+        # `needs: schema-validate` ensuring the offline gate already passed first — that job no longer
+        # exists in this file (retired 2026-08-30; see the module docstring's --scenarios-for-changed
+        # section) and nothing in production calls this mode today. Documenting the ordering contract
+        # for whichever future caller (if any) adopts it: such a caller would still want the offline
+        # gate to have passed for this SHA first, since this mode does not itself validate scenarios.yaml.
         for sid in scenarios_for_changed_files(scenarios, args.changed_files):
             print(sid)
         return 0

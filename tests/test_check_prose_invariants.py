@@ -3,10 +3,14 @@
 check_prose_invariants.py runs at .github/workflows/ci.yml as a bare (non-zero-exit-fails) gate, yet
 — unlike its offline single-source siblings (test_cadence_consistency.py, test_roster_consistency.py,
 test_autonomy_consistency.py) — it had NO dedicated test. A benign tightening of a forbid_regex that
-silently stops matching the retired phrasing would exit 0 (a vacuous pass) with nothing to catch it;
-and the exempt_line_regex / exempt_sections / nearest_heading branches have literally never run in
-production (the live ops/prose_invariants.yaml uses none of them). These tests exercise every branch
-against tmp_path spec + fixture files (never the real files), and assert the exact printed contract.
+silently stops matching the retired phrasing would exit 0 (a vacuous pass) with nothing to catch it.
+CORRECTION (2026-08-31 code-quality pass, prose-scope#1): the exempt_sections / nearest_heading
+branches have never run against the live ops/prose_invariants.yaml (a grep for a live
+`exempt_sections:` key is still empty), but exempt_line_regex now DOES — it went live on
+`market_only_orders` on 2026-07-21 and on `retired_car_envelopes_not_operational` on 2026-08-07, and
+dropping it today would false-fail CI on real, currently-legitimate historical/changelog lines in
+Claude_Task_Plan.md and Operating_Protocols.md. These tests exercise every branch against tmp_path
+spec + fixture files (never the real files), and assert the exact printed contract.
 """
 from copy import deepcopy
 from pathlib import Path

@@ -28,20 +28,22 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from conftest import load_module_from_path
+# DEDUP FIX (2026-08-31 code-quality pass): this file used to carry its own private
+# `_fake_run(returncode, stdout, stderr="")` factory, functionally identical to
+# conftest.fake_subprocess_run (the shared factory tests/test_bq_json.py and
+# tests/test_verify_owner_actions.py already import) -- exactly the copy-paste conftest.py's
+# docstring says centralizing this factory was meant to prevent. tests/test_bq_json.py already uses
+# this same `from conftest import fake_subprocess_run as _fake_run` spelling.
+#
+# run_bq_query (lib/bq_json.py) calls subprocess.run WITHOUT check=True -- it inspects
+# out.returncode itself and raises a plain RuntimeError(stderr-or-stdout) on a nonzero exit
+# (codebase audit 2026-07-26: q() no longer raises subprocess.CalledProcessError at all, since
+# it no longer builds its own check=True subprocess.run call -- see q()'s docstring). _fake_run
+# mirrors that: it never raises regardless of returncode, matching real subprocess.run's own
+# no-check behavior; the RuntimeError comes from run_bq_query, one layer up.
+from conftest import fake_subprocess_run as _fake_run
 
 gd = load_module_from_path("generate_dashboard", "ops", "dashboard", "generate_dashboard.py")
-
-
-def _fake_run(returncode, stdout, stderr=""):
-    # run_bq_query (lib/bq_json.py) calls subprocess.run WITHOUT check=True — it inspects
-    # out.returncode itself and raises a plain RuntimeError(stderr-or-stdout) on a nonzero exit
-    # (codebase audit 2026-07-26: q() no longer raises subprocess.CalledProcessError at all, since
-    # it no longer builds its own check=True subprocess.run call — see q()'s docstring). This fake
-    # mirrors that: it never raises here regardless of returncode, matching real subprocess.run's
-    # own no-check behavior; the RuntimeError comes from run_bq_query, one layer up.
-    def run(cmd, capture_output=None, text=None, timeout=None):
-        return types.SimpleNamespace(returncode=returncode, stdout=stdout, stderr=stderr)
-    return run
 
 
 # ---- beat_heartbeat(): CI-vs-session note suffix (OAE-5, 2026-07-16) ----------------------

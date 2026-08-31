@@ -23,12 +23,57 @@ dp = load_module_from_path("dbt_parity", "scripts", "dbt_parity.py")
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def _normalized_halt_echo_mr_cte(sql):
-    """The 176 CTE has no dbt refs, so its executable text should mirror byte-for-byte."""
+def _normalized_halt_echo_mr_cte(sql, end_pattern=r"al\s+AS"):
+    """The 176 CTE should mirror byte-for-byte (after comment/whitespace normalization).
+    `end_pattern` is whatever text immediately follows the CTE's closing `),` in `sql` — `al AS`
+    (the next CTE in every model's WITH clause) by default, overridden to match
+    `{%- endmacro %}` when this is pointed at the extracted macro body instead of a model (see
+    below)."""
     code = strip_sql_comments(sql)
-    match = re.search(r"halt_echo_mr\s+AS\s*\((.*?)\n\),\s*\nal\s+AS", code, re.DOTALL)
+    match = re.search(rf"halt_echo_mr\s+AS\s*\((.*?)\n\),\s*\n{end_pattern}", code, re.DOTALL)
     assert match, "halt_echo_mr CTE missing"
     return " ".join(match.group(1).split())
+
+
+def _normalized_halt_echo_md_cte(sql):
+    """Companion to _normalized_halt_echo_mr_cte, for the OTHER half of the shared pair (reviewer
+    finding, 2026-08-31 code-quality pass: the original rewrite of this module byte-compared ONLY
+    halt_echo_mr, so a corrupted halt_echo_md -- e.g. its day-match flipped from `=` to `!=`, which
+    would invert the fail-closed missing_dependency echo-suppression -- left this whole file green).
+    Unlike halt_echo_mr, whose next CTE differs by caller (a model's `al AS`; the macro's
+    `{%- endmacro %}`), halt_echo_md is ALWAYS immediately followed by halt_echo_mr -- in every model
+    (the macro emits both back-to-back) and in the macro body itself -- so no end_pattern parameter
+    is needed here."""
+    code = strip_sql_comments(sql)
+    match = re.search(r"halt_echo_md\s+AS\s*\((.*?)\n\),\s*\nhalt_echo_mr\s+AS", code, re.DOTALL)
+    assert match, "halt_echo_md CTE missing"
+    return " ".join(match.group(1).split())
+
+
+def _render_macro_sources(text):
+    """Fold `{{ source('ds', 'tbl') }}` into the literal backtick-qualified form the canonical
+    bigquery/*.sql files write directly (`` `PROJECT.ds.tbl` ``) — dbt only ever compiles source()
+    to a fully-qualified 3-part identifier for this project, so the substitution is exact, not an
+    approximation. Re-derived here rather than shelling out to a real `dbt compile`
+    (scripts/verify_dbt_port.py already does that, at porting time) so this stays a pure, offline
+    text comparison like the rest of this module — no dbt CLI, no warehouse, no creds."""
+    return re.sub(
+        r"\{\{\s*source\(\s*'([^']+)'\s*,\s*'([^']+)'\s*\)\s*\}\}",
+        lambda m: f"`{dp.PROJECT}.{m.group(1)}.{m.group(2)}`",
+        text,
+    )
+
+
+# The three models that carried the byte-identical halt_echo_md/halt_echo_mr CTE pair before the
+# 2026-08-31 dedup (code-quality pass, dbt#2) extracted it into dbt/macros/halt_echo.sql, mirroring
+# dbt/macros/sgov_forward_fill.sql's precedent. Named explicitly (not derived from a `dbt list`) so
+# any one of them silently dropping its macro call is caught directly, whether or not it leaves
+# behind any trace to grep for; test_halt_echo_model_enumeration_is_exhaustive below separately
+# guards against a genuinely NEW model joining this cluster without being added here too.
+TRADING_ENABLED = ROOT / "dbt" / "models" / "state" / "trading_enabled.sql"
+TRADING_ENABLED_MECHANICAL = ROOT / "dbt" / "models" / "state" / "trading_enabled_mechanical.sql"
+B3_TRADING_ENABLED_CHECK = ROOT / "dbt" / "models" / "state" / "b3_trading_enabled_check.sql"
+HALT_ECHO_MODELS = [TRADING_ENABLED, TRADING_ENABLED_MECHANICAL, B3_TRADING_ENABLED_CHECK]
 
 
 def test_trading_gate_dbt_ports_mirror_final_176_halt_echo_missed_run_logic():
@@ -39,18 +84,79 @@ def test_trading_gate_dbt_ports_mirror_final_176_halt_echo_missed_run_logic():
         re.DOTALL,
     )
     assert len(canonical_ctes) == 3  # trading_enabled, mechanical, and the B3 self-check
+    canonical_ctes = [" ".join(c.split()) for c in canonical_ctes]
+    # A single shared macro can only be a faithful replacement for all three inline copies if those
+    # three copies were already identical to begin with — pin that premise explicitly.
+    assert canonical_ctes[0] == canonical_ctes[1] == canonical_ctes[2]
 
-    models = [
-        ROOT / "dbt" / "models" / "state" / "trading_enabled.sql",
-        ROOT / "dbt" / "models" / "state" / "trading_enabled_mechanical.sql",
-    ]
-    for model, canonical_cte in zip(models, canonical_ctes[:2], strict=True):  # both are fixed length-2 by construction
-        sql = model.read_text()
-        code = strip_sql_comments(sql)
-        assert _normalized_halt_echo_mr_cte(sql) == " ".join(canonical_cte.split())
+    # Companion extraction for halt_echo_md (2026-08-31, same pass: reviewer finding — this test used
+    # to check ONLY halt_echo_mr, so a corrupted halt_echo_md was invisible here). Same premise check:
+    # the three pre-dedup inline copies must have already been identical before a shared macro can be
+    # a faithful replacement for all three.
+    canonical_md_ctes = re.findall(
+        r"halt_echo_md\s+AS\s*\((.*?)\n\),\s*\nhalt_echo_mr\s+AS",
+        strip_sql_comments(canonical),
+        re.DOTALL,
+    )
+    assert len(canonical_md_ctes) == 3
+    canonical_md_ctes = [" ".join(c.split()) for c in canonical_md_ctes]
+    assert canonical_md_ctes[0] == canonical_md_ctes[1] == canonical_md_ctes[2]
+
+    # ASSERTION MOVED (2026-08-31 code-quality pass, dbt#2): this used to compare each model's own
+    # inline CTE text to canonical, but the dedup deleted that inline text from every model — it now
+    # lives once, in dbt/macros/halt_echo.sql. Checking the macro alone would silently stop proving
+    # anything about the MODELS the moment one of them stopped calling it (a regression the old,
+    # inline-only version of this test could never have missed, since the CTE text lived right there
+    # in the model). So this is now two halves: (a) the macro's own CTE text still mirrors canonical
+    # 176 — below — and (b) every model that used to carry that CTE still actually INVOKES the macro
+    # — in the loop after.
+    #
+    # (a) macro vs. canonical. The macro body writes `{{ source('ops', 'alerts') }}` /
+    # `{{ source('ops', 'run_log') }}` where the canonical file (and, before the dedup, every inline
+    # copy) writes a hardcoded backtick literal for the same two tables — the one respect in which
+    # the macro's raw text is no longer byte-for-byte with canonical. _render_macro_sources() folds
+    # those Jinja calls back to the literal form dbt compiles them to before the comparison, so
+    # equality here still means byte-identical executable text, exactly as it did pre-dedup.
+    macro_sql = (ROOT / "dbt" / "macros" / "halt_echo.sql").read_text()
+    macro_cte = _normalized_halt_echo_mr_cte(_render_macro_sources(macro_sql), end_pattern=r"\{%-\s*endmacro")
+    assert macro_cte == canonical_ctes[0]
+
+    # Same check for halt_echo_md — the gap the reviewer found: without this, flipping the CTE's
+    # day-match from `=` to `!=` (inverting the fail-closed missing_dependency echo-suppression) would
+    # leave every assertion in this file green.
+    macro_md_cte = _normalized_halt_echo_md_cte(_render_macro_sources(macro_sql))
+    assert macro_md_cte == canonical_md_ctes[0]
+
+    # (b) every model still calls the macro. Without this half, a model that dropped
+    # `{{ halt_echo() }}` entirely (e.g. reverted to hand-writing its own `al` CTE with no
+    # halt-echo exclusion at all) would leave (a) passing — the macro itself would still be fine —
+    # while the live gate silently stopped excluding halt-echo alerts for that one model.
+    for model in HALT_ECHO_MODELS:
+        text = model.read_text()
+        code = strip_sql_comments(text)
+        assert re.search(r"\{\{\s*halt_echo\(\)\s*\}\}", code), f"{model.name} no longer calls halt_echo()"
+        assert "AND alert_id NOT IN (SELECT alert_id FROM halt_echo_md)" in code
         assert "AND alert_id NOT IN (SELECT alert_id FROM halt_echo_mr)" in code
-        assert "halt-echo dependency+missed_run gate echoes" in code
-        assert "bigquery/176_decouple_embedding_health_from_trading_gate.sql" in sql
+        assert "bigquery/176_decouple_embedding_health_from_trading_gate.sql" in text
+
+    # The wording assertion stays scoped to the two models whose halt_reason CASE actually emits this
+    # phrase — b3_trading_enabled_check.sql has no halt_reason column at all (its `expected` CTE is a
+    # bare boolean), so canonical 176 itself only contains this phrase twice, not three times.
+    for model in (TRADING_ENABLED, TRADING_ENABLED_MECHANICAL):
+        assert "halt-echo dependency+missed_run gate echoes" in strip_sql_comments(model.read_text())
+
+
+def test_halt_echo_model_enumeration_is_exhaustive():
+    # Cross-check for HALT_ECHO_MODELS above: every dbt/models/**/*.sql file that still mentions
+    # halt_echo_md/halt_echo_mr or invokes the shared macro must be EXACTLY that hand-picked list —
+    # so a future model joining this gate cluster (or one of the three being renamed/moved) fails
+    # here loudly instead of silently falling outside test_trading_gate_dbt_ports_mirror_final_176_
+    # halt_echo_missed_run_logic's coverage (2026-08-31 code-quality pass, dbt#2).
+    referencing = sorted(
+        p for p in (ROOT / "dbt" / "models").rglob("*.sql")
+        if any(tok in p.read_text() for tok in ("halt_echo_md", "halt_echo_mr", "halt_echo()"))
+    )
+    assert referencing == sorted(HALT_ECHO_MODELS)
 
 
 # ---- bq(): thin delegation to lib/bq_json.run_bq_query -- pins THIS caller's fixed max_rows=100000 -

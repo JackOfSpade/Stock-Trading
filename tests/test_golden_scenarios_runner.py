@@ -2367,6 +2367,24 @@ def test_validate_offline_governing_sections_clean_entry_passes_with_no_errors(t
     assert "governing_sections" in out and "Strategy.md" in out and "excerpt" in out
 
 
+def test_validate_offline_governing_sections_invalid_utf8_file_caught_not_raised(tmp_path, monkeypatch):
+    # BUG FIX regression test (2026-08-31 code-quality pass, golden-runner#0): the governing_sections
+    # anchor-validation read used to catch only `except OSError`, but UnicodeDecodeError is a ValueError
+    # subclass, not an OSError — so a governing file containing invalid UTF-8 bytes (a realistic risk on
+    # a hand-edited prose file like Strategy.md) escaped that handler and crashed validate_offline() with
+    # a raw traceback instead of returning the same clean, listed schema error the sibling anchor-failure
+    # tests above all get back as a plain string in `errs`. Pin the fix: the call must not raise, and the
+    # resulting error message must be the same "could not read '<gf>' ..." text the OSError branch
+    # produces, not a bare exception escaping this function.
+    monkeypatch.setattr(rg, "ROOT", str(tmp_path))
+    (tmp_path / "Strategy.md").write_bytes(b"## Alpha\n\xff\xfe not valid utf-8\n")
+    sc = _sc_with_sections(["Strategy.md"], {"Strategy.md": ["## Alpha"]})
+    errs = rg.validate_offline([sc])  # must return a clean error list, not raise UnicodeDecodeError
+    assert any(
+        "could not read 'Strategy.md' to validate governing_sections anchors" in e for e in errs
+    ), errs
+
+
 def test_validate_offline_real_scenarios_yaml_governing_sections_all_declared_and_valid():
     # INVERTS the phase-1 placeholder this supersedes (test_validate_offline_real_scenarios_yaml_has_no_
     # governing_sections_declared, 2026-08-17): that test's own comment said "a later pass owns adding the

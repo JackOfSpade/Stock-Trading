@@ -64,6 +64,7 @@ Exit 0 = all good. Exit 1 = at least one violation. Run from the repo root.
 from __future__ import annotations
 
 import json
+import re
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -249,7 +250,23 @@ def load_cadence():
     doc = load_yaml(CADENCE)
     routines = cadence_routines(doc)
     deadline = doc.get("cadence_watch_deadline_local", "21:00")
-    hh, mm = (int(x) for x in str(deadline).split(":"))
+    # BUG FIX (2026-08-31 code-quality pass, cadence#5): validate the field's SHAPE before unpacking,
+    # mirroring check_cadence_consistency.py's own HHMM guard on this exact field. An UNQUOTED
+    # "21:00" in ops/cadence.yaml YAML-parses as the base-60 sexagesimal int 1260 -- a documented,
+    # repeated trap in this repo -- so `str(1260).split(":")` used to yield a single-element list and
+    # the bare tuple-unpack below raised an opaque `ValueError: not enough values to unpack (expected
+    # 2, got 1)` with no field/file name attached. That crash is reachable in production: auto-merge-
+    # claude.yml's post-merge coverage-check job runs every checker through a run_check() helper that
+    # explicitly records a failure and keeps going instead of stopping at the first red check, so this
+    # script still ran (and still crashed with a raw traceback) even after check_cadence_consistency.py
+    # already failed loudly on the SAME malformed field, one step earlier in that same run_check() list.
+    # Fail with the same clear, actionable message check_cadence_consistency.py already gives for this
+    # field instead of a bare traceback.
+    if not (isinstance(deadline, str) and re.fullmatch(r"\d{2}:\d{2}", deadline)):
+        raise SystemExit(
+            f"ops/cadence.yaml: cadence_watch_deadline_local must be a quoted \"HH:MM\" string "
+            f"(got {deadline!r} — an UNquoted 21:00 is YAML base-60 = 1260; always quote it)")
+    hh, mm = (int(x) for x in deadline.split(":"))
     return routines, (hh, mm)
 
 

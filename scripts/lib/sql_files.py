@@ -66,6 +66,22 @@ both gates over the full bigquery/*.sql tree, before and after this consolidatio
 check_superseded_markers.py's `_line_offsets()` and check_sq_version_registry.py's helper of the same
 name were byte-identical already (only their docstrings differed, describing each caller's own
 0-based-vs-1-based bisect convention) — moved here unchanged.
+
+DBT_DATASETS (below) is a FOURTH consolidation (sql-parity#0, 2026-08-31 code-quality pass):
+dbt_parity.py's `DATASET_FOLDERS` and check_dbt_view_coverage.py's `DATASETS` each independently
+spelled out the same conceptual constant — the BigQuery datasets dbt's parallel-run port covers —
+under different names AND in a different order ("state", "perf", "analytics" vs "state",
+"analytics", "perf"). ORDER IS NOT INTERCHANGEABLE between the two callers, so this tuple keeps
+dbt_parity.py's original element order rather than picking the alphabetically-tidier one:
+check_dbt_view_coverage.py only ever uses the tuple as a for-loop source feeding a `set` or as an
+`in` membership test, and its printed output already runs every dataset-bearing list through
+`sorted()` at the point it's printed (main()'s `uncovered = sorted(live - covered)`), so it is
+provably indifferent to iteration order. dbt_parity.py is NOT: compiled_models() drives this tuple
+directly as the model-PROCESSING order, and main() aggregates the printed skipped/errors/diffs
+lists "in model order" (see check_one_model()'s docstring) specifically so the report is
+deterministic run to run — reordering the tuple would silently reorder that report. Picking the
+order-sensitive caller's order is what makes adopting this shared constant a true no-op for both
+scripts' pre-existing observable behavior.
 """
 import os
 import re
@@ -88,6 +104,13 @@ OBJECT_DDL = re.compile(
     rf"`{re.escape(_PROJECT)}\.(\w+)\.(\w+)`",
     re.IGNORECASE,
 )
+
+# The BigQuery datasets dbt's parallel-run port covers — folder name under dbt/models/ == BigQuery
+# dataset name. Shared by dbt_parity.py (as DATASET_FOLDERS) and check_dbt_view_coverage.py (as
+# DATASETS); see this module's docstring ("FOURTH consolidation") for why the ORDER below is
+# dbt_parity.py's original order and must not be alphabetized — dbt_parity.py's report ordering
+# depends on it, check_dbt_view_coverage.py's does not.
+DBT_DATASETS = ("state", "perf", "analytics")
 
 
 def numbered_sql_files(bigquery_dir):

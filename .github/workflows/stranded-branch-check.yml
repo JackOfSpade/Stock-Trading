@@ -237,11 +237,10 @@ jobs:
             detail="Routine output may be stranded off main (RUNBOOK §20). ${detail}"
             detail=$(printf '%s' "$detail" | cut -c1-900)
 
-            # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted BigQuery table
-            # name must not be shell-expanded, and @p_* are BigQuery named parameters, not shell vars.
-            if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false \
-                 --parameter="p_detail:STRING:${detail}" --parameter="p_url:STRING:${run_url}" \
-                 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("stranded-branch-check","stranded_branch","open",@p_detail,@p_url)'; then
+            # 2026-08-31 code-quality pass (shell-workflows#0): VALUES-row insert extracted to
+            # scripts/ci_finding.sh (it builds its own run_url; the shell $run_url var above is
+            # still needed by the auto-resolve INSERT..SELECT in the else branch below).
+            if ! scripts/ci_finding.sh "stranded-branch-check" "stranded_branch" "open" "$detail"; then
               # DELIBERATELY does NOT exit here, unlike live-sql-parity.yml's B3 open-row write. The
               # GitHub-issue step below is the pre-existing delivery path and still works; exiting now
               # would suppress it and make a bridge outage strictly worse than no bridge at all. The job

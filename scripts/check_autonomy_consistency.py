@@ -44,6 +44,7 @@ except ImportError:
     raise SystemExit(2) from None
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib.report import fail_or_ok
 from lib.textio import read_text, load_yaml
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -296,17 +297,16 @@ def main():
     for path in extra_files:
         total_citations += len(_check_citations(path, stages, errors))
 
-    if errors:
-        print("AUTONOMY CONSISTENCY: FAIL\n")
-        for e in errors:
-            print(" - " + e)
-        print("\nFix the stale prose/SQL citation OR ops/autonomy_levels.yaml so they agree. A loop's "
-              "cited stage must never claim MORE autonomy than the register currently grants.")
-        return 1
-
-    print(f"AUTONOMY CONSISTENCY: OK — {total_citations} stage citation(s) match "
-          f"ops/autonomy_levels.yaml ({len(stages)} registered loop(s)).")
-    return 0
+    # REFACTOR (2026-08-31 code-quality pass, cross-cutting#0): this FAIL/OK block used to be
+    # hand-rolled here, byte-identical to a dozen sibling checkers' own copy — see lib/report.py's
+    # module docstring for the duplication class and why fail_or_ok() now owns it.
+    return fail_or_ok(
+        "AUTONOMY CONSISTENCY", errors,
+        f"AUTONOMY CONSISTENCY: OK — {total_citations} stage citation(s) match "
+        f"ops/autonomy_levels.yaml ({len(stages)} registered loop(s)).",
+        hint=("Fix the stale prose/SQL citation OR ops/autonomy_levels.yaml so they agree. A loop's "
+              "cited stage must never claim MORE autonomy than the register currently grants."),
+    )
 
 
 if __name__ == "__main__":

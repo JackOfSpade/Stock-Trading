@@ -38,8 +38,8 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.md_fence import fence_mask
 from lib.routine_manifest import ROUTINE_SUFFIX, heading_to_id
-from lib.slice_writer import check_or_write_slices, slugify
-from lib.textio import read_text
+from lib.slice_writer import dedupe_slice_name, run_split_cli, slugify
+from lib.textio import read_text_preserving_newlines
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "Claude_Task_Plan.md")
@@ -47,7 +47,12 @@ OUTDIR = os.path.join(ROOT, "task_plan")
 HEADER = ("<!-- GENERATED from Claude_Task_Plan.md by scripts/split_task_plan.py — DO NOT EDIT.\n"
           "     Claude_Task_Plan.md is canonical; regenerate after editing it. -->\n\n")
 # Hand-maintained files in task_plan/ that this script does not generate and must never flag as orphans.
-HAND_MAINTAINED = {"README.md"}
+# CLEANUP (tooling-misc#0, code-quality pass 2026-08-31): this was `{"README.md"}`, copy-pasted from
+# split_strategy.py's own HAND_MAINTAINED (strategy/README.md does exist) without checking that
+# task_plan/README.md does too -- it does not (`ls task_plan/README.md` -> No such file or directory),
+# so the entry was a no-op that just misdescribed this directory. Empty until task_plan/ actually
+# gets a hand-maintained file.
+HAND_MAINTAINED: set[str] = set()
 
 
 def slug(title: str) -> str:
@@ -115,7 +120,12 @@ def split(text):
 
 
 def build():
-    text = read_text(SRC)
+    # BUG FIX (tooling-misc#2, code-quality pass 2026-08-31): read_text() would silently normalize a
+    # CRLF/bare-\r source line to \n before split() ever sees it, undermining this script's own
+    # "--check proves today's tree is byte-identical" claim above -- the exact bug class
+    # scripts/adversarial_review_storage.py::parse_legacy_review already found and fixed for its own
+    # reader. Paired with lib/slice_writer.py's newline="" read/write.
+    text = read_text_preserving_newlines(SRC)
     preamble, routines = split(text)
     files = {"00_preamble.md": HEADER + preamble}
     index = ["# Claude_Task_Plan.md — generated routine-slice index\n",
@@ -126,10 +136,9 @@ def build():
              "| _(shared)_ | preamble: OPERATING MODEL + FILE CONVENTIONS | `00_preamble.md` |\n"]
     used = set()
     for rid, title, group_intro, body in routines:
-        name = f"{rid}.md"
-        while name in used:   # defensive: a duplicate cadence id would otherwise clobber a sibling slice
-            name = name[:-3] + "_.md"
-        used.add(name)
+        # dedupe_slice_name: defensive against a duplicate cadence id, which would otherwise clobber
+        # a sibling slice (shared with split_strategy.py's identical guard — tooling-misc#0).
+        name = dedupe_slice_name(f"{rid}.md", used)
         files[name] = HEADER + preamble + group_intro + body
         index.append(f"| {rid} | {title} | `{name}` |\n")
     files["INDEX.md"] = "".join(index)
@@ -137,21 +146,19 @@ def build():
 
 
 def main(argv):
-    check = "--check" in argv
-    files = build()
-    return check_or_write_slices(
-        files,
+    # CLEANUP (tooling-misc#0, code-quality pass 2026-08-31): this check/build/write dispatch used to
+    # be hand-written here AND in split_strategy.py's main(), identically except for five message
+    # strings — now the one shared body, in lib/slice_writer.py, parameterized by this script's own
+    # identity.
+    return run_split_cli(
+        argv,
+        build,
         outdir=OUTDIR,
-        check=check,
+        outdir_label="task_plan/",
+        source_name="Claude_Task_Plan.md",
+        script_name="split_task_plan.py",
+        unit_noun="routine",
         hand_maintained=HAND_MAINTAINED,
-        stale_message="STALE slices (run scripts/split_task_plan.py): ",
-        orphan_message=(
-            "ORPHANED slice file(s) — no longer produced by any current Claude_Task_Plan.md heading "
-            "(a routine was likely renamed/removed; delete these or the check will keep failing): "
-        ),
-        orphan_warning="WARNING: orphaned slice file(s) present (not written by this run, not hand-maintained): ",
-        ok_message="task_plan/ slices are in sync with Claude_Task_Plan.md",
-        wrote_message=f"Wrote {len(files)} files to task_plan/",
     )
 
 

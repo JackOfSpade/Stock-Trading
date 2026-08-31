@@ -6,6 +6,13 @@
 -- cannot ratchet the peak or fake a breach; breach_soft (-15%) = entries-only, breach_hard (-40%) =
 -- gate full-halt. drawdown_breach retained as a backward-compat alias == breach_hard. See the live
 -- file for the full rationale. Keep this byte-aligned with 78 or scripts/dbt_parity.py fails closed.
+-- ORGANIZATION FIX (2026-08-31 code-quality pass, dbt#1): the `flowed`/`snapshot_stale` CTEs below now
+-- use source('events','cash_flows') / source('ops','run_log') instead of the hardcoded
+-- `stock-trading-498512.events.cash_flows` / `...ops.run_log` literals — both already declared in
+-- sources.yml but bypassed here. Compiled-SQL-identical substitution. peak_window_gap_days' own
+-- `state.account_snapshot_gap` reference is left hardcoded — that object has no dbt source/ref
+-- declaration at all, so there is nothing to substitute it for (dbt#1's fix sketch is scoped to
+-- already-declared sources/models).
 WITH snaps AS (
   SELECT snapshot_date, nav
   FROM {{ source('ops', 'account_snapshot') }}
@@ -13,7 +20,7 @@ WITH snaps AS (
 ),
 flowed AS (
   SELECT s.snapshot_date, s.nav,
-    COALESCE((SELECT SUM(cf.amount) FROM `stock-trading-498512.events.cash_flows` cf
+    COALESCE((SELECT SUM(cf.amount) FROM {{ source('events', 'cash_flows') }} cf
               WHERE cf.flow_date <= s.snapshot_date), 0) AS cum_flows
   FROM snaps s
 ),
@@ -42,7 +49,7 @@ SELECT
   -- missed_run CRITICAL, and a completed-but-silently-empty Step 0b still makes this EXISTS TRUE.
   (agg.n_snapshots > 0
    AND agg.latest.snapshot_date < ltd.last_trading_day
-   AND EXISTS (SELECT 1 FROM `stock-trading-498512.ops.run_log`
+   AND EXISTS (SELECT 1 FROM {{ source('ops', 'run_log') }}
                WHERE routine = 'D2a' AND status = 'completed'
                  AND run_date >= ltd.last_trading_day)) AS snapshot_stale,
   (agg.n_snapshots >= 5 AND SAFE_DIVIDE(agg.latest.gain - agg.latest.peak_gain, NULLIF(agg.latest.cum_flows, 0)) <= -0.15) AS breach_soft,

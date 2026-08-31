@@ -92,11 +92,34 @@ resource "google_bigquery_table_iam_member" "gh_ci_runner_routine_commit_markers
 # never `terraform apply` (CLAUDE.md "Terraform / full IaC adoption" settled decision). The live
 # grant is the exact `bq add-iam-policy-binding` command in OWNER_ACTIONS.md, not this resource.
 #
-# WHY TABLE-SCOPED: four CI guard workflows (live-sql-parity, keyless-sa-audit, wif-binding-audit,
-# guard-config-audit) each need to INSERT open/resolved marker rows into exactly one table
-# (ops.ci_findings) -- nowhere else in ops.*, in particular nowhere near ops.run_log or ops.alerts
-# themselves (those stay written only by BigQuery-side procedures/routines under the operator's own
-# identity, same boundary as the routine_commit_markers grant above).
+# WHY TABLE-SCOPED: every WIF-authenticated CI workflow that needs to record a CI finding writes
+# open/resolved marker rows into exactly one table (ops.ci_findings) -- nowhere else in ops.*, in
+# particular nowhere near ops.run_log or ops.alerts themselves (those stay written only by
+# BigQuery-side procedures/routines under the operator's own identity, same boundary as the
+# routine_commit_markers grant above). COUNT CORRECTED (2026-08-31 code-quality pass): this used to
+# say "four" (live-sql-parity, keyless-sa-audit, wif-binding-audit, guard-config-audit); the true
+# count is 9 -- the 4 above plus alert-relay, auto-merge-claude, offsite-backup,
+# stranded-branch-check, sql-dryrun-sweep -- all authenticating as the same
+# var.ci_service_account_email (gh-ci-runner@) via WIF, so the grant itself was never
+# under-scoped, only the comment's count was stale. VERIFICATION COMMAND CORRECTED (same pass,
+# stale on arrival): this comment used to cite plain
+# `grep -rl 'INSERT INTO.*ops\.ci_findings' .github/workflows/*.yml` to reproduce the 9 -- but this
+# same uncommitted change set's scripts/ci_finding.sh extraction (17 of 25 call sites moved to the
+# shared script; see its header) deleted the literal INSERT text from 3 of the 9 --
+# guard-config-audit.yml, keyless-sa-audit.yml, wif-binding-audit.yml -- so that grep now finds
+# only 6. The count did NOT change (moving shared SQL into a script relocates callers, it doesn't
+# add or remove one); only the detection method needed widening to also match a real script
+# invocation, not just the leftover literal INSERTs (live-sql-parity.yml, stranded-branch-check.yml
+# and sql-dryrun-sweep.yml keep a literal SELECT-based auto-resolve INSERT alongside their script
+# calls -- ci_finding.sh's header explains why those sites were left untouched):
+#   grep -rlE 'INSERT INTO.*ops\.ci_findings|scripts/ci_finding\.sh "' .github/workflows/*.yml
+# (verified 2026-08-31: returns exactly the 9 workflows named above.) Match on the literal
+# `scripts/ci_finding\.sh "` -- the script name immediately followed by its first quoted arg --
+# rather than a bare filename mention: ci.yml's `tests/test_ci_finding.sh` step name and comments
+# also contain the substring "ci_finding.sh" but never call the script to write a row, so an
+# OR-in-the-filename-alone pattern overcounts to 10. Re-run the grep above, not either hardcoded
+# number here, if a future pass adds a 10th caller or converts one of the three remaining
+# SELECT-based sites to the script.
 ###############################################################################
 resource "google_bigquery_table_iam_member" "gh_ci_runner_ci_findings_editor" {
   project    = var.project_id

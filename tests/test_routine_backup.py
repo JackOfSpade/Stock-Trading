@@ -387,6 +387,19 @@ def test_instruction_match_ignores_a_meta_block_and_an_empty_instruction():
                                  triggers_doc) == "D1"
 
 
+def test_trigger_id_match_returns_none_for_a_none_tid_even_against_an_id_less_entry():
+    """BUG FIX (routine-backup#1, 2026-08-31 code-quality pass) regression test: before the `if tid is
+    None: return None` guard, `_trigger_id_match(None, ...)` false-matched any trigger_ids.json entry
+    that ITSELF lacks a `trigger_id` key, via `(entry or {}).get("trigger_id") == tid` collapsing to
+    `None == None`. This is the sibling test to test_instruction_match_ignores_a_meta_block_and_an_
+    empty_instruction above, which already pins the equivalent guard on _instruction_match()."""
+    trigger_ids_doc = {"W5": {"verified_via": "chrome"}}  # a plausible placeholder: no trigger_id yet
+    assert rb._trigger_id_match(None, trigger_ids_doc) is None
+    # Sanity: a real trigger_id still matches normally once tid is non-None.
+    trigger_ids_doc["W5"]["trigger_id"] = "trig_W5REAL"
+    assert rb._trigger_id_match("trig_W5REAL", trigger_ids_doc) == "W5"
+
+
 # ---- match_routine_id priority + match_conflict (B5, mutation gap 3) ---------------------------------
 def test_match_routine_id_trigger_id_wins_over_conflicting_instruction_match():
     """Priority is deliberate and must never flip: trigger_id is the ground truth once recorded.
@@ -1545,6 +1558,36 @@ def test_check_fails_on_trigger_id_mismatch(tmp_path, monkeypatch, capsys):
     assert "D1: trigger_id mismatch" in capsys.readouterr().out
 
 
+def test_check_fails_when_cadence_routine_missing_from_trigger_ids_json(tmp_path, monkeypatch, capsys):
+    """BUG FIX (routine-backup#2, 2026-08-31 code-quality pass) regression test: a cadence routine with
+    NO entry at all in ops/trigger_ids.json used to make want_tid None and skip the whole trigger_id
+    comparison -- so an already-wrong stored trigger_id (here 'trig_WRONG_ID', deliberately never
+    checked against anything before this fix) sailed through silently."""
+    doc = _good_backup_doc()
+    doc["routines"]["D1"]["trigger_id"] = "trig_WRONG_ID"
+    _, _, trigger_ids_path, _ = _wire(tmp_path, monkeypatch, backup_doc=doc)
+    trigger_ids_doc = json.loads(trigger_ids_path.read_text())
+    del trigger_ids_doc["D1"]
+    trigger_ids_path.write_text(json.dumps(trigger_ids_doc))
+    assert rb.check() == 1
+    assert "D1: no trigger_id recorded in ops/trigger_ids.json" in capsys.readouterr().out
+
+
+def test_check_fails_when_trigger_ids_json_entry_is_missing_the_trigger_id_field(tmp_path, monkeypatch, capsys):
+    """Same gap, different shape of the input: an ops/trigger_ids.json entry that EXISTS for the
+    routine but was hand-edited without its `trigger_id` key (e.g. a 'verified_via: pending'
+    placeholder recorded before the id was known) must be treated the same as a missing entry, not
+    silently skipped."""
+    doc = _good_backup_doc()
+    doc["routines"]["D1"]["trigger_id"] = "trig_WRONG_ID"
+    _, _, trigger_ids_path, _ = _wire(tmp_path, monkeypatch, backup_doc=doc)
+    trigger_ids_doc = json.loads(trigger_ids_path.read_text())
+    trigger_ids_doc["D1"] = {"verified_via": "pending"}
+    trigger_ids_path.write_text(json.dumps(trigger_ids_doc))
+    assert rb.check() == 1
+    assert "D1: no trigger_id recorded in ops/trigger_ids.json" in capsys.readouterr().out
+
+
 def test_check_fails_when_profile_does_not_exist(tmp_path, monkeypatch, capsys):
     doc = _good_backup_doc()
     doc["routines"]["D1"]["profile"] = "no_such_profile"
@@ -1595,7 +1638,31 @@ def test_check_ok_when_entry_uses_run_once_at_instead_of_cron(tmp_path, monkeypa
     doc["routines"]["D1"]["run_once_at"] = "2099-01-01T00:00:00Z"
     _wire(tmp_path, monkeypatch, backup_doc=doc)
     assert rb.check() == 0
-    assert "ROUTINE BACKUP CHECK: OK" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "ROUTINE BACKUP CHECK: OK" in out
+    assert "WARNING" not in out  # a future run_once_at must never trip the new staleness warning
+
+
+def test_check_warns_but_does_not_fail_on_a_stale_past_run_once_at(tmp_path, monkeypatch, capsys):
+    """BUG FIX (routine-backup#0, 2026-08-31 code-quality pass) regression test: before this fix,
+    check() never flagged a run_once_at that had already passed, even though restore()'s
+    _one_shot_restore_error() (reused here) immediately refuses to restore one. Uses a non-cadence
+    entry (like the real committed personal_* routines this was found against) so the assertion
+    isolates (5b) from the unrelated cadence-only checks (1)/(2)/(3). This is a WARNING, not an error
+    -- it must NOT flip the exit code, mirroring the real committed ops/routine_backup.json today
+    (both personal_* entries carry an equally stale run_once_at and `check` must stay green)."""
+    doc = _good_backup_doc()
+    doc["routines"]["personal_stale_one_shot"] = {
+        "trigger_id": "trig_STALE", "name": "Stale One-Shot", "enabled": False, "profile": "fleet",
+        "run_once_at": "2020-01-01T00:00:00Z",
+        "instruction": "whatever -- not a cadence routine, instruction isn't checked",
+    }
+    _wire(tmp_path, monkeypatch, backup_doc=doc)
+    assert rb.check() == 0
+    out = capsys.readouterr().out
+    assert "ROUTINE BACKUP CHECK: OK" in out
+    assert "WARNINGS" in out
+    assert ("personal_stale_one_shot: run_once_at (2020-01-01T00:00:00Z) is in the past" in out)
 
 
 # ---- check(): resolved (profile + overrides) fields must be real recovery data, not just present (B3) --

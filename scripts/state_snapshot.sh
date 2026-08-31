@@ -11,6 +11,10 @@
 # Optionally have D2 run this and `git add state_snapshots && git commit` at end of run.
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=bq_csv.sh
+source "$SCRIPT_DIR/bq_csv.sh"
+
 PROJECT="${PROJECT:-stock-trading-498512}"
 OUT="${OUT:-state_snapshots}"
 mkdir -p "$OUT"
@@ -18,7 +22,10 @@ command -v bq >/dev/null || { echo "bq CLI not found (install Google Cloud SDK)"
 
 dump () {  # dump <name> <sql>
   echo "  $1.csv"
-  bq --project_id="$PROJECT" query --use_legacy_sql=false --format=csv --quiet --headless --max_rows=100000 "$2" > "$OUT/$1.csv"
+  # bq_csv_query() (scripts/bq_csv.sh, extracted 2026-08-31 -- shell-workflows#1) keeps the CSV
+  # header row -- unlike backup_events.sh/restore_drill.sh's table-enumeration use, this file's
+  # whole point is a human-diffable CSV meant to be committed to git, so the header must survive.
+  bq_csv_query "$PROJECT" "$2" > "$OUT/$1.csv"
 }
 
 echo "Snapshotting state -> $OUT/"

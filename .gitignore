@@ -26,3 +26,12 @@ b14575dd-*
 
 # local CI secrets for act (global pre-push hook) - never commit
 .secrets
+
+# BUG FIX (2026-08-31 code-quality pass): terraform.tfvars.example claims "terraform.tfvars is
+# git-ignored by convention" but no rule for it existed here — a `cp ... terraform.tfvars` +
+# `git add -A` could have committed a real billing_account id. Also ignore Terraform's local
+# state/plugin-cache dirs, which likewise must never be committed (the real state backend is
+# gs://stock-trading-tfstate, per infra/terraform's declared-spec-only posture in CLAUDE.md).
+infra/terraform/terraform.tfvars
+infra/terraform/.terraform/
+infra/terraform/*.tfstate*

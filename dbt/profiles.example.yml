@@ -29,7 +29,9 @@ stock_trading:
       maximum_bytes_billed: 1000000000   # 1 GB
 
     # ---- CI: service-account / Workload Identity Federation (gated on creds) ------
-    # Used by `dbt build --target ci`. Requires BigQuery access; see README "CI".
+    # `dbt build` has NEVER been wired into automation (verified 2026-08-31, dbt#4: grepped ci.yml +
+    # live-sql-parity.yml for `dbt build` -- zero hits; both only ever run `dbt parse`/`dbt compile`/
+    # `dbt test`, none of which materialize anything). Requires BigQuery access; see README "CI".
     # Prefer keyless WIF in GitHub Actions over a long-lived JSON key.
     ci:
       type: bigquery
@@ -40,7 +42,20 @@ stock_trading:
       # method: oauth                   # with google-github-actions/auth providing ADC
       method: oauth
       project: stock-trading-498512
-      dataset: dbt_ci                   # isolated CI dataset so CI never writes prod views
+      # BUG FIX (2026-08-31 code-quality pass, dbt#4): `dataset: dbt_ci` here does NOT isolate a future
+      # `dbt build --target ci` from the live datasets, despite what this line used to claim. This
+      # project's macros/generate_schema_name.sql override uses a model's +schema AS-IS whenever one is
+      # set (BARE, no dataset prefix) and dbt_project.yml gives EVERY model a folder-level +schema
+      # (state/perf/analytics) -- confirmed no model lacks one. So under this exact profile, every model
+      # would still compile to +schema's dataset (state/perf/analytics), i.e. the LIVE ones, regardless
+      # of what `dataset` says here. `dbt build` must never be pointed at this (or the `dev`) target
+      # without first overriding every model's +schema for that run (e.g. `--vars` plumbed through a
+      # conditional +schema, or per-run --project-dir with a throwaway dbt_project.yml) -- `dataset:`
+      # alone buys nothing. dbt/profiles.ci.yml (the file CI's dbt jobs actually copy in) sets
+      # `dataset: state` for the same reason: it was never meant to provide isolation either, only a
+      # default landing spot for dbt's own artifacts on the `dbt parse`/`compile`/`test`-only path that
+      # never materializes a model.
+      dataset: dbt_ci
       location: US
       threads: 4
       timeout_seconds: 300

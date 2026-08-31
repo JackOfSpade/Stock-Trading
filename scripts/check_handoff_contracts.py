@@ -70,7 +70,9 @@ so ops/handoff_contracts.yaml cannot silently drift from the live venue-claim tr
 direction (a queue/drainer set present in one but not the other is a FAIL, named explicitly).
 
 CHECK B -- REQUIRED-COLUMN NAMING (ops/handoff_contracts.yaml `required_column_naming`).
-Parses every `CREATE [OR REPLACE] TABLE [IF NOT EXISTS] project.(events|ops).<name>` in bigquery/*.sql
+Parses every `CREATE [OR REPLACE] TABLE [IF NOT EXISTS] project.(events|ops|state|analytics|perf).<name>`
+in bigquery/*.sql (widened from (events|ops) alone 2026-08-31, contracts#0 -- see CREATE_TABLE_RE's own
+comment for why)
 (numeric apply order via scripts/lib/sql_files.py, so a table CREATEd in one file and later
 CREATE-OR-REPLACEd in another resolves to its LAST-in-apply-order definition -- see
 parse_create_table_bodies()'s docstring for the one observed exception, which is a byte-identical
@@ -133,6 +135,7 @@ except ImportError:
     raise SystemExit(2) from None
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib.report import fail_or_ok
 from lib.sql_files import numbered_sql_files, strip_sql_comments
 from lib.textio import load_yaml, read_text
 from split_task_plan import split as split_task_plan_sections
@@ -317,9 +320,19 @@ def check_a(spec, bodies, errors):
 # CHECK B -- required-column naming
 # ============================================================================================
 
+# BUG FIX (2026-08-31 code-quality pass, contracts#0): was hardcoded to (events|ops), so every
+# state/analytics/perf CREATE TABLE was structurally invisible to both this regex and CHECK B's
+# completeness sweep below -- e.g. state.param_change_provenance's change_key/param_key/change_type
+# NOT NULL columns could never be flagged as unpinned in Claude_Task_Plan.md, exactly the defect
+# class this script exists to catch. Widened to every dataset that actually holds a routine-writable
+# table with a parenthesized column list; CREATE...AS (analytics.review_embeddings,
+# analytics.decision_embeddings) and the FORMAT-string dynamic `CREATE ... LIKE` in
+# events_restore_drill (bigquery/17_restore_drill.sql) still don't match -- neither has an immediate
+# `(` after the table name, so widening the alternation further to include events_restore_drill would
+# be a no-op for that specific statement.
 CREATE_TABLE_RE = re.compile(
     r"CREATE\s+(?:OR\s+REPLACE\s+)?TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?"
-    rf"`{re.escape(PROJECT)}\.(events|ops)\.(\w+)`\s*\(",
+    rf"`{re.escape(PROJECT)}\.(events|ops|state|analytics|perf)\.(\w+)`\s*\(",
     re.IGNORECASE,
 )
 COLNAME_RE = re.compile(r"^([a-zA-Z_][a-zA-Z0-9_]*)\b")
@@ -534,9 +547,10 @@ def check_b(spec, task_plan_text, errors):
         if resolve(table) is None:
             errors.append(f"CHECK B: excluded_tables table {table!r} has no CREATE TABLE in bigquery/*.sql")
 
-    # Completeness: every events./ops. table with >=1 required column must be accounted for exactly
-    # once above (write_targets, procedure_wrapped, or excluded_tables) -- an unrecognized table is
-    # neither a pass nor a silent skip, it is a gap in this spec's own coverage.
+    # Completeness: every table CREATE_TABLE_RE can see (events/ops/state/analytics/perf, each with
+    # >=1 required column) must be accounted for exactly once above (write_targets, procedure_wrapped,
+    # or excluded_tables) -- an unrecognized table is neither a pass nor a silent skip, it is a gap in
+    # this spec's own coverage.
     for (dataset, name), body in table_bodies.items():
         table = f"{dataset}.{name}"
         if table in seen_tables:
@@ -673,21 +687,19 @@ def main():
     tables_checked = check_b(spec, task_plan_text, errors)
     rows_checked = check_c(spec, bodies, errors)
 
-    if errors:
-        print("HANDOFF CONTRACTS: FAIL\n")
-        for e in errors:
-            print(" - " + e)
-        return 1
-
+    # REFACTOR (2026-08-31 code-quality pass, cross-cutting#0): shared FAIL/OK block, see
+    # lib/report.py's module docstring — this file's own two earlier guards (missing/empty
+    # SPEC_PATH, above) stay hand-rolled: they are single-message fail-closed preconditions with no
+    # matching OK line to pair against, not this dual-branch shape.
     n_procedure_wrapped = len((spec.get("required_column_naming") or {}).get("procedure_wrapped") or [])
     n_excluded_queues = len(spec.get("excluded_queues") or [])
-    print(
+    return fail_or_ok(
+        "HANDOFF CONTRACTS", errors,
         f"HANDOFF CONTRACTS: OK -- CHECK A: {lanes_checked} queue lane(s) drain-close-verified "
         f"({n_excluded_queues} excluded with reason); CHECK B: {tables_checked} write-target "
         f"table(s) column-name-verified ({n_procedure_wrapped} procedure-wrapped exemptions); "
-        f"CHECK C: {rows_checked} row-mediated handoff(s) discovery-predicate-verified."
+        f"CHECK C: {rows_checked} row-mediated handoff(s) discovery-predicate-verified.",
     )
-    return 0
 
 
 if __name__ == "__main__":

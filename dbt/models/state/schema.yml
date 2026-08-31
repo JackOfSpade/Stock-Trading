@@ -242,3 +242,121 @@ models:
     columns:
       - name: trading_enabled
         tests: [not_null]
+
+  # ---- SISA-lifecycle '*_readiness' gates (dbt#3, 2026-08-31 code-quality pass) --------------------
+  # Added 2026-08-22 (dbt view-coverage burn-down) with zero schema.yml presence — every sibling gate
+  # model above (trading_enabled, book_drawdown_watch, system_health, trading_control_latest) got a
+  # description AND a dbt test; these 17 got neither, so `dbt docs`/the model-level catalog had nothing
+  # to show for the exact gates the fully-autonomous SL1-SL5 Strategy Arsenal lifecycle and the monitor-
+  # /loop-promotion routines read (CLAUDE.md: "Strategy add/delete is now FULLY AUTONOMOUS" — the
+  # graduation pipeline these views implement IS the safety rail). DESCRIPTIONS ONLY, deliberately no
+  # `tests:` here — `dbt test` runs against LIVE data in live-sql-parity.yml (the B3 invariant suite),
+  # so a new singular/generic test on a readiness gate could turn that daily workflow red on a live-data
+  # condition that isn't a repo defect; scripts/dbt_parity.py's row-level comparison already protects
+  # each of these 17 the same way it protects every other ported model.
+  - name: append_only_integrity_promotion_readiness
+    description: Promotion gate for the append_only_integrity cadence monitor — TRUE once its trailing
+      14-distinct-day clean streak (ops.monitor_health_history) is complete and it has not already been
+      promoted (ops.monitor_promotion_log). Canonical bigquery/57_append_only_integrity_promotion.sql.
+
+  - name: b3_promotion_readiness
+    description: Promotion gate for the b3_trading_enabled_drift monitor — same trailing-14-clean-day-
+      streak shape as append_only_integrity_promotion_readiness, keyed on a different check_id.
+      Canonical bigquery/79_b3_promotion.sql.
+
+  - name: calibration_param_readiness
+    description: Per-calibration-parameter auto-change gate — ready_for_change is TRUE when the
+      Wilson interval (calibration_shrunk) excludes the registry's current implied_rate, the
+      calibration sample has closed >= 15, a SHADOW trial already proved the change
+      (state_external.param_change_provenance), and it has not already been applied; auto_revert_due
+      separately surfaces an OOS-degradation revert signal from param_oos_degradation. Canonical
+      bigquery/37_self_improvement_autonomy.sql.
+
+  - name: catchup_refire_readiness
+    description: Pending routine catch-up refire candidates — unions daily-tier misses
+      (catchup_available), period-tier misses (period_catchup_available), and a D1/D3/SL3
+      yesterday-daily-miss fallback, minus anything already logged in ops.catchup_refire_log.
+      Canonical bigquery/112_catchup_readiness_period_asof_fix.sql.
+
+  - name: d2a_cutover_readiness
+    description: D2a mechanical-cutover gate — ready_for_cutover is TRUE once >= 3 completed D2a
+      trading-day runs are logged (ops.run_log) and no cutover attempt has been recorded yet
+      (ops.d2a_cutover_log). Canonical bigquery/32_d2a_cutover_readiness.sql.
+
+  - name: ddl_drift_promotion_readiness
+    description: Promotion gate for the ddl_drift monitor — same trailing-14-clean-day-streak shape as
+      append_only_integrity_promotion_readiness / b3_promotion_readiness, keyed on a different
+      check_id. Canonical bigquery/45_monitor_promotion.sql.
+
+  - name: execution_quality_readiness
+    description: Execution-quality auto-change gate — ready_for_change is TRUE once >= 8 measured
+      non-SGOV fills (execution_quality) show a consistent-sign adverse/favorable slippage signal (all
+      adverse or all favorable). Canonical bigquery/37_self_improvement_autonomy.sql.
+
+  - name: foundation_change_termination_readiness
+    description: Per-strategy foundation-change TERMINATE gate — ready is TRUE when the latest
+      orchestrator foundation-change-assessment verdict AND its paired referee_gemini verdict
+      (adversarial_reviews_current, matched by review_id) both read TERMINATE, and no matching
+      roster_change_log TERMINATED transition already exists. Canonical
+      bigquery/143_adversarial_review_correction_path.sql.
+
+  - name: process_reliability_readiness
+    description: Per (routine, deadline_key) process-constant auto-change gate — ready_for_change is
+      TRUE once the 3 most recent cycles (ops.process_reliability_observations) all flagged
+      threat_pattern and no matching ops.process_constant_change_log entry already exists. Canonical
+      bigquery/37_self_improvement_autonomy.sql.
+
+  - name: referee_promotion_readiness
+    description: Cross-model referee-independence loop promotion gate — ready_for_promotion is TRUE
+      once the 90-day quarter has elapsed since the first referee_gemini row, the scored-sample /
+      concurrence-rate / review-type-breadth bars (referee_concurrence_calibration) are all met, and
+      the loop has not already been promoted to active_auto (ops.loop_promotion_log). Canonical
+      bigquery/143_adversarial_review_correction_path.sql.
+
+  - name: research_quality_promotion_readiness
+    description: Per (strategy, sub_pattern) research-quality feedback-loop promotion gate —
+      ready_for_promotion is TRUE once the 3 most recent cycles (ops.research_quality_observations)
+      all met min_n and the loop has not already been promoted to active_auto. Canonical
+      bigquery/71_research_quality_promotion.sql.
+
+  - name: restore_stale_promotion_readiness
+    description: Promotion gate for the restore_stale monitor — ready is TRUE once restore_health
+      reports monitored AND last_drill_passed and it has not already been promoted. Canonical
+      bigquery/45_monitor_promotion.sql.
+
+  - name: strategy_adoption_readiness
+    description: Per-strategy UNDER_REVIEW -> SHADOW adoption gate — ready is TRUE when the latest
+      strategy-adoption orchestrator verdict is SUFFICIENT, the paired theater_judge row reads
+      judge_independent, the incubation-cap/ceiling rails (arsenal_rails) and the arsenal kill-switch
+      (arsenal_enabled) are clear, and no matching roster_change_log UNDER_REVIEW->SHADOW transition
+      already exists. Canonical bigquery/143_adversarial_review_correction_path.sql.
+
+  - name: strategy_paper_readiness
+    description: Per-strategy PAPER -> PROBE promotion gate plus an independent >= 400-paper-day stuck
+      flag — ready combines a days/trade-count/trailing-excess/regime-coverage bar with the arsenal
+      rails and not_already_transitioned; stuck/stuck_reason separately flag a PAPER candidate that has
+      run long enough (>= 400 days) that an unmet candidate-side term means cull-to-REJECTED rather
+      than keep waiting (arsenal-state terms are deliberately excluded from stuck — a candidate blocked
+      only by a roster ceiling or the owner's freeze is healthy). Canonical
+      bigquery/189_paper_stuck_completeness.sql.
+
+  - name: strategy_playbook_readiness
+    description: Playbook-revision auto-change gate — ready_for_change is TRUE when >= 1 conviction
+      tier is a trustworthy edge (calibration_shrunk) AND at least 2 of the 3 process checks
+      (conviction_monotonicity / declared_vs_realized / forecast_bias) meet their own min_n bar.
+      Canonical bigquery/37_self_improvement_autonomy.sql.
+
+  - name: strategy_retirement_readiness
+    description: Per-strategy RETIREMENT_PROPOSED -> TERMINATED gate — ready is TRUE when the latest
+      strategy-retirement orchestrator verdict is RETIRE, the paired referee_gemini verdict
+      (matched by review_id, not strategy_code, so a stale prior-review verdict can never satisfy a new
+      one) concurs, the roster floor (active_count > n_min) and arsenal rails are clear, and no
+      matching roster_change_log TERMINATED transition already exists. Canonical
+      bigquery/143_adversarial_review_correction_path.sql.
+
+  - name: strategy_shadow_readiness
+    description: Per-strategy SHADOW -> PAPER promotion gate plus an independent >= 400-shadow-day
+      stuck flag — ready combines a days/signal-rate/scaffolding-fault bar with the arsenal
+      kill-switch and not_already_transitioned; stuck mirrors strategy_paper_readiness's stuck (a
+      SHADOW candidate that has run long enough that an unmet signal-rate or scaffolding term means
+      cull-to-REJECTED). Canonical bigquery/60_shadow_stuck_cull.sql.

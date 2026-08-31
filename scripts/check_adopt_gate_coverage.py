@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Fail CI if OPS0 STEP 4d precondition 5's hand-kept check list drifts from ci.yml.
+"""Fail CI if OPS0 STEP 4d precondition 5's hand-kept check list, OR auto-merge-claude.yml's
+post-merge coverage-check step, drifts from ci.yml.
 
 WHY THIS EXISTS (alert ops0_adopt_gate_drift, 2026-08-20). OPS0's STEP 4d ADOPT path
 (Claude_Task_Plan.md) merges a stranded branch onto main with no human in the loop, gated on
@@ -40,6 +41,35 @@ WHAT THIS DELIBERATELY DOES NOT CHECK:
     makes precondition 5 do MORE work than CI requires, never less -- it cannot let a
     weaker-than-CI branch through, which is the only risk this script exists to close.
 
+SECOND MIRROR (roster#0, 2026-08-31 code-quality pass). auto-merge-claude.yml's `id: postmerge`
+step ("Post-merge coverage check", run against main's ACTUAL merged tip after this job pushes)
+is a STRUCTURALLY IDENTICAL hand-kept copy of ci.yml's checks-job step list -- its own comment
+says as much ("Every command below is copy-identical to ci.yml's `checks` job ... except the
+push-diff-scoped check_cadence_marker.py ... and the lint/dbt steps"). Nothing cross-checked that
+copy against ci.yml the way this script already does for Claude_Task_Plan.md's precondition 5,
+so it could drift exactly as precondition 5 already did once (ops0_adopt_gate_drift, above) with
+zero CI signal -- the next blocking step added to ci.yml would silently stop being re-verified
+against main's merged tip. This script now also asserts every required identifier's basename
+appears as a `run_check <cmd> ...` line inside that step's `run:` body, EXCEPT the identifiers in
+POSTMERGE_EXCLUDED_IDENTIFIERS below -- an explicit allowlist (not silence) for the omissions the
+step's own comment already documents as deliberate: check_cadence_marker.py (needs a `git diff`
+against the ORIGINAL push's base, which no longer resolves once this job has already merged onto
+main's new tip) and the three pinned-linter/name-sync steps (actionlint, shellcheck,
+workflow_run) that this job never installs a linter binary to run at all. This closes that
+agreement mechanically so it can't silently rot the way precondition 5's did.
+
+STALE-COMMENT CORRECTION (2026-08-31 code-quality pass, same day): this paragraph originally
+froze "the two lists agree today (24 `run_check` lines == 28 required identifiers minus those 4
+allowlisted ones)" here. That was already wrong by the time this file was read again in the same
+pass -- two more blocking ci.yml steps (tests/test_bq_csv.sh, tests/test_ci_finding.sh) had been
+added after the sentence was written, and re-running this script now prints 30 required
+identifiers / 26 `run_check` lines, not 28/24. A number frozen in prose rots the moment ci.yml
+gains or loses a blocking step; it is not re-verified by anything. Do not restore a hardcoded
+count here -- run `python scripts/check_adopt_gate_coverage.py` and read its own
+`POST-MERGE COVERAGE MIRROR: OK -- N blocking checks-job identifiers ... (plus 4 deliberately
+allowlisted)` line for the live count; that line is generated from ci.yml and
+auto-merge-claude.yml every time this script runs, so it cannot go stale the way this comment did.
+
 Usage: python scripts/check_adopt_gate_coverage.py     # exit 0 if in sync, 1 + diff if not
 """
 import os
@@ -58,12 +88,32 @@ from lib.textio import load_yaml, read_text
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CI_YML = os.path.join(ROOT, ".github", "workflows", "ci.yml")
 TASK_PLAN = os.path.join(ROOT, "Claude_Task_Plan.md")
+AUTO_MERGE_YML = os.path.join(ROOT, ".github", "workflows", "auto-merge-claude.yml")
 
 # Anchors bounding precondition 5's step-list paragraph within OPS0 STEP 4d's ADOPT block. Both
 # must exist verbatim; a rewrite that removes either is itself worth failing loudly for, rather
 # than silently scanning the wrong (or zero) text.
 PARA_START = "THE LOCAL CHECK SUITE PASSES ON THE RESOLUTION"
 PARA_END = "PUSH IMMEDIATELY once 1"
+
+# auto-merge-claude.yml's post-merge coverage-check step is identified by its `id:`, not by a
+# substring of its `name:` -- that workflow has FIVE other steps whose name also contains "post-
+# merge coverage check" (the Python setup step before it, the GH-issue/ops.ci_findings steps
+# after it), so a name substring would be ambiguous. `id:` is also what the step's own later
+# `if: steps.postmerge.outputs.result == ...` conditions key off, so it is already the load-
+# bearing identifier for this step elsewhere in the same workflow, not a citation invented here.
+POSTMERGE_STEP_ID = "postmerge"
+
+# Required identifiers (roster#0, 2026-08-31) that the post-merge coverage-check step
+# DELIBERATELY does not run_check, per that step's own comment -- an explicit allowlist rather
+# than silently treating a missing identifier as fine. See this module's docstring ("SECOND
+# MIRROR") for why each one is here.
+POSTMERGE_EXCLUDED_IDENTIFIERS = {
+    "check_cadence_marker.py",  # push-diff scoped; no ORIGINAL push base to diff post-merge
+    "actionlint",  # pinned-linter step; this job never installs actionlint
+    "shellcheck",  # pinned-linter step; this job never installs shellcheck
+    "workflow_run",  # name-sync check reads workflow files directly, not run here
+}
 
 PY_RUN = re.compile(r"\bpython3?\s+(?:-m\s+)?(\S+\.py)\b")
 PYTEST_RUN = re.compile(r"\bpython3?\s+-m\s+pytest\b")
@@ -134,9 +184,68 @@ def find_precondition5_paragraph(plan_text):
     return plan_text[start:end]
 
 
+def load_postmerge_step(path=None):
+    """The auto-merge-claude.yml step whose `id:` is POSTMERGE_STEP_ID, or None if no step in
+    the workflow carries that id (workflow restructured -- the id itself renamed or removed)."""
+    doc = load_yaml(path or AUTO_MERGE_YML)
+    try:
+        jobs = doc["jobs"]
+    except KeyError as e:
+        raise SystemExit(f"{path or AUTO_MERGE_YML}: no jobs found -- workflow restructured? ({e})") from e
+    for job in jobs.values():
+        for step in job.get("steps") or []:
+            if step.get("id") == POSTMERGE_STEP_ID:
+                return step
+    return None
+
+
+def postmerge_step_identifiers(step):
+    """Identifiers the post-merge coverage-check step actually `run_check`s, reusing the same
+    PY_RUN/PYTEST_RUN/BASH_TEST_RUN/NODE_RUN patterns required_identifiers() uses against
+    ci.yml. Unlike that function, there is no continue-on-error/`|| true`/act-local shape to
+    filter here -- every line in this step is unconditionally blocking by construction (see the
+    step's own comment) -- so the only filter is requiring the line to actually be a `run_check
+    ...` invocation, not one of the surrounding `run_check()` helper-function lines (`fail=0`,
+    the `if ! "$@"; then` body, the trailing `if [ "$fail" -eq 0 ]` summary)."""
+    found = set()
+    for line in (step.get("run") or "").splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("run_check "):
+            continue
+        if PYTEST_RUN.search(stripped):
+            found.add("pytest")
+        for pattern in (PY_RUN, BASH_TEST_RUN, NODE_RUN):
+            m = pattern.search(stripped)
+            if m:
+                found.add(os.path.basename(m.group(1)))
+    return found
+
+
+def find_postmerge_missing(required):
+    """(missing, step): step is the located `id: postmerge` step (or None if it could not be
+    found at all); missing is the (ident, step_name) pairs required_identifiers() computed from
+    ci.yml that are absent from that step's run_check lines, after excluding
+    POSTMERGE_EXCLUDED_IDENTIFIERS -- the same "one per identifier, first ci.yml step wins"
+    dedup shape main() already uses for the precondition-5 comparison."""
+    step = load_postmerge_step()
+    if step is None:
+        return [], None
+
+    present = postmerge_step_identifiers(step)
+    missing = []
+    seen = set()
+    for ident, step_name in required:
+        if ident in POSTMERGE_EXCLUDED_IDENTIFIERS or ident in present or ident in seen:
+            continue
+        seen.add(ident)
+        missing.append((ident, step_name))
+    return missing, step
+
+
 def main():
     steps = load_checks_job_steps()
     required = required_identifiers(steps)
+    exit_code = 0
 
     paragraph = find_precondition5_paragraph(read_text(TASK_PLAN))
     if paragraph is None:
@@ -144,28 +253,55 @@ def main():
               f"paragraph in {os.path.relpath(TASK_PLAN, ROOT)} (anchor {PARA_START!r} or "
               f"{PARA_END!r} missing/moved). Fix the anchors in this script if the prose was "
               f"deliberately reworded, or restore the paragraph if it was accidentally deleted.")
-        return 1
+        exit_code = 1
+    else:
+        missing = []
+        seen = set()
+        for ident, step_name in required:
+            if ident in paragraph or ident in seen:
+                continue
+            seen.add(ident)
+            missing.append((ident, step_name))
 
-    missing = []
-    seen = set()
-    for ident, step_name in required:
-        if ident in paragraph or ident in seen:
-            continue
-        seen.add(ident)
-        missing.append((ident, step_name))
+        if missing:
+            print("ADOPT GATE COVERAGE: FAIL -- OPS0 STEP 4d precondition 5's hand-kept check list "
+                  "(Claude_Task_Plan.md) is missing steps that ci.yml's checks job actually blocks "
+                  "on. OPS0's ADOPT path would run a WEAKER local gate than CI. Add each one to "
+                  "precondition 5's step list:\n")
+            for ident, step_name in missing:
+                print(f"  - {ident}  (ci.yml step: {step_name!r})")
+            exit_code = 1
+        else:
+            print(f"ADOPT GATE COVERAGE: OK -- {len({i for i, _ in required})} blocking checks-job "
+                  f"identifiers all present in precondition 5's step list.")
 
-    if missing:
-        print("ADOPT GATE COVERAGE: FAIL -- OPS0 STEP 4d precondition 5's hand-kept check list "
-              "(Claude_Task_Plan.md) is missing steps that ci.yml's checks job actually blocks "
-              "on. OPS0's ADOPT path would run a WEAKER local gate than CI. Add each one to "
-              "precondition 5's step list:\n")
-        for ident, step_name in missing:
+    # SECOND MIRROR (roster#0, 2026-08-31): auto-merge-claude.yml's `id: postmerge` step is a
+    # second hand-kept copy of this same ci.yml step list -- see this module's docstring. Run
+    # regardless of the precondition-5 result above so one report shows both mirrors' status.
+    postmerge_missing, postmerge_step = find_postmerge_missing(required)
+    if postmerge_step is None:
+        print(f"POST-MERGE COVERAGE MIRROR: FAIL -- could not locate the `id: {POSTMERGE_STEP_ID}` "
+              f"step in {os.path.relpath(AUTO_MERGE_YML, ROOT)} (workflow restructured -- the "
+              f"step's id was renamed or removed). Fix POSTMERGE_STEP_ID in this script if that "
+              f"was deliberate, or restore the step's id if it was accidentally dropped.")
+        exit_code = 1
+    elif postmerge_missing:
+        print("POST-MERGE COVERAGE MIRROR: FAIL -- auto-merge-claude.yml's post-merge coverage-"
+              "check step (id: postmerge) is missing run_check lines for steps ci.yml's checks "
+              "job actually blocks on. A branch could merge to main's tip without this job's "
+              "post-merge safety net re-verifying it against that check. Add each one as a "
+              "`run_check ...` line in that step, or to POSTMERGE_EXCLUDED_IDENTIFIERS in this "
+              "script if the omission is deliberate and documented there like the existing four:\n")
+        for ident, step_name in postmerge_missing:
             print(f"  - {ident}  (ci.yml step: {step_name!r})")
-        return 1
+        exit_code = 1
+    else:
+        covered = len({i for i, _ in required} - POSTMERGE_EXCLUDED_IDENTIFIERS)
+        print(f"POST-MERGE COVERAGE MIRROR: OK -- {covered} blocking checks-job identifiers all "
+              f"present in auto-merge-claude.yml's post-merge coverage-check step (plus "
+              f"{len(POSTMERGE_EXCLUDED_IDENTIFIERS)} deliberately allowlisted).")
 
-    print(f"ADOPT GATE COVERAGE: OK -- {len({i for i, _ in required})} blocking checks-job "
-          f"identifiers all present in precondition 5's step list.")
-    return 0
+    return exit_code
 
 
 if __name__ == "__main__":

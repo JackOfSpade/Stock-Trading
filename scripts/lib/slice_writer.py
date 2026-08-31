@@ -20,6 +20,22 @@ def find_orphaned_markdown_files(outdir: str, expected_files, hand_maintained) -
     return sorted(fn for fn in os.listdir(outdir) if fn.endswith(".md") and fn not in expected)
 
 
+def dedupe_slice_name(name: str, used: set[str]) -> str:
+    """Disambiguate a generated slice filename against names already used this build.
+
+    split_task_plan.py and split_strategy.py each build a `.md` filename from a heading and
+    defensively guard against a collision (two headings producing the same slice name) with the
+    identical loop: keep appending a trailing underscore before the extension until the name is
+    unique. Shared here so the guard can't drift between the two copies (tooling-misc#0, code-quality
+    pass 2026-08-31). Mutates `used` to include the returned name — callers no longer need their own
+    `used.add(name)` line.
+    """
+    while name in used:
+        name = name[:-3] + "_.md"
+    used.add(name)
+    return name
+
+
 def check_or_write_slices(
     files: dict[str, str],
     *,
@@ -39,13 +55,19 @@ def check_or_write_slices(
         path = os.path.join(outdir, name)
         existing = None
         if os.path.exists(path):
-            with open(path, encoding="utf-8") as f:
+            # BUG FIX (tooling-misc#2, code-quality pass 2026-08-31): newline="" disables universal-
+            # newline translation on both this read and the write below, so a CRLF (or bare \r) byte
+            # sequence in `content` (from lib.textio.read_text_preserving_newlines) round-trips
+            # unchanged instead of being silently normalized to \n -- which would otherwise make a
+            # --check comparison pass even though the generated slice differs from its source by line
+            # ending, contradicting split_task_plan.py's/split_strategy.py's own byte-identical claim.
+            with open(path, encoding="utf-8", newline="") as f:
                 existing = f.read()
         if check:
             if existing != content:
                 drift.append(name)
         else:
-            with open(path, "w", encoding="utf-8") as f:
+            with open(path, "w", encoding="utf-8", newline="") as f:
                 f.write(content)
 
     orphans = find_orphaned_markdown_files(outdir, files, hand_maintained)
@@ -63,3 +85,46 @@ def check_or_write_slices(
         print(orphan_warning + ", ".join(orphans))
     print(wrote_message)
     return 0
+
+
+def run_split_cli(
+    argv,
+    build_fn,
+    *,
+    outdir: str,
+    outdir_label: str,
+    source_name: str,
+    script_name: str,
+    unit_noun: str,
+    hand_maintained,
+) -> int:
+    """Shared `main(argv)` body for split_task_plan.py / split_strategy.py.
+
+    Both scripts' main()s were byte-for-byte identical control flow (`--check` in argv -> build() ->
+    check_or_write_slices(...)), differing only in five hand-written message strings that repeat the
+    same handful of facts about the caller (its own script filename, its source .md, its output
+    directory, and the noun for "one generated unit"). This derives those five strings from that
+    small set of facts instead, so a future generic wording/behavior fix applies to both callers at
+    once instead of needing to be hand-copied into the sibling script (tooling-misc#0, code-quality
+    pass 2026-08-31).
+
+    `outdir_label` is the printable form of `outdir` used in prose (e.g. "task_plan/", "strategy/") —
+    kept as an explicit argument rather than derived from `outdir` because the two differ (outdir is
+    the full on-disk path; outdir_label is the short repo-relative name every message prints).
+    """
+    check = "--check" in argv
+    files = build_fn()
+    return check_or_write_slices(
+        files,
+        outdir=outdir,
+        check=check,
+        hand_maintained=hand_maintained,
+        stale_message=f"STALE slices (run scripts/{script_name}): ",
+        orphan_message=(
+            f"ORPHANED slice file(s) — no longer produced by any current {source_name} heading "
+            f"(a {unit_noun} was likely renamed/removed; delete these or the check will keep failing): "
+        ),
+        orphan_warning="WARNING: orphaned slice file(s) present (not written by this run, not hand-maintained): ",
+        ok_message=f"{outdir_label} slices are in sync with {source_name}",
+        wrote_message=f"Wrote {len(files)} files to {outdir_label}",
+    )

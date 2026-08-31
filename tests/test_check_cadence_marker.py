@@ -55,6 +55,34 @@ def test_daily_and_annual():
     assert svc.expected_marker("annual", "current", _dt(2026, 8, 2)) == "2026"
 
 
+# DEFENSIVE FIX (2026-08-31 code-quality pass, cadence#4): daily/weekly's `offset` branch was a
+# vacuous no-op -- both "current" and "prior" returned the SAME marker. No live CADENCE_FILES entry
+# uses daily/weekly + "prior" today (this was refuted as a live bug, not confirmed), but
+# expected_marker() is now total, matching monthly/quarterly/annual's existing current/prior split.
+# These two pairs pin BOTH halves: the unchanged current-period value (already covered above, pinned
+# again here for the direct current-vs-prior contrast) and the new prior-period arithmetic.
+def test_daily_prior_is_one_day_earlier_than_current():
+    assert svc.expected_marker("daily", "current", _dt(2026, 8, 2)) == "2026-08-02"
+    assert svc.expected_marker("daily", "prior", _dt(2026, 8, 2)) == "2026-08-01"
+
+
+def test_daily_prior_rolls_the_month_and_year_at_the_first():
+    assert svc.expected_marker("daily", "prior", _dt(2026, 1, 1)) == "2025-12-31"
+
+
+def test_weekly_prior_is_the_iso_week_before_current():
+    assert svc.expected_marker("weekly", "current", _dt(2026, 7, 26)) == "2026-W30"
+    assert svc.expected_marker("weekly", "prior", _dt(2026, 7, 26)) == "2026-W29"
+
+
+def test_weekly_prior_rolls_the_iso_year_at_week_one():
+    # 2026-01-01 is a Thursday, ISO week 1 of 2026 (verified: datetime.date(2026, 1, 1).isocalendar()
+    # == (2026, 1, 4)); seven calendar days earlier, 2025-12-25 (also a Thursday), is ISO week 52 of
+    # 2025 (isocalendar() == (2025, 52, 4)) -- 2025 has 52 ISO weeks, not 53.
+    assert svc.expected_marker("weekly", "current", _dt(2026, 1, 1)) == "2026-W01"
+    assert svc.expected_marker("weekly", "prior", _dt(2026, 1, 1)) == "2025-W52"
+
+
 def test_operating_plane_is_denver_not_utc():
     # A 04:19 UTC commit is still the PREVIOUS day in Denver — the whole reason Daily.md markers
     # must be evaluated on the operating plane (bigquery/20_user_prefs.sql).
