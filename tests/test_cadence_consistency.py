@@ -2341,3 +2341,68 @@ def test_parse_stalled_runs_cls_ids_resolves_the_highest_numbered_definition(tmp
     assert ambiguous is None
     assert number == 148 and fn == "148_new.sql"
     assert ids == ["D1", "OPS0"]
+
+
+# ---- check Q: D3's OWNER-ELIGIBLE-DAY BRANCH fire-time table mirrors ops/cadence.yaml ----
+#
+# These pin the guard itself, not just its output. The slot table decides whether D3 SUPPRESSES or
+# RAISES queue_item_stale -- the fleet's only dead-trigger detector for AR_att/AR_orc/SL2/SL5 -- so a
+# refactor that silently stops parsing it (regex rot, a reformat, a renamed anchor) must fail loudly
+# rather than pass vacuously. Test 3 is the one that matters most: it asserts the DISARMED branch.
+
+def _cadQ(sl2_dow="1,2,3,4,5"):
+    def r(rid, local, dow):
+        return {"id": rid, "expected_trigger": {"time_local": local, "cron_utc": f"0 0 * * {dow}"}}
+    return {
+        "AR_att": r("AR_att", "18:00", "1,2,3,4,5"),
+        "AR_orc": r("AR_orc", "18:35", "1,2,3,4,5"),
+        "D3":     r("D3",     "18:45", "1,2,3,4,5"),
+        "SL2":    r("SL2",    "19:05", sl2_dow),
+        "SL5":    r("SL5",    "19:25", "1,2,3,4,5"),
+    }
+
+
+_Q_TABLE = ("queue_item_stale\n\n**CLAUSE (b) IS THE ENTIRE FIX** ... "
+            "**AR_att 18:00 · AR_orc 18:35 · D3 18:45 · SL2 19:05 · SL5 19:25** (read the file).\n\n")
+
+
+def _writeQ(tmp_path, monkeypatch, text):
+    p = tmp_path / "plan.md"
+    p.write_text(text, encoding="utf-8")
+    monkeypatch.setattr(cc, "PLAN", str(p))
+
+
+def test_check_q_matching_slot_table_is_clean(tmp_path, monkeypatch):
+    _writeQ(tmp_path, monkeypatch, _Q_TABLE)
+    assert cc.queue_owner_slot_mirror_errors(_cadQ()) == []
+
+
+def test_check_q_drifted_minute_is_caught(tmp_path, monkeypatch):
+    _writeQ(tmp_path, monkeypatch, _Q_TABLE.replace("SL2 19:05", "SL2 19:15"))
+    errs = cc.queue_owner_slot_mirror_errors(_cadQ())
+    assert any("SL2 fires at 19:15" in e and "19:05" in e for e in errs), errs
+
+
+def test_check_q_missing_anchor_reports_disarmed(tmp_path, monkeypatch):
+    """The raise is present but the slot table is gone -- the guard must say so, not pass silently."""
+    _writeQ(tmp_path, monkeypatch, "queue_item_stale\n\n**CLAUSE (b) IS SOMETHING ELSE** 18:00\n\n")
+    errs = cc.queue_owner_slot_mirror_errors(_cadQ())
+    assert any("DISARMED" in e for e in errs), errs
+
+
+def test_check_q_skips_a_plan_with_no_queue_item_stale_raise(tmp_path, monkeypatch):
+    """Out of scope, not a failure -- the checker's other fixtures build minimal plans like this."""
+    _writeQ(tmp_path, monkeypatch, "# a minimal plan with no queue hygiene step\n")
+    assert cc.queue_owner_slot_mirror_errors(_cadQ()) == []
+
+
+def test_check_q_owner_losing_a_firing_day_is_caught(tmp_path, monkeypatch):
+    _writeQ(tmp_path, monkeypatch, _Q_TABLE)
+    errs = cc.queue_owner_slot_mirror_errors(_cadQ(sl2_dow="1,2,3,4"))
+    assert any("day-of-week is '1,2,3,4'" in e for e in errs), errs
+
+
+def test_check_q_missing_owner_from_table_is_caught(tmp_path, monkeypatch):
+    _writeQ(tmp_path, monkeypatch, _Q_TABLE.replace(" · SL5 19:25", ""))
+    errs = cc.queue_owner_slot_mirror_errors(_cadQ())
+    assert any("omits SL5" in e for e in errs), errs

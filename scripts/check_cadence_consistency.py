@@ -1063,6 +1063,91 @@ def class_map_errors(want, have, *, missing_from, mismatch_label, mismatch_ref, 
     return errors
 
 
+# ---- check Q (2026-08-31): D3's QUEUE HYGIENE "OWNER-ELIGIBLE-DAY BRANCH" restates each queue-driven
+# owner's SCHEDULED local fire time, and its suppress/raise decision turns on comparing those times to
+# the moment D3 runs (clause (b)). Those minutes are a MIRROR of ops/cadence.yaml's
+# expected_trigger.time_local, and they have drifted before -- AR_orc moved 18:20 -> 18:35 on
+# 2026-08-04 (see that entry's own comment in ops/cadence.yaml). A stale restatement here does not
+# fail loudly; it silently flips a suppress into a raise (or worse, a raise into a suppress) for the
+# fleet's ONLY dead-trigger detector on AR_att/AR_orc/SL2/SL5. So the mirror is machine-checked.
+#
+# It also asserts the branch's OTHER load-bearing premise -- that all four owners fire Sun-Thu -- by
+# reading each one's cron day-of-week field rather than trusting the prose. UTC Mon-Fri (1,2,3,4,5) IS
+# Denver Sun-Thu for these evening slots.
+QUEUE_OWNER_SLOT_ANCHOR = "CLAUSE (b) IS THE ENTIRE FIX"
+# Presence of the raise itself is what puts this file in scope for check Q (see the scope note
+# in queue_owner_slot_mirror_errors) -- it is the thing the slot table exists to decide.
+QUEUE_OWNER_SLOT_SCOPE = "queue_item_stale"
+QUEUE_OWNER_SLOT_PAIR = re.compile(r"\b(AR_att|AR_orc|D3|SL2|SL5)\s+(\d{1,2}:\d{2})\b")
+QUEUE_DRIVEN_OWNERS = ("AR_att", "AR_orc", "SL2", "SL5")
+
+
+def queue_owner_slot_mirror_errors(cad):
+    """D3's OWNER-ELIGIBLE-DAY BRANCH fire-time table matches ops/cadence.yaml, and the four
+    queue-driven owners really do fire Sun-Thu. Returns a list of error strings."""
+    errs = []
+    txt = read_text(PLAN)
+    # Scope: this check guards the INTERNAL consistency of D3's QUEUE HYGIENE step. A plan text with
+    # no queue_item_stale raise at all has nothing to guard (the checker's own unit-test fixtures
+    # build exactly such a minimal plan), so skip rather than fail. But if the raise IS present and
+    # the clause-(b) slot table is NOT, the guard has been disarmed for real -- report that loudly.
+    if QUEUE_OWNER_SLOT_SCOPE not in txt:
+        return []
+    i = txt.find(QUEUE_OWNER_SLOT_ANCHOR)
+    if i < 0:
+        return [f"Claude_Task_Plan.md: names the {QUEUE_OWNER_SLOT_SCOPE!r} raise but has no "
+                f"{QUEUE_OWNER_SLOT_ANCHOR!r} paragraph — check Q's fire-time mirror guard is "
+                f"DISARMED. That paragraph carries the AR_att/AR_orc/D3/SL2/SL5 slot table the "
+                f"queue_item_stale suppress/raise decision reads. Restore it, or update this "
+                f"checker's anchor."]
+    para = txt[i:txt.find("\n\n", i) if txt.find("\n\n", i) > 0 else len(txt)]
+    pairs = dict(QUEUE_OWNER_SLOT_PAIR.findall(para))
+    expect_ids = set(QUEUE_DRIVEN_OWNERS) | {"D3"}
+    if not pairs:
+        return ["Claude_Task_Plan.md: found the OWNER-ELIGIBLE-DAY BRANCH clause-(b) paragraph but "
+                "parsed ZERO '<routine> HH:MM' pairs out of it — check Q is DISARMED (regex rot, or "
+                "the table was reformatted). Restore a parseable table."]
+    missing = sorted(expect_ids - set(pairs))
+    if missing:
+        errs.append(f"Claude_Task_Plan.md: the OWNER-ELIGIBLE-DAY BRANCH slot table omits "
+                    f"{', '.join(missing)} — clause (b) compares D3's own run moment against every "
+                    f"queue-driven owner's slot, so all of {', '.join(sorted(expect_ids))} must appear.")
+    for rid, shown in sorted(pairs.items()):
+        r = cad.get(rid)
+        if r is None:
+            errs.append(f"Claude_Task_Plan.md: the OWNER-ELIGIBLE-DAY BRANCH slot table names "
+                        f"'{rid}', which is not a routine id in ops/cadence.yaml.")
+            continue
+        want_local = str((r.get("expected_trigger") or {}).get("time_local", "")).strip()
+        if not want_local:
+            errs.append(f"ops/cadence.yaml: {rid} has no expected_trigger.time_local, so D3's "
+                        f"OWNER-ELIGIBLE-DAY BRANCH slot table cannot be verified against it.")
+            continue
+        if shown != want_local:
+            errs.append(f"Claude_Task_Plan.md: the OWNER-ELIGIBLE-DAY BRANCH slot table says {rid} "
+                        f"fires at {shown}, but ops/cadence.yaml expected_trigger.time_local says "
+                        f"{want_local}. That table is what D3's queue_item_stale suppress/raise "
+                        f"decision compares against, so a stale minute silently mis-decides the "
+                        f"fleet's only dead-trigger detector. Update BOTH in the same pass "
+                        f"(ops/cadence.yaml is the source of truth).")
+    for rid in QUEUE_DRIVEN_OWNERS:
+        r = cad.get(rid)
+        if r is None:
+            continue
+        cron = str((r.get("expected_trigger") or {}).get("cron_utc", "")).split()
+        if len(cron) != 5:
+            errs.append(f"ops/cadence.yaml: {rid} expected_trigger.cron_utc is not a 5-field cron, "
+                        f"so the OWNER-ELIGIBLE-DAY BRANCH's 'fires Sun-Thu' premise cannot be verified.")
+            continue
+        if cron[4] != "1,2,3,4,5":
+            errs.append(f"ops/cadence.yaml: {rid} cron_utc day-of-week is '{cron[4]}', not "
+                        f"'1,2,3,4,5' (UTC Mon-Fri = Denver Sun-Thu). D3's OWNER-ELIGIBLE-DAY BRANCH "
+                        f"asserts all four queue-driven owners fire Sun-Thu and counts eligible days "
+                        f"on that basis; if this owner's day-set really changed, update that "
+                        f"paragraph in the same pass.")
+    return errs
+
+
 def main():
     cad = load_cadence()
     headings = plan_headings()
@@ -1498,6 +1583,9 @@ def main():
             errors.append(f"{rid}: in bigquery/{cls_fn}'s state.stalled_runs `cls` CTE but not a "
                           f"routine id in ops/cadence.yaml — stale entry for a retired/renamed "
                           f"routine, remove it.")
+
+    # ---- check Q: D3's OWNER-ELIGIBLE-DAY BRANCH fire-time table mirrors cadence.yaml ----
+    errors.extend(queue_owner_slot_mirror_errors(cad))
 
     # ---- report ----
     if errors:

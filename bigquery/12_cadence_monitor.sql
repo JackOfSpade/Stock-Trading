@@ -243,6 +243,13 @@ FROM watch e;
 -- off-slot catch-up of a period routine). Daily/queue/unrecognized deps keep this file's exact
 -- predicate. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this
 -- CREATE statement live in isolation — doing so silently reverts BOTH fixes.
+-- SUPERSEDED (2026-08-31) by bigquery/205_alert_message_stability.sql, the current canonical
+-- definition of this procedure. 205 changes MESSAGE TEXT ONLY: the missing_dependency alert message
+-- embedded in_run_date, so a dependency block lasting n days raised n separate CRITICAL alerts
+-- instead of one -- the same defect bigquery/85 fixed for the sibling trading_halted gate in
+-- 2026-07-04, never ported here. run_date stays in the payload and in the RAISE. No predicate or
+-- control flow differs. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply this CREATE live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_assert_deps`(
   in_routine STRING, in_deps ARRAY<STRING>, in_run_date DATE
 )

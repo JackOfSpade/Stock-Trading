@@ -68,6 +68,13 @@
 -- #14 auto-age category IN-list. Built mechanically from the resolved canonical body (never
 -- hand-retyped) via a throwaway script that asserted each substitution matched EXACTLY once. Every
 -- other check in the body is carried forward unchanged.
+-- SUPERSEDED (2026-08-31) by bigquery/205_alert_message_stability.sql, the current canonical
+-- definition of this procedure. 205 changes MESSAGE TEXT ONLY, on three sp_raise_alert_once calls
+-- (queue_driven_silent, backup_per_table_row_drop, process_constant_evidence_invalidated) whose
+-- messages embedded run-varying values -- a day-count, two row counts, two streak counters -- and
+-- so defeated that procedure's own exact-message dedup, re-alerting daily on a persisting
+-- condition. No predicate, threshold, severity or control flow differs. Kept here, unmodified,
+-- for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';

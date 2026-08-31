@@ -127,6 +127,14 @@ FROM agg CROSS JOIN ltd;
 --   * the book soft-drawdown breach (breach_soft, this file), and
 --   * the owner-confirmation absence gate (state.owner_confirmation_liveness.entries_halted, 76).
 -- Fail-safe: any NULL underlying reads as blocked. Auto-clears when both underlying signals clear.
+-- SUPERSEDED (2026-08-31) by bigquery/205_alert_message_stability.sql, the current canonical
+-- definition of this view. 205 changes the book_drawdown_soft_breach branch of block_reason from a
+-- FORMAT() interpolating the live drawdown_from_peak into a fixed literal: that column moves with
+-- NAV every day the book stays in soft breach, defeating sp_raise_alert_once's exact-message dedup
+-- at the D2a call site that passes block_reason straight through as the alert message. The gate
+-- predicate (entries_allowed) is byte-for-byte unchanged, and the live figure remains on
+-- state.book_drawdown_watch.drawdown_from_peak. Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only. DO NOT re-apply this CREATE live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.entry_staging_allowed` AS
 WITH bdw AS (SELECT breach_soft, drawdown_from_peak FROM `stock-trading-498512.state.book_drawdown_watch`),
 ocl AS (SELECT entries_halted, trading_days_since_last_fill, n_pending_instructions FROM `stock-trading-498512.state.owner_confirmation_liveness`)

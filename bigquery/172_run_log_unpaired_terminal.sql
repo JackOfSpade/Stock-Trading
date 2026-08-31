@@ -101,6 +101,13 @@ WHERE NOT EXISTS (
 -- the allowlist. This file's OTHER object (state.run_log_unpaired_terminal, above) is untouched by
 -- 186; note it is separately superseded by bigquery/177 -- see that file's header.
 -- ============================================================================
+-- SUPERSEDED (2026-08-31) by bigquery/205_alert_message_stability.sql, the current canonical
+-- definition of this procedure. 205 changes MESSAGE TEXT ONLY, on three sp_raise_alert_once calls
+-- (queue_driven_silent, backup_per_table_row_drop, process_constant_evidence_invalidated) whose
+-- messages embedded run-varying values -- a day-count, two row counts, two streak counters -- and
+-- so defeated that procedure's own exact-message dedup, re-alerting daily on a persisting
+-- condition. No predicate, threshold, severity or control flow differs. Kept here, unmodified,
+-- for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';
