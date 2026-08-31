@@ -67,27 +67,23 @@
 -- programmatically (not retyped) with only the message substitutions above applied.
 -- Re-run safe (CREATE OR REPLACE).
 --
--- !! APPLY STATE — PARTIAL. READ THIS BEFORE ASSUMING repo == live. !!
--- This file was applied live from an interactive operator session on 2026-08-31, and the
--- BigQuery MCP OAuth token EXPIRED PART-WAY THROUGH. Recorded honestly rather than left
--- for the next session to discover as mystery drift:
---   * state.entry_staging_allowed  — APPLIED live and VERIFIED. entries_allowed read TRUE /
+-- APPLY STATE — COMPLETE. All three objects are live and verified.
+-- Applied from an interactive operator session on 2026-08-31:
+--   * state.entry_staging_allowed  — APPLIED and VERIFIED. entries_allowed read TRUE /
 --     block_reason NULL both immediately before and immediately after the replace, so the gate
 --     did not move.
---   * ops.sp_assert_deps           — APPLIED live (job_P3cvAum_OSXpFpefRlxheR7bKMgf).
---   * ops.sp_sq_cadence_check      — **NOT APPLIED.** The token expired on this statement, which
---     is why it is listed last here. Live therefore still runs bigquery/186's body, whose three
---     message strings are the pre-fix ones.
--- CONSEQUENCE, and it is benign: `scripts/check_live_sql_parity.py` will report exactly one
--- DRIFT row, `ops.sp_sq_cadence_check`, until someone re-authorizes the BigQuery connector and
--- re-applies THIS file's copy of that procedure. That parity check is the system's own designed
--- detector for precisely this condition and runs daily (live-sql-parity.yml, 07:10 UTC), so the
--- outstanding apply cannot be silently forgotten. Nothing is degraded in the meantime: the live
--- procedure keeps working exactly as it did before, it simply keeps re-alerting on those three
--- categories while a condition persists — the defect this file exists to remove, not a new one.
--- TO FINISH: re-authorize the BigQuery connector, then apply this file's
--- `CREATE OR REPLACE PROCEDURE ops.sp_sq_cadence_check` statement verbatim and re-run
--- `python3 scripts/check_live_sql_parity.py` until it reports 0 mismatched.
+--   * ops.sp_assert_deps           — APPLIED (job_P3cvAum_OSXpFpefRlxheR7bKMgf).
+--   * ops.sp_sq_cadence_check      — APPLIED (job_Ze-ievkIO1KlrFMAaxRFVo88cav5).
+-- VERIFIED END-TO-END by `scripts/check_live_sql_parity.py`: 247 objects compared against live
+-- BigQuery, **0 mismatched, 0 missing, 0 unchecked**. That checker — not this comment — is the
+-- authority on repo==live; re-run it rather than trusting this note if the two ever disagree.
+--
+-- HISTORICAL, kept because it explains the odd statement ORDER in this file and a ~40-minute
+-- window of real drift: the BigQuery OAuth token expired part-way through the original apply,
+-- after the first two objects and ON sp_sq_cadence_check. That is why sp_sq_cadence_check is
+-- listed LAST here, and why the commit that introduced this file (1b26ce0) described the apply
+-- as partial. The connector was re-authorized and the procedure applied verbatim from this
+-- file's own copy in the same session; parity then came back clean. No re-apply is owed.
 -- ============================================================================
 
 -- ===== (1) ops.sp_assert_deps — canonical body from bigquery/114, message stabilised =====
