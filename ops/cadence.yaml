@@ -539,8 +539,15 @@ routines:
     monitor_class: daily_sun_thu
     catchup_safe: true
     depends_on: [D2a]
-    writes: [analytics.strategy_incubation_perf, events.strategy_lifecycle, state.arsenal_regime_coverage,
-             events.queue_events, events.decision_log, ops.alerts, events.shadow_positions]
+    # state.arsenal_regime_coverage is deliberately NOT here: it is a VIEW (table_type='VIEW',
+    # re-verified live 2026-08-30) that SL3 only READS at STEP 5 -- "recompute" is satisfied by
+    # querying it, settled 2026-08-19. ops.roster_change_log (STEP 3/4 markers, pinned 2026-08-19
+    # and 2026-08-20) and state.strategy_candidates (STEP 4's cooldown_until/status/reject_reason
+    # UPDATE, pinned 2026-08-19) were added 2026-08-30 -- both were missing since the 2026-07-10
+    # SISA conversion. Do not re-add the coverage view here.
+    writes: [analytics.strategy_incubation_perf, events.strategy_lifecycle, events.shadow_positions,
+             ops.roster_change_log, state.strategy_candidates,
+             events.queue_events, events.decision_log, ops.alerts]
     expected_trigger:
       recurrence: custom_cron
       cron_utc: "0 2 * * 1,2,3,4,5"
