@@ -61,6 +61,15 @@ def test_position_size_dollars_rejects_nonpositive_nav():
         common.position_size_dollars(-100, pct=0.02)
 
 
+def test_position_size_dollars_rejects_nonfinite_nav():
+    # NUMERICS HARDENING (2026-08-31): NaN compares False against every ordering
+    # operator, so `sub_portfolio_nav <= 0` alone let a NaN NAV silently through
+    # (returning NaN instead of raising) before require_finite_positive was added.
+    for bad in (float('nan'), float('inf'), float('-inf')):
+        with pytest.raises(ValueError):
+            common.position_size_dollars(bad, pct=0.02)
+
+
 def test_pearson_correlation_perfect_positive():
     x = [1.0, 2.0, 3.0, 4.0, 5.0]
     y = [2.0, 4.0, 6.0, 8.0, 10.0]
@@ -166,6 +175,13 @@ def test_b_event_reaction_rejects_nonpositive_base():
         strategy_b.event_reaction_qualifies(0.0, 5.0)
 
 
+def test_b_event_reaction_rejects_nonfinite_base():
+    # NUMERICS HARDENING (2026-08-31): NaN/inf used to bypass the `<= 0` guard.
+    for bad in (float('nan'), float('inf'), float('-inf')):
+        with pytest.raises(ValueError):
+            strategy_b.event_reaction_qualifies(bad, 105.0)
+
+
 def test_b_convergence_timeline_boundary():
     entry = datetime.date(2026, 1, 1)
     within = entry + datetime.timedelta(days=60)
@@ -198,6 +214,34 @@ def test_b_short_stop_loss_boundary():
 def test_b_short_stop_loss_rejects_nonpositive_entry():
     with pytest.raises(ValueError):
         strategy_b.short_stop_loss_triggered(0.0, 100.0)
+
+
+def test_b_short_stop_loss_rejects_nonfinite_or_negative_current_price():
+    # NUMERICS HARDENING (2026-08-31, defensive-coding pass on a not-yet-wired spec
+    # module -- see this function's docstring): current_price previously had NO
+    # validation at all. `current_price = float('nan')` compared False against `>=`
+    # and silently returned False ("stop not triggered") instead of raising. 0.0 is
+    # deliberately NOT in this reject list -- see the positive assertion below.
+    for bad in (-50.0, float('nan'), float('inf'), float('-inf')):
+        with pytest.raises(ValueError):
+            strategy_b.short_stop_loss_triggered(100.0, bad)
+
+
+def test_b_short_stop_loss_current_price_zero_is_valid_not_triggered():
+    # BUG FIX (2026-08-31, adversarial review of this session's own numerics-hardening
+    # pass): an earlier draft of the current_price guard rejected 0.0, but a worthless
+    # underlying (delisted / gone to zero) is the SHORT SELLER'S BEST outcome, not a
+    # stop event -- 0.0 >= short_entry_price * 1.25 is correctly False for any positive
+    # entry price, and this was the pre-existing, correct behavior before this pass
+    # touched the function at all. current_price uses allow_zero=True for exactly this
+    # reason; short_entry_price does NOT (a zero entry price is genuinely invalid).
+    assert strategy_b.short_stop_loss_triggered(100.0, 0.0) is False
+
+
+def test_b_short_stop_loss_rejects_nonfinite_entry():
+    for bad in (float('nan'), float('inf'), float('-inf')):
+        with pytest.raises(ValueError):
+            strategy_b.short_stop_loss_triggered(bad, 125.0)
 
 
 # ===== strategy_d.py =====
@@ -430,6 +474,42 @@ def test_e_financing_cost_ok_boundary():
 def test_e_financing_cost_rejects_nonpositive_expected_return():
     with pytest.raises(ValueError):
         strategy_e.financing_cost_ok(0.10, 1000.0, 180, 0.0)
+
+
+def test_e_financing_cost_rejects_nonfinite_expected_return():
+    for bad in (float('nan'), float('inf'), float('-inf')):
+        with pytest.raises(ValueError):
+            strategy_e.financing_cost_ok(0.10, 1000.0, 180, bad)
+
+
+def test_e_financing_cost_rejects_negative_or_nonfinite_borrow_rate():
+    # NUMERICS HARDENING (2026-08-31): borrow_rate_annualized, position_size_dollars,
+    # and expected_holding_period_days previously flowed into the financing_cost
+    # formula completely unvalidated. A sign-flipped borrow rate silently made the
+    # gate PASS an entry the correctly-signed input would have BLOCKED, with no error
+    # raised anywhere -- reproduces the exact case from the audit finding: with
+    # otherwise-identical inputs, financing_cost_ok(0.30, ...) is False (correctly
+    # too expensive) but financing_cost_ok(-0.30, ...) used to be True.
+    assert strategy_e.financing_cost_ok(0.30, 1000.0, 180, 10.0) is False
+    for bad in (-0.30, float('nan'), float('inf'), float('-inf')):
+        with pytest.raises(ValueError):
+            strategy_e.financing_cost_ok(bad, 1000.0, 180, 10.0)
+    # Zero is a legitimate value (a genuinely free borrow), not an error.
+    assert strategy_e.financing_cost_ok(0.0, 1000.0, 180, 10.0) is True
+
+
+def test_e_financing_cost_rejects_negative_or_nonfinite_position_size():
+    for bad in (-1000.0, float('nan'), float('inf'), float('-inf')):
+        with pytest.raises(ValueError):
+            strategy_e.financing_cost_ok(0.10, bad, 180, 10.0)
+    assert strategy_e.financing_cost_ok(0.10, 0.0, 180, 10.0) is True
+
+
+def test_e_financing_cost_rejects_negative_or_nonfinite_holding_period():
+    for bad in (-180, float('nan'), float('inf'), float('-inf')):
+        with pytest.raises(ValueError):
+            strategy_e.financing_cost_ok(0.10, 1000.0, bad, 10.0)
+    assert strategy_e.financing_cost_ok(0.10, 1000.0, 0, 10.0) is True
 
 
 def test_e_time_exit_boundary():

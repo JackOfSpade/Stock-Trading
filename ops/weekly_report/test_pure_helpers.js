@@ -98,7 +98,7 @@ const path = require('path');
 // scripts/check_script_version_consistency.py's existing .gs<->bigquery/43 drift gate, applied here to
 // this file's OWN copy-drift instead. Bump this in the SAME commit that re-verifies the copies below
 // against a new ALERT_SCRIPT_VERSION.
-const ALERT_SCRIPT_VERSION_SYNCED_AS_OF = 'v9';
+const ALERT_SCRIPT_VERSION_SYNCED_AS_OF = 'v10';
 
 // The same pin for the OTHER source file: the weekly_report.gs SCRIPT_VERSION this file's 19
 // weekly_report.gs copies were last hand-verified against, checked by its own guard test near the bottom.
@@ -1487,6 +1487,24 @@ t('this file\'s alert_emailer.gs copies are pinned to its current ALERT_SCRIPT_V
     `alert_emailer.gs is now ${m[1]} but this file's copies were last synced against ` +
     `${ALERT_SCRIPT_VERSION_SYNCED_AS_OF} -- re-verify htmlAlerts_/plainAlerts_/isTest_/etc. against the ` +
     `new version and bump ALERT_SCRIPT_VERSION_SYNCED_AS_OF in the same commit`);
+});
+
+// ---- fmtAlertTs_ year fix (v10, 2026-08-31 BUG FIX) -- read from the LIVE .gs source, not mirrored ----
+// fmtAlertTs_ itself is deliberately NOT copied verbatim into this file (see the fmtAlertTs_ stand-in
+// above, `TS(${a.alert_ts})`): the real function calls Utilities.formatDate() and reads state.user_tz
+// via a live BigQuery query (getUserTzAlerts_), both Apps-Script-only dependencies plain Node cannot
+// satisfy, and inventing a parallel reimplementation of Utilities.formatDate's format-string semantics
+// here would itself be a second place for the two to drift. So this pins the one thing that changed --
+// the format STRING now includes a year -- by reading it straight out of the live source, the same
+// technique the ALERT_SCRIPT_VERSION guard test just above already uses for the same reason (drift
+// with no live consumer to catch it otherwise).
+t('alert_emailer.gs\'s alert-timestamp format string includes a 4-digit year (v10 BUG FIX -- roster-change notices are EXEMPT from LOOKBACK_HOURS and can arrive weeks or months late, so a year-less timestamp on exactly that mail was genuinely ambiguous)', () => {
+  const gsPath = path.join(__dirname, '..', 'monitoring', 'alert_emailer.gs');
+  const gsSrc = fs.readFileSync(gsPath, 'utf8');
+  const m = /Utilities\.formatDate\(new Date\(Number\(a\.alert_ms\)\), tz, '([^']+)'\)/.exec(gsSrc);
+  assert.ok(m, 'could not find fmtAlertTs_\'s Utilities.formatDate call in alert_emailer.gs -- regex may need updating if the call shape changed');
+  assert.ok(/yyyy/.test(m[1]),
+    `expected the alert timestamp format string to include a 4-digit year (yyyy), got: ${JSON.stringify(m[1])}`);
 });
 
 // ---- copy-drift guard: this file's weekly_report.gs copies vs the live SCRIPT_VERSION / SUBJECT_LABEL ----

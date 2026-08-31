@@ -5,7 +5,7 @@ mechanical rules. Source: strategy/07_strategy_e.md (GENERATED from Strategy.md)
 
 from __future__ import annotations
 
-from .common import days_between, ols_regression, pearson_correlation
+from .common import days_between, ols_regression, pearson_correlation, require_finite_positive
 
 # Entry criterion 3 — "L-S correlation over trailing 252 trading days >= 0.5"
 MIN_PAIR_CORRELATION_ENTRY = 0.5
@@ -56,12 +56,29 @@ def financing_cost_ok(
     size x expected holding period) is computed by code and is <= 15% of thesis
     expected return — otherwise financing eats the alpha." Financing cost is
     annualized borrow rate pro-rated over the expected holding period (days/365).
+
+    NUMERICS HARDENING (2026-08-31, owner-authorized code-quality pass): `borrow_rate_
+    annualized`, `position_size_dollars`, and `expected_holding_period_days` previously
+    flowed into the financing_cost formula completely unvalidated. A sign-flipped input
+    on any of the three (e.g. a negative borrow rate reaching this function from an
+    upstream data/arithmetic bug — this repo has hit exactly this bug class before at
+    the SQL layer, see CLAUDE.md's "one dbt sign error stranded EVERY branch") silently
+    flipped this gate from correctly BLOCKING an entry to wrongly PASSING it, with no
+    error raised anywhere. All three are now required to be finite and non-negative
+    (a value of exactly 0 — e.g. a same-day flip's `expected_holding_period_days=0`, or
+    a genuinely free borrow — is not itself invalid, only a negative or non-finite one
+    is), mirroring `thesis_expected_return_dollars`'s pre-existing guard below.
     """
-    if thesis_expected_return_dollars <= 0:
-        raise ValueError(
-            f"thesis_expected_return_dollars = {thesis_expected_return_dollars} (must be > 0 — "
-            "a non-positive expected return means there is no expected alpha for financing to eat)."
-        )
+    # NUMERICS HARDENING (2026-08-31): require_finite_positive also rejects NaN/inf,
+    # not just <= 0 -- see that function's docstring.
+    require_finite_positive(
+        thesis_expected_return_dollars, "thesis_expected_return_dollars",
+        detail="A non-positive expected return means there is no expected alpha for financing to eat.",
+    )
+    require_finite_positive(borrow_rate_annualized, "borrow_rate_annualized", allow_zero=True)
+    require_finite_positive(position_size_dollars, "position_size_dollars", allow_zero=True)
+    require_finite_positive(
+        expected_holding_period_days, "expected_holding_period_days", allow_zero=True)
     financing_cost = borrow_rate_annualized * position_size_dollars * (expected_holding_period_days / 365.0)
     return (financing_cost / thesis_expected_return_dollars) <= MAX_FINANCING_COST_PCT_OF_EXPECTED_RETURN
 

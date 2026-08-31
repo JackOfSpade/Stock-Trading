@@ -150,6 +150,42 @@ def _require_positive_path_count(n_paths: int) -> None:
         raise ValueError(f"n_paths = {n_paths!r} (must be a positive integer).")
 
 
+def _require_finite_positive(
+    value: float, name: str, *, allow_zero: bool = False, detail: str = ""
+) -> None:
+    """Reject a NaN, +/-inf, negative (or, unless `allow_zero`, zero) numeric input
+    with a clear, named ValueError.
+
+    NUMERICS HARDENING (2026-08-31, owner-authorized code-quality pass): every
+    "must be a positive number" guard in this file used to be a direct one-sided
+    float comparison (e.g. `if self.underlying_price <= 0: raise ...`). Python's
+    `<`/`<=`/`>`/`>=` are all non-ordering for NaN — `float('nan') <= 0` and
+    `float('nan') > 0` are BOTH False — so a bare one-sided guard let a NaN input
+    sail straight through instead of being rejected, and the bad value then
+    propagated as NaN through price_bsm/greeks_bsm/net_debit/max_loss_closed_form,
+    surfacing (if at all) as a cryptic, unattributed crash several calls downstream
+    in size_position instead of a clear error at the point of entry. This is the
+    same shape of fix already applied ad hoc at cascade_max_loss's
+    `implied_move_full_horizon` guard (`not math.isfinite(...) or ... <= 0`),
+    promoted here to a shared local helper so every guard in this file uses the
+    identical convention, instead of hand-adding `math.isfinite(...)` at each site.
+
+    Does not change behavior on any already-valid (finite, in-range) input — only a
+    previously-silent-wrong-answer NaN/inf/out-of-range input now raises here.
+
+    This module deliberately has NO shared-module dependency (Strategy C predates
+    strategy_math/ and scripts/check_roster_consistency.py's spec_hash_inputs()
+    hashes C as [c_options_math.py] alone), so this is a LOCAL duplicate — not an
+    import — of strategy_math/common.py's identically-named `require_finite_positive`.
+    Keep the two in sync by hand if either's contract changes.
+    """
+    ok = (value >= 0) if allow_zero else (value > 0)
+    if not math.isfinite(value) or not ok:
+        bound = ">= 0" if allow_zero else "> 0"
+        suffix = f" {detail}" if detail else ""
+        raise ValueError(f"{name} = {value} (must be a finite number {bound}).{suffix}")
+
+
 # =============================================================================
 # Black-Scholes-Merton primitives
 # =============================================================================
@@ -192,17 +228,20 @@ class OptionInputs:
         # price_bsm/greeks_bsm's own `time_to_expiration <= 0` guard would instead
         # silently treat the bad data as "expired" and return an intrinsic-value
         # price rather than rejecting it (2026-07-04 audit finding).
-        if self.days_to_expiration < 0:
-            raise ValueError(
-                f"days_to_expiration = {self.days_to_expiration} (must be >= 0). "
-                f"A negative value is invalid input, not a valid 'expired' state."
-            )
-        if self.underlying_price <= 0:
-            raise ValueError(f"underlying_price = {self.underlying_price} (must be > 0).")
-        if self.strike <= 0:
-            raise ValueError(f"strike = {self.strike} (must be > 0).")
-        if self.volatility < 0:
-            raise ValueError(f"volatility = {self.volatility} (must be >= 0).")
+        #
+        # NUMERICS HARDENING (2026-08-31, owner-authorized): all four guards below now
+        # also reject NaN and +/-inf (via _require_finite_positive's math.isfinite check),
+        # not just out-of-range values — see that function's docstring for why a bare
+        # one-sided comparison was NaN-blind. Every VALID (finite, in-range) input is
+        # priced identically to before; only a previously-silent-wrong-answer NaN/inf
+        # input now raises here instead of propagating as NaN into price_bsm/greeks_bsm.
+        _require_finite_positive(
+            self.days_to_expiration, "days_to_expiration", allow_zero=True,
+            detail="A negative value is invalid input, not a valid 'expired' state.",
+        )
+        _require_finite_positive(self.underlying_price, "underlying_price")
+        _require_finite_positive(self.strike, "strike")
+        _require_finite_positive(self.volatility, "volatility", allow_zero=True)
         if self.option_type not in ('call', 'put'):
             raise ValueError(
                 f"option_type = {self.option_type!r} (must be 'call' or 'put'). "
@@ -560,6 +599,17 @@ class Structure:
     structure_type: str  # 'long_call', 'debit_call_spread', 'iron_condor', etc.
 
     def __post_init__(self):
+        # NUMERICS HARDENING (2026-08-31, owner-authorized): an empty legs list made
+        # every check below vacuously pass (a {...for leg in []} comprehension is an
+        # empty set, len()==0, never >1), so `Structure(legs=[], ...)` used to
+        # construct silently and only fail later, deep inside a property or method,
+        # with an unhelpful bare `IndexError`/`max() iterable argument is empty`
+        # that names neither the actual problem (an empty structure) nor this class.
+        # Reject it here instead, at construction, alongside this __post_init__'s
+        # other direct-assembly guards below.
+        if not self.legs:
+            raise ValueError(f"{self.name}: a Structure must have at least one leg.")
+
         # Enforce single-expiration per Strategy.md rev 20
         expirations = {leg.option.days_to_expiration for leg in self.legs}
         if len(expirations) > 1:
@@ -1486,14 +1536,21 @@ def size_position(
     has zero or negative max loss; a zero indicates an upstream computational
     bug, not a sizing edge case). Per cycle 4 critical-eval warning [2].
     """
-    if max_loss_per_contract <= 0:
-        raise ValueError(
-            f"max_loss_per_contract = {max_loss_per_contract} (must be > 0). "
-            f"Real options structures have positive max loss; a zero or negative "
-            f"value indicates an upstream computational bug. Defer the thesis "
-            f"and audit the max-loss computation rather than treating this as "
-            f"a sizing edge case."
-        )
+    # NUMERICS HARDENING (2026-08-31, owner-authorized): _require_finite_positive also
+    # rejects NaN/inf, not just <= 0 -- see that function's docstring. Before this fix,
+    # a NaN max_loss_per_contract slipped past a bare `<= 0` guard and crashed several
+    # lines below at `math.floor(nav_cap / max_loss_per_contract + 1e-9)` with an
+    # unattributed `ValueError: cannot convert float NaN to integer` instead of failing
+    # here with a clear, attributed message.
+    _require_finite_positive(
+        max_loss_per_contract, "max_loss_per_contract",
+        detail=(
+            "Real options structures have positive max loss; a zero, negative, NaN, "
+            "or infinite value indicates an upstream computational bug. Defer the "
+            "thesis and audit the max-loss computation rather than treating this as "
+            "a sizing edge case."
+        ),
+    )
 
     # NO SIZING CEILING (owner directive 2026-08-05 — both Rev 43 hard CaR envelopes
     # RETIRED). This previously required max_pct_nav <= 0.10, the per-name Capital-at-Risk
@@ -1550,6 +1607,34 @@ def realized_volatility_30d(
 
     # Trailing 30-day window: the last 31 prices yield 30 returns.
     window = daily_close_prices[-31:]
+
+    # NUMERICS HARDENING (2026-08-31, owner-authorized): a zero, negative, NaN, or
+    # infinite close previously reached `math.log(window[i] / window[i - 1])` below
+    # unvalidated and crashed with an unattributed, index-free `ValueError: math domain
+    # error` (or worse, silently produced a NaN result for a negative-over-negative
+    # ratio). Validate the WINDOW, AFTER slicing — not the full `daily_close_prices`
+    # input — so a bad tick OUTSIDE the trailing 31 closes stays exactly as harmless as
+    # this function's own docstring documents ("uses the most recent 31 closes"; a
+    # longer history's earlier entries are never touched by the return calculation
+    # below). An earlier draft of this guard validated the full list BEFORE the slice,
+    # which changed behavior on a VALID input this function always handled correctly —
+    # a bad value outside the used window used to be discarded harmlessly and would
+    # have raised instead, exactly the regression class this numerics-hardening pass
+    # promised not to introduce (reviewer-verified 2026-08-31: a 5-zero + 4-negative
+    # prefix ahead of 31 valid trailing closes returns the same value as without that
+    # prefix, both before this pass and after this fix). The index named in the error
+    # is the index WITHIN THE ORIGINAL daily_close_prices list (via the offset below),
+    # not a window-local index, so the message stays unambiguous and directly usable
+    # against the caller's own list — mirroring this file's own established convention
+    # (e.g. OptionInputs.__post_init__'s underlying_price/strike guards) instead of
+    # leaving domain validation to a bare stdlib exception several lines downstream.
+    offset = len(daily_close_prices) - len(window)
+    for i, p in enumerate(window):
+        _require_finite_positive(
+            p, f"daily_close_prices[{offset + i}]",
+            detail="(index is into the ORIGINAL list; only the trailing 31-close "
+                   "window is validated — a bad value outside it is ignored).",
+        )
 
     log_returns = []
     for i in range(1, len(window)):

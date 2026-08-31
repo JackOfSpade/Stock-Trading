@@ -120,6 +120,113 @@ goes red, correctly.
 fires the CRITICAL `safety_critical_control_insert` lane, whose entire purpose is to make you confirm that a
 manual re-enable was actually you. Resolve them by `alert_id` once you have confirmed your own action.
 
+---
+
+# 2026-08-31 Alert-emailer chain fixes — timestamp year + inbox-probe token collision (`alert_emailer.gs` v9 → v10 + `bigquery/43` MERGE, sequenced)
+
+Owner-authorized bug-fix pass (2026-08-31, `alert-emailer-chain`): two independent fixes to
+`ops/monitoring/alert_emailer.gs`, both already landed in the repo, both requiring the same
+two-step, sequenced, owner-only redeploy cycle every `.gs` change in this file has needed since
+AE-1/AE-2 above — Claude cannot reach `script.google.com`.
+
+## AE-3. Re-paste `alert_emailer.gs` (v9 → v10, timestamp year + inbox-probe token fix), THEN apply the `bigquery/43` MERGE that seeds `expected_version='v10'` for `alert_emailer`
+
+**What changed.**
+
+1. `fmtAlertTs_` formatted alert timestamps as `MMM d, h:mm a` — no year — while `weekly_report.gs`
+   uses `MMM d, yyyy`. Roster-change notices are deliberately EXEMPT from `LOOKBACK_HOURS` (v6,
+   AE-2 above) so a delivery outage of any length delays one instead of destroying it — which means
+   the exact mail most likely to arrive long after it was raised, possibly in a different calendar
+   year, was the one carrying a genuinely ambiguous, year-less timestamp. Now
+   `MMM d, yyyy, h:mm a`, matching `weekly_report.gs`.
+2. `verifyInboxDelivery_` (v8, 2026-08-07) probed Gmail on the unquoted single token
+   `subject:Stock-Trading`, on the documented reasoning that every subject both this script and
+   `weekly_report.gs` emit contains that token, so no quoting of the ⚠ / ⚗ / — characters in the
+   real subjects was needed. That reasoning was right about the quoting problem and wrong about the
+   consequence: both scripts sharing the token meant the probe could not tell mail sent by this
+   script apart from mail sent by `weekly_report.gs` — so a healthy weekly report sitting in the
+   Inbox inside the 600-second probe window satisfied `inbox > 0` and reset `inbox_fail_streak`,
+   even on a poll where this script's own alert mail was silently landing in Trash. That is exactly
+   the "delivery is not the same thing as liveness" failure mode v8 exists to catch, reopened by the
+   probe's own disambiguation design. Fixed with a new module-level `ALERT_PROBE_TOKEN`
+   (`'stalertprobe'`, a single unquoted ASCII lowercase word — the no-quoting property is preserved)
+   appended to the body of every alert email at the send site in `checkAlerts_`, covering both the
+   normal render and the payload-render-failure fallback, and deliberately never appended to
+   `escalateDeliveryFailure_`'s own direct-mail escalation, which must stay outside what the probe
+   searches for. The probe now searches on that token instead of the subject substring the two
+   scripts used to share. Self-healing and safe in the transition: until the first alert send under
+   v10, no mail carries the token yet, so the probe reads inconclusive and leaves the streak
+   untouched rather than misreading the gap as a fault.
+
+`ops/weekly_report/test_pure_helpers.js` gained a regression test pinning the year in the live
+`.gs` format string (read directly from source — `fmtAlertTs_` itself is not one of the functions
+verbatim-mirrored there, since it depends on Apps-Script-only globals `Utilities.formatDate` /
+`getUserTzAlerts_`).
+
+**Action — two sequenced steps, same shape as AE-1/AE-2 above:**
+
+(a) **Re-paste `ops/monitoring/alert_emailer.gs` (v9 → v10) into the live "Stock-Trading
+Automation" Apps Script project.** Use the
+`github.com/JackOfSpade/Stock-Trading/blob/<COMMIT_SHA>/ops/monitoring/alert_emailer.gs` URL form
+(once this change merges to `main`) and its "Copy raw file" button — **NOT**
+`raw.githubusercontent.com`, which 404s on this private repo (AE-1's paste cycle hit this exact
+pitfall). Then run `runAlertCheck` (or wait for its next natural fire) once to confirm the
+`alert_emailer` heartbeat lands with `version='v10'`. **The instant that heartbeat lands,
+`state.script_version_drift` will read `expected='v9'` / `last_reported='v10'` / `drift=TRUE`** —
+expected, not a fault: that view's whole purpose is to flag exactly this gap (repo/live disagree),
+and it is a WARNING, never a CRITICAL, so it cannot halt order staging. This is the same transient
+window AE-1 documented when it did this same cycle for v4→v5.
+
+(b) **Only after (a) has landed AND `alert_emailer` has emitted a v10 heartbeat**, apply the
+`MERGE` statement in `bigquery/43_script_version_registry.sql` live (BigQuery MCP `execute_sql` or
+console — same idempotent-reapply pattern as every other `bigquery/NN_*.sql` file) to close that
+gap. The repo seed is already `'v10'`, but per that file's own inline NOTE on the `alert_emailer`
+MERGE row, the MERGE has deliberately NOT been applied yet — live still expects `'v9'`, so
+`state.script_version_drift` currently reads `drift=FALSE` (expected still matches reported) while
+the paste is pending. Applying the MERGE BEFORE (a) lands would flip that to the SAME `drift=TRUE`
+warning prematurely, for a different reason (expected moved to v10 while the live script is still
+reporting v9) — so do these two steps back to back, in order, and expect a brief `drift=TRUE`
+warning between them either way.
+
+**Verify:**
+```sql
+-- (a) confirm the v10 heartbeat landed before doing (b):
+SELECT source, version, beat_ts FROM `stock-trading-498512.ops.heartbeat`
+WHERE source='alert_emailer' ORDER BY beat_ts DESC LIMIT 3;
+
+-- (b) after applying the MERGE, confirm no drift:
+SELECT script_name, last_reported_version, expected_version, drift
+FROM `stock-trading-498512.state.script_version_drift` WHERE script_name='alert_emailer';
+```
+
+**If skipped:** no functional loss and nothing halts — the year-less timestamp and the inbox-probe
+token collision are both cosmetic/observability issues, not delivery failures: alerts keep arriving
+exactly as before. `state.script_version_drift` will keep showing `alert_emailer` at `v9` with
+`drift=FALSE` (expected still matches reported) until step (a) lands, then a brief `drift=TRUE`
+window between (a) and (b) — expected and unavoidable in EITHER order, per steps (a)/(b) above.
+**CORRECTION (2026-08-31 code-quality pass):** this sentence previously read "...until both steps
+land, then briefly `drift=TRUE` only if (b) is ever run before (a) completes — the ordering above
+avoids that," which is false and contradicts steps (a) and (b) above in this same item: step (a)
+already says the instant the v10 heartbeat lands drift reads `expected=v9 / reported=v10 /
+drift=TRUE`, and step (b) already says to expect a brief `drift=TRUE` warning between the two steps
+"either way." `state.script_version_drift`'s definition (`bigquery/43_script_version_registry.sql`)
+computes drift as a SYMMETRIC inequality (`last_reported_version != expected_version`), so a
+mismatch in EITHER direction reads `drift=TRUE` — only the direction of the mismatch differs
+((a)-then-(b), the documented order, reads `expected=v9 / reported=v10` during that window;
+(b)-then-(a) would instead read `expected=v10 / reported=v9`), not whether the window fires. The one
+thing that stays imprecise until the paste lands: an old-format un-notified roster-change notice
+(year-less timestamp) could in principle still be sitting un-notified from before this fix, and the
+inbox probe stays exposed to the token-collision false-negative (BUG 2) until v10 is live.
+
+```verify
+id: AE-3
+type: gs
+probe: SELECT script_name, last_reported_version, expected_version, drift FROM `stock-trading-498512.state.script_version_drift` WHERE script_name='alert_emailer'
+done_when: last_reported_version='v10' AND expected_version='v10' AND drift=FALSE
+```
+
+---
+
 # 2026-08-23 FMP earnings-calendar horizon — owner decision, not a bug (W1 catalyst calendar)
 
 ## FMP-earn-horizon. NORMAL — Strategy A's 6-month catalyst calendar can only source CONFIRMED earnings dates ~13 weeks out on the current FMP tier — decide whether to raise the tier or accept the gap — `[NORMAL — owner decision pending; no default action, existing per-name fallback already covers the gap]`
@@ -445,8 +552,20 @@ FROM `stock-trading-498512.state.script_version_drift` WHERE script_name='alert_
 **If skipped:** no functional loss — roster-change notices keep arriving by email today (via the
 already-live severity bump), just in the plain warning-alert format rather than the dedicated ROSTER
 CHANGE section. `state.script_version_drift` will keep showing `alert_emailer` at its pre-v5 version
-with `drift=false` (expected still matches reported) until both steps land, then briefly `drift=true`
-only if (b) is ever run before (a) completes — the ordering above avoids that.
+with `drift=false` (expected still matches reported) until step (a) lands, then a brief `drift=true`
+window between (a) and (b) — expected and unavoidable in either order.
+**CORRECTION (2026-08-31 code-quality pass) to a completed record:** this sentence previously read
+"...until both steps land, then briefly `drift=true` only if (b) is ever run before (a) completes —
+the ordering above avoids that," which is false and is contradicted by this same item's own DONE
+record above: with the paste run in the documented (a)-then-(b) order, step (b) reports
+`state.script_version_drift` reading `expected=v4 / reported=v5 / drift=TRUE` immediately after (a)
+landed — i.e. the drift=TRUE window occurred even though (a) ran before (b), exactly as the
+corrected AE-3 item above now also states. `state.script_version_drift`'s definition
+(`bigquery/43_script_version_registry.sql`) computes drift as a SYMMETRIC inequality
+(`last_reported_version != expected_version`), so a mismatch in EITHER direction reads drift=TRUE;
+only the direction of the mismatch depends on run order, not whether the window fires. This
+correction does not change anything about what AE-1 actually did — the DONE record above is
+unaffected.
 
 ```verify
 id: AE-1

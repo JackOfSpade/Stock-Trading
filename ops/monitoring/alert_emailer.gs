@@ -72,7 +72,15 @@ const ALERT_RECIPIENT  = Session.getActiveUser().getEmail(); // self-email
 const ALERT_SENDER     = 'Stock-Trading Alerts';
 const SEVERITIES       = ['critical', 'warning']; // set to ['critical'] for criticals only
 const POLL_HOURS       = 2;                        // how often to check
-const ALERT_SCRIPT_VERSION = 'v9';                 // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep. Named ALERT_SCRIPT_VERSION (not SCRIPT_VERSION) because this file and weekly_report.gs share ONE Apps Script project's top-level scope -- a same-named const in both would throw a project-wide SyntaxError on the next paste (2026-07-14 audit finding).
+const ALERT_SCRIPT_VERSION = 'v10';                // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep. Named ALERT_SCRIPT_VERSION (not SCRIPT_VERSION) because this file and weekly_report.gs share ONE Apps Script project's top-level scope -- a same-named const in both would throw a project-wide SyntaxError on the next paste (2026-07-14 audit finding).
+
+// ALERT-PROBE TOKEN (v10, 2026-08-31 BUG FIX). A single ASCII lowercase alphanumeric word, appended
+// to the body of every alert email this script sends (see the send site in checkAlerts_ below) so
+// verifyInboxDelivery_'s post-send Gmail search can find genuinely THIS SCRIPT's own mail and nothing
+// else's -- see the POST-SEND INBOX VERIFICATION section further down for what this replaced and why.
+// No punctuation, one word: Gmail tokenizes it as a single term with no quoting needed, the same
+// property the old `subject:Stock-Trading` probe base was chosen for.
+const ALERT_PROBE_TOKEN = 'stalertprobe';
 
 // ROSTER-CHANGE NOTICES (owner directive 2026-08-04, bigquery/134_roster_change_notifications.sql).
 // The autonomous SISA loop (SL1-SL5) adds and removes trading strategies with no human approval step --
@@ -243,6 +251,21 @@ function checkAlerts_() {
         subject = '⚠ Stock-Trading ALERT — ' + combined.length + ' alert(s) (payload render failed)';
         plainBody = combined.map(a => `[${a.severity}] ${a.source} / ${a.category}: ${a.message}`).join('\n\n');
         htmlBody = null;
+      }
+      // ALERT-PROBE TOKEN (v10, 2026-08-31 BUG FIX). Appended HERE, at the send site, rather than
+      // inside plainAlerts_/htmlAlerts_ -- those two renderers are copied verbatim into
+      // ops/weekly_report/test_pure_helpers.js and their own comments say they must not drift.
+      // Appending here also means BOTH branches above are covered, including the
+      // payload-render-failure fallback body: that fallback is exactly the case where the inbox probe
+      // must not go blind (a malformed payload should never also blind the delivery-health check).
+      // See verifyInboxDelivery_ below for what reads this token and why it replaced the old
+      // subject-substring probe. Deliberately NOT added to escalateDeliveryFailure_'s direct-mail
+      // send (Channel 2 there) -- that mail must stay outside the probe's own search results, or the
+      // probe would be finding its own escalation email instead of an ordinary alert.
+      plainBody += '\n\n' + ALERT_PROBE_TOKEN;
+      if (htmlBody) {
+        htmlBody = htmlBody.replace('</body></html>',
+          `<div style="font-size:10px;color:#c3cbd3;padding-top:4px;">${ALERT_PROBE_TOKEN}</div></body></html>`);
       }
       GmailApp.sendEmail(ALERT_RECIPIENT, subject, plainBody,
         htmlBody ? { htmlBody: htmlBody, name: ALERT_SENDER } : { name: ALERT_SENDER });
@@ -427,19 +450,58 @@ function escalateDeliveryFailure_(err) {
 //   * the weekly delivery_canary: asserts the canary row was delivered+STAMPED — and stamping happens
 //     here, in this script, immediately after sendEmail(). It proves the loop ran, not that a human
 //     could see the result. The canary was itself in Trash the whole time.
-// Nothing in this repo trashes the mail (grep: no moveToTrash / moveThreadToTrash anywhere), so the
-// cause is Gmail-side — most likely a filter with a Delete action matching the self-send or the
-// ALERT_SENDER display-name override. That is an account setting only the operator can change; what
-// this script owes them is to NOTICE, over a channel that does not depend on the broken one.
+// CAUSE RESOLVED 2026-08-08 — THERE WAS NO MISROUTE. THE OPERATOR READS THE ALERT MAIL AND DELETES
+// IT. Asked directly; his words: "why are you investigating my gmail trash? last time, you incorrectly
+// put all the alert emails i deleted back into my inbox which i had to delete again." A mail that was
+// read and then deleted carries exactly ["TRASH","SENT"] and no "INBOX" — so the 2026-08-07
+// measurement above is what NORMAL looks like here, not evidence of a fault, and this probe having
+// raised zero alert_not_reaching_inbox rows in the months since is the CORRECT outcome, not a broken
+// detector. (Re-verified 2026-08-31: 20 of 20 threads over the prior 14 days still carry TRASH+SENT,
+// and ops.alerts still holds zero alert_not_reaching_inbox rows — consistent, expected, no action.)
+//
+// This paragraph used to say the opposite: "the cause is Gmail-side — most likely a filter with a
+// Delete action ... an account setting only the operator can change." That was DISPROVEN by direct
+// inspection (Gmail has zero filters; sender not blocked; forwarding disabled; POP set to keep the
+// Inbox copy; the Apps Script project makes no moveToTrash call) and then superseded by simply asking
+// the operator. It is corrected here rather than deleted because the wrong version already sent one
+// later audit hunting Gmail settings off the same premise, and the correction only ever lived in a
+// session memory — never in this file, the repo, or events.decision_log — which is why it could
+// recur. FOR ANY FUTURE READER: do NOT investigate Gmail filters/forwarding/IMAP over this, and do NOT
+// untrash or re-label the operator's deleted alert mail — a prior session did exactly that and dumped
+// mail he had deliberately deleted back into his Inbox for him to delete a second time.
+//
+// WHAT REMAINS TRUE, and is why this probe still earns its place: every other guard proves SENDING,
+// not DELIVERY, so "no alert email arrived" must never be read as "nothing was wrong" — query
+// ops.alerts. If a real misroute ever does start, this probe is the only thing that would notice, and
+// it reports over a channel that does not depend on the broken one.
 //
 // PROBE, and why it is three searches and not one. A just-sent message can lag Gmail's search index by
 // seconds, so "not found in:inbox" alone is ambiguous between "misrouted" and "not indexed yet" —
 // exactly the ambiguity that would make this check either noisy or useless. Searching in:anywhere
 // first disambiguates: found-anywhere-but-not-in-inbox is a POSITIVE misroute observation; not found
-// anywhere is inconclusive and deliberately leaves the streak untouched. The unquoted single-token
-// `subject:Stock-Trading` is intentional — every subject this script and weekly_report.gs emit
-// contains that token, and it avoids quoting the ⚠ / ⚗ / — characters that appear in the real
-// subjects. from:me scopes it to our own self-sent mail.
+// anywhere is inconclusive and deliberately leaves the streak untouched. from:me scopes it to our own
+// self-sent mail.
+//
+// BUG FIX (v10, 2026-08-31): the probe base used to be the unquoted single token
+// `subject:Stock-Trading`, on the reasoning (still correct, as far as it went) that every subject
+// this script AND weekly_report.gs emit contains that token, so no quoting of the ⚠ / ⚗ / — characters
+// in the real subjects was needed. What that reasoning missed: BOTH scripts' subjects sharing the
+// token means this probe could not tell its OWN mail apart from weekly_report.gs's. A healthy weekly
+// report sitting in the Inbox inside the 600s probe window satisfied `inbox > 0` exactly as well as
+// one of THIS script's own alert emails would — so a poll where checkAlerts_'s own mail was silently
+// landing in Trash could still read as healthy and reset inbox_fail_streak, purely because a same-window
+// weekly report happened to be sitting in the Inbox. Fixed by giving this script its own body marker:
+// ALERT_PROBE_TOKEN ('stalertprobe', see CONFIG above) is appended to every alert email's body at the
+// send site in checkAlerts_ (both the normal render and the payload-render-failure fallback — see that
+// function), and weekly_report.gs never emits it. The probe now searches on that token instead of the
+// subject substring the two scripts used to share — still a single unquoted ASCII lowercase word, so
+// the original no-quoting-needed property is preserved, just scoped to mail this script actually sent.
+//
+// TRANSITIONAL BEHAVIOR: in the window between this version being deployed and the FIRST alert send
+// under it, no mail in the account carries ALERT_PROBE_TOKEN yet. `anywhere` is legitimately 0 in that
+// window, so the probe falls into the inconclusive branch below and leaves inbox_fail_streak untouched
+// — the safe direction (a false "still open" reading beats a false "resolved" one) — and it self-heals
+// automatically the moment the first token-bearing alert is sent and indexed.
 //
 // ESCALATION reuses the v6 streak idiom (a single indexing-lag miss must not page anyone) but sends
 // over the ntfy channel ONLY: emailing a human to tell them their email is not arriving is a
@@ -463,7 +525,7 @@ const INBOX_PROBE_WINDOW_SEC = 600;
 
 function verifyInboxDelivery_() {
   let anywhere, inbox, trashed, spammed;
-  const base = 'from:me subject:Stock-Trading after:' +
+  const base = 'from:me ' + ALERT_PROBE_TOKEN + ' after:' +
                (Math.floor(Date.now() / 1000) - INBOX_PROBE_WINDOW_SEC);
   try {
     // in:anywhere spans Trash and Spam, which GmailApp.search() otherwise excludes by default.
@@ -590,7 +652,14 @@ function getUserTzAlerts_() {
 function fmtAlertTs_(a) {
   const tz = getUserTzAlerts_();
   if (a.alert_ms != null) {
-    return Utilities.formatDate(new Date(Number(a.alert_ms)), tz, 'MMM d, h:mm a') + ` (${tz})`;
+    // BUG FIX (v10, 2026-08-31): this format used to omit the year ('MMM d, h:mm a'), unlike
+    // weekly_report.gs's 'MMM d, yyyy'. Roster-change notices are deliberately EXEMPT from
+    // LOOKBACK_HOURS (see the ROSTER NOTICES ARE EXEMPT FROM LOOKBACK_HOURS comment in checkAlerts_
+    // above) precisely so a delivery outage of any length DELAYS one instead of destroying it — which
+    // means the exact mail most likely to arrive long after it was raised, possibly in a different
+    // calendar year, was the one rendering a year-less, genuinely ambiguous timestamp. Now matches
+    // weekly_report.gs's year-bearing convention.
+    return Utilities.formatDate(new Date(Number(a.alert_ms)), tz, 'MMM d, yyyy, h:mm a') + ` (${tz})`;
   }
   return a.alert_ts + ' UTC';  // fallback if UNIX_MILLIS was unavailable
 }

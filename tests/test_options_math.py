@@ -893,3 +893,73 @@ def test_greeks_bsm_at_expiration_other_greeks_still_zero():
     for opt in (ATMOption(110, 100, 0, 0.045, 0.30, 'call'), ATMOption(90, 100, 0, 0.045, 0.30, 'put')):
         g = greeks_bsm(opt)
         assert g['gamma'] == 0.0 and g['theta'] == 0.0 and g['vega'] == 0.0 and g['rho'] == 0.0
+
+
+# ---------------------------------------------------------------------------
+# 2026-08-31 numerics-hardening pass: NaN/+-inf bypassed every one-sided `<= 0`/
+# `< 0` guard in this file (Python's ordering comparisons are all False against
+# NaN, so `nan <= 0` never fires), silently letting bad data construct/compute
+# instead of raising. These pin the new math.isfinite-based guards; the ordinary
+# negative/zero/too-few-legs cases stay covered by the pre-existing tests above.
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize("bad", [float('nan'), float('inf'), float('-inf')])
+def test_optioninputs_rejects_nonfinite_underlying_price_strike_days(bad):
+    with pytest.raises(ValueError):
+        ATMOption(bad, 100.0, 30, 0.045, 0.30, 'call')
+    with pytest.raises(ValueError):
+        ATMOption(100.0, bad, 30, 0.045, 0.30, 'call')
+    with pytest.raises(ValueError):
+        ATMOption(100.0, 100.0, bad, 0.045, 0.30, 'call')
+    with pytest.raises(ValueError):
+        ATMOption(100.0, 100.0, 30, 0.045, bad, 'call')
+
+
+def test_structure_rejects_empty_legs():
+    # Every check in __post_init__ was built on a `{... for leg in self.legs}` set
+    # comprehension, vacuously satisfied (len 0, never > 1) when legs=[] -- the
+    # class used to construct silently and only fail later, deep inside a property
+    # (.days_to_expiration/.underlying_price -> bare IndexError) or method
+    # (max_loss_closed_form -> `max() iterable argument is empty`).
+    with pytest.raises(ValueError):
+        Structure(legs=[], name='empty', structure_type='empty')
+
+
+@pytest.mark.parametrize("bad", [0, -50.0, float('nan'), float('inf'), float('-inf')])
+def test_size_position_rejects_nonfinite_or_nonpositive_max_loss(bad):
+    with pytest.raises(ValueError):
+        size_position(bad, 1389.37, 0.02)
+
+
+@pytest.mark.parametrize("bad", [0.0, -1.0, float('nan'), float('inf'), float('-inf')])
+def test_realized_vol_rejects_nonfinite_or_nonpositive_price(bad):
+    # A zero/negative close crashed math.log(window[i]/window[i-1]) below with an
+    # unattributed `ValueError: math domain error` naming neither the bad price nor
+    # its index; NaN/inf were not rejected at all. All five classes must now raise
+    # here, at validation, with the offending index in the message. This list is only
+    # 3 elements, so `bad` is necessarily INSIDE the trailing 31-close window that gets
+    # validated -- see test_realized_vol_ignores_bad_price_strictly_outside_trailing_31_window
+    # just below for the complementary case (a bad price OUTSIDE the window).
+    with pytest.raises(ValueError):
+        realized_volatility_30d([100.0, bad, 105.0])
+
+
+def test_realized_vol_ignores_bad_price_strictly_outside_trailing_31_window():
+    # BUG FIX (2026-08-31, adversarial review of this session's own numerics-hardening
+    # pass): the validation guard was first written to check the FULL daily_close_prices
+    # list BEFORE the `[-31:]` slice, so a bad value strictly outside the window --
+    # previously discarded harmlessly, exactly as this function's own docstring
+    # documents ("uses the most recent 31 closes") -- newly raised instead. That is the
+    # exact regression class this numerics-hardening pass promised not to introduce
+    # ("behavior on every valid input is byte-identical; only previously-invalid inputs
+    # now raise") -- a bad value outside the used window was never actually consumed by
+    # this function, so it was never really an invalid INPUT to the computation that
+    # runs. Reviewer-verified reproduction: prices = [0.0]*5 + [-10.0]*4 +
+    # [100.0+i for i in range(31)] returns 0.01070060710530742 pre-diff; this pins that
+    # exact value, and — more robustly, so the assertion does not depend on a
+    # hand-computed magic number surviving an unrelated future change — also confirms
+    # it equals calling the function on just the (valid) trailing 31 prices directly.
+    window_only = [100.0 + i for i in range(31)]
+    prices = [0.0] * 5 + [-10.0] * 4 + window_only
+    result = realized_volatility_30d(prices)
+    assert result == pytest.approx(realized_volatility_30d(window_only), abs=1e-12)
+    assert result == pytest.approx(0.01070060710530742)

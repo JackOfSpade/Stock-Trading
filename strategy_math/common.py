@@ -14,6 +14,39 @@ import math
 from dataclasses import dataclass
 
 
+def require_finite_positive(
+    value: float, name: str, *, allow_zero: bool = False, detail: str = ""
+) -> None:
+    """Reject a NaN, +/-inf, negative (or, unless `allow_zero`, zero) numeric input
+    with a clear, named ValueError.
+
+    NUMERICS HARDENING (2026-08-31, owner-authorized code-quality pass): every
+    "must be a positive number" guard in this package used to be a direct one-sided
+    float comparison (e.g. `if sub_portfolio_nav <= 0: raise ...`). Python's
+    `<`/`<=`/`>`/`>=` are all non-ordering for NaN — `float('nan') <= 0` and
+    `float('nan') > 0` are BOTH False — so a bare one-sided guard let a NaN input
+    sail straight through instead of being rejected, and the bad value then
+    propagated as NaN through whatever sizing/entry math it fed, surfacing (if at
+    all) as a cryptic, unattributed crash somewhere downstream instead of a clear
+    error at the point of entry. This helper closes that gap once, for every call
+    site, instead of hand-adding `math.isfinite(...)` at each one.
+
+    Does not change behavior on any already-valid (finite, in-range) input — only a
+    previously-silent-wrong-answer NaN/inf/out-of-range input now raises here.
+
+    c_options_math.py mirrors this as its own local, non-imported
+    `_require_finite_positive` — that module deliberately has no shared-module
+    dependency (scripts/check_roster_consistency.py's spec_hash_inputs() hashes C
+    as [c_options_math.py] alone; importing strategy_math would make that input
+    list wrong).
+    """
+    ok = (value >= 0) if allow_zero else (value > 0)
+    if not math.isfinite(value) or not ok:
+        bound = ">= 0" if allow_zero else "> 0"
+        suffix = f" {detail}" if detail else ""
+        raise ValueError(f"{name} = {value} (must be a finite number {bound}).{suffix}")
+
+
 def position_size_dollars(sub_portfolio_nav: float, pct: float) -> float:
     """Thesis-scaled position sizing: `pct` is THIS THESIS's risk budget as a
     fraction of the strategy's own sub-portfolio NAV.
@@ -48,8 +81,11 @@ def position_size_dollars(sub_portfolio_nav: float, pct: float) -> float:
     domain sanity bound (a budget cannot be negative, and cannot exceed the whole
     sub-portfolio), NOT a risk envelope — keep it.
     """
-    if sub_portfolio_nav <= 0:
-        raise ValueError(f"sub_portfolio_nav = {sub_portfolio_nav} (must be > 0).")
+    # NUMERICS HARDENING (2026-08-31): require_finite_positive also rejects NaN/inf,
+    # not just <= 0 -- see that function's docstring. The `pct` check just below was
+    # already NaN-safe (a chained `0 < pct <= 1` evaluates False, not True, for NaN),
+    # so it is unchanged.
+    require_finite_positive(sub_portfolio_nav, "sub_portfolio_nav")
     if not (0 < pct <= 1):
         raise ValueError(f"pct = {pct} (must be in (0, 1]).")
     return sub_portfolio_nav * pct
