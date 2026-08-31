@@ -139,9 +139,13 @@ connectors:
         use: unused
         prose_ambiguous: true
       - name: company
-        use: unused
+        use: required
         prose_ambiguous: true
         note: >-
+          D1 SINGLE-NAME-MOVE MARKET-CAP RAIL (Claude_Task_Plan.md D1 item 3, "Large single-name moves")
+          — `profile-symbol` is the market-cap source of record for a symbol FMP's free-tier allow-list
+          denies. PROMOTED unused -> required 2026-08-30 together with the D1 prose that calls it; the
+          two must move in one commit (this file's EDIT DISCIPLINE header).
           SYMBOL-ALLOW-LIST GATED, NOT QUOTA-SHAPED — the distinction a 2026-08-26 D1 alert got backwards,
           and it changes the remedy (pacing/retry cannot help; a different symbol or a different source
           can). `market-cap` returned AAPL cleanly on 2026-08-26 (marketCap 4,603,751,738,200) and
@@ -149,10 +153,23 @@ connectors:
           plan" for ANF in the same session — deterministic and reproducible, not intermittent. That
           parameter-level string always means THE SYMBOL is outside free's ~87-name allow-list, never
           that the tool is down. `batch-market-cap` additionally DROPS denied symbols at HTTP 200 with no
-          marker, so a batch response can look complete and be short. For a symbol the allow-list denies,
-          the market-cap rail runs through Operating_Protocols.md §11 MARKET CAP BASIS instead —
-          `secFilings` is NOT allow-list-gated (verified 2026-08-26: `sec-company-full-profile` returned
-          for ANF, a symbol this tool denies).
+          marker, so a batch response can look complete and be short.
+          THE GATE IS PER-ENDPOINT, NOT PER-TOOL (measured 2026-08-30 across the 12 symbols
+          `batch-market-cap` silently dropped from a 20-symbol call: MARA, SOLS, SMR, IREN, ESTC, GAP,
+          IONQ, PLUG, NU, PCG, MRVL, MSTR). `batch-market-cap`, `market-cap` and `shares-float` returned
+          ACCESS DENIED for ALL 12; `profile-symbol` returned a `marketCap` for ALL 12, each carrying a
+          `price` matching that symbol's independently IBKR-measured 2026-08-28 close exactly. So a
+          denial on one `company` endpoint says nothing about its siblings — go to `profile-symbol`
+          FIRST for a cap on a denied symbol.
+          CORRECTION, same measurement: this entry previously routed that case to
+          Operating_Protocols.md §11 MARKET CAP BASIS on the grounds that "`secFilings` is NOT
+          allow-list-gated (verified 2026-08-26: `sec-company-full-profile` returned for ANF, a symbol
+          this tool denies)". The premise stands and is NOT retracted — but the inference built on it
+          was wrong: `sec-company-full-profile` returned for all 12 and carries NO `marketCap` and NO
+          share-count field (registrant/SIC/CIK metadata only), so it cannot satisfy the market-cap
+          rail at all. CAVEAT on `profile-symbol`: FMP's implied share count can lag a recent issuance
+          — it put SMR at $2.77B against ~$3.81–3.99B from two independent sources, a ~30% gap. No
+          binary >=$2B call among the 12 changed, but second-source any name within ~30% of the rail.
       - name: crypto
         use: unused
         prose_ambiguous: true
