@@ -921,7 +921,7 @@ def test_fetch_live_definitions_routes_view_kind_to_information_schema_views(mon
     assert max_rows is not None and max_rows > 200  # generous margin above any real dataset today
 
 
-def test_fetch_live_definitions_routes_procedure_and_table_function_to_information_schema_routines(monkeypatch):
+def test_fetch_live_definitions_routes_every_routine_kind_to_information_schema_routines(monkeypatch):
     seen = []
 
     def fake_bq(sql, project, max_rows=None):
@@ -929,21 +929,29 @@ def test_fetch_live_definitions_routes_procedure_and_table_function_to_informati
         return [
             {"routine_name": "sp_foo", "routine_type": "PROCEDURE", "routine_definition": "BEGIN SELECT 1; END"},
             {"routine_name": "fn_x", "routine_type": "TABLE FUNCTION", "routine_definition": "SELECT 1"},
+            {"routine_name": "fn_s", "routine_type": "FUNCTION", "routine_definition": "t IS NOT NULL"},
         ]
     monkeypatch.setattr(clsp, "bq", fake_bq)
     final = {
         ("ops", "sp_foo"): ("PROCEDURE", "proj", "01.sql", "BEGIN SELECT 1; END"),
         ("ops", "fn_x"): ("TABLE FUNCTION", "proj", "01.sql", "SELECT 1"),
+        # Scalar FUNCTION joined ROUTINE_KINDS 2026-09-01 and must ride the SAME single query.
+        ("ops", "fn_s"): ("FUNCTION", "proj", "01.sql", "t IS NOT NULL"),
     }
     views, routines = clsp.fetch_live_definitions("proj", final)
-    # ONE query covers BOTH kinds for the dataset (WHERE routine_type IN (...)), not one per kind.
+    # ONE query covers ALL THREE routine kinds for the dataset (WHERE routine_type IN (...)), not
+    # one per kind. The filter must list every member of ROUTINE_KINDS or a kind is silently dropped
+    # from the batch and every object of that kind is reported as false MISSING.
     assert len(seen) == 1
     assert "INFORMATION_SCHEMA.ROUTINES" in seen[0]
-    assert "routine_type IN ('PROCEDURE', 'TABLE FUNCTION')" in seen[0]
+    assert "routine_type IN ('PROCEDURE', 'TABLE FUNCTION', 'FUNCTION')" in seen[0]
+    for kind in clsp.ROUTINE_KINDS:
+        assert f"'{kind}'" in seen[0]
     assert views == {}
     assert routines == {"ops": {
         ("sp_foo", "PROCEDURE"): "BEGIN SELECT 1; END",
         ("fn_x", "TABLE FUNCTION"): "SELECT 1",
+        ("fn_s", "FUNCTION"): "t IS NOT NULL",
     }}
 
 
@@ -1426,3 +1434,50 @@ def test_canonicalize_treats_string_CONTENT_as_significant():
 def test_canonicalize_handles_empty_and_none():
     assert clsp.canonicalize("") == ""
     assert clsp.canonicalize(None) is None
+
+
+def test_scalar_function_is_in_the_compared_set():
+    """REGRESSION (2026-09-01 audit). `analytics.fn_is_occ_option_symbol` (bigquery/40_options_marks.sql)
+    is this repo's only scalar UDF, and until this pass it was the ONE code-bodied live object outside
+    every repo<->live parity gate: CREATE_STMT's kind alternation, ROUTINE_KINDS and
+    fetch_live_definitions()' routine_type filter all listed only VIEW/PROCEDURE/TABLE FUNCTION.
+    Nothing else covered it either -- state.ddl_drift compares events.* table COLUMNS, dbt declares
+    the UDF in sources.yml but never builds it (and dbt_parity calls the same LIVE udf on both sides,
+    so a drift cancels out), and ops.sp_sq_safety_critical_dml_watch has no DDL statement-type lane.
+    A silent console edit to it was therefore undetectable. Pin the object so the hole cannot reopen."""
+    final = clsp.find_final_definitions()
+    assert ("analytics", "fn_is_occ_option_symbol") in final
+    obj_type, *_rest = final[("analytics", "fn_is_occ_option_symbol")]
+    assert obj_type == "FUNCTION"
+    assert "FUNCTION" in clsp.ROUTINE_KINDS
+
+
+def test_create_stmt_still_types_table_function_as_table_function():
+    """The `FUNCTION` alternative added above MUST stay AFTER `TABLE\\s+FUNCTION` in CREATE_STMT.
+    Python alternation is first-match, not longest-match, so a leading `FUNCTION` alternative would
+    match the trailing half of "TABLE FUNCTION" and silently re-type every TFVN in the repo -- which
+    would then be looked up under the wrong routine_type and reported as MISSING live."""
+    tf = "CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.tf_foo`(x INT64) AS (\n  SELECT x AS y\n);\n"
+    m = clsp.CREATE_STMT.search(tf)
+    assert clsp.normalize_kind(m.group(1)) == "TABLE FUNCTION"
+    # and the real repo still contains its table functions, typed correctly
+    final = clsp.find_final_definitions()
+    kinds = {k for (_ds, _n), (k, *_r) in final.items()}
+    assert {"VIEW", "PROCEDURE", "TABLE FUNCTION", "FUNCTION"} <= kinds
+
+
+def test_extract_body_strips_the_scalar_udf_as_wrapper():
+    """A scalar UDF's live INFORMATION_SCHEMA.ROUTINES.routine_definition is the BARE expression --
+    verified live on analytics.fn_is_occ_option_symbol, the 85-char
+    "ticker IS NOT NULL AND REGEXP_CONTAINS(...)" -- NOT the surrounding `AS ( ... )`. So the repo
+    side must strip exactly one wrapper pair, the same shape TABLE FUNCTION already strips. Getting
+    this wrong yields a permanent false DRIFT on an object that is in fact byte-identical."""
+    txt = (
+        "CREATE OR REPLACE FUNCTION `stock-trading-498512.analytics.fn_x`(t STRING) AS (\n"
+        "  t IS NOT NULL AND REGEXP_CONTAINS(t, r'^[A-Z]{1,6}$')\n"
+        ");\n"
+    )
+    m = clsp.CREATE_STMT.search(txt)
+    assert clsp.normalize_kind(m.group(1)) == "FUNCTION"
+    body = clsp.extract_body(txt, m.start(), "FUNCTION")
+    assert body == "t IS NOT NULL AND REGEXP_CONTAINS(t, r'^[A-Z]{1,6}$')"

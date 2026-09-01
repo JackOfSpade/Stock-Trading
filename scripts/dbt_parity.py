@@ -13,7 +13,10 @@ this compares the two SELECT logics over identical inputs. NOTE: this does NOT `
 generate_schema_name override pins models to the bare live datasets, so a build would overwrite
 them; compile+EXCEPT stays read-only.
 
-Run AFTER `dbt compile` (the CI job does that), from the repo root. Requires the `bq` CLI authed
+Run AFTER `dbt compile` (the CI job does that), from the repo root. Running it by hand? clear
+`dbt/target` first (`dbt clean`): that directory is git-ignored and `dbt compile` does not purge
+it, so artifacts of models the repo no longer has survive there and used to be compared as if
+they were ported models — see compiled_models()' ORPHAN GUARD. They are now skipped and counted. Requires the `bq` CLI authed
 (WIF in CI). Exit 0 = all parity; exit 1 = any drift, OR every model was skipped (a systemic bq/
 auth failure must not silently report "OK" on zero real comparisons — 2026-07-14 audit finding).
 
@@ -216,7 +219,10 @@ def live_columns_all():
     return out or None
 
 
-def compiled_models():
+def compiled_artifacts():
+    """Every .sql under COMPILED_ROOT/<dataset>, unfiltered — what `dbt compile` has LEFT ON DISK,
+    which is not the same thing as what this repo currently ports. Kept separate from
+    compiled_models() so the orphan count below can be reported rather than silently swallowed."""
     for dataset in DATASET_FOLDERS:
         d = os.path.join(COMPILED_ROOT, dataset)
         if not os.path.isdir(d):
@@ -224,6 +230,40 @@ def compiled_models():
         for fn in sorted(os.listdir(d)):
             if fn.endswith(".sql"):
                 yield dataset, fn[:-4], read_text(os.path.join(d, fn)).strip().rstrip(";")
+
+
+def compiled_models():
+    """The compiled artifacts that correspond to a dbt model SOURCE file that still exists.
+
+    ORPHAN GUARD (2026-09-01 audit). dbt/target/ is git-ignored and `dbt compile` does NOT purge it,
+    so a compiled artifact outlives the model file it came from. This function used to yield every
+    .sql on disk, so each orphan was compared against its live view as if it were a ported model —
+    and since the orphan's SQL is frozen at whatever the model said when it was last compiled, any
+    later legitimate redefinition of that live view shows up as FABRICATED DRIFT. Measured in one
+    working checkout: 187 compiled artifacts vs 84 with a source file, and 5 of the 103 orphans
+    reported drift purely because bigquery/200-203 had redefined their live views after the stale
+    compile (state.web_call_coverage: dbt-only 457 rows vs live 159).
+
+    This CANNOT weaken the fail-closed posture: an artifact with no source file is provably not a
+    ported model, so dropping it removes a fabricated comparison, never a real one. The genuine
+    partial-compile guard is the OPPOSITE direction — sources with no artifact — and main()'s
+    `uncompiled` check still enforces that, now more accurately because compiled_names no longer
+    counts orphans toward coverage.
+
+    CI is structurally immune (dbt/.gitignore ships `target/` and actions/checkout is clean), so this
+    only ever bit an interactive full-suite verification run — which is exactly the run an agent
+    trusts when it reports "dbt_parity 0 drift"."""
+    sources = model_source_names()
+    for dataset, name, sql in compiled_artifacts():
+        if (dataset, name) in sources:
+            yield dataset, name, sql
+
+
+def orphan_compiled_artifacts():
+    """{(dataset, name)} compiled under COMPILED_ROOT with no surviving dbt/models/ source file.
+    Reported by main() so a stale dbt/target/ is visible instead of silently shrinking coverage."""
+    sources = model_source_names()
+    return {(ds, nm) for ds, nm, _sql in compiled_artifacts() if (ds, nm) not in sources}
 
 
 def model_source_names():
@@ -329,6 +369,16 @@ def main():
     models = list(compiled_models())
     total = len(models)
     compiled_names = {(dataset, name) for dataset, name, _ in models}
+    # Stale dbt/target/ artifacts are skipped, not compared (see compiled_models()). Say so out loud:
+    # a silent skip would read identically to "there was nothing there", and the whole point of the
+    # guard is that the operator can see the local tree is stale and re-run `dbt clean && dbt compile`.
+    orphans = orphan_compiled_artifacts()
+    if orphans:
+        print(f"NOTE: skipped {len(orphans)} compiled artifact(s) under {COMPILED_ROOT} with no dbt/models/ "
+              f"source file (stale dbt/target/ — `dbt clean` then re-`dbt compile` to clear). These are NOT "
+              f"ported models and comparing them would fabricate drift against legitimately-redefined live "
+              f"views: " + ", ".join(f"{ds}.{nm}" for ds, nm in sorted(orphans)[:8])
+              + (f", +{len(orphans) - 8} more" if len(orphans) > 8 else ""))
     # ONE batched metadata job for all models instead of one per model (2026-07-30 Actions cost audit;
     # 70.9s -> 1.5s, proven 43/43 equivalent — see live_columns_all()). None = batch unusable, in which
     # case every model falls back to the original per-model live_columns() call inside the worker.

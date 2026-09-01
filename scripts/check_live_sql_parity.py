@@ -74,7 +74,7 @@ measured 517-619s (~9-11 billable CI min/day) runtimes of .github/workflows/live
 parity step (~76% of a month's total via the shared cost-audit finding in CLAUDE.md's push-cost
 note). Replaced with fetch_live_definitions() / resolve_live_definition(): ONE
 INFORMATION_SCHEMA.VIEWS query per dataset that has at least one expected VIEW, and ONE
-INFORMATION_SCHEMA.ROUTINES query (WHERE routine_type IN ('PROCEDURE','TABLE FUNCTION')) per
+INFORMATION_SCHEMA.ROUTINES query (WHERE routine_type IN ('PROCEDURE','TABLE FUNCTION','FUNCTION')) per
 dataset that has at least one expected PROCEDURE/TABLE FUNCTION — 5 queries total against the real
 repo's 4 datasets, not 199. See fetch_live_definitions()'s docstring for the safety property this
 batching had to preserve without weakening: a FAILED batch query must mark every object in that
@@ -148,14 +148,18 @@ BIGQUERY_DIR = os.path.join(ROOT, "bigquery")
 # against a literal kind: normalize_kind() it first (find_final_definitions does), since `TABLE\s+
 # FUNCTION` can also capture a legally line-wrapped "TABLE\n  FUNCTION".
 CREATE_STMT = re.compile(
-    r"^CREATE\s+OR\s+REPLACE\s+(VIEW|PROCEDURE|TABLE\s+FUNCTION)\s+`([\w-]+)\.(\w+)\.(\w+)`",
+    # `FUNCTION` is listed LAST, AFTER `TABLE\s+FUNCTION`: Python's alternation is first-match,
+    # not longest-match, so a leading `FUNCTION` alternative would capture the trailing half of
+    # "TABLE FUNCTION" and mis-type every TFVN in the repo. Same longest-first rule DROP_STMT's own
+    # comment documents. Scalar FUNCTION added 2026-09-01 — see the module docstring.
+    r"^CREATE\s+OR\s+REPLACE\s+(VIEW|PROCEDURE|TABLE\s+FUNCTION|FUNCTION)\s+`([\w-]+)\.(\w+)\.(\w+)`",
     re.IGNORECASE | re.MULTILINE,
 )
 
 # Boundary for extract_body: the NEXT top-level (column-0) statement ends the current object's body.
-# CREATE_STMT only recognizes the three object types this script COMPARES (VIEW/PROCEDURE/TABLE
-# FUNCTION), but bigquery/*.sql also carries top-level CREATE TABLE [IF NOT EXISTS], scalar CREATE OR
-# REPLACE FUNCTION, CREATE OR REPLACE MODEL, and CREATE SCHEMA between comparable objects. Using
+# CREATE_STMT recognizes the four object types this script COMPARES (VIEW/PROCEDURE/TABLE FUNCTION/
+# scalar FUNCTION), but bigquery/*.sql also carries top-level CREATE TABLE [IF NOT EXISTS],
+# CREATE OR REPLACE MODEL, and CREATE SCHEMA between comparable objects. Using
 # CREATE_STMT itself as the end boundary let those foreign DDL blocks BLEED into the preceding
 # object's extracted body — 10 live objects mis-parsed into a permanent false DRIFT that also fed the
 # RES-3 self-heal candidate loop (2026-07-17 code-quality audit). Matching any top-level CREATE
@@ -508,7 +512,7 @@ def extract_body(txt, start, obj_type):
         # well-formed DDL but keeps this from ever returning nothing instead of returning something.
         end_m = find_procedure_body_end(stmt, begin_at)
         body = stmt[begin_at:end_m] if end_m is not None else stmt[begin_at:]
-    else:  # VIEW / TABLE FUNCTION
+    else:  # VIEW / TABLE FUNCTION / scalar FUNCTION
         # The first standalone "AS" (followed by whitespace) after the CREATE header — the AS that
         # starts the SELECT/body. A column-alias "AS" can never appear textually before this header
         # AS, so the first `\bAS\b(?=\s)` is always the header AS in both the end-of-line style
@@ -531,7 +535,12 @@ def extract_body(txt, start, obj_type):
         body = stmt[as_end:]
 
     body = normalize_tail(body)
-    if obj_type == "TABLE FUNCTION":
+    if obj_type in ("TABLE FUNCTION", "FUNCTION"):
+        # Scalar FUNCTION shares this branch (2026-09-01): live
+        # INFORMATION_SCHEMA.ROUTINES.routine_definition for a scalar UDF is the BARE expression
+        # (verified on analytics.fn_is_occ_option_symbol: the 85-char
+        # "ticker IS NOT NULL AND REGEXP_CONTAINS(...)"), NOT the surrounding `AS ( ... )`, so the
+        # repo side must strip exactly the one wrapper pair — the identical shape TABLE FUNCTION has.
         # The outer wrapping ")" that closes the function's parameter list is part of the
         # preamble captured differently per call site; TABLE FUNCTION bodies in this repo are a
         # single AS ( ... ) wrapper — strip one matching outer paren pair if present. A naive
@@ -691,7 +700,10 @@ def bq(sql, project, max_rows=None):
 # Object kinds that live in INFORMATION_SCHEMA.ROUTINES rather than .VIEWS. CREATE_STMT only ever
 # produces obj_type in {"VIEW", "PROCEDURE", "TABLE FUNCTION"} — the three kinds this script
 # compares (see CREATE_STMT's comment) — so "not a routine kind" always means VIEW here.
-ROUTINE_KINDS = frozenset({"PROCEDURE", "TABLE FUNCTION"})
+# Scalar "FUNCTION" joined 2026-09-01: analytics.fn_is_occ_option_symbol (bigquery/40) was the repo's
+# only code-bodied live object outside every repo<->live parity gate — state.ddl_drift covers table
+# COLUMNS only, dbt declares the UDF as a source but never builds it, and the DML watch has no DDL lane.
+ROUTINE_KINDS = frozenset({"PROCEDURE", "TABLE FUNCTION", "FUNCTION"})
 
 # bq CLI's `bq query` caps result rows at 100 by default (`--max_rows`, verified via `bq query
 # --help`: "How many rows to return in the result. (default: '100')"). A per-object query only ever
@@ -779,7 +791,7 @@ def fetch_live_definitions(project, final):
             rows = bq(
                 f"SELECT routine_name, routine_type, routine_definition FROM "
                 f"`{project}`.{dataset}.INFORMATION_SCHEMA.ROUTINES "
-                f"WHERE routine_type IN ('PROCEDURE', 'TABLE FUNCTION')", project,
+                f"WHERE routine_type IN ('PROCEDURE', 'TABLE FUNCTION', 'FUNCTION')", project,
                 max_rows=BATCH_MAX_ROWS)
             routines_by_dataset[dataset] = parse_routines_batch(rows)
         except Exception as e:  # noqa: BLE001 - any query failure is cached here and re-raised per-object below (see docstring)
