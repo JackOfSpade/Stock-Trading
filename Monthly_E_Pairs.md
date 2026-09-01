@@ -14,6 +14,13 @@ The August edition closed by saying that "what blocks entry is no longer executi
 
 **Consequence for this screen.** E is activated and executable; the residual blockers are the open pre-mortem defect and the trading-enable gate, neither of which M2 can clear and neither of which is a reason to weaken the screen. **This PART 2 is still research feedstock for M4, not a queue to drain into orders** — but for a different and weaker reason than in August.
 
+> **AMENDMENT, same day, after M1b completed.** M2 read the activation state before M1b's September run landed; M1b then completed at 2026-09-01 and its September call materially changes the *framing* above without changing the binding state. Recorded here rather than left for M4 to reconcile:
+>
+> - **The binding state is still `ACTIVATE`** — M1b wrote **no** new `STRATEGY_ACTIVATION`/`E` row, so the 2026-08-05 row remains the latest and everything above stands as measured. Re-verified after M1b's commit.
+> - **But M1b's September post-reconciliation call for E is DO-NOT-ACTIVATE**, and it is **override-manufactured for the first time**: M1b's *raw* fundamental call **flipped to ACTIVATE** — a genuine flip, and one it credits substantially to *this screen's own August measurement* (60d correlation exceeding 252d in 66 of 89 pairs, 74%) — and then the universal rule `shock_overlay = acute → override ACTIVATE → DO-NOT-ACTIVATE for ANY strategy` fired. **This is the first time that rule has ever fired on E.**
+> - **So only the mechanical shock override now stands between E and activation.** M1b's own raw grounds no longer argue against E; they agree with `div-E-202607-1`. M1b flags the raw-to-override inversion as materially new information for the incoming divergence review, and notes the net call is unchanged so there is no router flip for M4 to action.
+> - **This does not weaken any disposition in this screen** — no pair was advanced or dropped on activation state, and the technical gate reads ACTIVATE on all three legs either way. It does mean **M4 should read PART 2 as feedstock for a live divergence review on E**, not as a shortlist blocked by a settled fundamental DNA.
+
 **`state.trading_enabled` reads FALSE as of this run**, on `halt_reason = 'state.freshness marks_fresh/engine_fresh not both TRUE'`. This is the ordinary pre-close state on a trading day, not an incident: `state.freshness` shows `marks_current = TRUE` and `engine_current = TRUE` with marks through 2026-08-31 and `marks_due_through` 2026-08-31 — the flag is FALSE only because `last_trading_day` has already rolled to today and today's D2a has not yet run. Stated as fact; M2 stages no orders and is not gated by it.
 
 ## Cross-strategy conflicts and the E book
