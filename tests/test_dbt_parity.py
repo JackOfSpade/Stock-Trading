@@ -16,11 +16,28 @@ import re
 import threading
 from pathlib import Path
 
+import pytest
+
 from conftest import load_module_from_path
 from lib.sql_files import strip_sql_comments
 
 dp = load_module_from_path("dbt_parity", "scripts", "dbt_parity.py")
 ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.fixture(autouse=True)
+def _no_live_scope_by_default(monkeypatch):
+    """Neutralize dbt/parity_live_scope.yml for every test in this module unless it says otherwise.
+
+    Added 2026-09-01 with the view-coverage burn-down. main() now filters the compared set through
+    live_scope(); every test written before that assumed "no scope file, so compare every compiled
+    model", and they monkeypatch compiled_models() with FAKE names like m1/foo/bar. Read against the
+    REAL scope file those names are all out of scope, so main() would compare ZERO models — which
+    made four tests fail outright and, more dangerously, could make others pass for the WRONG reason
+    (several assert main() == 1, which a zero-model run also returns via the partial-compile guard).
+    Defaulting to None keeps each test asserting what it was written to assert. The two scope-specific
+    tests at the end of this file monkeypatch live_scope themselves, and a later setattr wins."""
+    monkeypatch.setattr(dp, "live_scope", lambda: None)
 
 
 def _normalized_halt_echo_mr_cte(sql, end_pattern=r"al\s+AS"):
@@ -832,3 +849,43 @@ def test_model_source_count_is_len_of_model_source_names(monkeypatch):
     # never disagree (the total==0 branch uses the count, the partial guard uses the names).
     monkeypatch.setattr(dp, "model_source_names", lambda: {("state", "a"), ("state", "b"), ("perf", "c")})
     assert dp.model_source_count() == 3
+
+
+def test_live_scope_bounds_the_live_comparison_without_hiding_models(monkeypatch, capsys):
+    """dbt/parity_live_scope.yml selects which models get the EXPENSIVE live row comparison.
+
+    Added 2026-09-01 with the view-coverage burn-down: 101 newly ported models are gated by the
+    OFFLINE token-identity check (scripts/verify_dbt_port.py) rather than by one live BigQuery job
+    each, which would have roughly tripled the warehouse-validation job. Two properties matter and
+    are pinned here: (1) an out-of-scope model is EXCLUDED from the live comparison and never
+    queried, and (2) it is NOT counted as uncompiled — narrowing compiled_names alongside `models`
+    would make the partial-compile guard fire on every deferred model and print PARITY NOT VERIFIED
+    for models that compiled perfectly well."""
+    monkeypatch.setattr(dp, "compiled_models",
+                        lambda: iter([("state", "in_scope", "SELECT 1 AS a"),
+                                      ("state", "deferred", "SELECT 1 AS a")]))
+    monkeypatch.setattr(dp, "model_source_names", lambda: {("state", "in_scope"), ("state", "deferred")})
+    monkeypatch.setattr(dp, "orphan_compiled_artifacts", set)
+    monkeypatch.setattr(dp, "live_scope", lambda: {"in_scope"})
+    seen = []
+
+    def fake_live_columns(ds, tbl):
+        seen.append(tbl)
+        return [{"column_name": "a", "data_type": "STRING"}]
+
+    monkeypatch.setattr(dp, "live_columns", fake_live_columns)
+    monkeypatch.setattr(dp, "live_columns_all", lambda: None)   # force the per-model path, so `seen` is meaningful
+    monkeypatch.setattr(dp, "bq", lambda sql: [{"n_missing": 0, "n_extra": 0}])
+    assert dp.main() == 0
+    out = capsys.readouterr().out
+    assert "1 models compared" in out
+    assert "1 deferred to the offline token-identity gate" in out
+    assert "PARITY NOT VERIFIED" not in out       # deferred is not the same as uncompiled
+    assert seen == ["in_scope"]                    # the deferred model was never queried
+
+
+def test_live_scope_missing_file_compares_everything(monkeypatch, tmp_path):
+    """A missing or unreadable scope file must fall back to the STRICTER behaviour (compare every
+    compiled model), never fail open. A typo in the filename must not silently disable the live gate."""
+    monkeypatch.setattr(dp, "LIVE_SCOPE_YML", str(tmp_path / "nope.yml"))
+    assert dp.live_scope() is None

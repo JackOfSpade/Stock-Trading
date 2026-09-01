@@ -774,7 +774,13 @@ sources:
       - name: theater_judge
         description: >
           AI-graded 'theater' judgements (ops.sp_score_theater / remote model). Not a pure SELECT. Defined in bigquery/11_theater_judge.sql.
-
+      - name: theater_independence
+        description: >
+          NOT a dbt model by standing decision (dbt/README.md, "Deliberately NOT ported"): the body
+          computes ML.DISTANCE over analytics.review_embeddings, which is produced by a REMOTE MODEL,
+          so it is not a pure SELECT and dbt could not rebuild it at cutover. Declared here so the
+          object is accounted for by scripts/check_dbt_view_coverage.py without dbt ever building it.
+          Canonical body: bigquery/04_analytics.sql.
 
   - name: perf
     project: stock-trading-498512

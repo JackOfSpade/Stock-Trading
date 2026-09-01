@@ -550,6 +550,7 @@ jobs:
           run_check python scripts/check_settings_toolcov.py
           run_check python scripts/check_connector_tools.py
           run_check python scripts/check_adopt_gate_coverage.py
+          run_check python scripts/check_dbt_view_coverage.py
           run_check bash tests/test_auto_merge_logic.sh
           run_check bash tests/test_resolve_diff_base.sh
           run_check bash tests/test_notify_webhook.sh

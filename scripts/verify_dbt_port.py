@@ -22,7 +22,17 @@ comments stripped, whitespace collapsed, and BigQuery's two identifier-quoting s
 A token-equal result means dbt_parity.py's live EXCEPT comparison must also agree -- the compiled
 text IS what dbt would run. Anything else is printed as a unified diff for a human to judge.
 
-Usage: verify_port.py <model_name> [<model_name> ...]
+Usage:
+  verify_dbt_port.py <model_name> [<model_name> ...]   # compile just these, then compare
+  verify_dbt_port.py --all                             # every model under dbt/models/{state,perf,analytics}
+  verify_dbt_port.py --all --use-compiled              # skip the compile; reuse dbt/target/compiled
+
+`--use-compiled` exists so CI can run this for FREE. The warehouse-validation job already runs
+`dbt compile`; re-compiling here would duplicate ~a minute of work for no new information. It is
+also the mode that makes this affordable as an ALWAYS-ON gate over all ~186 models, which is what
+lets `scripts/dbt_parity.py` keep its expensive LIVE row comparison bounded (dbt/parity_live_scope.yml).
+With --use-compiled, a model with no compiled artifact is a FAILURE, not a skip: silently passing a
+model nobody compiled is exactly the vacuous-green this gate exists to prevent.
 """
 import difflib
 import importlib.util
@@ -104,14 +114,34 @@ def resolve_profiles_dir():
     return profiles_dir
 
 
-def main(models):
-    env = dict(os.environ, DBT_PROFILES_DIR=resolve_profiles_dir())
-    r = subprocess.run(
-        ["dbt", "compile", "--target", "ci", "--select", " ".join(models)],
-        cwd=os.path.join(REPO, "dbt"), env=env, capture_output=True, text=True, timeout=600)
-    if r.returncode != 0:
-        print("dbt compile FAILED:\n" + (r.stdout or "")[-3000:])
+def all_model_names():
+    """Every model under dbt/models/{state,perf,analytics} (model names are globally unique)."""
+    from lib.sql_files import DBT_DATASETS
+    out = []
+    for ds in DBT_DATASETS:
+        d = os.path.join(REPO, "dbt", "models", ds)
+        if os.path.isdir(d):
+            out += [fn[:-4] for fn in sorted(os.listdir(d)) if fn.endswith(".sql")]
+    return out
+
+
+def main(argv):
+    use_compiled = "--use-compiled" in argv
+    models = [a for a in argv if not a.startswith("--")]
+    if "--all" in argv or not models:
+        models = all_model_names()
+    if not models:
+        print("no models found under dbt/models/ — refusing to report OK on zero comparisons")
         return 2
+
+    if not use_compiled:
+        env = dict(os.environ, DBT_PROFILES_DIR=resolve_profiles_dir())
+        r = subprocess.run(
+            ["dbt", "compile", "--target", "ci", "--select", " ".join(models)],
+            cwd=os.path.join(REPO, "dbt"), env=env, capture_output=True, text=True, timeout=600)
+        if r.returncode != 0:
+            print("dbt compile FAILED:\n" + (r.stdout or "")[-3000:])
+            return 2
 
     bad = 0
     for m in models:

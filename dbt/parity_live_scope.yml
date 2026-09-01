@@ -1,0 +1,121 @@
+# dbt_parity LIVE-comparison scope — which ported models get a live BigQuery row comparison.
+#
+# WHY THIS FILE EXISTS (2026-09-01, dbt view-coverage burn-down completed).
+# `scripts/check_dbt_view_coverage.py` reported 102 live state/analytics/perf views with neither a
+# dbt model nor a declared source. 101 were pure SELECT; they are now ported (the 102nd,
+# analytics.theater_independence, is ML.DISTANCE-backed and is declared in sources.yml instead).
+# Coverage is 0 uncovered — but `scripts/dbt_parity.py` issues ONE LIVE BigQuery JOB PER MODEL, so
+# comparing all 186 would roughly triple the warehouse-validation job. Measured 2026-09-01: 186
+# models did not finish inside a 580 s local budget, against a 6m47s CI job at 85 models; the path
+# gate fires that job on ~109 pushes/30d, so the naive version costs hundreds of billable
+# minutes/month for no new information. CLAUDE.md's push-cost discipline forbids that.
+#
+# WHY DROPPING THE LIVE CHECK FOR THE REST IS SAFE — it is replaced by a STRONGER, cheaper gate, not
+# by nothing. `scripts/verify_dbt_port.py --all --use-compiled` now runs in CI over EVERY model and
+# proves each one TOKEN-IDENTICAL to its canonical bigquery/*.sql body. Its own docstring states the
+# implication: "Token-equal here implies dbt_parity.py must also agree, because the two sides are the
+# same SQL." And live-vs-canonical is independently proven for all 249 objects by
+# `scripts/check_live_sql_parity.py`. Token-identical port + canonical==live ⇒ port==live. The live
+# row comparison adds nothing for a token-identical model; it earns its cost only as a belt-and-braces
+# check on the gate-critical set below.
+#
+# NOT a way to silence a failing model. Removing a model from this list does NOT reduce what is
+# checked — verify_dbt_port still gates it on every push, and a DIFF there is a hard CI failure.
+# This list only chooses where the EXPENSIVE redundant check also runs.
+#
+# THIS GATE IS WHY IT MATTERS: adding verify_dbt_port to CI immediately caught FOUR pre-existing
+# ports that had silently gone stale against later bigquery/*.sql revisions — entry_staging_allowed
+# (missed bigquery/205's message-stability rewrite), calibration_shrunk (dropped a
+# COALESCE(conviction,'(unscored)')), position_lifecycle (lost an f. qualifier) and
+# strategy_daily_returns (dropped the fn_is_occ_option_symbol option filter entirely). dbt_parity had
+# passed all four for weeks because the differing branches are currently inert — no drawdown breach,
+# no OCC option ever held. All four are regenerated and token-identical as of this commit.
+#
+# TO ADD A MODEL HERE: weigh it against the per-model live cost above. The default answer for a newly
+# ported view is NO — verify_dbt_port already covers it.
+live_scope:
+  - account_latest
+  - account_reconciliation
+  - adversarial_reviews_current
+  - append_only_integrity
+  - append_only_integrity_haltable
+  - append_only_integrity_promotion_readiness
+  - arsenal_enabled
+  - arsenal_rails
+  - arsenal_regime_coverage
+  - b3_promotion_readiness
+  - b3_trading_enabled_check
+  - book_drawdown_watch
+  - cadence_expected_today
+  - cadence_period_watch
+  - cadence_watch
+  - calibration_param_readiness
+  - calibration_shrunk
+  - calibration_summary
+  - catchup_available
+  - catchup_refire_readiness
+  - conviction_features
+  - conviction_monotonicity
+  - current_positions
+  - current_regime
+  - d2a_cutover_readiness
+  - daily_briefing
+  - daily_marks_curated
+  - ddl_drift_promotion_readiness
+  - declared_vs_realized
+  - deployed_book_vs_benchmarks
+  - deployed_book_vs_sgov
+  - dust_classified_fills
+  - entry_staging_allowed
+  - execution_quality
+  - execution_quality_readiness
+  - forecast_bias
+  - foundation_change_termination_readiness
+  - freshness
+  - gate_watch
+  - kill_flags
+  - market_calendar
+  - open_orders
+  - open_queue
+  - open_queue_detail
+  - option_marks_curated
+  - owner_confirmation_liveness
+  - param_oos_degradation
+  - park_baseline
+  - park_counterfactuals
+  - park_nav_daily
+  - period_catchup_available
+  - position_campaigns
+  - position_lifecycle
+  - position_reconciliation
+  - process_reliability_readiness
+  - referee_concurrence_calibration
+  - referee_promotion_readiness
+  - research_quality_promotion_readiness
+  - restore_health
+  - restore_stale_promotion_readiness
+  - sgov_cumulative
+  - sgov_daily_return
+  - staging_halt_disposition
+  - strategy_adoption_readiness
+  - strategy_daily_returns
+  - strategy_nav
+  - strategy_paper_readiness
+  - strategy_playbook_readiness
+  - strategy_retirement_readiness
+  - strategy_scorecard
+  - strategy_shadow_readiness
+  - strategy_unit_value_7d_ago
+  - strategy_vs_park
+  - strategy_vs_park_daily
+  - system_health
+  - thesis_outcomes
+  - trade_fills_curated
+  - trading_control_latest
+  - trading_day_today
+  - trading_enabled
+  - trading_enabled_mechanical
+  - twr_forecast_vs_actual_all_vintages
+  - voo_cumulative
+  - voo_daily_return
+  - weekly_activity

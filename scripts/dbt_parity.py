@@ -259,6 +259,35 @@ def compiled_models():
             yield dataset, name, sql
 
 
+# Anchored to the REPO, not to the cwd: every other path in this file is cwd-relative because CI
+# always runs it from the repo root, but a config that silently becomes "absent" (-> compare
+# everything) when invoked from elsewhere would make the live scope depend on the caller's
+# directory. Resolve it once, from this file's own location.
+LIVE_SCOPE_YML = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                              "dbt", "parity_live_scope.yml")
+
+
+def live_scope():
+    """{model_name} that get the expensive LIVE row comparison, from dbt/parity_live_scope.yml.
+
+    Returns None when the file is absent or unreadable, which the caller treats as "compare
+    EVERYTHING" — the stricter, pre-2026-09-01 behaviour. Failing OPEN here would be the wrong
+    direction for a missing config: a typo in the filename must not silently switch the live gate off.
+
+    Models OUTSIDE this set are not unchecked. scripts/verify_dbt_port.py runs in CI over EVERY model
+    and proves it token-identical to its canonical bigquery/*.sql body, which (per that script's own
+    docstring) implies this comparison would agree. See dbt/parity_live_scope.yml's header for the
+    cost measurement and the full argument."""
+    try:
+        import yaml
+        with open(LIVE_SCOPE_YML, encoding="utf-8") as fh:
+            doc = yaml.safe_load(fh) or {}
+        names = doc.get("live_scope")
+        return set(names) if names else None
+    except Exception:  # noqa: BLE001 - absent/unparseable -> compare everything (fail closed)
+        return None
+
+
 def orphan_compiled_artifacts():
     """{(dataset, name)} compiled under COMPILED_ROOT with no surviving dbt/models/ source file.
     Reported by main() so a stale dbt/target/ is visible instead of silently shrinking coverage."""
@@ -372,6 +401,22 @@ def main():
     # Stale dbt/target/ artifacts are skipped, not compared (see compiled_models()). Say so out loud:
     # a silent skip would read identically to "there was nothing there", and the whole point of the
     # guard is that the operator can see the local tree is stale and re-run `dbt clean && dbt compile`.
+    scope = live_scope()
+    if scope is not None:
+        deferred = sorted({(ds, nm) for ds, nm, _s in models if nm not in scope})
+        if deferred:
+            models = [(ds, nm, s) for ds, nm, s in models if nm in scope]
+            total = len(models)
+            # compiled_names is DELIBERATELY not narrowed to the live scope: it feeds the
+            # partial-compile guard below ("sources with no compiled artifact"), which must keep
+            # asking about EVERY ported model. Narrowing it would make that guard fire on the 101
+            # deferred models every run — reporting PARITY NOT VERIFIED for models that compiled
+            # perfectly well and are gated offline instead.
+            print(f"LIVE SCOPE: comparing {total} of {total + len(deferred)} models against live "
+                  f"({len(deferred)} deferred to the offline token-identity gate, "
+                  f"scripts/verify_dbt_port.py — see {LIVE_SCOPE_YML}). Deferred models are NOT "
+                  f"unchecked; they are checked more cheaply and, for a token-identical port, "
+                  f"equivalently.")
     orphans = orphan_compiled_artifacts()
     if orphans:
         print(f"NOTE: skipped {len(orphans)} compiled artifact(s) under {COMPILED_ROOT} with no dbt/models/ "
