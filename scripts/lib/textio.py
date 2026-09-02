@@ -32,6 +32,7 @@ test and use these helpers only for the read itself. Do not collapse those; the 
 check.
 """
 import os
+import re
 
 import yaml
 
@@ -96,3 +97,37 @@ def load_yaml(path, missing=None):
         return {} if missing is None else missing
     with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
+
+
+# The repo's single most-repeated YAML trap: an UNQUOTED "HH:MM" scalar (e.g. `21:00`) YAML-1.1-parses
+# as base-60 sexagesimal -- an INT (1260), not the string a caller wants -- so the only reliable guard
+# is "is this actually a string matching HH:MM", not "does str(value) look right". HHMM_RE is the one
+# regex every caller of validate_hhmm_field() below shares, so the shape rule itself cannot drift out
+# of sync with the message that describes it.
+HHMM_RE = re.compile(r"^\d{2}:\d{2}$")
+
+
+def validate_hhmm_field(value, field_name):
+    """None when `value` is a quoted "HH:MM" string; otherwise the STANDARD drift-guard message for
+    the base-60 trap described above. `field_name` is the CALLER's own leading field-path text (e.g.
+    "ops/cadence.yaml: cadence_watch_deadline_local" or "D1: expected_trigger.time_local") so the same
+    message reads correctly at every call site without this helper needing to know the object's
+    identity.
+
+    Extracted 2026-09-02 ('hhmm-validation-triplicated' finding, code-quality pass): this exact
+    message -- byte-identical at two of its three sites -- used to be copy-pasted at THREE independent
+    call sites in TWO files with nothing keeping them in sync: scripts/check_cadence_consistency.py's
+    check D (cadence_watch_deadline_local) and check I (expected_trigger.time_local), and
+    scripts/check_cron_dst_safety.py's load_cadence() (the SAME cadence_watch_deadline_local field, a
+    second file entirely, whose own comment said it deliberately mirrored check D's wording with
+    nothing enforcing that). A wording or regex fix landed in one could silently desync the other two
+    with zero CI signal -- a reader hitting the trap in one script and fixing the OTHER script's copy
+    from memory would leave the third permanently stale. Single-sourcing both the message AND the
+    HH:MM shape regex here (HHMM_RE) means all three call sites read the SAME rule and the SAME
+    wording going forward; the shape check itself can no longer drift out of sync with the message
+    that describes it either.
+    """
+    if isinstance(value, str) and HHMM_RE.match(value):
+        return None
+    return (f"{field_name} must be a quoted \"HH:MM\" string (got {value!r} — an UNquoted 21:00 is "
+            f"YAML base-60 = 1260; always quote it)")

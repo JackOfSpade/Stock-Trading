@@ -33,12 +33,23 @@ the exact dead-end chain this exists to prevent. The canonical file declaring "S
 does not count: the operator at risk is the one reading the OLD file, who never sees the new one.
 
 BASELINE. Pre-existing unmarked definitions (19 at introduction 2026-07-18; 5 burned down same day
-when their pointers were found actively stale, see below) are grandfathered below so this can land
-blocking without a full comment sweep. NEW violations fail CI, so the class cannot grow. An entry
-whose comment block actively points at a non-canonical file is NEVER exempt, baselined or not —
-grandfathering covers only the silent no-marker case, not a live wrong pointer. The baseline is
-also checked for ROT in the other direction: once an entry is marked (or stops being multi-defined),
-the check FAILS telling you to delete it, so the allowlist can't quietly outlive its subjects.
+when their pointers were found actively stale, then 10 -> 0 on 2026-09-02 — see below) were
+grandfathered here so this could land blocking without a full comment sweep. NEW violations fail CI,
+so the class cannot grow. An entry whose comment block actively points at a non-canonical file is
+NEVER exempt, baselined or not — grandfathering covers only the silent no-marker case, not a live
+wrong pointer. The baseline is also checked for ROT in the other direction: once an entry is marked
+(or stops being multi-defined), the check FAILS telling you to delete it, so the allowlist can't
+quietly outlive its subjects.
+
+BURN-DOWN HISTORY: 19 at introduction (2026-07-18) -> 10 the same day (5 pointers found actively
+stale and fixed on the spot; see the git history for that commit) -> 0 on 2026-09-02, when the
+remaining 10 BASELINE entries and both CONTRADICTION_BASELINE entries were each given a real
+SUPERSEDED marker (bigquery/34, 71, 02, 03 x2, 16, 23, 22, 13 x2, 26, 118 — ten files, twelve
+objects) instead of being deleted from the tree, per this file's own apply-in-order/supersede-only
+rule. BASELINE and CONTRADICTION_BASELINE are kept below as empty frozensets, not removed outright:
+main() still runs the stale-baseline diff against them (an empty set can't go stale, but a future
+finding may need to re-populate one, and the diff logic exists either way) — see violations() and
+contradiction_violations() below.
 
 Read-only, no BigQuery/dbt CLI needed — pure text parsing of files already in the repo.
 
@@ -50,7 +61,6 @@ import os
 import re
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.sql_files import (
     OBJECT_DDL, line_offsets, normalize_kind, numbered_sql_files, resolve_canonical,
     strip_sql_comments,
@@ -68,20 +78,32 @@ BIGQUERY_DIR = os.path.join(ROOT, "bigquery")
 # Pre-existing unmarked definitions (2026-07-18). BURN-DOWN LIST, not a permanent exemption: add a
 # proper "SUPERSEDED ... see bigquery/<canonical>" marker above the CREATE, then DELETE the entry here
 # (the stale-baseline guard in main() will tell you to).
-BASELINE = frozenset({
-    ("TABLE FUNCTION", "analytics", "find_precedents", "02_ai_layer.sql"),
-    ("VIEW", "analytics", "strategy_daily_returns", "03_twr_engine.sql"),
-    ("VIEW", "perf", "kill_flags", "03_twr_engine.sql"),
-    ("VIEW", "state", "sgov_position", "13_sgov_reconciliation.sql"),
-    ("VIEW", "state", "sgov_reconciliation", "13_sgov_reconciliation.sql"),
-    ("VIEW", "state", "automation_heartbeat", "16_automation_health.sql"),
-    ("VIEW", "state", "cash_flows_backfill_check", "22_cash_flows.sql"),
-    ("VIEW", "state", "book_drawdown_watch", "23_trading_control.sql"),
-    ("PROCEDURE", "ops", "sp_auto_resolve_alerts", "34_alert_lifecycle.sql"),
-    ("TABLE", "ops", "loop_promotion_log", "71_research_quality_promotion.sql"),
-})
+#
+# Burned down to zero 2026-09-02 — the last 10 entries (find_precedents, strategy_daily_returns,
+# kill_flags, sgov_position, sgov_reconciliation, automation_heartbeat, cash_flows_backfill_check,
+# book_drawdown_watch, sp_auto_resolve_alerts, loop_promotion_log) each got a real marker instead of
+# a deletion (bigquery/*.sql is supersede-only; the old files stay, unmodified except for comments —
+# see each file's new banner for what its canonical successor actually changed). Kept as an empty
+# frozenset, not removed: the stale-baseline diff in violations() still runs against it every time,
+# and a future finding may need to re-populate it.
+BASELINE = frozenset()
 
 
+# KNOWN BLIND SPOT — both _header_block() and _preceding_comment() below recognize only `--`-style
+# LINE comments (`ln.strip().startswith("--")`). A SUPERSEDED marker that is correctly worded but
+# written as a `/* ... */` BLOCK comment is invisible to both: a line inside one (or its closing `*/`)
+# does not start with `--`, so the walk stops immediately and the required "supersed" word / bigquery/
+# NN pointer is never seen. That produces a FALSE violation for an otherwise-compliant definition —
+# the fail-safe direction (blocks a compliant file rather than silently passing a bad one), unlike the
+# blind spots check_superseded_by_discipline.py documents for itself.
+#
+# Deliberately not taught to also parse `/* */`: this repo already has a hard, costly-lesson-learned
+# convention against block comments in bigquery/*.sql (feedback_bigquery_file_conventions.md trap #2 —
+# a trailing `/* */` permanently broke check_live_sql_parity.py and cost a debugging session). Adding
+# `/* */` recognition here would legitimize a comment style already deliberately abandoned elsewhere in
+# this same file type for a related parity-breaking reason, and add parsing surface (nested markers, a
+# `*/` inside a string literal) for a pattern with zero live instances. Write a SUPERSEDED marker as
+# `--` line comments, matching the rest of bigquery/*.sql, and this check sees it.
 def _header_block(lines):
     """The file's leading contiguous comment/blank block (a top-of-file SUPERSEDED banner)."""
     out = []
@@ -297,10 +319,14 @@ SUPERSEDED_LIVE_CLAIM = re.compile(r"SUPERSEDED LIVE by bigquery/0*(\d+)")
 # into a historical note that no longer claims to be "the current single source of truth" for the
 # object — see bigquery/75/111/120's `ops.sp_sq_cadence_check` banners (this same commit) for the
 # pattern to follow — then DELETE the entry here (the stale-baseline guard below will tell you to).
-CONTRADICTION_BASELINE = frozenset({
-    ("VIEW", "analytics", "declared_vs_realized", "26_process_metrics.sql"),
-    ("VIEW", "analytics", "declared_vs_realized", "118_decision_record_audit_followups.sql"),
-})
+#
+# Burned down to zero 2026-09-02: both declared_vs_realized entries (bigquery/26, 118) carried a
+# stale "SUPERSEDED LIVE by bigquery/131" banner stacked next to a correct "...by bigquery/136" one
+# (131, canonical for one day, was itself superseded by 136 on 2026-08-04). Reworded per the pattern
+# above — the 131 mention now reads as history, with a single surviving marker naming 136. Kept as
+# an empty frozenset, not removed, for the same reason BASELINE is: the stale-baseline diff in
+# contradiction_violations() still runs against it every time.
+CONTRADICTION_BASELINE = frozenset()
 
 
 def contradiction_violations():

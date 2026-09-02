@@ -90,6 +90,20 @@ FROM ML.GENERATE_EMBEDDING(
 -- rebuild fail (file 02 would reference tables that don't exist until files 04/25/28 run). Callers
 -- always get the outcome-annotated version once 29 has applied — this base definition only exists so
 -- 02 is self-contained and DR-rebuildable on its own.
+--
+-- SUPERSEDED LIVE by bigquery/122_decision_correction_append_only.sql — current single source of
+-- truth for this object (bigquery/29_precedent_outcomes.sql, bigquery/116_decision_record_
+-- analyzability.sql, and bigquery/118_decision_record_audit_followups.sql are all intermediate,
+-- also-superseded definitions — do not stop at any of them). 29 layered outcome annotation on top of
+-- this CHUNKED base (realized thesis P&L, NO-GO counterfactual, shrunk calibration); 116 added a
+-- superseded_by exclusion but applied it OUTSIDE the candidate subquery (after QUALIFY rn=1 LIMIT
+-- 10), so a query whose nearest 10 included N superseded rows returned only 10-N precedents instead
+-- of backfilling from the 20 already-fetched, unused candidates at ranks 11-30; 118 fixed that by
+-- moving the filter inside the subquery and switching LEFT JOIN to NOT IN. 122 correctly excludes a
+-- correction row's TARGET entry_id while keeping the replacement correction itself eligible as
+-- final-effective precedent evidence — the append-only decision-correction semantics adopted after
+-- the 2026-08-01 integrity incident. Kept here, unmodified, for DR-rebuild apply-in-order reference
+-- only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.find_precedents`(query_text STRING)
 AS (
   SELECT base.entry_id, base.entry_date, base.strategy, base.entry_type, base.sub_pattern,

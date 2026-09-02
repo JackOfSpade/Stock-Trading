@@ -35,19 +35,23 @@ ORDER BY strategy, conviction_ordinal;
 -- (guard blocks, order-craft failures) or a pattern of GO decisions that don't survive to execution —
 -- both worth a human look, neither actionable from this view alone.
 --
--- SUPERSEDED LIVE by bigquery/131_declared_vs_realized_distinct_positions.sql — current single
--- source of truth for this object (chain: 26 -> 118 -> 131). The go_theses CTE below re-derives its own count with an exact-string
--- `entry_type = 'thesis-construction' AND decision = 'GO'` filter; bigquery/116 fixed that exact bug
--- class in thesis_outcomes/conviction_features/thesis_outcome_summary but MISSED this sibling view, so
--- from 2026-07-30 the two paths silently diverged (this one reported 19 GO theses vs the corrected 21,
--- dropping B:ISRG f90e7c15 and D:GOOGL fd464178). 118 reads analytics.thesis_outcomes WHERE
--- is_go_family instead, so the vocabulary lives in ONE place. Kept here, unmodified, for DR-rebuild
--- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
+-- WHY (2026-07-30 defect, first fixed by bigquery/118): the go_theses CTE below re-derives its own
+-- count with an exact-string `entry_type = 'thesis-construction' AND decision = 'GO'` filter;
+-- bigquery/116 fixed that exact bug class in thesis_outcomes/conviction_features/thesis_outcome_
+-- summary but MISSED this sibling view, so from 2026-07-30 the two paths silently diverged (this one
+-- reported 19 GO theses vs the corrected 21, dropping B:ISRG f90e7c15 and D:GOOGL fd464178). 118
+-- reads analytics.thesis_outcomes WHERE is_go_family instead, so the vocabulary lives in ONE place.
+-- 118 was canonical for one fix cycle, then itself superseded by bigquery/131 (2026-08-03, the
+-- go_minus_opened COUNT(DISTINCT position_key) double-count fix), which was itself superseded the
+-- very next day (2026-08-04) by bigquery/136 — do not stop at 131, it is an intermediate,
+-- also-superseded pointer; see the single marker below.
 --
 -- SUPERSEDED LIVE by bigquery/136_declared_vs_realized_orphan_sides.sql (2026-08-04) — current single
--- source of truth for this object. The chain is 26 -> 118 -> 131 (COUNT(DISTINCT position_key)) -> 136
--- (adds n_go_theses_without_position / n_positions_without_go_thesis); each intermediate file carries
--- its own marker. Name 136, not 118, when looking for the live definition.
+-- source of truth for this object (chain: 26 -> 118 -> 131 -> 136; 131 fixed the go_minus_opened
+-- COUNT(DISTINCT position_key) double-count, 136 adds n_go_theses_without_position /
+-- n_positions_without_go_thesis on top of it so a strategy with one orphan on each side, netting to
+-- zero, is no longer indistinguishable from one genuinely reconciled). Kept here, unmodified, for
+-- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.declared_vs_realized` AS
 WITH go_theses AS (
   SELECT strategy, COUNT(*) AS go_count

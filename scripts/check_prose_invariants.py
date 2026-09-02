@@ -41,6 +41,7 @@ map, "Portfolio_Ledger.md retired, §15") do not trip them.
 
 Usage:  python scripts/check_prose_invariants.py        # exit 0 if all invariants hold, 1 + diff if not
 """
+import bisect
 import os
 import re
 import sys
@@ -54,8 +55,7 @@ except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
     raise SystemExit(2) from None
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.md_fence import fence_mask
+from lib.md_fence import FENCE_LINE, fence_mask
 from lib.report import fail_or_ok
 from lib.textio import load_yaml, read_text
 
@@ -223,17 +223,67 @@ def without_strikethrough(lines):
     unmatched delimiter visible as ordinary text instead of guessing that active prose is historical.
     Blanking with spaces rather than joining text also prevents two live words separated by a struck
     span from being accidentally concatenated into a new regex match.
+
+    FENCE-AWARE (finding prose-invariants-strikethrough-not-fence-aware, added after this scanner
+    shipped with none). A bare ``~~~`` fence delimiter line -- 3+ tildes, per lib.md_fence.FENCE_LINE,
+    the SAME marker shape check_rule()'s own fence_mask() usage relies on for nearest_heading() --
+    contains "~~" as an ordinary substring of its own run of identical characters, not a strikethrough
+    delimiter. The original pure sequential text.find("~~", cursor) scan had no fence awareness at
+    all, so a ~~~ opener's leading two characters were consumed as a strikethrough OPENER and paired
+    with the next "~~" anywhere later in the file -- confirmed live: a ~~~-fenced block containing a
+    genuine instruction, closed by its matching ~~~, previously had that entire instruction blanked
+    to spaces, because the two fence markers' own leading "~~" runs paired with each other. Any
+    ignore_strikethrough rule (6 of this file's 21) would then treat a live instruction as historical,
+    or lose sight of one it must require. Lines matching FENCE_LINE are therefore never eligible to
+    open or close a pairing: a "~~" candidate landing on one is skipped past that line's own content
+    and the scan resumes looking for the next real candidate, exactly as if that line were absent.
+
+    fence_mask()/get_fence_mask() are deliberately NOT reused for this (unlike nearest_heading()):
+    their True/False encodes "is this line's CONTENT inside a fence" -- by fence_mask()'s own test,
+    an opening ``` line reads False/outside under that predicate, an intentional asymmetry for
+    nearest_heading's purposes -- which is the wrong question for "is this line ITSELF a delimiter
+    marker". FENCE_LINE, the shared source of truth for that marker shape, answers the right one
+    directly and needs no per-file stack-depth bookkeeping to do it.
     """
     text = "\n".join(lines)
     visible = list(text)
+    is_delim = [bool(FENCE_LINE.match(ln)) for ln in lines]
+    # Each line's own start offset into the joined text, so a "~~" match index can be mapped back to
+    # the physical line that contains it (via bisect) without re-scanning from scratch per candidate.
+    # +1 accounts for the "\n" joiner between lines; harmless overcount past the very last line, since
+    # no candidate index is ever looked up beyond it.
+    line_start = []
+    pos = 0
+    for ln in lines:
+        line_start.append(pos)
+        pos += len(ln) + 1
+
+    def line_of(idx):
+        return bisect.bisect_right(line_start, idx) - 1
+
+    def past_line(li):
+        # Offset just past line `li`'s own content (i.e. its trailing "\n", or EOF for the last line).
+        return line_start[li] + len(lines[li])
+
     cursor = 0
     while True:
         start = text.find("~~", cursor)
         if start < 0:
             break
+        if is_delim[line_of(start)]:
+            # A fence marker's own "~~" is not an opener -- skip past this whole line and keep
+            # looking for the next real candidate instead of pairing it.
+            cursor = past_line(line_of(start))
+            continue
         end = text.find("~~", start + 2)
         if end < 0:
             break
+        if is_delim[line_of(end)]:
+            # Same rule for the CLOSING candidate: a fence marker's "~~" cannot close a span either.
+            # Abandon this `start` (it pairs with nothing legitimate before the fence line) and
+            # resume scanning past the fence line for the next real candidate.
+            cursor = past_line(line_of(end))
+            continue
         for idx in range(start, end + 2):
             if visible[idx] != "\n":
                 visible[idx] = " "

@@ -256,6 +256,21 @@ jobs:
         # resolve_diff_base, notify_webhook) is already a blocking gate here; an unwired suite
         # would rot silently, so this closes that gap the same way.
         run: bash tests/test_bq_csv.sh
+      - name: restore_drill.sh snapshot-DATE resolution tests (resolve_backup_date — 2026-09-02 code-quality pass)
+        # Same WIRING discipline as the bq_csv.sh step above, and for the same reason: the fixing
+        # agent owned scripts/restore_drill.sh but not ci.yml / Claude_Task_Plan.md /
+        # auto-merge-claude.yml, and a blocking step has to be registered in all three (see
+        # scripts/check_adopt_gate_coverage.py). An unwired suite rots silently.
+        #
+        # WHAT IT GUARDS: resolve_backup_date() used to walk the table list alphabetically and
+        # `break` at the FIRST table with any dt= partition, anchoring the whole DR drill on that
+        # table's own newest snapshot. bigquery's backup export isolates each table in its own
+        # BEGIN/EXCEPTION block precisely so one table can fail without aborting the rest — so a
+        # table whose export has been erroring for days, but which still has an old partition in
+        # GCS, would silently pin the drill to a stale date while fresher snapshots sat unread.
+        # The test sed-extracts the LIVE function out of scripts/restore_drill.sh rather than
+        # mirroring it, so it cannot drift from what actually ships.
+        run: bash tests/test_restore_drill.sh
       - name: weekly_report.gs / alert_emailer.gs pure-helper tests (esc_/esc2_, periodAvg_, alertSubject_, ...)
         # No actions/setup-node step needed -- ubuntu-latest ships Node preinstalled and the script
         # only uses the built-in `assert` module (no package.json/npm install anywhere in the repo).

@@ -2,10 +2,12 @@
 
 That script is a BLOCKING ci.yml gate whose three checks all rest on a hand-rolled scan of
 bigquery/*.sql text: CHECK A diffs ops/handoff_contracts.yaml against the `allowed_map` CTE in
-bigquery/180, and CHECK B derives each write target's NOT NULL/no-default column list from a
-CREATE TABLE body. Every one of those scans FAILS OPEN when it mis-parses — a swallowed column is
-simply a column the plan is no longer required to name, with nothing printed — so the parsers need
-their own regression net rather than only the end-to-end "the real repo still passes" signal.
+ALLOWED_MAP_SOURCE (resolved at runtime by resolve_allowed_map_source() below to whichever
+bigquery/*.sql file currently defines state.queue_venue_claim_unwired -- bigquery/199 today), and
+CHECK B derives each write target's NOT NULL/no-default column list from a CREATE TABLE body. Every
+one of those scans FAILS OPEN when it mis-parses — a swallowed column is simply a column the plan is
+no longer required to name, with nothing printed — so the parsers need their own regression net
+rather than only the end-to-end "the real repo still passes" signal.
 
 The specific rot these pin: `strip_sql_comments()` (whose output all of these consume) copies string
 literals through verbatim by design, so a single `>` or `)` inside an OPTIONS(description="...")
@@ -14,10 +16,13 @@ descriptions already carry parentheses and its prose uses `>=`/`->` constantly, 
 near-miss, not a hypothetical.
 
 Bodies here are small synthetic fixtures, so no assertion depends on the real tree's evolving
-contents — except the one live guard, which pins only that the real bigquery/180 still parses into a
-non-empty lane map.
+contents — except the live guards, which pin only that the real ALLOWED_MAP_SOURCE still resolves
+to the current canonical file and parses into a non-empty lane map.
 """
+import os
 import re
+
+import pytest
 
 from conftest import load_module_from_path
 from lib.textio import read_text
@@ -186,12 +191,76 @@ def test_parse_allowed_map_returns_none_on_an_unclosed_cte(tmp_path):
     assert ch.parse_allowed_map(_sql(tmp_path, text)) is None
 
 
+# ---- resolve_allowed_map_source(): resolved at runtime, not hand-pinned to a superseded file ----
+# BUG FIX (finding allowed-map-source-points-at-superseded-file). ALLOWED_MAP_SOURCE used to be
+# hand-pinned to bigquery/180_probe_register_queue_lane.sql, which its own header now calls
+# SUPERSEDED LIVE by bigquery/199_queue_venue_claim_status_normalisation.sql (2026-08-25). The two
+# files' allowed_map CTE bodies are byte-identical today, so the stale pin was behavior-preserving
+# but latently wrong: the next edit to allowed_map anywhere would leave CHECK A silently validating
+# a file that is no longer canonical. resolve_allowed_map_source() now resolves the canonical file
+# at runtime via lib.sql_files.resolve_canonical (highest-numbered file that defines the object
+# wins -- the same rule every other canonical-file lookup in this codebase already uses), and
+# raises loudly rather than falling back to a guess when the object is undefined or the winner is
+# ambiguous.
+def _write_view_defining_file(bigquery_dir, num, name, extra_body=""):
+    path = os.path.join(bigquery_dir, f"{num}_{name}.sql")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(
+            f"-- bigquery/{num}_{name}.sql\n"
+            f"CREATE OR REPLACE VIEW `{ch.PROJECT}.state.queue_venue_claim_unwired` AS\n"
+            f"WITH allowed_map AS (\n"
+            f"  SELECT * FROM UNNEST([\n"
+            f"    STRUCT('PENDING_X' AS queue, ['R1'] AS allowed_drainers)\n"
+            f"  ])\n"
+            f")\n"
+            f"SELECT * FROM allowed_map;\n"
+            f"{extra_body}\n"
+        )
+    return path
+
+
+def test_resolve_allowed_map_source_picks_the_highest_numbered_definition(tmp_path):
+    """Two files defining the view (mirroring the real 180 -> superseded-by-199 shape): the
+    resolver must pick the HIGHER-numbered one, not the first one found by directory listing
+    order (which is not numeric -- see lib.sql_files' own docstring on why lexical directory
+    order is unsafe here)."""
+    d = tmp_path / "bigquery"
+    d.mkdir()
+    _write_view_defining_file(str(d), "005", "old_definition")
+    winner = _write_view_defining_file(str(d), "042", "new_definition")
+    resolved = ch.resolve_allowed_map_source(str(d))
+    assert resolved == winner
+
+
+def test_resolve_allowed_map_source_raises_when_nothing_defines_the_view(tmp_path):
+    """No silent fallback: if no bigquery/*.sql file defines state.queue_venue_claim_unwired at
+    all, resolution must fail loudly rather than return a guessed or stale path -- a quiet
+    fallback here would recreate exactly the "validates a file that's no longer canonical, and
+    nobody notices" bug this replaced."""
+    d = tmp_path / "bigquery"
+    d.mkdir()
+    (d / "001_unrelated.sql").write_text(
+        f"CREATE OR REPLACE VIEW `{ch.PROJECT}.state.something_else` AS SELECT 1;\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(SystemExit) as excinfo:
+        ch.resolve_allowed_map_source(str(d))
+    assert "queue_venue_claim_unwired" in str(excinfo.value)
+
+
 # ---- the live guard -------------------------------------------------------------------------
 
 def test_real_allowed_map_source_still_parses():
     live = ch.parse_allowed_map(ch.ALLOWED_MAP_SOURCE)
     assert live, "bigquery/180's allowed_map CTE no longer parses — CHECK A's live source is broken"
     assert all(isinstance(drainers, list) and drainers for drainers in live.values())
+
+
+def test_real_allowed_map_source_resolves_to_the_current_canonical_file():
+    """The live guard: on the real repo tree, ALLOWED_MAP_SOURCE must resolve to bigquery/199
+    (the current canonical definition per its own header and bigquery/180's own "SUPERSEDED LIVE
+    by ..." note), not to bigquery/180 (the original hardcoded pin this fix replaced)."""
+    assert os.path.basename(ch.ALLOWED_MAP_SOURCE) == "199_queue_venue_claim_status_normalisation.sql"
 
 
 # =================================================================================================
@@ -315,11 +384,73 @@ def test_check_c_flags_a_consumer_that_is_not_a_routine_section():
     assert any("is NOT a routine section" in e for e in errors)
 
 
+# ---- CHECK C: empty/missing `row_handoffs` must fail loudly, not silently check nothing ---------
+# BUG FIX (finding handoff-check-c-empty-guard-missing). CHECK A (line ~236 above) and CHECK B
+# (line ~490 below) both guard against their own YAML list being empty/absent and fail loudly.
+# CHECK C had no such guard -- `entries = spec.get("row_handoffs") or []` fell straight into a
+# zero-iteration `for e in entries:` loop, returning checked=0 with ZERO errors appended, so
+# main() printed CHECK C's normal OK line ("0 row-mediated handoff(s) discovery-predicate-
+# verified") for an accidentally-emptied or altogether-missing `row_handoffs:` key. That is
+# exactly the defect class CHECK C exists to catch: a real handoff loses its guard and CI stays
+# green.
+def test_check_c_fails_loudly_on_an_explicitly_empty_row_handoffs_list():
+    """Pre-fix: `check_c({"row_handoffs": []}, {}, errors)` returned checked=0 with errors == []
+    -- a silent pass wearing CHECK C's own OK message. Post-fix: an explicit CHECK C error is
+    appended and 0 is still returned (no entries WERE checked, so the counted-checked contract
+    does not change -- only the errors list does)."""
+    errors = []
+    checked = ch.check_c({"row_handoffs": []}, {}, errors)
+    assert checked == 0
+    assert len(errors) == 1
+    assert "CHECK C" in errors[0] and "row_handoffs" in errors[0]
+
+
+def test_check_c_fails_loudly_when_row_handoffs_key_is_missing_entirely():
+    """Same gap, the other way it happens in practice: a YAML edit that drops the `row_handoffs:`
+    key altogether (rather than leaving it present-but-empty) must be caught identically -- both
+    forms collapse to the same `spec.get("row_handoffs") or []` expression, so both must produce
+    the same loud failure rather than either one falling through silently."""
+    errors = []
+    checked = ch.check_c({}, {}, errors)
+    assert checked == 0
+    assert len(errors) == 1
+    assert "CHECK C" in errors[0] and "row_handoffs" in errors[0]
+
+
+def test_check_c_still_passes_through_a_real_non_empty_entry_unaffected():
+    """The guard must be a pure addition for the non-empty case: a spec with one well-formed entry
+    against a routine section that actually holds the discovery query must still check it and
+    report zero errors, exactly as before this fix."""
+    body = (
+        "SELECT l.strategy_code\n"
+        "FROM `stock-trading-498512.events.strategy_lifecycle` l\n"
+        "WHERE l.to_state = 'TERMINATED'\n"
+    )
+    spec = {"row_handoffs": [{
+        "table": "events.strategy_lifecycle",
+        "discovery_column": "to_state",
+        "discovery_value": "TERMINATED",
+        "consumer": "SL5",
+        "producers": ["SL3"],
+        "pinned_columns": ["strategy_code"],
+        "why": "because",
+    }]}
+    errors = []
+    checked = ch.check_c(spec, {"SL5": body, "SL3": "strategy_code is pinned here"}, errors)
+    assert checked == 1
+    assert errors == []
+
+
 # ---- end-to-end + live guards ------------------------------------------------------------------
 def test_real_repo_handoff_contracts_pass():
     """The committed ops/handoff_contracts.yaml + Claude_Task_Plan.md + bigquery/*.sql must satisfy
     every check -- the standing equivalent of the module header's one-off manual runs, and what
-    catches a regex tightening that starts rejecting the real, correct tree."""
+    catches a regex tightening that starts rejecting the real, correct tree. Also the plumbing
+    guard for ALLOWED_MAP_SOURCE's resolve_allowed_map_source() switch (finding
+    allowed-map-source-points-at-superseded-file): CHECK A must produce the identical pass/fail
+    verdict after switching its source from the hardcoded bigquery/180 to the resolved
+    bigquery/199 -- the two files' allowed_map CTE bodies are byte-identical today, so this is a
+    pure plumbing change, not a behavior change."""
     assert ch.main() == 0
 
 

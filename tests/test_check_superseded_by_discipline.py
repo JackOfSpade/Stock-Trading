@@ -103,6 +103,55 @@ END;
     assert "canonical definition of state.decision_log_current" not in out, out
 
 
+def test_string_literal_begin_in_procedure_signature_does_not_hide_a_trailing_raw_read(tmp_path, monkeypatch, capsys):
+    """Locating a PROCEDURE's own body-opening BEGIN used to be a raw, un-tokenized `\\bBEGIN\\b` regex
+    search over the chunk text (mirroring check_live_sql_parity.extract_body()'s OLD, since-fixed
+    approach — see that function's 2026-08-22 comment). A STRING DEFAULT parameter note containing the
+    word BEGIN (e.g. "Runs once at the BEGIN of the trading day") won that match before the real body
+    keyword did, so find_procedure_body_end() was handed an offset inside the procedure's own
+    signature, found no matching END for a BEGIN that was never really there, and returned None.
+
+    `if body_end is not None: ... chunk = chunk[:body_end]` is skipped entirely when None -- so NO
+    truncation happened, and the whole segment (procedure body PLUS a trailing free-standing UPDATE up
+    to the next CREATE) was folded into the procedure's own (dataset, name) key and silently rode ITS
+    allowlist entry. That is exactly the bigquery/143 bug _definition_segments() exists to prevent,
+    reintroduced through this different vector.
+
+    The procedure's own raw read of events.decision_log IS allowlisted below (it's the only entry);
+    the free-standing UPDATE's raw read is NOT and must earn its own violation. Against the pre-fix
+    PROCEDURE_BEGIN regex, `begin.start()` lands inside the STRING DEFAULT literal,
+    find_procedure_body_end() returns None, and the free-standing UPDATE rides the procedure's pass —
+    main() returns 0. Against the fix (sql_tokens()-based location, which skips string-literal
+    content), BEGIN is correctly found at the real body opener, the procedure body is truncated at its
+    own END, and the UPDATE is scanned and reported on its own merits.
+    """
+    filename = "01_fake.sql"
+    _tree(tmp_path, {
+        filename: """
+CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_example`(
+  in_note STRING DEFAULT 'Runs once at the BEGIN of the trading day'
+)
+BEGIN
+  SELECT COUNT(*) FROM `stock-trading-498512.events.decision_log`;
+END;
+
+UPDATE `stock-trading-498512.analytics.unrelated_table` T
+SET c = (SELECT COUNT(*) FROM `stock-trading-498512.events.decision_log` d WHERE d.x = T.x);
+""",
+    }, monkeypatch)
+    monkeypatch.setattr(cs, "ALLOWLIST", {
+        (filename, "ops.sp_example"): "test fixture: pretend legit reason for the procedure's OWN read.",
+    })
+    rc = cs.main()
+    out = capsys.readouterr().out
+    assert rc == 1, out
+    assert "a file-level statement (outside any CREATE definition)" in out, out
+    # The PROCEDURE's own canonical definition must NOT be reported -- it is correctly allowlisted;
+    # the whole point is that the free-standing UPDATE does not get to ride that pass by having its
+    # text folded into the procedure's body via a mislocated BEGIN.
+    assert "canonical definition of ops.sp_example" not in out, out
+
+
 def test_stale_allowlist_entry_is_reported_and_fails(tmp_path, monkeypatch, capsys):
     """The ALLOWLIST staleness self-defense (`stale = sorted(set(ALLOWLIST) - used_allowlist)`) is
     what stops the real, 21-entry ALLOWLIST from silently outliving its subjects. An entry that points

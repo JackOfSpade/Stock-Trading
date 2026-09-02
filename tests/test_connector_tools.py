@@ -147,6 +147,79 @@ def test_check1_tool_in_both_tools_and_absent_fails(tmp_path, monkeypatch, capsy
     assert "CHECK1" in out and "BOTH `tools` and `absent`" in out
 
 
+def test_check1_null_tools_key_fails(tmp_path, monkeypatch, capsys):
+    """REGRESSION (2026-09-02). A present-but-null `tools:` key (a hand-edit that deletes every list
+    item but leaves the bare key) used to satisfy `"tools" not in c` and pass CHECK1 silently: `tools
+    = c.get("tools")` came back None, the `tools is not None` type-check guard never fired, and
+    `tools = tools or []` quietly turned it into an empty list -- the connector's entire tool set,
+    including anything `use: required`, vanished from CHECK2's allowlist-coverage check with no
+    diagnostic anywhere. Against the OLD `"tools" not in c` test this fixture returns 0 (bug); the
+    NEW `not c.get("tools")` test must return 1 and name the connector's missing `tools`."""
+    doc = copy.deepcopy(_base_manifest())
+    doc["connectors"][0]["tools"] = None
+    manifest_path, task_plan_path, settings = _write_fixtures(tmp_path, doc, "no refs\n", _base_allow())
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 1
+    out = capsys.readouterr().out
+    assert "CHECK1" in out and "missing required field `tools`" in out
+
+
+def test_check1_absent_entry_with_no_name_fails(tmp_path, monkeypatch, capsys):
+    """REGRESSION (2026-09-02). The `tools` loop has always flagged an entry with no `name` (a
+    `nam:` typo, say); the sibling `absent` list had no equivalent check -- such an entry was simply
+    dropped from `absent_names` by the set-comprehension with zero findings raised. That mattered
+    because CHECK4 (the retired-tool gate) is built from this same list: a typo'd `absent:` entry
+    didn't just fail to record a retirement, it made CHECK4 structurally unable to ever catch a
+    routine calling that retired tool again -- with the manifest itself looking clean. Against the
+    old code this fixture returns 0 (bug, and the retired tool is invisible to CHECK4 too); the new
+    code must return 1 and name the connector's `absent` entry."""
+    doc = copy.deepcopy(_base_manifest())
+    doc["connectors"][0]["absent"].append({"verified": "2026-01-01", "note": "typo'd name key"})
+    manifest_path, task_plan_path, settings = _write_fixtures(tmp_path, doc, "no refs\n", _base_allow())
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 1
+    out = capsys.readouterr().out
+    assert "CHECK1" in out and "`absent` entry with no `name`" in out
+
+
+def test_check1_overlapping_settings_prefix_fails(tmp_path, monkeypatch, capsys):
+    """REGRESSION (2026-09-02). resolve_full_token() and check5_stale_allowlist() both walk
+    connectors in manifest order and return on the FIRST `settings_prefix` that is a string-prefix
+    of a token, on the explicit assumption prefixes never overlap. CHECK1 never verified that
+    assumption. A new connector declaring `mcp__Gm` -- a proper prefix of Gmail's existing
+    `mcp__Gmail__` -- must be caught here, regardless of which one is shorter or where either sits
+    in manifest order."""
+    doc = copy.deepcopy(_base_manifest())
+    doc["connectors"].append({
+        "name": "GmailShort",
+        "connector_uuid": "uuid-gmail-short",
+        "settings_prefix": "mcp__Gm",  # a proper prefix of Gmail's mcp__Gmail__
+        "tools": [{"name": "probe", "use": "unused"}],
+        "absent": [],
+    })
+    manifest_path, task_plan_path, settings = _write_fixtures(tmp_path, doc, "no refs\n", _base_allow())
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 1
+    out = capsys.readouterr().out
+    assert "CHECK1" in out and "proper prefix" in out and "GmailShort" in out and "Gmail" in out
+
+
+def test_check1_identical_settings_prefix_fails(tmp_path, monkeypatch, capsys):
+    doc = copy.deepcopy(_base_manifest())
+    doc["connectors"].append({
+        "name": "FMP2",
+        "connector_uuid": "uuid-fmp2",
+        "settings_prefix": "mcp__FMP__",  # identical to the existing FMP connector's
+        "tools": [{"name": "probe", "use": "unused"}],
+        "absent": [],
+    })
+    manifest_path, task_plan_path, settings = _write_fixtures(tmp_path, doc, "no refs\n", _base_allow())
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 1
+    out = capsys.readouterr().out
+    assert "CHECK1" in out and "IDENTICAL" in out and "FMP2" in out
+
+
 # ---------------------------------------------------------------------------------------------------
 # CHECK 2 -- required tools must be allowlisted (exact-string match only)
 # ---------------------------------------------------------------------------------------------------

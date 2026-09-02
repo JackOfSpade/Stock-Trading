@@ -74,6 +74,24 @@ QUALIFY ROW_NUMBER() OVER (ORDER BY control_ts DESC) = 1;
 -- depth: D2a's own outage already trips cadence_watch's missed_run critical (which independently forces
 -- state.system_health.all_green=FALSE and thus trading_enabled=FALSE) — this is the direct, same-signal
 -- path so the drawdown breaker's own staleness is legible without having to reason through that indirection.
+--
+-- SUPERSEDED LIVE by bigquery/155_snapshot_and_option_anomaly_d2a_gate.sql (chain: 23 -> 78 -> 153 ->
+-- 155) — current single source of truth for state.book_drawdown_watch. 78 rebuilt this view TWO-TIER
+-- and FLOW-ADJUSTED: the single -15% breach term below became breach_soft (-15%, pauses new-entry
+-- staging only) plus breach_hard (-40%, the genuine full-halt catastrophe tier), and raw NAV drawdown
+-- was replaced with drawdown measured on flow-neutral trading gain (nav minus cumulative cash flows)
+-- so a deposit can no longer ratchet the peak and a withdrawal can no longer manufacture a phantom
+-- breach. 153 then added peak_window_gap_days (a COUNT of state.account_snapshot_gap trading days
+-- D2a never wrote, since the flow-adjusted peak_gain running max cannot have seen them). 155 changed
+-- the snapshot_stale predicate to guard against Friday/Saturday false-staleness after D2a moved to a
+-- Sunday-Thursday-only cron (a designed cadence gap, not a fault) by requiring an EXISTS(...D2a
+-- completed...) check before treating a gap as stale. Re-applying this original -15%-only, raw-NAV
+-- definition would reinstate a breaker whose single breach term fed BOTH trading gates
+-- unconditionally — freezing exit re-craft, kill-trigger terminations and park cover along with new
+-- entries — on an ORDINARY market correction (VOO fell >15% peak-to-trough in 2018/2020/2022), not
+-- only a catastrophe, and remains gameable by an ordinary deposit/withdrawal ratcheting the raw-NAV
+-- peak. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this
+-- CREATE OR REPLACE VIEW statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.book_drawdown_watch` AS
 WITH snaps AS (
   SELECT snapshot_date, nav

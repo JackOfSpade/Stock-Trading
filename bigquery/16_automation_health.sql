@@ -98,6 +98,14 @@ FROM b, td;
 -- ===== state.automation_heartbeat — are the out-of-band scripts still firing? (self-bootstrapping) =====
 -- Per source, the expected max age between beats. stale = has beaten before AND the last beat is older
 -- than that. monitored = has ever beaten (so a script the owner hasn't deployed yet never alarms).
+--
+-- SUPERSEDED LIVE by bigquery/106_retire_dashboard_heartbeat.sql (chain: 16 -> 58 -> 106) — current
+-- single source of truth for this object. 58 added a 'dashboard' UNNEST row so ops/dashboard/
+-- generate_dashboard.py's daily build could beat and be watched here too; 106 removed that same row
+-- (incident 2026-07-25, RUNBOOK §16) — the dashboard-liveness monitor was retired, so re-applying
+-- either this definition or 58's in isolation would resurrect a watched source with no writer, which
+-- ages to `stale` and alarms on a build this repo no longer runs. Kept here, unmodified, for
+-- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.automation_heartbeat` AS
 WITH expected AS (
   SELECT * FROM UNNEST([

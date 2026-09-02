@@ -117,6 +117,55 @@ def test_live_views_does_not_match_materialized_view_by_design(tmp_path, monkeyp
     assert cov.live_views() == {("state", "regular")}   # mv excluded, regular view kept
 
 
+def test_live_views_ignores_a_view_ddl_embedded_in_an_execute_immediate_string_literal(
+        tmp_path, monkeypatch):
+    # BUG FIX (adversarial review, 2026-09-02): VIEW_DDL/DROP_VIEW_DDL used to match `CREATE OR
+    # REPLACE VIEW` / `DROP VIEW` ANYWHERE in the (comment-stripped) file text, with no column-0
+    # anchor -- unlike check_live_sql_parity.py's sibling CREATE_STMT/DROP_STMT, which anchor on
+    # `^` + re.MULTILINE specifically so a CREATE/DROP embedded in a FORMAT()/EXECUTE IMMEDIATE
+    # string literal (the documented bigquery/17_restore_drill.sql idiom) can never match -- see
+    # that module's own "KNOWN, ACCEPTED LIMIT" comment. Reproduced live (pre-fix): a file whose
+    # only top-level statement was a PROCEDURE containing an EXECUTE IMMEDIATE payload that quoted
+    # a `CREATE OR REPLACE VIEW ...` registered the quoted view as a phantom "live view" that was
+    # never created by any real top-level DDL statement -- pure noise fed into main()'s
+    # uncovered-view report, whose whole stated value (module docstring) is "a trustworthy count."
+    bq = tmp_path / "bigquery"
+    bq.mkdir()
+    # Mirrors the reporter's exact reproduction: a PROCEDURE whose body EXECUTE IMMEDIATEs a quoted,
+    # INDENTED "CREATE OR REPLACE VIEW ..." string. The quoted text is real DDL syntax if read in
+    # isolation, but it never runs as a top-level statement in THIS file -- it is data inside a
+    # string literal, assembled and run only if/when the procedure itself is later CALLed.
+    (bq / "01_a.sql").write_text(
+        "CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_one_time_repair`()\n"
+        "BEGIN\n"
+        "  EXECUTE IMMEDIATE\n"
+        '    "CREATE OR REPLACE VIEW `stock-trading-498512.state.scratch_diag_2026_09_02` '
+        'AS SELECT 1";\n'
+        "END;\n"
+    )
+    monkeypatch.setattr(cov, "BIGQUERY_DIR", str(bq))
+    # Pre-fix, this returned {("state", "scratch_diag_2026_09_02")} -- a view name pulled out of a
+    # string literal by an unanchored regex. Verified against the pre-fix module directly (not just
+    # asserted here): git-show'ing the pre-fix scripts/check_dbt_view_coverage.py and running this
+    # exact fixture through its live_views() reproduces {("state", "scratch_diag_2026_09_02")}.
+    assert cov.live_views() == set()
+
+
+def test_live_views_still_matches_a_genuine_column_zero_view_ddl(tmp_path, monkeypatch):
+    # The anchor must not overcorrect into matching nothing: a real, top-level (column-0)
+    # CREATE OR REPLACE VIEW / DROP VIEW pair must still be picked up exactly as before.
+    bq = tmp_path / "bigquery"
+    bq.mkdir()
+    (bq / "01_a.sql").write_text(
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.real_view` AS SELECT 1;\n"
+    )
+    (bq / "02_b.sql").write_text(
+        "DROP VIEW IF EXISTS `stock-trading-498512.state.retired_view`;\n"
+    )
+    monkeypatch.setattr(cov, "BIGQUERY_DIR", str(bq))
+    assert cov.live_views() == {("state", "real_view")}
+
+
 # ---- dbt_model_names(): dataset subdir *.sql (excluding schema.yml) -------------------------------
 def test_dbt_model_names_collects_sql_only(tmp_path, monkeypatch):
     models = tmp_path / "models"

@@ -72,7 +72,6 @@ except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
     raise SystemExit(2) from None
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.routine_manifest import (
     parse_routine_headings, heading_to_id, instruction_text, cadence_routines,
 )

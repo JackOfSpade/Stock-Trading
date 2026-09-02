@@ -31,9 +31,7 @@ Two column adjustments make the EXCEPT well-defined:
 import concurrent.futures
 import os
 import subprocess  # noqa: F401 — kept so tests can monkeypatch subprocess.run/TimeoutExpired at the module level
-import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.bq_json import run_bq_query
 from lib.sql_files import DBT_DATASETS
 from lib.textio import read_text
@@ -85,9 +83,17 @@ SCHEMA_DRIFT_MARKERS = ("unrecognized name", "not found inside", "set operations
                         "no matching signature", "does not have a column", "incompatible types")
 
 # Client-side concurrency for the per-model parity queries (owner-authorized 2026-07-30, Actions cost
-# audit). The 43 parity queries are one bq job each and cannot be batched (see main()), so the only
-# remaining lever is running them concurrently. This does NOT change the per-run BigQuery JOB COUNT — it
-# only compresses those same jobs in time.
+# audit). Each live-scope model (dbt/parity_live_scope.yml; 85 as of 2026-09-01, was 43 pre-scoping —
+# see that file's header for the cost measurement behind the split) costs one bq job and cannot be
+# batched (see main()), so the only remaining lever is running them concurrently. This does NOT change
+# the per-run BigQuery JOB COUNT — it only compresses those same jobs in time.
+#
+# STALE-COUNT FIX (2026-09-02 audit): this comment used to hardcode "The 43 parity queries" as a
+# present-tense fact justifying the concurrency ceiling below. That was accurate when written but
+# dbt/parity_live_scope.yml (added 2026-09-01) now bounds the live comparison to 85 models, roughly
+# DOUBLE the job volume the comment described — against the exact DTS rate-quota class documented
+# below. Point at dbt/parity_live_scope.yml as the source of truth instead of re-hardcoding a fresh
+# number that will go stale again the next time live_scope: changes.
 #
 # WHY THIS NEEDED AUTHORIZATION, and why the ceiling below is not decoration: this job's BigQuery job
 # volume tripped the project's Data Transfer Service consumer rate-quota on 2026-06-29, which delayed the
@@ -403,6 +409,22 @@ def main():
     # guard is that the operator can see the local tree is stale and re-run `dbt clean && dbt compile`.
     scope = live_scope()
     if scope is not None:
+        # STALE-NAME GUARD (2026-09-02 audit). live_scope() trusts every name in
+        # dbt/parity_live_scope.yml with no check against a real dbt model name. A future rename or
+        # typo in that YAML would never match anything, so the `nm not in scope` filtering below
+        # would just silently drop the model it was MEANT to select into `deferred` instead — no
+        # error, no warning, no count discrepancy anywhere (the "LIVE SCOPE: comparing N of M" line
+        # below only reports COUNTS, not names, so a wrong name is invisible in the log) — and that
+        # model's expensive live row comparison, the whole reason this module exists, silently stops
+        # covering it forever while every other check keeps printing OK. Advisory only (print, not
+        # sys.exit): this module's exit code is reserved for actual row-drift/coverage failures per
+        # its own docstring's exit-code contract, and a stale scope entry is a config hygiene issue,
+        # not proof of live data drift.
+        known_names = {nm for _, nm in model_source_names()}
+        unknown = scope - known_names
+        if unknown:
+            print(f"WARNING: dbt/parity_live_scope.yml lists {len(unknown)} name(s) with no "
+                  f"matching dbt model (stale rename/typo?): {sorted(unknown)}")
         deferred = sorted({(ds, nm) for ds, nm, _s in models if nm not in scope})
         if deferred:
             models = [(ds, nm, s) for ds, nm, s in models if nm in scope]

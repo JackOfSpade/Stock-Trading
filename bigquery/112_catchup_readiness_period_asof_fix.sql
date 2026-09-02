@@ -2,6 +2,16 @@
 -- part of the OPS2 Catch-up Executor go-live self-audit). Project: stock-trading-498512.
 -- Apply after bigquery/59, bigquery/90.
 --
+-- SUPERSEDED LIVE by bigquery/208_yesterday_tier_ops1_coverage.sql (2026-09-02) — that file is the
+-- current single source of truth for state.catchup_refire_readiness. It carries EVERYTHING below
+-- forward byte-identical except yesterday_daily_misses' hand-maintained routine list, which goes
+-- from ['D1', 'D3', 'SL3'] to ['D1', 'D3', 'OPS1', 'SL3']: OPS1 joined the catchup-safe daily tier
+-- on 2026-07-19 (ops/cadence.yaml `catchup_safe: true`, and both bigquery/31 and bigquery/90 list
+-- it), but this file's 2026-08-08 widening copied the older 3-id list forward unchanged, so OPS1
+-- was silently excluded from the compound-miss recovery bridge. Kept here, unmodified, for
+-- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in
+-- isolation — doing so reverts OPS1 out of the yesterday tier again.
+--
 -- SUPERSEDES the state.catchup_refire_readiness view definition in bigquery/59_catchup_autofire.sql.
 -- Every OTHER object in that file (the ops.catchup_refire_log TABLE and the
 -- state.catchup_refire_failures VIEW) is UNCHANGED and remains canonical there — this file redefines

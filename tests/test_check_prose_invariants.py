@@ -374,6 +374,56 @@ def test_unmatched_strikethrough_delimiter_is_not_silently_exempted(tmp_path, mo
     assert _run(tmp_path, monkeypatch, rule, {"Doc.md": "~~live CaR is capped at 10%\n"}) == 1
 
 
+# ---- without_strikethrough() is fence-aware (finding prose-invariants-strikethrough-not-fence-aware)
+
+def test_without_strikethrough_does_not_pair_across_a_tilde_fence_delimiter():
+    # REGRESSION. without_strikethrough() used to be a pure sequential '~~' pairing scan with no
+    # fence awareness at all: a bare ~~~ fence delimiter line's own leading two characters were
+    # consumed as a strikethrough OPENER and paired with the very next '~~' anywhere later in the
+    # file — including its own matching ~~~ closer, whose leading two characters look identical.
+    # That blanked every live line sandwiched between the two fence markers, as if the fenced content
+    # itself were struck-through history. Nothing here is real strikethrough, so this must come back
+    # byte-for-byte unchanged.
+    lines = ["before", "~~~", "LIVE INSTRUCTION: must not be blanked", "~~~", "after"]
+    assert cpi.without_strikethrough(lines) == lines
+
+
+def test_without_strikethrough_skips_a_backtick_fence_delimiter_too():
+    # FENCE_LINE covers both ``` and ~~~ (3+ characters) — a ``` line does not itself contain "~~",
+    # so this is really a regression guard on is_delim's own construction (FENCE_LINE.match per
+    # line), not on the pairing logic, but pins that a ``` fence sitting between two unrelated '~~'
+    # spans does not confuse the line-offset bookkeeping.
+    lines = ["~~struck~~ before a fence", "```", "~~~", "```", "~~struck~~ after a fence"]
+    assert cpi.without_strikethrough(lines) == [
+        "           before a fence", "```", "~~~", "```", "           after a fence",
+    ]
+
+
+def test_without_strikethrough_still_pairs_ordinary_strikethrough_outside_a_fence():
+    # Scope guard: the fix must not stop pairing REAL strikethrough that has nothing to do with a
+    # fence. Only a '~~' occurrence that lands on a bare fence-delimiter LINE is exempted.
+    lines = ["~~retired words~~ live text"]
+    assert cpi.without_strikethrough(lines) == ["                  live text"]
+
+
+def test_ignore_strikethrough_forbid_rule_still_catches_a_live_line_inside_a_tilde_fence(tmp_path, monkeypatch):
+    # End-to-end version of the same regression: a forbid rule with ignore_strikethrough must still
+    # see (and fail on) a live retired-instruction line sandwiched between two ~~~ fence markers, even
+    # though the file also carries an ordinary, unrelated struck span later on. Under the old,
+    # fence-blind scan the two ~~~ markers paired with each other and blanked the retired-instruction
+    # line to spaces, so the forbid_regex never matched it — a silent false-clean on exactly the class
+    # of finding this rule set exists to catch.
+    rule = [{"id": "no_ledger", "files": ["Doc.md"], "forbid_regex": "write to Portfolio_Ledger",
+             "ignore_strikethrough": True}]
+    doc = (
+        "~~~\n"
+        "please write to Portfolio_Ledger now\n"
+        "~~~\n"
+        "later, an unrelated ~~struck~~ aside\n"
+    )
+    assert _run(tmp_path, monkeypatch, rule, {"Doc.md": doc}) == 1
+
+
 # ---- rule-shape validation --------------------------------------------------------------------
 
 def test_rule_with_both_forbid_and_require_errors(tmp_path, monkeypatch, capsys):

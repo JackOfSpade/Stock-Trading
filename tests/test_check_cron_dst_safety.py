@@ -345,6 +345,25 @@ def test_wellformed_quoted_deadline_still_loads(tmp_path, monkeypatch):
     assert deadline_local == (21, 0)
 
 
+def test_load_cadence_deadline_hhmm_delegates_to_shared_validator(tmp_path, monkeypatch):
+    # Coupling test ('hhmm-validation-triplicated' finding, 2026-09-02, mirrors the same-named tests
+    # in tests/test_cadence_consistency.py): load_cadence()'s shape guard must be COMPUTED by calling
+    # the shared lib.textio.validate_hhmm_field, not by re-literalizing its own isinstance/re.fullmatch
+    # test + message inline -- that inline copy was one of THREE independent copies of the exact same
+    # message the finding closed. Monkeypatch the shared validator to flag something a WELL-FORMED
+    # "21:00" would otherwise sail through, and confirm load_cadence() still raises with it -- if this
+    # function still had its own hardcoded shape test, a well-formed deadline would load cleanly
+    # regardless of what this patched validator says.
+    path = tmp_path / "cadence.yaml"
+    path.write_text('cadence_watch_deadline_local: "21:00"\nroutines:\n')
+    monkeypatch.setattr(cs, "CADENCE", path)
+    monkeypatch.setattr(cs, "validate_hhmm_field",
+                        lambda value, field_name: f"SENTINEL for {field_name}")
+    with pytest.raises(SystemExit) as exc_info:
+        cs.load_cadence()
+    assert "SENTINEL for ops/cadence.yaml: cadence_watch_deadline_local" in str(exc_info.value)
+
+
 # ---- period classes -------------------------------------------------------------------------
 
 def test_monthly_shifted_off_its_day_is_caught(tmp_path, monkeypatch, capsys):

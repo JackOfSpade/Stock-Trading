@@ -64,12 +64,11 @@ import os
 import re
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # find_procedure_body_end() is imported from its home in check_live_sql_parity.py rather than moved
 # into lib/: it is directly regression-tested there (CASE-expression / END CASE / FOR...END FOR edge
 # cases) and _definition_segments() below needs exactly that scanner to know where a PROCEDURE's own
 # body ends.
-from check_live_sql_parity import find_procedure_body_end
+from check_live_sql_parity import find_procedure_body_end, sql_tokens
 from lib.sql_files import (
     OBJECT_DDL, normalize_kind, numbered_sql_files, resolve_canonical, strip_sql_comments,
 )
@@ -271,11 +270,26 @@ STANDALONE_STMT = re.compile(
     re.IGNORECASE | re.MULTILINE,
 )
 
-# The BEGIN that opens a PROCEDURE's own body — the starting point handed to
-# find_procedure_body_end(). Not column-0 anchored: a procedure's opening BEGIN is written at column 0
-# in this repo today but need not be, and the first BEGIN after a CREATE PROCEDURE header is its body
-# opener wherever it sits. Mirrors check_live_sql_parity.extract_body()'s own `\bBEGIN\b` search.
-PROCEDURE_BEGIN = re.compile(r"\bBEGIN\b", re.IGNORECASE)
+# Locating the BEGIN that opens a PROCEDURE's own body — the starting point handed to
+# find_procedure_body_end() — used to be a raw `re.compile(r"\bBEGIN\b", re.IGNORECASE)` search over
+# UN-TOKENIZED chunk text. That is exactly the bug class check_live_sql_parity.extract_body() was
+# fixed for on 2026-08-22 (see that function's own comment): a header STRING literal containing the
+# word BEGIN — e.g. a `STRING DEFAULT 'Runs once at the BEGIN of the trading day'` parameter default —
+# wins the match before the real body keyword does. When that happens, find_procedure_body_end() is
+# handed an offset inside the procedure's OWN signature, can find no matching END for a BEGIN that was
+# never really there, and returns None — which skips truncation entirely (see the `if body_end is not
+# None` check below), so the WHOLE segment (procedure body plus any trailing free-standing statement up
+# to the next CREATE) is folded into this object's (dataset, name) key and silently rides its ALLOWLIST
+# entry. That is precisely the bigquery/143 bug _definition_segments()'s own docstring exists to
+# prevent, reintroduced through a different vector. Fixed the same way extract_body() was: locate BEGIN
+# through sql_tokens()'s "T"-kind tokens only, which by construction skip string-literal and comment
+# content, so a signature default (or a header comment) can never win the match again. Reused, not
+# reinvented — see this file's own "reuse find_procedure_body_end(), don't reinvent it" note above.
+def _procedure_begin(chunk):
+    return next(
+        (tstart for kind, val, tstart, _tend in sql_tokens(chunk)
+         if kind == "T" and val.upper() == "BEGIN"),
+        None)
 
 
 def _definition_segments(text):
@@ -324,8 +338,8 @@ def _definition_segments(text):
         kind = normalize_kind(m.group(1))
         chunk = text[m.start():end]
         if kind in ("PROCEDURE", "FUNCTION", "TABLE FUNCTION"):
-            begin = PROCEDURE_BEGIN.search(chunk)
-            body_end = find_procedure_body_end(chunk, begin.start()) if begin else None
+            begin_at = _procedure_begin(chunk)
+            body_end = find_procedure_body_end(chunk, begin_at) if begin_at is not None else None
             if body_end is not None:
                 unowned.append(chunk[body_end:])
                 chunk = chunk[:body_end]

@@ -11,6 +11,9 @@ pulling this block into its own parameterized module.
 """
 import os
 
+import pytest
+
+import lib.model_of_record as mor
 from lib.model_of_record import (
     MODEL_ID_CORE,
     MODEL_ID_RE,
@@ -220,3 +223,62 @@ def test_check_model_of_record_reports_mirror_paths_relative_to_root(tmp_path):
     expected_rel = os.path.relpath(str(mirror), str(tmp_path))
     assert len(errs) == 1
     assert errs[0].startswith(f"{expected_rel}:1:")
+
+
+# ---- resource-leak regression (finding model-of-record-bare-open) -------------------------------
+#
+# check_model_of_record() used to scan each mirror file with a bare `open(path, encoding="utf-8")`
+# handed straight to enumerate() -- no `with`, no bound variable, no explicit close. That is invisible
+# on the HAPPY path (CPython refcounting closes the handle the instant the loop's hidden iterator is
+# discarded), so a naive "does check_model_of_record still return the right errors" test cannot tell
+# the fixed code from the broken one. The gap only shows up if the loop body raises MID-FILE: the
+# open file object is then referenced by the exception's traceback/frame and is not promptly released
+# -- exactly the scenario reproduced here by making MODEL_ID_RE.findall() raise on the file's second
+# line and inspecting the captured file handle's `.closed` state while the exception (and its
+# traceback) is still bound, the same way a caller's `except ... as e:` block would hold it.
+def test_mirror_file_scan_closes_handle_when_the_loop_body_raises(monkeypatch, tmp_path):
+    cadence = tmp_path / "cadence.yaml"
+    cadence.write_text("routine_model: claude-opus-5\n")
+    mirror = tmp_path / "mirror.md"
+    mirror.write_text("first line ok\nsecond line raises\nthird line unread\n")
+
+    # Spy on `open` as resolved from model_of_record's OWN module globals (monkeypatch.setattr with
+    # raising=False installs it there; Python's LEGB lookup finds a module-level `open` before falling
+    # through to the builtin), capturing the real file object opened for `mirror` so it can be
+    # inspected after check_model_of_record() has raised and returned control to this test.
+    opened = []
+    real_open = open
+
+    def spy_open(path, *args, **kwargs):
+        handle = real_open(path, *args, **kwargs)
+        if path == str(mirror):
+            opened.append(handle)
+        return handle
+
+    monkeypatch.setattr(mor, "open", spy_open, raising=False)
+
+    class BoomOnSecondLine:
+        """Stand-in for MODEL_ID_RE: raises once the scan reaches the file's second line, simulating
+        the "any other exception" mid-file case the fix's docstring names."""
+        def findall(self, text):
+            if "raises" in text:
+                raise RuntimeError("simulated mid-file failure")
+            return []
+
+    monkeypatch.setattr(mor, "MODEL_ID_RE", BoomOnSecondLine())
+
+    # `as exc_info` keeps the exception (and therefore its __traceback__, and therefore -- under the
+    # OLD bare-open code -- the still-referenced, still-open file object) alive for this assertion,
+    # mirroring how a real caller's `except Exception as e:` block would hold it before `e` goes out
+    # of scope. Without a bound reference, a bare `with pytest.raises(...):` can let CPython refcount
+    # the traceback away immediately, which would close the file either way and defeat the test.
+    with pytest.raises(RuntimeError, match="simulated mid-file failure") as exc_info:
+        check_model_of_record(str(cadence), [str(mirror)], str(tmp_path))
+
+    assert opened, "expected the mirror file to actually be opened during the scan"
+    assert opened[0].closed, (
+        "mirror file handle must be closed once the exception has propagated out of "
+        "check_model_of_record() -- a bare open() with no `with` block leaves it open, referenced "
+        "only by the exception's traceback, until something eventually garbage-collects it"
+    )
+    assert exc_info.value is not None  # keep the reference alive through the assertion above

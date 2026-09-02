@@ -889,3 +889,45 @@ def test_live_scope_missing_file_compares_everything(monkeypatch, tmp_path):
     compiled model), never fail open. A typo in the filename must not silently disable the live gate."""
     monkeypatch.setattr(dp, "LIVE_SCOPE_YML", str(tmp_path / "nope.yml"))
     assert dp.live_scope() is None
+
+
+# ---- stale-name guard on dbt/parity_live_scope.yml (2026-09-02 audit) -------------------------
+#
+# BUG (finding parity-live-scope-no-name-validation): live_scope() trusts every name in
+# dbt/parity_live_scope.yml with no check against a real dbt model name. A future rename/typo in
+# that YAML never matches anything, so the model it was meant to select for the expensive LIVE row
+# comparison just silently falls into `deferred` (the cheaper offline-only path) instead — no error,
+# no warning, no count discrepancy anywhere, and the run still prints "OK: every compared dbt model
+# matches its live view row-for-row" for the smaller set it actually compared.
+
+def test_live_scope_warns_about_a_stale_name_with_no_matching_model(monkeypatch, capsys):
+    """Pre-fix: FAILS -- no warning is ever printed; "renamed_away" is silently swallowed and the
+    run reports plain OK with no trace that a scope entry didn't resolve to anything.
+    Post-fix: main() diffs `scope` against model_source_names() and prints a loud, non-fatal
+    WARNING naming every unmatched entry — advisory only (main() still returns 0), since a stale
+    scope entry is a config hygiene issue, not proof of live data drift."""
+    monkeypatch.setattr(dp, "compiled_models", lambda: iter([("state", "in_scope", "SELECT 1 AS a")]))
+    monkeypatch.setattr(dp, "model_source_names", lambda: {("state", "in_scope")})
+    monkeypatch.setattr(dp, "orphan_compiled_artifacts", set)
+    # "renamed_away" is a stale/typo'd scope entry with no matching model anywhere.
+    monkeypatch.setattr(dp, "live_scope", lambda: {"in_scope", "renamed_away"})
+    monkeypatch.setattr(dp, "live_columns", lambda ds, tbl: [{"column_name": "a", "data_type": "STRING"}])
+    monkeypatch.setattr(dp, "live_columns_all", lambda: None)  # force the per-model fallback path
+    monkeypatch.setattr(dp, "bq", lambda sql: [{"n_missing": 0, "n_extra": 0}])
+    assert dp.main() == 0  # advisory: a stale scope name must not fail the run
+    out = capsys.readouterr().out
+    assert "WARNING" in out
+    assert "renamed_away" in out
+
+
+def test_live_scope_prints_no_warning_when_every_name_matches_a_model(monkeypatch, capsys):
+    # Non-vacuity control for the guard above: a fully valid scope file must print nothing extra.
+    monkeypatch.setattr(dp, "compiled_models", lambda: iter([("state", "in_scope", "SELECT 1 AS a")]))
+    monkeypatch.setattr(dp, "model_source_names", lambda: {("state", "in_scope")})
+    monkeypatch.setattr(dp, "orphan_compiled_artifacts", set)
+    monkeypatch.setattr(dp, "live_scope", lambda: {"in_scope"})
+    monkeypatch.setattr(dp, "live_columns", lambda ds, tbl: [{"column_name": "a", "data_type": "STRING"}])
+    monkeypatch.setattr(dp, "live_columns_all", lambda: None)
+    monkeypatch.setattr(dp, "bq", lambda sql: [{"n_missing": 0, "n_extra": 0}])
+    assert dp.main() == 0
+    assert "WARNING" not in capsys.readouterr().out

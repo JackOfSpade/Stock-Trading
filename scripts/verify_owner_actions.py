@@ -55,10 +55,8 @@ import json
 import os
 import re
 import subprocess
-import sys
 from datetime import datetime, timezone
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__))))
 from lib.bq_json import run_bq_query
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

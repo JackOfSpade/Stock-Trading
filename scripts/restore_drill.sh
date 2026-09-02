@@ -36,6 +36,33 @@ command -v gcloud >/dev/null || { echo "gcloud CLI not found (install Google Clo
 # shell-workflows#1), which is the exact invocation this used to hand-type inline.
 bqq() { bq_csv_query_headless "$PROJECT" "$1"; }
 
+# resolve_backup_date(bucket, table...): the newest dt= partition present ACROSS ALL tables named,
+# tolerating any individual table having zero snapshots. Kept as a standalone function (2026-09-02,
+# rather than left inlined) specifically so it is unit-testable against a stubbed `gcloud` in isolation
+# from live GCS/BigQuery access -- see tests/test_restore_drill_date_resolution.sh, which exercises the
+# exact bug this replaced: a table that sorts alphabetically first but whose OWN daily EXTRACT has
+# started silently erroring (bigquery/scheduled_queries/backup_events_export.sql isolates each table's
+# export in its own BEGIN/EXCEPTION block precisely so this can happen to one table while every other
+# table keeps exporting fine) must never anchor the whole drill's DATE at its own stale last-good day
+# while a fresher snapshot sits unexamined on a later table.
+#
+# A running max, not "stop at the first table with ANY partition" (that was the 2026-08-08 fix, and it
+# undershot -- see the call site below for the full history). A table with NO snapshot at all (a
+# brand-new table with no backup written yet) simply never raises the max, preserving the ORIGINAL
+# (pre-2026-08-08) fix's tolerance for that case.
+resolve_backup_date() {
+  local bucket="$1"; shift
+  local d date=""
+  for t in "$@"; do
+    d="$(gcloud storage ls "$bucket/events/$t/" 2>/dev/null \
+           | sed -n 's#.*/dt=\([0-9-]\{10\}\)/.*#\1#p' | sort -u | tail -1 || true)"
+    if [ -n "$d" ] && { [ -z "$date" ] || [[ "$d" > "$date" ]]; }; then
+      date="$d"
+    fi
+  done
+  printf '%s' "$date"
+}
+
 # Tables to restore = every base table in the live events dataset.
 # NOTE (codebase audit 2026-07-26): do NOT rewrite this back to `mapfile -t TABLES < <(bq_list_events_tables ...)`.
 # Under `set -euo pipefail`, bash only checks mapfile's OWN exit status here, not the process
@@ -61,17 +88,21 @@ mapfile -t TABLES <<< "$TABLES_RAW"
 # 2026-07-14 audit finding covers.
 [ "${#TABLES[@]}" -gt 0 ] || { echo "no events.* base tables found; aborting"; exit 1; }
 
-# Resolve the snapshot date: newest dt= partition present, unless DATE is pinned. Walk TABLES in
-# order and stop at the first one that yields a partition -- NOT just TABLES[0] (2026-08-08 fix).
-# TABLES[0] is whatever sorts alphabetically first in events.*, so a newly-added table with no
-# backup written yet, or a one-off gap in that single table, made DATE resolve empty even though
-# every other table had a perfectly good snapshot to restore from.
+# Resolve the snapshot date: newest dt= partition present ACROSS ALL TABLES, unless DATE is pinned.
+# 2026-09-02: was "walk TABLES in order and stop at the first one that yields a partition" (the
+# 2026-08-08 fix, which itself replaced an even earlier bug where TABLES[0] alone -- whatever sorts
+# alphabetically first -- having zero snapshots aborted the whole script). That 2026-08-08 fix
+# undershot: it still `break`s at the FIRST table with ANY partition, so a table with snapshots that
+# are merely STALE (see resolve_backup_date's own comment, above, for why that is a real, designed
+# failure mode of the backup job this drill validates) silently anchors DATE at its own old last-good
+# day if it happens to sort first alphabetically -- every fresher snapshot on every other table is
+# never even examined. Now a running max via resolve_backup_date, which keeps the original fix's
+# tolerance for a table with NO snapshot at all while no longer letting a stale-but-nonempty one cap
+# the whole drill. Bonus: a genuinely-stale table now correctly shows as "LOAD FAILED" in the per-table
+# report below (its dt=<true max> partition won't exist) instead of silently "passing" at its own stale
+# date.
 if [ -z "${DATE:-}" ]; then
-  for t in "${TABLES[@]}"; do
-    DATE="$(gcloud storage ls "$BUCKET/events/$t/" 2>/dev/null \
-              | sed -n 's#.*/dt=\([0-9-]\{10\}\)/.*#\1#p' | sort -u | tail -1 || true)"
-    [ -n "${DATE:-}" ] && break
-  done
+  DATE="$(resolve_backup_date "$BUCKET" "${TABLES[@]}")"
 fi
 [ -n "${DATE:-}" ] || { echo "could not resolve a backup date under $BUCKET/events/ for any table; pass DATE=YYYY-MM-DD"; exit 1; }
 

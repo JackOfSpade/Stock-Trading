@@ -82,6 +82,19 @@ lists "in model order" (see check_one_model()'s docstring) specifically so the r
 deterministic run to run — reordering the tuple would silently reorder that report. Picking the
 order-sensitive caller's order is what makes adopting this shared constant a true no-op for both
 scripts' pre-existing observable behavior.
+
+_string_literal_end() (below) is a FIFTH consolidation (2026-09-02 codebase audit): strip_sql_
+comments()'s quote-handling branch and check_sql_dryrun.py's _blank_string_literals() had each
+hand-written the identical 15-line string-literal span walk (quote/triple-quote detection via
+`text[i:i+3] == quote*3`, the `\\`-escape 2-character skip, the unterminated-single-line-literal
+break on `\\n`, the closing-delimiter scan) — check_sql_dryrun.py's own docstring even said its
+version "mirrors" this module's, acknowledging the duplication without removing it. The two differ
+only in what they DO with the matched span once found (strip_sql_comments copies it verbatim;
+_blank_string_literals space-blanks it), so that decision stays with each caller — this factors out
+only the span-finding walk itself, as `_string_literal_end(text, i)`. A future fix to the escape/
+triple-quote handling (e.g. a currently-unhandled BigQuery escape edge case) now has exactly one
+place to land instead of two that can silently drift apart on what counts as "inside a string" for
+the same input SQL.
 """
 import os
 import re
@@ -180,6 +193,36 @@ def resolve_canonical(occurrences):
     return winner_number, winner_filenames
 
 
+def _string_literal_end(text, i):
+    """Offset just past the closing delimiter of the string literal that STARTS at `text[i]` (which
+    must be `'` or `"`) — or, if the literal never closes, just past however much of it exists (end
+    of the line for a single-quoted literal, end of the text for a triple-quoted one). Handles a
+    triple-quoted body (three `'` or three `"` in a row opening and closing it) and backslash-escaped
+    characters exactly like GoogleSQL's own literal grammar.
+
+    Factored out (2026-09-02 dedup) from strip_sql_comments()'s and check_sql_dryrun.py's
+    _blank_string_literals()'s previously-independent, byte-for-byte-identical copies of this same
+    walk — see this module's docstring ("FIFTH consolidation") for the bug class that duplication
+    invited. This function only FINDS the span; each caller still decides what to do with it
+    (strip_sql_comments keeps `text[i:j]` verbatim, _blank_string_literals space-blanks it)."""
+    n = len(text)
+    quote = text[i]
+    triple = text[i:i + 3] == quote * 3
+    j = i + (3 if triple else 1)
+    end = quote * 3 if triple else quote
+    while j < n:
+        if not triple and text[j] == "\\":
+            j += 2
+            continue
+        if text[j:j + len(end)] == end:
+            j += len(end)
+            break
+        if not triple and text[j] == "\n":   # unterminated single-line literal — stop here
+            break
+        j += 1
+    return j
+
+
 def strip_sql_comments(text):
     """Blank out `--` line comments and `/* ... */` block comments in `text`, replacing every
     stripped character with a space and leaving every newline in place — so the RETURN VALUE has
@@ -210,20 +253,7 @@ def strip_sql_comments(text):
     while i < n:
         c = text[i]
         if c in ("'", '"'):
-            quote = c
-            triple = text[i:i + 3] == quote * 3
-            j = i + (3 if triple else 1)
-            end = quote * 3 if triple else quote
-            while j < n:
-                if not triple and text[j] == "\\":
-                    j += 2
-                    continue
-                if text[j:j + len(end)] == end:
-                    j += len(end)
-                    break
-                if not triple and text[j] == "\n":   # unterminated single-line literal — stop here
-                    break
-                j += 1
+            j = _string_literal_end(text, i)
             out.append(text[i:j])
             i = j
             continue

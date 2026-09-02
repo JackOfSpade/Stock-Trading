@@ -65,9 +65,13 @@ body (the routine's own section, excluding shared group boilerplate) closes that
 the more faithful reading of "the DRAINER routine's OWN section" the spec asks for.
 
 ALSO asserts the YAML's queue->drainers map stays consistent with the machine-readable
-`allowed_map` inside bigquery/180_probe_register_queue_lane.sql (state.queue_venue_claim_unwired) --
-so ops/handoff_contracts.yaml cannot silently drift from the live venue-claim truth in either
-direction (a queue/drainer set present in one but not the other is a FAIL, named explicitly).
+`allowed_map` inside whichever bigquery/*.sql file currently CREATEs (or CREATE OR REPLACEs)
+state.queue_venue_claim_unwired -- resolved at runtime as ALLOWED_MAP_SOURCE, below, rather than
+pinned to one filename (originally bigquery/180_probe_register_queue_lane.sql; superseded live by
+bigquery/199_queue_venue_claim_status_normalisation.sql on 2026-08-25, and the pin was never
+updated -- see ALLOWED_MAP_SOURCE's own comment) -- so ops/handoff_contracts.yaml cannot silently
+drift from the live venue-claim truth in either direction (a queue/drainer set present in one but
+not the other is a FAIL, named explicitly).
 
 CHECK B -- REQUIRED-COLUMN NAMING (ops/handoff_contracts.yaml `required_column_naming`).
 Parses every `CREATE [OR REPLACE] TABLE [IF NOT EXISTS] project.(events|ops|state|analytics|perf).<name>`
@@ -134,9 +138,8 @@ except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
     raise SystemExit(2) from None
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.report import fail_or_ok
-from lib.sql_files import numbered_sql_files, strip_sql_comments
+from lib.sql_files import numbered_sql_files, resolve_canonical, strip_sql_comments
 from lib.textio import load_yaml, read_text
 from split_task_plan import split as split_task_plan_sections
 
@@ -144,8 +147,54 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SPEC_PATH = os.path.join(ROOT, "ops", "handoff_contracts.yaml")
 TASK_PLAN_PATH = os.path.join(ROOT, "Claude_Task_Plan.md")
 BIGQUERY_DIR = os.path.join(ROOT, "bigquery")
-ALLOWED_MAP_SOURCE = os.path.join(BIGQUERY_DIR, "180_probe_register_queue_lane.sql")
 PROJECT = "stock-trading-498512"
+
+# BUG FIX (finding allowed-map-source-points-at-superseded-file). This used to be a hand-pinned
+# `os.path.join(BIGQUERY_DIR, "180_probe_register_queue_lane.sql")` -- but bigquery/180's own
+# header says it is "SUPERSEDED LIVE by bigquery/199_queue_venue_claim_status_normalisation.sql
+# (2026-08-25, D3)". The two files' allowed_map CTE bodies are byte-identical TODAY (199 carries
+# 180's PENDING_ROSTER -> ['SL5'] row forward unchanged), so pointing here at 180 was behavior-
+# preserving -- but latently wrong: the next edit to allowed_map anywhere would leave CHECK A
+# silently validating a STALE map instead of the live one. Resolved at runtime instead of
+# hand-pinned a second time, via the SAME "highest-numbered file that defines the object wins"
+# rule lib.sql_files.resolve_canonical already applies for every other canonical-file lookup in
+# this codebase (check_sq_version_registry.py, check_cadence_consistency.py) -- one mechanism,
+# not a second hand-maintained pointer that can rot the same way again.
+VIEW_DEF_RE = re.compile(
+    r"CREATE\s+(?:OR\s+REPLACE\s+)?VIEW\s+(?:IF\s+NOT\s+EXISTS\s+)?"
+    rf"`{re.escape(PROJECT)}\.state\.queue_venue_claim_unwired`",
+    re.IGNORECASE,
+)
+
+
+def resolve_allowed_map_source(bigquery_dir):
+    """Path to the bigquery/*.sql file whose CREATE (OR REPLACE) VIEW currently defines
+    state.queue_venue_claim_unwired -- the highest-numbered (i.e. last-applied) file that does.
+    Raises loudly rather than falling back to a guess: a silent fallback here would recreate the
+    exact "validates a map that is no longer canonical, and nobody notices" bug this replaced."""
+    occurrences = []
+    for num, path in numbered_sql_files(bigquery_dir):
+        text = strip_sql_comments(read_text(path))
+        if VIEW_DEF_RE.search(text):
+            occurrences.append((num, os.path.basename(path)))
+    if not occurrences:
+        raise SystemExit(
+            f"CHECK A: no bigquery/*.sql file defines "
+            f"`{PROJECT}.state.queue_venue_claim_unwired` -- cannot resolve a canonical "
+            f"allowed_map source for ALLOWED_MAP_SOURCE in check_handoff_contracts.py"
+        )
+    _winner_number, winner_filenames = resolve_canonical(occurrences)
+    if len(winner_filenames) > 1:
+        raise SystemExit(
+            f"CHECK A: {len(winner_filenames)} bigquery/*.sql files at the same highest apply "
+            f"number all define `{PROJECT}.state.queue_venue_claim_unwired` "
+            f"({winner_filenames}) -- ambiguous canonical allowed_map source, resolve the "
+            f"collision before this check can proceed"
+        )
+    return os.path.join(bigquery_dir, winner_filenames[0])
+
+
+ALLOWED_MAP_SOURCE = resolve_allowed_map_source(BIGQUERY_DIR)
 
 # ============================================================================================
 # Shared: per-routine section text (scripts/split_task_plan.split(), BODY ONLY -- see module
@@ -200,8 +249,10 @@ def has_queue_literal(body, queue):
     return re.search(r"\b" + re.escape(queue) + r"\b", body) is not None
 
 
-# The allowed_map STRUCT literal inside bigquery/180's `allowed_map AS (SELECT * FROM UNNEST([...]))`
-# CTE -- see that file's own header for why it is the canonical queue->drainer source.
+# The allowed_map STRUCT literal inside ALLOWED_MAP_SOURCE's `allowed_map AS (SELECT * FROM
+# UNNEST([...]))` CTE -- see that file's own header for why it is the canonical queue->drainer
+# source, and ALLOWED_MAP_SOURCE's own comment for why the FILE that CTE lives in is resolved at
+# runtime rather than hardcoded.
 ALLOWED_MAP_STRUCT = re.compile(
     r"STRUCT\(\s*'([A-Z_]+)'\s+AS\s+queue\s*,\s*\[(.*?)\]\s+AS\s+allowed_drainers\s*\)",
     re.IGNORECASE | re.DOTALL,
@@ -210,9 +261,10 @@ DRAINER_LITERAL = re.compile(r"'([^']+)'")
 
 
 def parse_allowed_map(path):
-    """{queue: [drainer, ...]} parsed from bigquery/180's allowed_map CTE. Scoped to the
-    `allowed_map AS (` ... matching `)` block so an unrelated STRUCT(...) literal elsewhere in the
-    file (there is none today, but this is a live SQL file, not a fixture) can never be picked up."""
+    """{queue: [drainer, ...]} parsed from the given file's allowed_map CTE (in practice, always
+    called with ALLOWED_MAP_SOURCE). Scoped to the `allowed_map AS (` ... matching `)` block so an
+    unrelated STRUCT(...) literal elsewhere in the file (there is none today, but this is a live
+    SQL file, not a fixture) can never be picked up."""
     text = strip_sql_comments(read_text(path))
     m = re.search(r"allowed_map\s+AS\s*\(", text, re.IGNORECASE)
     if not m:
@@ -281,7 +333,13 @@ def check_a(spec, bodies, errors):
         if not (ex.get("queue") and (ex.get("why") or "").strip()):
             errors.append(f"CHECK A: excluded_queues entry {ex!r} is missing queue/why")
 
-    # Consistency: YAML queue_lanes <-> bigquery/180's allowed_map, both directions.
+    # Consistency: YAML queue_lanes <-> ALLOWED_MAP_SOURCE's allowed_map (resolved above to
+    # whichever bigquery/*.sql file currently defines state.queue_venue_claim_unwired), both
+    # directions. `source_name` is used in every message below instead of a hardcoded filename so
+    # a future resolution to a different file (the object gets superseded again) does not leave
+    # these messages pointing at a file that is no longer canonical -- the same staleness this
+    # whole fix exists to close, just in the error text instead of the lookup itself.
+    source_name = os.path.basename(ALLOWED_MAP_SOURCE)
     live_map = parse_allowed_map(ALLOWED_MAP_SOURCE)
     if live_map is None:
         errors.append(f"CHECK A: could not locate an allowed_map CTE in {ALLOWED_MAP_SOURCE}")
@@ -292,26 +350,27 @@ def check_a(spec, bodies, errors):
         for queue, drainers in live_map_sorted.items():
             if queue not in yaml_map:
                 errors.append(
-                    f"CHECK A: bigquery/180's allowed_map has queue {queue!r} -> {drainers} that is "
-                    f"absent from ops/handoff_contracts.yaml queue_lanes (YAML has drifted from the "
-                    f"live venue-claim source)"
+                    f"CHECK A: {source_name}'s allowed_map has queue {queue!r} -> {drainers} that "
+                    f"is absent from ops/handoff_contracts.yaml queue_lanes (YAML has drifted from "
+                    f"the live venue-claim source)"
                 )
             elif yaml_map[queue] != drainers:
                 errors.append(
-                    f"CHECK A: queue {queue!r} drainers disagree -- bigquery/180 allowed_map says "
+                    f"CHECK A: queue {queue!r} drainers disagree -- {source_name} allowed_map says "
                     f"{drainers}, ops/handoff_contracts.yaml says {yaml_map[queue]}"
                 )
         for queue in yaml_map:
             if queue not in live_map_sorted:
                 errors.append(
                     f"CHECK A: ops/handoff_contracts.yaml queue_lanes has {queue!r} which is absent "
-                    f"from bigquery/180's allowed_map (register it there, or this YAML has drifted)"
+                    f"from {source_name}'s allowed_map (register it there, or this YAML has drifted)"
                 )
         for queue in excluded_names:
             if queue in live_map_sorted:
                 errors.append(
-                    f"CHECK A: {queue!r} is listed in excluded_queues but bigquery/180's allowed_map "
-                    f"DOES register it as a drain-to-completion lane -- the exclusion is stale"
+                    f"CHECK A: {queue!r} is listed in excluded_queues but {source_name}'s "
+                    f"allowed_map DOES register it as a drain-to-completion lane -- the exclusion "
+                    f"is stale"
                 )
     return checked
 
@@ -611,6 +670,19 @@ def has_discovery_query(body, table, discovery_column, discovery_value):
 
 def check_c(spec, bodies, errors):
     entries = spec.get("row_handoffs") or []
+    # BUG FIX (finding handoff-check-c-empty-guard-missing): CHECK A and CHECK B both guard
+    # against their own YAML list being empty or absent (lines ~236 and ~490 above) and fail
+    # loudly rather than silently checking nothing. CHECK C had no such guard -- an accidentally
+    # emptied `row_handoffs:` list (a bad merge-conflict resolution, a copy-paste slip while
+    # adding an unrelated entry) fell straight through the `for e in entries:` loop below with
+    # zero iterations, returned checked=0 with zero errors, and main() printed CHECK C's normal
+    # "N row-mediated handoff(s) discovery-predicate-verified" OK line -- CI stays green while
+    # CHECK C has stopped checking anything at all. That is exactly the defect class CHECK C
+    # exists to catch (see this module's docstring): a real handoff loses its guard and nothing
+    # notices. Matching the sibling checks' phrasing keeps all three failing the same way.
+    if not entries:
+        errors.append("CHECK C: ops/handoff_contracts.yaml has no `row_handoffs` entries")
+        return 0
     checked = 0
     for e in entries:
         table = e.get("table")

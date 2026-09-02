@@ -14,9 +14,11 @@ reports.
 import bisect
 import os
 
+from conftest import load_module_from_path
 from lib.sql_files import (
     DBT_DATASETS,
     OBJECT_DDL,
+    _string_literal_end,
     line_offsets,
     normalize_kind,
     numbered_sql_files,
@@ -271,3 +273,64 @@ def test_object_ddl_ignores_if_not_exists_and_a_different_project():
 
     other_project = "CREATE TABLE `some-other-project.state.thing` (a INT64);"
     assert OBJECT_DDL.search(other_project) is None
+
+
+# ---- _string_literal_end(): shared by strip_sql_comments() (above) and check_sql_dryrun.py's -------
+# _blank_string_literals() (2026-09-02 dedup). Both used to hand-copy this exact 15-line span walk;
+# this pins the walk itself, then a separate test below pins that check_sql_dryrun.py actually CALLS
+# this copy rather than a second, independently-maintained one.
+
+def test_string_literal_end_single_quoted():
+    text = "'abc' rest"
+    assert _string_literal_end(text, 0) == len("'abc'")
+
+
+def test_string_literal_end_double_quoted():
+    text = '"abc" rest'
+    assert _string_literal_end(text, 0) == len('"abc"')
+
+
+def test_string_literal_end_triple_quoted_spans_newlines_and_ignores_a_single_quote_inside():
+    # A triple-quoted literal is not ended by a single embedded quote of the same kind — only by
+    # the closing TRIPLE — and its internal newlines are just more literal content.
+    text = "'''line one\nline 'two' still inside\nline three'''tail"
+    end = _string_literal_end(text, 0)
+    assert text[:end] == "'''line one\nline 'two' still inside\nline three'''"
+    assert text[end:] == "tail"
+
+
+def test_string_literal_end_backslash_escape_does_not_end_the_literal_early():
+    # `\'` is an escaped quote inside a single-quoted (non-triple) literal, not a terminator — the
+    # walk must skip BOTH the backslash and the escaped character (j += 2), not just the backslash.
+    text = r"'a\'b' rest"
+    end = _string_literal_end(text, 0)
+    assert text[:end] == r"'a\'b'"
+
+
+def test_string_literal_end_unterminated_single_line_literal_stops_at_newline():
+    # No closing quote before end-of-line: the walk must stop at the newline rather than running on
+    # into the next line looking for a close (would otherwise swallow real SQL on the next line).
+    text = "'unterminated\nSELECT 1;"
+    end = _string_literal_end(text, 0)
+    assert text[:end] == "'unterminated"
+    assert text[end:] == "\nSELECT 1;"
+
+
+def test_string_literal_end_unterminated_triple_quoted_runs_to_end_of_text():
+    text = "'''never closes"
+    assert _string_literal_end(text, 0) == len(text)
+
+
+def test_check_sql_dryrun_blank_string_literals_calls_the_shared_literal_walker():
+    """REGRESSION (2026-09-02 adversarial review, duplication finding). check_sql_dryrun.py's
+    _blank_string_literals() used to hand-copy this exact quote/triple-quote/backslash-escape/
+    unterminated-literal walk instead of reusing _string_literal_end() from here — 15 lines,
+    identical control flow, confirmed byte-for-byte against strip_sql_comments()'s own copy before
+    this fix. Pre-fix, scripts/check_sql_dryrun.py never imported or defined a name called
+    `_string_literal_end` at all, so this attribute lookup raised AttributeError; post-fix it
+    imports THIS module's function directly, so the two names are the exact same function object —
+    a future fix to the escape/triple-quote handling (e.g. a currently-unhandled BigQuery escape
+    edge case) can no longer land in only one of the two gates and leave them silently disagreeing
+    about what counts as "inside a string" for the same input SQL."""
+    csd = load_module_from_path("check_sql_dryrun_dedup_check", "scripts", "check_sql_dryrun.py")
+    assert csd._string_literal_end is _string_literal_end

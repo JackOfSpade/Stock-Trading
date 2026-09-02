@@ -77,7 +77,6 @@ except ImportError:  # pragma: no cover — stdlib since 3.9; CI/runners pin >=3
     ZoneInfo = None
     ZoneInfoNotFoundError = KeyError
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.bq_json import run_bq_query
 from lib import tz_render
 

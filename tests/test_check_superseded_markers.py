@@ -146,6 +146,31 @@ def test_top_of_file_banner_counts_not_just_the_line_above(tmp_path, monkeypatch
     assert cs.violations()[0] == []
 
 
+def test_block_comment_marker_is_a_known_blind_spot_and_still_flags(tmp_path, monkeypatch):
+    """Pins the documented blind spot on _header_block()/_preceding_comment() (see the comment above
+    both): only `--` line comments are recognized, so a correctly-worded SUPERSEDED marker written as
+    a `/* ... */` block comment is invisible and the old definition is (incorrectly) flagged, even
+    though its text plainly contains the required "supersed" word and a valid bigquery/NN pointer.
+
+    This is the fail-safe direction — a false violation on a compliant file, not a silent pass on a
+    bad one — so it is intentionally NOT fixed to also parse `/* */` (this repo has a hard convention
+    against block comments in bigquery/*.sql; see the comment above _header_block()). This test exists
+    so a future change that teaches the parser to recognize `/* */` — silently turning this from a
+    FAIL into a pass — gets caught here and has to update the documentation alongside the behavior,
+    not drift the two apart. Mirror image of test_marked_old_definition_passes above, which proves the
+    identical marker text passes in `--` form.
+    """
+    _tree(tmp_path, {
+        "10_old.sql": "/* SUPERSEDED LIVE by bigquery/20_new.sql — do not re-apply. */\n" + DDL,
+        "20_new.sql": "-- canonical\n" + DDL,
+    }, monkeypatch)
+    new, _still, _stale = cs.violations()
+    assert len(new) == 1, "block-comment marker is a documented blind spot: it must NOT be recognized"
+    (kind, ds, name, fn), canonical_file, _line = new[0]
+    assert (kind, ds, name, fn) == ("VIEW", "state", "thing", "10_old.sql")
+    assert canonical_file == "20_new.sql"
+
+
 def test_single_definition_is_never_flagged(tmp_path, monkeypatch):
     # An object defined in exactly one file has nothing to be superseded by.
     _tree(tmp_path, {"10_only.sql": "-- no marker needed\n" + DDL}, monkeypatch)

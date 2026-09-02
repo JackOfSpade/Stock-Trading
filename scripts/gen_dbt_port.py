@@ -25,10 +25,8 @@ Usage:
 import argparse
 import os
 import re
-import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(REPO, "scripts"))
 
 import yaml  # noqa: E402
 from lib.sql_files import DBT_DATASETS  # noqa: E402
@@ -115,6 +113,26 @@ HEADER = (
 )
 
 
+def _structurally_eligible(v, final):
+    """Would `v` (a "dataset.name" string) survive the NOT_PORTED / no-CREATE / not-a-VIEW skip
+    branches in the per-target loop below, judging ONLY from `final` (find_final_definitions())?
+    Does NOT check unresolved refs -- that can only be known after substitute() runs, so a v that
+    passes this can still be skipped later for its own unresolved refs (see resolvable_targets())."""
+    ds, name = v.split(".", 1)
+    if (ds, name) in NOT_PORTED:
+        return False
+    ent = final.get((ds, name))
+    return ent is not None and ent[0] == "VIEW"
+
+
+def resolvable_targets(targets, final):
+    """The subset of `targets` structurally eligible to be written this run -- i.e. every `targets`
+    entry MINUS the ones that will hit the NOT_PORTED / no-CREATE / not-a-VIEW skip branches. Used to
+    build `known_models` for substitute() so a same-batch view that will never be written cannot be
+    ref()'d anyway (see main()'s "BUG" comment at its call site for the failure this closes)."""
+    return [v for v in targets if _structurally_eligible(v, final)]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("views", nargs="*")
@@ -132,25 +150,57 @@ def main():
         covered = cov.dbt_model_names() | cov.dbt_source_names()
         targets = [f"{ds}.{n}" for (ds, n) in sorted(cov.live_views() - covered)]
 
-    # A view being ported may reference another view being ported in the same pass.
-    known = model_names() | {v.split(".", 1)[1] for v in targets}
+    # A view being ported may reference another view being ported in the same pass -- but ONLY if
+    # that co-processed view will actually be WRITTEN this run. `known` used to be built from every
+    # name in `targets` unconditionally, before the per-target loop below had checked whether each
+    # one even survives the NOT_PORTED / no-CREATE / not-a-VIEW / unresolved-refs skip branches.
+    #
+    # BUG (dbt view-coverage burn-down, 2026-09-02 audit): a batch containing state.foo_helper (a
+    # TABLE, so it hits the "not a VIEW" skip) and state.foo_derived (a VIEW whose body references
+    # foo_helper) put "foo_helper" into `known` regardless of the skip. substitute() then rewrote
+    # foo_derived's reference to `{{ ref('foo_helper') }}` -- a ref to a model that is never written
+    # to disk. foo_derived.sql landed with a dangling ref, and `dbt compile`/`dbt parse` (including
+    # verify_dbt_port.py's own compile step and CI's `dbt` job) failed on it with "depends on a node
+    # named 'foo_helper' which was not found" -- with nothing in this script's own SKIP output
+    # pointing at foo_derived as the file that would break. --list mode had the identical bug: it
+    # runs the same substitute() call and would have reported "foo_derived: OK".
+    #
+    # Fix: pre-filter `targets` to the names that are STRUCTURALLY eligible (resolvable_targets():
+    # not NOT_PORTED, has a live CREATE, and that CREATE is a VIEW) before folding them into `known`.
+    # This closes 3 of the 4 skip categories exactly, since all three are knowable up front with no
+    # dependency on substitute() itself. The 4th (a same-batch VIEW that is itself skipped for ITS
+    # OWN unresolved refs, and is in turn referenced by a third same-batch view -- a two-hop cascade)
+    # is a rarer, separate case that would need a small fixed-point loop to close fully; not
+    # attempted here since it is not the scenario this fix targets. The per-target loop below still
+    # walks the FULL `targets` list unchanged, so every SKIP message still prints exactly as before.
+    known = model_names() | {v.split(".", 1)[1] for v in resolvable_targets(targets, final)}
 
+    # LINT FIX (2026-09-02 audit): the `append(...); continue` one-liners below used to pack an
+    # append and a `continue` onto the same physical line with a semicolon (ruff E702, part of the
+    # E7 group this repo's pyproject.toml selects). Pre-existing on every branch in this loop, not
+    # behavioral -- splitting each onto two lines changes nothing about which branch is taken or
+    # what gets appended, it only lets `ruff check scripts/gen_dbt_port.py` actually pass.
     written, skipped = [], []
     for v in targets:
         ds, name = v.split(".", 1)
         if (ds, name) in NOT_PORTED:
-            skipped.append((v, "NOT_PORTED (remote-model/ML backed) — belongs in sources.yml")); continue
+            skipped.append((v, "NOT_PORTED (remote-model/ML backed) — belongs in sources.yml"))
+            continue
         ent = final.get((ds, name))
         if ent is None:
-            skipped.append((v, "no CREATE in bigquery/*.sql")); continue
+            skipped.append((v, "no CREATE in bigquery/*.sql"))
+            continue
         obj_type, _proj, srcfile, body = ent[0], ent[1], ent[2], ent[3]
         if obj_type != "VIEW":
-            skipped.append((v, f"not a VIEW ({obj_type})")); continue
+            skipped.append((v, f"not a VIEW ({obj_type})"))
+            continue
         new_body, unresolved = substitute(body, known, sources, name)
         if unresolved:
-            skipped.append((v, "unresolved refs: " + ", ".join(sorted(unresolved)))); continue
+            skipped.append((v, "unresolved refs: " + ", ".join(sorted(unresolved))))
+            continue
         if args.list:
-            written.append((v, "OK")); continue
+            written.append((v, "OK"))
+            continue
         path = os.path.join(MODELS_ROOT, ds, f"{name}.sql")
         header = HEADER.format(src=os.path.basename(srcfile), ds=ds, name=name)
         with open(path, "w", encoding="utf-8") as fh:

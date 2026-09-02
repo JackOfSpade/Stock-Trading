@@ -20,10 +20,10 @@ import os
 import re
 
 from lib.md_fence import fence_mask
+from lib.routine_manifest import HEADING_ID_PREFIX, ROUTINE_SUFFIX
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLAN = os.path.join(ROOT, "Claude_Task_Plan.md")
-ROUTINE_HEADING = re.compile(r"^##\s+([A-Za-z0-9_]+)\.\s")
 
 
 def routine_sections(text: str) -> dict[str, str]:
@@ -34,6 +34,32 @@ def routine_sections(text: str) -> dict[str, str]:
     W5): otherwise text introducing MONTHLY/ADVERSARIAL work becomes accidental
     W5 scope.  The plan embeds Markdown/SQL samples, so fence-mask the same way
     ``split_task_plan.py`` does before treating a heading-shaped line as structure.
+
+    HEADING TEST (finding routine-scope-duplicate-heading-detector). This used to accept ANY
+    "## <token>. " line as a routine boundary, via a private ``ROUTINE_HEADING = re.compile(r"^##\\s+
+    ([A-Za-z0-9_]+)\\.\\s")`` -- a second, independently maintained heading test with no requirement
+    that the heading actually be a coded routine's. The canonical detector (this file's own
+    scripts/split_task_plan.py, via scripts/lib/routine_manifest.py's ROUTINE_SUFFIX) additionally
+    requires the heading END with its "— (deep research|regular routine)" type tag before it counts.
+    Without that, a heading-SHAPED line inside some OTHER routine's own body -- a numbered aside like
+    "## 3. See the note below" -- satisfied the old test and was misread as a NEW routine boundary,
+    truncating the real routine's section right there and reassigning everything after it to a bogus
+    id no _check_present/_check_absent rule names: whatever forbidden- or required-pattern text
+    landed after the accidental heading silently dropped out of every ownership-boundary rule's view,
+    with no error reported (see tests/test_check_routine_scope.py). HEADING_ID_PREFIX and ROUTINE_SUFFIX are
+    now imported from lib.routine_manifest -- the same regex OBJECTS scripts/split_task_plan.py's own
+    is_routine() checks -- rather than re-typed here, so this heading test cannot quietly re-diverge
+    from the canonical one the way the deleted ROUTINE_HEADING already had.
+
+    This does NOT delegate the whole boundary-WALK to scripts/split_task_plan.split(): that function
+    requires a `# ` cadence-group header before the first routine and raises ValueError otherwise,
+    which is correct for the real, canonically-structured Claude_Task_Plan.md but would break every
+    synthetic fixture in tests/test_check_routine_scope.py that exercises routine_sections() on a
+    bare "## <ID>. ... — regular routine" heading with no preceding group header. The walking loop
+    below already tolerates a missing group header (next_group defaults to len(lines)); only the
+    per-line heading TEST needed tightening to close the actual defect, so that is the only piece
+    changed -- the two files' heading tests are now the SAME imported primitives even though the
+    surrounding boundary-walk stays a second, narrower loop.
     """
     lines = text.splitlines(keepends=True)
     in_fence = fence_mask(lines)
@@ -42,9 +68,11 @@ def routine_sections(text: str) -> dict[str, str]:
     for index, (line, fenced) in enumerate(zip(lines, in_fence, strict=True)):
         if fenced:
             continue
-        match = ROUTINE_HEADING.match(line)
-        if match:
-            starts.append((index, match.group(1)))
+        if line.startswith("## "):
+            title = line[3:].strip()
+            id_match = HEADING_ID_PREFIX.match(title)
+            if id_match and ROUTINE_SUFFIX.search(title):
+                starts.append((index, id_match.group(1)))
         elif line.startswith("# "):
             group_starts.append(index)
 

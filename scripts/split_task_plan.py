@@ -35,7 +35,6 @@ import os
 import re
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.md_fence import fence_mask
 from lib.routine_manifest import ROUTINE_SUFFIX, heading_to_id
 from lib.slice_writer import dedupe_slice_name, run_split_cli, slugify

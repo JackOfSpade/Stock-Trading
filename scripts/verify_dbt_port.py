@@ -44,7 +44,8 @@ import sys
 import tempfile
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(REPO, "scripts"))
+
+from lib.sql_files import DBT_DATASETS  # noqa: E402
 
 
 def _load_module_from_path(name, *rel_parts):
@@ -85,7 +86,15 @@ def normalize(sql):
 
 
 def compiled_path(model):
-    for ds in ("state", "analytics", "perf"):
+    # DEDUP + BUG FIX (2026-09-02 audit): this used to hand-copy the dataset list as its own tuple
+    # `("state", "analytics", "perf")` -- a THIRD, differently-ordered spelling of the same constant
+    # all_model_names() below already imports as DBT_DATASETS. Order is provably irrelevant here
+    # (this just tests os.path.exists per (ds, model) and returns on the first hit), so reusing the
+    # canonical import is a pure drop-in -- but it closes a real latent gap: a dataset added to
+    # DBT_DATASETS in the future would make all_model_names() enumerate models under it correctly
+    # while this loop kept never looking there, silently misdiagnosing every model in the new
+    # dataset as FAIL "no compiled output found" even after a correct `dbt compile`.
+    for ds in DBT_DATASETS:
         p = os.path.join(REPO, "dbt", "target", "compiled", "stock_trading", "models", ds, f"{model}.sql")
         if os.path.exists(p):
             return ds, p
@@ -93,10 +102,11 @@ def compiled_path(model):
 
 
 def resolve_profiles_dir():
-    """DBT_PROFILES_DIR to run `dbt compile` under: respect an already-set env var, else
-    materialize dbt/profiles.ci.yml -- the single checked-in CI profile ci.yml's `dbt` and
-    `dbt-parity` jobs already treat as canonical (see that file's own header) -- into a fresh
-    tempdir as profiles.yml.
+    """(profiles_dir, owned) -- DBT_PROFILES_DIR to run `dbt compile` under, and whether THIS CALL
+    created it. Respects an already-set env var (owned=False: not ours to delete, the caller does
+    not own that directory), else materializes dbt/profiles.ci.yml -- the single checked-in CI
+    profile ci.yml's `dbt` and `dbt-parity` jobs already treat as canonical (see that file's own
+    header) -- into a fresh tempdir as profiles.yml (owned=True: the caller should rmtree it).
 
     BUG FIX (2026-08-31 code-quality pass): this used to hardcode DBT_PROFILES_DIR="/tmp/dbtprof",
     a path nothing in the repo ever created or populated (`grep -rn dbtprof .` had exactly one
@@ -105,18 +115,29 @@ def resolve_profiles_dir():
     path (ci.yml, live-sql-parity.yml) instead does
     `mkdir -p ~/.dbt && cp dbt/profiles.ci.yml ~/.dbt/profiles.yml`; this mirrors that convention
     with a private tempdir rather than the shared ~/.dbt so two concurrent porting sessions can't
-    race on the same profiles.yml."""
+    race on the same profiles.yml.
+
+    LEAK FIX (2026-09-02 audit): the tempdir this function creates was never cleaned up -- nothing
+    in this file called shutil.rmtree() or registered any cleanup, so every invocation of the
+    interactive porting workflow this function exists for ("Use it when porting a view ... and to
+    re-check a model after editing it" -- this module's own docstring) left one more orphaned
+    /tmp/dbtprof-XXXXXXXX/ behind, unbounded. Returning the ownership flag lets main() clean up only
+    the directory THIS call created, never a caller-supplied DBT_PROFILES_DIR this function does not
+    own."""
     existing = os.environ.get("DBT_PROFILES_DIR")
     if existing:
-        return existing
+        return existing, False
     profiles_dir = tempfile.mkdtemp(prefix="dbtprof-")
     shutil.copy(os.path.join(REPO, "dbt", "profiles.ci.yml"), os.path.join(profiles_dir, "profiles.yml"))
-    return profiles_dir
+    return profiles_dir, True
 
 
 def all_model_names():
-    """Every model under dbt/models/{state,perf,analytics} (model names are globally unique)."""
-    from lib.sql_files import DBT_DATASETS
+    """Every model under dbt/models/{state,perf,analytics} (model names are globally unique).
+
+    DBT_DATASETS is now imported once at module level (2026-09-02 audit) rather than re-imported
+    locally here every call -- compiled_path() above needed the same constant and used to hand-copy
+    it as a differently-ordered tuple instead of reusing this import; see that function's comment."""
     out = []
     for ds in DBT_DATASETS:
         d = os.path.join(REPO, "dbt", "models", ds)
@@ -135,10 +156,18 @@ def main(argv):
         return 2
 
     if not use_compiled:
-        env = dict(os.environ, DBT_PROFILES_DIR=resolve_profiles_dir())
-        r = subprocess.run(
-            ["dbt", "compile", "--target", "ci", "--select", " ".join(models)],
-            cwd=os.path.join(REPO, "dbt"), env=env, capture_output=True, text=True, timeout=600)
+        profiles_dir, owned = resolve_profiles_dir()
+        env = dict(os.environ, DBT_PROFILES_DIR=profiles_dir)
+        try:
+            r = subprocess.run(
+                ["dbt", "compile", "--target", "ci", "--select", " ".join(models)],
+                cwd=os.path.join(REPO, "dbt"), env=env, capture_output=True, text=True, timeout=600)
+        finally:
+            # Clean up only the tempdir THIS call created -- never a caller-supplied
+            # DBT_PROFILES_DIR (owned=False), which this function does not own. See
+            # resolve_profiles_dir()'s "LEAK FIX" note: this used to never run at all.
+            if owned:
+                shutil.rmtree(profiles_dir, ignore_errors=True)
         if r.returncode != 0:
             print("dbt compile FAILED:\n" + (r.stdout or "")[-3000:])
             return 2

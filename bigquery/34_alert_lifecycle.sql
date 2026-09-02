@@ -90,6 +90,22 @@ WHERE NOT EXISTS (SELECT 1 FROM `stock-trading-498512.ops.alert_policy`);
 -- subquery anywhere. A subquery that merely SELF-references ops.alerts (Rule 4's own
 -- open-critical-count) hits the same restriction even with no row correlation at all, so that
 -- count is computed as an independent scripting variable FIRST, then used as a plain boolean.
+--
+-- SUPERSEDED LIVE by bigquery/148_audit_2026_08_08_fixes.sql — current single source of truth for
+-- ops.sp_auto_resolve_alerts (chain: 34 -> 78 -> 94 -> 97 -> 107 -> 130 -> 134 -> 148; every
+-- intermediate file carries its own marker naming 148 directly — do not stop at any of them). 78
+-- first superseded this definition, giving Rule 4 (staleness) an ECHO branch so a staleness alert
+-- whose OWN payload showed marks_fresh AND engine_fresh already TRUE at raise time (a pure
+-- alert-on-alert echo) could resolve without waiting for the next live recheck. 94 added Rule 3b
+-- (catchup_refire_blocked); 97 made Rule 4's no_other_criticals halt-echo-aware for
+-- missing_dependency; 107 extended that to missed_run; 130 made Rule 1's dependency match tolerant
+-- of the missing_upstream / unsatisfied_deps payload-key aliases; 134 added Rule 5 (roster-change
+-- notices auto-resolve once notified_ts is stamped); 148 fixed Rule 4's echo arm to re-check all
+-- FOUR state.system_health components (marks_fresh, engine_fresh, embeddings_healthy,
+-- position_drift) instead of the original two, closing a resolve-path gap that let an
+-- embeddings/position-drift-caused staleness alert auto-clear on a payload that never proved that
+-- specific fault had healed. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply this CREATE OR REPLACE PROCEDURE below live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_auto_resolve_alerts`()
 BEGIN
   DECLARE eligible_dep, eligible_run, eligible_stalled, eligible_stale ARRAY<STRING>;

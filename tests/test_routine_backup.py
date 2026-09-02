@@ -966,6 +966,38 @@ def test_ingest_same_trigger_id_twice_is_still_deduped_not_a_conflict(tmp_path, 
     assert result["added"] == ["D1"]
 
 
+def test_ingest_records_a_duplicate_when_both_colliding_triggers_are_id_less(tmp_path, monkeypatch):
+    """REGRESSION (routine-backup#3, 2026-09-02). The duplicate-live-trigger guard above
+    (test_ingest_records_a_duplicate_live_trigger_instead_of_silently_dropping_one) only ever
+    exercised two DISTINCT non-None trigger_ids -- but `claimed_by[rid]` is set to
+    `normalized["trigger_id"]`, which is legitimately None for a raw with no id/trigger_id field
+    (normalize_trigger()'s `raw.get("id") or raw.get("trigger_id")`), and _dedup_raw_triggers()
+    deliberately keeps every id-less raw as its own entry rather than collapsing them together (its
+    own docstring). The OLD guard was `claimant is not None and claimant != normalized["trigger_id"]`
+    -- the exact `None == None` null-coalescing accident _trigger_id_match() was fixed for one call
+    earlier in this file (routine-backup#1) -- so once the FIRST id-less raw claimed D1 (setting
+    claimed_by["D1"] = None), a SECOND, genuinely distinct id-less raw also resolving to D1 via the
+    instruction fallback sailed straight past the guard (`None is not None` is False) and silently
+    overwrote doc["routines"]["D1"], with nothing recorded in conflicts, _unmatched, or anywhere else.
+
+    Both raws share the same name/instruction (so both resolve to D1 via _instruction_match, exactly
+    as the id-less/recreated-trigger scenario the guard exists for), but differ in `enabled` so an
+    overwrite is observable rather than silently landing an identical entry -- the old code fails this
+    by leaving doc['routines']['D1']['enabled'] flipped to the SECOND raw's value with zero conflict
+    recorded; the new membership-only guard (`rid in claimed_by`) catches it regardless of either
+    trigger_id being None."""
+    _wire(tmp_path, monkeypatch)
+    raws = [_raw_trigger(tid=None, enabled=True), _raw_trigger(tid=None, enabled=False)]
+    result = rb.ingest(str(_write(tmp_path, "in.json", {"data": raws})))
+
+    assert result["conflicts"] == [
+        {"trigger_id": None, "duplicate_of_routine": "D1", "kept_trigger_id": None}]
+    assert result["added"] == ["D1"]
+    assert result["updated"] == []
+    doc = rb.load_backup()
+    assert doc["routines"]["D1"]["enabled"] is True, "the first-filed raw's data must survive intact"
+
+
 # ---- ingest/restore: enabled=False must survive end to end (mutation gap 2) -----------------------------
 def test_build_create_body_preserves_a_disabled_routine(tmp_path, monkeypatch):
     """Two REAL routines are deliberately paused (enabled=False) -- a restore must never re-enable

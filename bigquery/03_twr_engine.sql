@@ -104,6 +104,15 @@ LEFT JOIN exits x
 -- decisive for D's multi-month holds. Fill-price boundaries matter: BURL was bought 303.00 but
 -- CLOSED 323.83 on entry day; a close-baseline would mis-state it badly. Flow-immune. (Splits via
 -- split-adjusted close at ingest.)
+--
+-- SUPERSEDED LIVE by bigquery/125_dust_excluded_from_twr.sql (chain: 03 -> 40 -> 82 -> 125) —
+-- current single source of truth for analytics.strategy_daily_returns. 40 added an option-aware
+-- valuation branch to the `held` CTE (OCC-format legs value at contracts * multiplier *
+-- premium_close via state.option_marks_curated instead of shares * close); 82 made the equity leg
+-- SPLIT-AWARE, scaling shares by a per-position running split factor so a post-entry split on a held
+-- stock keeps mv and the dividend leg continuous; 125 preserves both and additionally excludes
+-- audited post-close DRIP-dust lots. Kept here, unmodified, for DR-rebuild apply-in-order reference
+-- only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.strategy_daily_returns` AS
 WITH held AS (
   SELECT m.mark_date, l.strategy, l.position_key, l.shares, l.entry_price,
@@ -184,6 +193,16 @@ OPTIONS(description='Deployed-TWR engine output. Full series computed 2026-06-05
 -- columns and a LEFT JOIN). At runtime 39's definition wins. ANY change to the thresholds or columns
 -- below MUST be mirrored into bigquery/39_beta_adjusted_alpha.sql or it is silently dead. No CI gate
 -- enforces this — sync by hand.
+--
+-- SUPERSEDED LIVE by bigquery/39_beta_adjusted_alpha.sql — current single source of truth for
+-- perf.kill_flags (the "RUNTIME OVERRIDE" paragraph above is this same fact, worded before this
+-- check existed). drawdown_kill / runaway_review / gate_reached are UNCHANGED there — absolute-
+-- magnitude checks, not SGOV-relative — but m2m_underperf_review and interim_underperf_warning gain
+-- an AND-term (`NOT min_n_met OR alpha_annualized <= 0`) that suppresses an SGOV-relative
+-- underperformance verdict when a strategy's beta-adjusted alpha is confidently positive, i.e. the
+-- SGOV-relative shortfall is fully explained by low/negative market-beta exposure rather than bad
+-- decisions. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
+-- this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.perf.kill_flags` AS
 SELECT strategy, as_of_date, deployed_unit_value, peak_unit_value, current_drawdown,
        excess_vs_sgov, deployed_days, closed_trades, gate_n,

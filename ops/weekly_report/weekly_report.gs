@@ -367,6 +367,17 @@ function buildHealthReasons_(health, marksFresh, engineFresh, firingKillFlags, k
 }
 
 // ===== BigQuery helper =====
+// KEEP IN SYNC MANUALLY with bqAlerts_() in ops/monitoring/alert_emailer.gs -- byte-for-byte identical
+// on purpose (each file must keep working if re-pasted/redeployed independent of the other -- see
+// ops/RUNBOOK.md's v9->v10 alert_emailer-only re-paste while this file stayed untouched, and
+// alert_emailer.gs's own "independent of Apps Script and Gmail" channel-independence design). NOT
+// merged into one shared helper despite both files sharing one Apps Script project's top-level scope
+// (see alert_emailer.gs's SETUP note) -- a cross-file call would make one script's delivery depend on
+// the OTHER script's copy staying correct, defeating the independent re-paste discipline. The actual
+// drift guard is ops/weekly_report/test_pure_helpers.js's bq_/bqAlerts_ parity test, which stubs
+// BigQuery.Jobs.query/getQueryResults deterministically and asserts both twins behave identically on a
+// single-page response, a paginated response, and a permanently-incomplete job; this comment is only a
+// pointer to it (2026-09-02 audit finding -- previously unguarded, unlike the esc_/esc2_ pair below).
 function bq_(sql) {
   let res = BigQuery.Jobs.query({ query: sql, useLegacySql: false, timeoutMs: 30000, maxResults: 10000 }, PROJECT_ID);
   let guard = 0;
@@ -392,6 +403,11 @@ function bq_(sql) {
   });
 }
 
+// KEEP IN SYNC MANUALLY with getUserTzAlerts_() in ops/monitoring/alert_emailer.gs -- byte-for-byte
+// identical on purpose, same reasons as the bq_/bqAlerts_ pair above (each caches into its own
+// differently-named module-level variable, _tzCache here vs _alertTzCache there, so the two caches
+// never collide despite sharing one Apps Script project's scope). Also covered by
+// ops/weekly_report/test_pure_helpers.js's parity test (2026-09-02 audit finding).
 let _tzCache = null;
 function getUserTzWeekly_() {
   if (_tzCache) return _tzCache;

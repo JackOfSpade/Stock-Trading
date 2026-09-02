@@ -29,8 +29,12 @@ only ever asks "is this token allowlisted", never "does this tool still exist").
 CHECKS (each accumulates findings; none exits early):
 
   CHECK 1 -- MANIFEST INTERNAL VALIDITY. A connector missing `name`/`connector_uuid`/`settings_prefix`/
-  `tools`; a tool `use` value outside {required, optional, unused}; a tool name declared twice within
-  one connector's `tools`; a name present in BOTH `tools` and `absent` for the same connector.
+  `tools` (present-but-null or empty counts as missing, same as absent -- a bare `tools:` key with no
+  list under it is not a zero-tool connector, it's a malformed one); a `tools` or `absent` entry with
+  no `name`; a tool `use` value outside {required, optional, unused}; a tool name declared twice within
+  one connector's `tools`; a name present in BOTH `tools` and `absent` for the same connector; two
+  connectors whose `settings_prefix` values are identical or one a proper prefix of the other (the
+  invariant resolve_full_token() and CHECK 5 both assume when they stop at the first prefix match).
 
   CHECK 2 -- REQUIRED TOOLS MUST BE ALLOWLISTED. Every tool with `use: required` must have
   `<settings_prefix><name>` present in .claude/settings.json's permissions.allow, by EXACT string match
@@ -92,7 +96,6 @@ except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
     raise SystemExit(2) from None
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.mcp_tokens import MCP_TOKEN, load_allow_entries
 from lib.textio import load_yaml, read_text
 
@@ -132,7 +135,9 @@ def _connector_label(c, idx):
 
 def check1_manifest_validity(connectors, findings):
     """CHECK 1: manifest self-consistency -- required fields, valid `use` values, no duplicate tool
-    name within a connector, no name shared between `tools` and `absent` for the same connector."""
+    name within a connector, no name shared between `tools` and `absent` for the same connector, and
+    (across connectors) no `settings_prefix` that is a proper prefix of -- or identical to -- another
+    connector's `settings_prefix`."""
     if not connectors:
         findings.append("CHECK1: ops/connector_tools.yaml declares zero connectors (empty or missing "
                          "`connectors:` list)")
@@ -147,7 +152,14 @@ def check1_manifest_validity(connectors, findings):
         for field in ("name", "connector_uuid", "settings_prefix"):
             if not c.get(field):
                 findings.append(f"CHECK1: connector {cname} is missing required field `{field}`")
-        if "tools" not in c:
+        # `not c.get("tools")` (not `"tools" not in c`) so a PRESENT-but-null `tools:` key -- e.g.
+        # a hand-edit that deletes every list item but leaves the bare key behind -- is flagged the
+        # same as a missing one. `"tools" not in c` only caught the key's ABSENCE: with the key
+        # present and null, this finding was silently skipped, `tools = c.get("tools")` came back
+        # None, the `tools is not None` guard just below never fired, and `tools = tools or []`
+        # quietly turned it into an empty list -- a connector's entire `use: required` tool set
+        # could vanish from CHECK2's allowlist coverage with no diagnostic anywhere (2026-09-02).
+        if not c.get("tools"):
             findings.append(f"CHECK1: connector {cname} is missing required field `tools`")
 
         tools = c.get("tools")
@@ -178,11 +190,58 @@ def check1_manifest_validity(connectors, findings):
             findings.append(f"CHECK1: connector {cname}'s `absent` must be a list, "
                              f"got {type(absent).__name__}")
             absent = []
+        # Parallel to the `tools` loop above: a malformed `absent` entry (e.g. a `nam:` typo instead
+        # of `name:`) used to be silently dropped by the `absent_names` comprehension below with no
+        # finding raised at all -- unlike its `tools` sibling, which has flagged a name-less entry
+        # since this check was written. That asymmetry mattered: CHECK4 (the retired-tool gate) reads
+        # `absent_by_name`/`absent_full`, built from this same list, so a typo'd `absent:` entry did
+        # not just fail to record a retirement -- it made CHECK4 structurally unable to ever catch a
+        # routine calling that retired tool again, with the manifest looking clean.
+        for a in (absent or []):
+            if not isinstance(a, dict) or a.get("name") is None:
+                findings.append(f"CHECK1: connector {cname} has an `absent` entry with no `name`")
         absent_names = {a["name"] for a in (absent or [])
                         if isinstance(a, dict) and a.get("name") is not None}
         overlap = set(seen_counts) & absent_names
         for tname in sorted(overlap):
             findings.append(f"CHECK1: connector {cname} lists `{tname}` in BOTH `tools` and `absent`")
+
+    # Cross-connector: resolve_full_token() (below) and check5_stale_allowlist() both walk connectors
+    # in manifest order and return on the FIRST `settings_prefix` that is a string-prefix of a token,
+    # on the explicit assumption that prefixes never overlap -- see resolve_full_token()'s own comment
+    # ("prefixes are disjoint, stop here"). Nothing enforced that assumption until now: today's real
+    # prefixes (mcp__FMP__, mcp__Gmail__, ...) happen to be pairwise disjoint, but a future connector
+    # added with a shorter, overlapping prefix ahead of an existing one in `connectors:` (e.g. a
+    # hypothetical generic `mcp__Google_` positioned before `mcp__Google_Calendar__`) would silently
+    # steal every full-token match belonging to the longer-prefixed connector -- CHECK4 would check
+    # retirement against the wrong connector's `absent` list and CHECK5 would misattribute a stale
+    # entry, with no error marking the misattribution. O(n^2) pairwise is fine here: connector count
+    # is ~7, this runs once per CI invocation, and it guards the load-bearing invariant at its root
+    # (the manifest itself) instead of leaving each first-match call site to assume it silently.
+    prefixed = [(c.get("settings_prefix"), _connector_label(c, idx)) for idx, c in enumerate(connectors)
+                if isinstance(c, dict) and c.get("settings_prefix")]
+    for i, (prefix_a, name_a) in enumerate(prefixed):
+        for prefix_b, name_b in prefixed[i + 1:]:
+            if prefix_a == prefix_b:
+                findings.append(
+                    f"CHECK1: connectors {name_a} and {name_b} declare the IDENTICAL "
+                    f"`settings_prefix` {prefix_a!r} -- full mcp__ token resolution "
+                    f"(resolve_full_token()/CHECK5) requires prefixes to be unambiguous"
+                )
+            elif prefix_b.startswith(prefix_a):
+                findings.append(
+                    f"CHECK1: connector {name_a}'s `settings_prefix` {prefix_a!r} is a proper "
+                    f"prefix of connector {name_b}'s {prefix_b!r} -- a full mcp__ token belonging "
+                    f"to {name_b} would incorrectly resolve against {name_a} first "
+                    f"(resolve_full_token()/CHECK5 both stop at the first prefix match)"
+                )
+            elif prefix_a.startswith(prefix_b):
+                findings.append(
+                    f"CHECK1: connector {name_b}'s `settings_prefix` {prefix_b!r} is a proper "
+                    f"prefix of connector {name_a}'s {prefix_a!r} -- a full mcp__ token belonging "
+                    f"to {name_a} would incorrectly resolve against {name_b} first "
+                    f"(resolve_full_token()/CHECK5 both stop at the first prefix match)"
+                )
 
 
 def load_allow_set():

@@ -39,11 +39,9 @@ Usage:  python scripts/check_cadence_marker.py    # exit 0 if consistent, 1 + di
 import os
 import re
 import subprocess
-import sys
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.report import fail_or_ok
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

@@ -23,7 +23,6 @@ import os
 import re
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.md_fence import fence_mask
 from lib.slice_writer import dedupe_slice_name, run_split_cli, slugify
 from lib.textio import read_text_preserving_newlines

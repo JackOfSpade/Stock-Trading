@@ -112,8 +112,12 @@ WHERE w.period_missed;
 -- correlated subqueries against real tables. Rewritten as LEFT JOIN + IS NULL (the standard BigQuery
 -- workaround for this exact limitation), verified live via execute_sql_readonly before applying.
 --
--- SUPERSEDED LIVE by bigquery/112_catchup_readiness_period_asof_fix.sql (2026-07-27 OPS2 adversarial
--- review) — current single source of truth for this object. The period_misses CTE below emits
+-- SUPERSEDED LIVE by bigquery/208_yesterday_tier_ops1_coverage.sql (2026-09-02) — current single
+-- source of truth for this object. (Pointer retargeted 2026-09-02: it previously named
+-- bigquery/112_catchup_readiness_period_asof_fix.sql, which was canonical from 2026-07-27 until 208
+-- superseded it; 112 remains the source of the period-tier `period_start AS as_of` fix and the
+-- 2026-08-08 last_expected_day widening, both carried forward into 208 byte-identical.)
+-- The period_misses CTE below emits
 -- `today AS as_of` for every period-tier row instead of `period_start AS as_of`, so every outstanding
 -- period-tier miss (W1..A2) ties on the same as_of within one query execution — defeating OPS2 STEP
 -- 2's new "process at most N=4, oldest first (ORDER BY as_of ASC)" bound for exactly the rows where a

@@ -28,9 +28,7 @@ coverage; it only proves the full-token subset is covered.
 Usage:  python scripts/check_settings_toolcov.py    # exit 0 if covered, 1 + diff if not
 """
 import os
-import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # Shared with scripts/check_connector_tools.py -- the two gates sit on opposite sides of the same
 # "what is an mcp__ tool token" question and must never disagree. See lib/mcp_tokens.py for why the
 # two byte-identical private copies this replaced were a drift hazard (quality pass 2026-08-22), and

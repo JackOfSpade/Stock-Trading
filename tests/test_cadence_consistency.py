@@ -238,6 +238,49 @@ def test_check_depends_on_against_real_cadence_yaml_is_clean():
     assert cc.check_depends_on(cc.load_cadence()) == []
 
 
+# ---- check_depends_on: CYCLE detection ('depends-on-no-cycle-check' finding, 2026-09-02) -- a
+# self- or mutual dependency feeds the FATAL sp_assert_deps gate and can never be satisfied, but the
+# dangling-id loop above only ever validated that a referenced id EXISTS, never that the graph is
+# acyclic. These regression-test both shapes the fix's DFS walk is meant to catch with no special
+# casing: a direct 1-hop self-reference, and an indirect 2-node mutual cycle. ----
+def test_check_depends_on_flags_direct_self_reference():
+    cad = {"D1": {"depends_on": ["D1"]}}
+    errs = cc.check_depends_on(cad)
+    assert len(errs) == 1
+    assert "D1: depends_on cycle detected: D1 -> D1" in errs[0]
+
+
+def test_check_depends_on_flags_mutual_two_node_cycle():
+    cad = {"A": {"depends_on": ["B"]}, "B": {"depends_on": ["A"]}}
+    errs = cc.check_depends_on(cad)
+    # Both participants get their OWN error line (rooted at each one in turn), not just one -- a
+    # maintainer looking at either routine's cadence.yaml entry in isolation must see the problem.
+    assert len(errs) == 2
+    a_err = next(e for e in errs if e.startswith("A:"))
+    b_err = next(e for e in errs if e.startswith("B:"))
+    assert "A: depends_on cycle detected: A -> B -> A" in a_err
+    assert "B: depends_on cycle detected: B -> A -> B" in b_err
+    assert "sp_assert_deps" in a_err and "sp_assert_deps" in b_err
+
+
+def test_check_depends_on_indirect_cycle_through_a_third_node_is_caught():
+    # A three-node cycle (A -> B -> C -> A), none of them a direct pair -- proves the DFS walk isn't
+    # special-cased to 2-node mutual cycles only.
+    cad = {"A": {"depends_on": ["B"]}, "B": {"depends_on": ["C"]}, "C": {"depends_on": ["A"]}}
+    errs = cc.check_depends_on(cad)
+    assert len(errs) == 3
+    assert any("A: depends_on cycle detected: A -> B -> C -> A" in e for e in errs)
+
+
+def test_check_depends_on_a_cycle_elsewhere_does_not_false_positive_an_unrelated_routine():
+    # D3 depends on the CYCLING pair (A, B) but is not itself part of the cycle -- D3 must get no
+    # cycle error of its own, only A and B should.
+    cad = {"A": {"depends_on": ["B"]}, "B": {"depends_on": ["A"]}, "D3": {"depends_on": ["A"]}}
+    errs = cc.check_depends_on(cad)
+    assert not any(e.startswith("D3:") for e in errs)
+    assert any(e.startswith("A:") for e in errs) and any(e.startswith("B:") for e in errs)
+
+
 # ---- main() end-to-end fixture: a minimal, self-contained repo copy that reaches checks F/G/H
 #      cleanly (2026-07-14 audit finding — check F previously had zero end-to-end coverage of
 #      main()'s actual fail path; only the pure generate_triggers_manifest() helper was tested) ----
@@ -335,6 +378,17 @@ def _write_stalled_runs_fixture(tmp_path, ids, filename="900_test_stalled_runs.s
     return f
 
 
+def _cadence_daily_catchup_safe_ids_from_yaml(cadence_path):
+    """Routine ids from a fixture cadence.yaml that are BOTH catchup_safe: true AND daily-tier
+    (monitor_class in cc.DAILY_CLASSES) -- the "want" set check K's yesterday-tier bracket check
+    (bigquery/208) and its bigquery/90 daily-copy check both compare against. Same call-time-
+    independence rationale as _cadence_ids_from_yaml above (called from _patch_fixture_paths() itself
+    while cc.CADENCE is still being patched, so it must not depend on that patch having landed)."""
+    doc = yaml.safe_load(open(cadence_path, encoding="utf-8")) or {}
+    return [r["id"] for r in (doc.get("routines") or [])
+            if r.get("catchup_safe") is True and r.get("monitor_class") in cc.DAILY_CLASSES]
+
+
 def _write_cadence_watch_fixture(tmp_path, deadline, filename="901_test_cadence_watch.sql"):
     """Writes a canonical-shaped `CREATE OR REPLACE VIEW ...state.cadence_watch` definition into
     tmp_path/filename, whose deadline-guard TIME literal is DERIVED from `deadline` (the fixture
@@ -358,6 +412,41 @@ def _write_cadence_watch_fixture(tmp_path, deadline, filename="901_test_cadence_
         f"   AND DATETIME(CURRENT_TIMESTAMP(), 'America/Denver') >= DATETIME(e.today, TIME '{deadline}:00')\n"
         "  ) AS needs_attention\n"
         "FROM state.cadence_expected_today e;\n"
+    )
+    return f
+
+
+def _write_catchup_refire_readiness_fixture(tmp_path, ids, filename="902_test_catchup_refire_readiness.sql"):
+    """Writes a canonical-shaped `CREATE OR REPLACE VIEW ...state.catchup_refire_readiness` definition
+    into tmp_path/filename, whose `yesterday_daily_misses` CTE UNNEST([...]) bracket carries exactly
+    `ids` -- mirrors _write_stalled_runs_fixture (check O) / _write_cadence_watch_fixture (check
+    D-extended)'s own shape/rationale, one canonical object over (check K's yesterday-tier drift
+    guard, 2026-09-02 -- see the 'catchup-yesterday-list-unwatched' finding this fixture backs). The
+    chosen leading number (902) never collides with 900/901 (the other two canonical-object fixtures
+    this module writes into the SAME tmp_path) or any bare `NN.sql` fixture written elsewhere (see
+    _write_stalled_runs_fixture's own docstring for why that's safe). Deliberately selects several
+    columns before its own `FROM UNNEST(...)` (miss_key, routine, tier, as_of), matching the REAL
+    bigquery/208 body's shape and exercising YESTERDAY_TIER_CTE_UNNEST_RE's non-greedy `SELECT
+    ... FROM UNNEST(` span rather than a trivial `SELECT * FROM UNNEST(...)` a looser regex would
+    also accept. Returns the written Path."""
+    quoted = ", ".join(f"'{rid}'" for rid in ids)
+    f = tmp_path / filename
+    f.write_text(
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.catchup_refire_readiness` AS\n"
+        "WITH daily_misses AS (\n"
+        "  SELECT CONCAT(routine, '|', CAST(today AS STRING)) AS miss_key, routine, 'daily' AS tier, "
+        "today AS as_of\n"
+        "  FROM `stock-trading-498512.state.catchup_available`\n"
+        "),\n"
+        "yesterday_daily_misses AS (\n"
+        "  SELECT\n"
+        "    CONCAT(routine_id, '|', CAST(y.last_expected_day AS STRING)) AS miss_key,\n"
+        "    routine_id AS routine, 'daily' AS tier, y.last_expected_day AS as_of\n"
+        f"  FROM UNNEST([{quoted}]) AS routine_id\n"
+        "  CROSS JOIN (SELECT CURRENT_DATE() AS last_expected_day) y\n"
+        "),\n"
+        "all_misses AS (SELECT * FROM daily_misses UNION ALL SELECT * FROM yesterday_daily_misses)\n"
+        "SELECT * FROM all_misses;\n"
     )
     return f
 
@@ -393,6 +482,20 @@ def _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, cata
     # BIGQUERY_DIR/STALLED_RUNS_BIGQUERY_DIR from each other without disturbing the other check's fixture.
     monkeypatch.setattr(cc, "STALLED_RUNS_BIGQUERY_DIR", str(tmp_path))
     _write_stalled_runs_fixture(tmp_path, _cadence_ids_from_yaml(cadence))
+    # check K's yesterday-tier extension (2026-09-02): point CATCHUP_REFIRE_READINESS_BIGQUERY_DIR (a
+    # constant kept SEPARATE from BIGQUERY_DIR/STALLED_RUNS_BIGQUERY_DIR, for the identical test-
+    # isolation reason those two are kept apart) at this SAME tmp_path fixture directory too, and drop
+    # in a canonical state.catchup_refire_readiness definition whose `yesterday_daily_misses` UNNEST
+    # list is EXACTLY the daily catchup-safe subset of `cadence` (_cadence_daily_catchup_safe_ids_
+    # from_yaml) -- so this new check stays silently clean by default for every OTHER check's fixture
+    # below, the same convention _write_stalled_runs_fixture/_write_cadence_watch_fixture already
+    # established. UNLIKE bigquery/31/59/90's absent-path "skip silently" convention just below, this
+    # check's "file not found at all" branch is a HARD ERROR (mirroring check O/D-extended), so a
+    # fixture MUST be present here or every one of this shared fixture's ~55 cc.main() callers would
+    # start failing. Tests that want to exercise check K's yesterday-tier guard itself overwrite this
+    # fixture file (_write_catchup_refire_readiness_fixture) directly.
+    monkeypatch.setattr(cc, "CATCHUP_REFIRE_READINESS_BIGQUERY_DIR", str(tmp_path))
+    _write_catchup_refire_readiness_fixture(tmp_path, _cadence_daily_catchup_safe_ids_from_yaml(cadence))
     # check N's mirror scan is now resolved at call time (the model_mirror_files()
     # call-time-resolution fix) from CADENCE/OWNER_ACTIONS/PLAN/CATALOG_SQL -- without patching
     # OWNER_ACTIONS too, a fixture test would silently scan the REAL repo's OWNER_ACTIONS.md instead
@@ -410,6 +513,7 @@ def _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, cata
     # _write_check_fixture's plan carries a minimal-but-valid table by default instead.
     monkeypatch.setattr(cc, "CATCHUP_NOTIFY_SQL", str(tmp_path / "absent_31.sql"))
     monkeypatch.setattr(cc, "CATCHUP_AUTOFIRE_SQL", str(tmp_path / "absent_59.sql"))
+    monkeypatch.setattr(cc, "CATCHUP_INPROGRESS_GUARD_SQL", str(tmp_path / "absent_90.sql"))
     # check M's membership cross-check (evening_slot_guard_membership_errors) compares
     # EVENING_DAILY_GUARD_IDS/NOON_CLAUSE_EXEMPT_EVENING_IDS -- the REAL 11-routine evening-slot
     # cohort -- against THIS fixture's `cad`, which normally carries only D1 with no expected_trigger
@@ -739,6 +843,180 @@ def test_check_k_present_but_unparseable_59_fails_loud_not_silent(tmp_path, monk
     assert cc.main() == 1
     out = capsys.readouterr().out
     assert "59_catchup_autofire.sql" in out and "DISARMED" in out
+
+
+# ---- check K (yesterday-tier extension, 2026-09-02, 'catchup-yesterday-list-unwatched' finding):
+# parse_yesterday_tier_ids / find_canonical_catchup_refire_readiness_file -- the SECOND, previously
+# invisible hand-copy of the daily catchup-safe tier, inside state.catchup_refire_readiness's
+# `yesterday_daily_misses` CTE. Mirrors the parse_stalled_runs_cls_ids parser-level test block above
+# (check O), one canonical object over. ----
+def test_parse_yesterday_tier_ids_matches_known_good(tmp_path, monkeypatch):
+    f = tmp_path / "902_refire.sql"
+    f.write_text(
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.catchup_refire_readiness` AS\n"
+        "WITH yesterday_daily_misses AS (\n"
+        "  SELECT\n"
+        "    CONCAT(routine_id, '|', CAST(y.last_expected_day AS STRING)) AS miss_key,\n"
+        "    routine_id AS routine, 'daily' AS tier, y.last_expected_day AS as_of\n"
+        "  FROM UNNEST(['D1', 'D3', 'OPS1', 'SL3']) AS routine_id\n"
+        "  CROSS JOIN (SELECT CURRENT_DATE() AS last_expected_day) y\n"
+        "),\n"
+        "all_misses AS (SELECT * FROM yesterday_daily_misses)\n"
+        "SELECT * FROM all_misses;\n"
+    )
+    monkeypatch.setattr(cc, "CATCHUP_REFIRE_READINESS_BIGQUERY_DIR", str(tmp_path))
+    ids, _number, fn, ambiguous = cc.parse_yesterday_tier_ids()
+    assert ambiguous is None
+    assert fn == "902_refire.sql"
+    assert ids == ["D1", "D3", "OPS1", "SL3"]
+
+
+def test_parse_yesterday_tier_ids_strips_comments_so_prose_mention_is_ignored(tmp_path, monkeypatch):
+    # bigquery/208's OWN header narrates the OLD, pre-fix list ("UNNEST(['D1', 'D3', 'SL3'])") in
+    # prose -- a commented-out or illustrative mention must never be read as a live entry, same
+    # discipline as check O's identical comment-stripping test above.
+    f = tmp_path / "902_refire.sql"
+    f.write_text(
+        "-- e.g. the OLD list read UNNEST(['D1', 'D3', 'SL3']) before this fix\n"
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.catchup_refire_readiness` AS\n"
+        "WITH yesterday_daily_misses AS (\n"
+        "  SELECT routine_id AS routine\n"
+        "  FROM UNNEST(['D1', 'D3', 'OPS1', 'SL3']) AS routine_id\n"
+        "),\n"
+        "all_misses AS (SELECT * FROM yesterday_daily_misses)\n"
+        "SELECT * FROM all_misses;\n"
+    )
+    monkeypatch.setattr(cc, "CATCHUP_REFIRE_READINESS_BIGQUERY_DIR", str(tmp_path))
+    ids, _number, _fn, _ambiguous = cc.parse_yesterday_tier_ids()
+    assert ids == ["D1", "D3", "OPS1", "SL3"]
+    assert "SL3" in ids and ids.count("SL3") == 1  # not doubled by the commented-out mention
+
+
+def test_parse_yesterday_tier_ids_returns_none_filename_when_view_absent(tmp_path, monkeypatch):
+    monkeypatch.setattr(cc, "CATCHUP_REFIRE_READINESS_BIGQUERY_DIR", str(tmp_path))  # empty dir
+    ids, _number, fn, ambiguous = cc.parse_yesterday_tier_ids()
+    assert ids == [] and fn is None and ambiguous is None
+
+
+def test_parse_yesterday_tier_ids_resolves_the_highest_numbered_definition(tmp_path, monkeypatch):
+    # The object has already moved TWICE for real (bigquery/59 -> 112 -> 208); the parser must always
+    # resolve to the HIGHEST-numbered file defining it, mirroring find_canonical_cadence_watch_file()'s
+    # / find_canonical_stalled_runs_file()'s own superseded-object resolution.
+    old = tmp_path / "59_old.sql"
+    old.write_text(
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.catchup_refire_readiness` AS\n"
+        "WITH yesterday_daily_misses AS (\n  SELECT routine_id AS routine\n"
+        "  FROM UNNEST(['D1', 'D3', 'SL3']) AS routine_id\n),\n"
+        "all_misses AS (SELECT * FROM yesterday_daily_misses)\nSELECT * FROM all_misses;\n"
+    )
+    new = tmp_path / "208_new.sql"
+    new.write_text(
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.catchup_refire_readiness` AS\n"
+        "WITH yesterday_daily_misses AS (\n  SELECT routine_id AS routine\n"
+        "  FROM UNNEST(['D1', 'D3', 'OPS1', 'SL3']) AS routine_id\n),\n"
+        "all_misses AS (SELECT * FROM yesterday_daily_misses)\nSELECT * FROM all_misses;\n"
+    )
+    monkeypatch.setattr(cc, "CATCHUP_REFIRE_READINESS_BIGQUERY_DIR", str(tmp_path))
+    ids, number, fn, ambiguous = cc.parse_yesterday_tier_ids()
+    assert ambiguous is None
+    assert number == 208 and fn == "208_new.sql"
+    assert ids == ["D1", "D3", "OPS1", "SL3"]
+
+
+def test_parse_yesterday_tier_ids_uses_a_dedicated_regex_not_first_bracket_in_file(tmp_path, monkeypatch):
+    # THE test proving WHY check K's yesterday-tier guard needs its own CTE-scoped regex rather than
+    # reusing the generic, first-match-only UNNEST_ROUTINE_BRACKET.search() the OLD (pre-fix) check K
+    # already had -- and proving the old approach really would have missed the live OPS1 drift, not
+    # just theoretically. This is EXACTLY the shape the real bigquery/59_catchup_autofire.sql file has
+    # in production: catchup_safe_period_routines' UNNEST([...]) AS routine bracket (the PERIOD tier)
+    # appears textually BEFORE yesterday_daily_misses' bracket (the DAILY/yesterday tier) in the SAME
+    # file. A first-match-only scan of the whole file finds the period bracket and stops -- it can
+    # never see the yesterday-tier bracket at all, which is precisely why that bracket's OPS1 drift
+    # went undetected for six weeks.
+    f = tmp_path / "902_combined.sql"
+    f.write_text(
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.catchup_refire_readiness` AS\n"
+        "WITH catchup_safe_period_routines AS (\n"
+        "  SELECT routine FROM UNNEST(['W1', 'W2']) AS routine\n"
+        "),\n"
+        "yesterday_daily_misses AS (\n"
+        "  SELECT\n"
+        "    routine_id AS routine, 'daily' AS tier\n"
+        "  FROM UNNEST(['D1', 'D3', 'OPS1', 'SL3']) AS routine_id\n"
+        "),\n"
+        "all_misses AS (SELECT * FROM yesterday_daily_misses)\n"
+        "SELECT * FROM all_misses;\n"
+    )
+    monkeypatch.setattr(cc, "CATCHUP_REFIRE_READINESS_BIGQUERY_DIR", str(tmp_path))
+    ids, _number, fn, _ambiguous = cc.parse_yesterday_tier_ids()
+    assert fn == "902_combined.sql"
+    assert ids == ["D1", "D3", "OPS1", "SL3"]  # the CORRECT, CTE-scoped bracket
+
+    # The OLD, first-match-only approach on this SAME file (cc.parse_unnest_routine_ids() is check K's
+    # existing generic scraper, still in production use for bigquery/31/59/90's own FIRST-bracket
+    # lists today -- calling it here is exactly what a naive "just reuse the existing scraper"
+    # extension of check K would have done) returns something ELSE entirely -- the unrelated
+    # period-tier bracket -- never the yesterday-tier ids this check actually needs.
+    naive = cc.parse_unnest_routine_ids(str(f))
+    assert naive == ["W1", "W2"]
+    assert naive != ids
+    assert "OPS1" not in naive  # the exact drift class: OPS1 present in the real bracket, invisible here
+
+
+# ---- check K's yesterday-tier extension, main()-level: drift injection + the vacuity guards ----
+def test_check_k_yesterday_tier_drift_is_caught(tmp_path, monkeypatch, capsys):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    # _patch_fixture_paths already wrote a matching yesterday-tier fixture (["D1"], cadence.yaml's
+    # DEFAULT daily catchup-safe set). Overwrite it with a DIFFERENT non-empty list -- D1 missing,
+    # some other id present -- the live 2026-09-02 bug shape (a present-but-wrong bracket, not an
+    # unparseable one, which is covered by the vacuity-guard tests below instead).
+    _write_catchup_refire_readiness_fixture(tmp_path, ["ZZ_NOT_A_REAL_ID"])
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert "state.catchup_refire_readiness `yesterday_daily_misses` UNNEST list DRIFT" in out
+    assert "wants ['D1']" in out
+    assert "OPS0-WATCHDOG-FALLBACK" in out
+
+
+def test_check_k_yesterday_tier_vacuity_guard_file_not_found_errors(tmp_path, monkeypatch, capsys):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    empty_dir = tmp_path / "empty_refire_dir"
+    empty_dir.mkdir()
+    monkeypatch.setattr(cc, "CATCHUP_REFIRE_READINESS_BIGQUERY_DIR", str(empty_dir))
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert ("could not find any bigquery/*.sql file defining `CREATE OR REPLACE VIEW "
+            "state.catchup_refire_readiness` at all" in out)
+
+
+def test_check_k_yesterday_tier_vacuity_guard_empty_bracket_errors(tmp_path, monkeypatch, capsys):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    # A file that defines the view but whose yesterday_daily_misses CTE has been reformatted past
+    # recognition -- must ERROR, never silently validate nothing.
+    broken = tmp_path / "902_test_catchup_refire_readiness.sql"
+    broken.write_text(
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.catchup_refire_readiness` AS\n"
+        "SELECT 1;\n"
+    )
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert "could not parse any routine id out of state.catchup_refire_readiness's" in out
+    assert "DISARMED" in out
+
+
+def test_check_k_bigquery_90_daily_copy_drift_is_caught(tmp_path, monkeypatch, capsys):
+    # The THIRD hand-copy (bigquery/90_catchup_inprogress_guard.sql), also newly watched.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    guard90 = tmp_path / "90.sql"
+    guard90.write_text("SELECT routine FROM UNNEST([]) AS routine\n")  # D1 missing
+    monkeypatch.setattr(cc, "CATCHUP_INPROGRESS_GUARD_SQL", str(guard90))
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert "90_catchup_inprogress_guard.sql" in out and "DRIFT" in out
 
 
 def test_check_k_missing_catchup_safe_key_is_caught(tmp_path, monkeypatch, capsys):
@@ -1929,6 +2207,36 @@ def test_check_d_multiple_distinct_deadline_literals_is_caught(tmp_path, monkeyp
     assert "multiple distinct deadline literals" in capsys.readouterr().out
 
 
+# ---- check D / check I: cadence_watch_deadline_local / expected_trigger.time_local's "quoted HH:MM"
+# shape guard now DELEGATES to the shared lib.textio.validate_hhmm_field ('hhmm-validation-triplicated'
+# finding, 2026-09-02) rather than re-literalizing an isinstance/HHMM.match test + message inline at
+# each call site. Coupling tests, mirroring test_check_b_follows_the_shared_instruction_text_template:
+# monkeypatch the shared validator to something a WELL-FORMED value would never normally trip, and
+# confirm the check still reports it -- if either check still had its OWN hardcoded shape test, a
+# well-formed value would pass silently regardless of what this patched validator says, and the
+# assertion below would fail (main()==0, not 1) against that old, undelegated code. ----
+def test_check_d_deadline_hhmm_delegates_to_shared_validator(tmp_path, monkeypatch, capsys):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    # _write_check_fixture's cadence.yaml has cadence_watch_deadline_local: "21:00" -- well-formed,
+    # would otherwise pass check D's shape guard cleanly.
+    monkeypatch.setattr(cc, "validate_hhmm_field",
+                        lambda value, field_name: f"SENTINEL for {field_name}")
+    assert cc.main() == 1
+    assert "SENTINEL for ops/cadence.yaml: cadence_watch_deadline_local" in capsys.readouterr().out
+
+
+def test_check_i_time_local_hhmm_delegates_to_shared_validator(tmp_path, monkeypatch, capsys):
+    _setup_check_i(tmp_path, monkeypatch,
+                   "  - id: D1\n    monitor_class: daily_trading\n    catchup_safe: true\n"
+                   "    expected_trigger:\n      recurrence: daily\n      enabled: true\n"
+                   '      time_local: "09:30"\n')  # well-formed -- would otherwise pass check I clean
+    monkeypatch.setattr(cc, "validate_hhmm_field",
+                        lambda value, field_name: f"SENTINEL for {field_name}")
+    assert cc.main() == 1
+    assert "SENTINEL for D1: expected_trigger.time_local" in capsys.readouterr().out
+
+
 # ---- monitor_class presence + vocabulary; duplicate plan-heading detection ----
 def test_missing_monitor_class_is_caught(tmp_path, monkeypatch, capsys):
     plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
@@ -2297,6 +2605,28 @@ def test_check_o_cls_extra_routine_not_in_cadence_is_caught(tmp_path, monkeypatc
             "a routine id in ops/cadence.yaml" in out)
 
 
+def test_check_o_duplicate_id_in_cls_list_is_caught(tmp_path, monkeypatch, capsys):
+    # THE regression test for 'cls-list-duplicate-id-uncaught' (2026-09-02): a routine id duplicated
+    # inside the `cls` CTE's STRUCT list must be caught, not silently collapsed by `set(cls_ids)` with
+    # both directions of the membership comparison still balancing cleanly. Under the pre-fix code,
+    # set(["D1", "D1"]) == {"D1"} == set(cad) -- clean on both sides -- so this exact fixture produces
+    # ZERO errors against the old code and exactly one against the fixed code, discriminating the fix.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    # cadence.yaml's default routine set is {D1} -- duplicate D1 itself so BOTH set-directions
+    # (cad_set - cls_set, cls_set - cad_set) stay empty and only the new duplicate guard can catch it.
+    _write_stalled_runs_fixture(tmp_path, ["D1", "D1"])
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert ("bigquery/900_test_stalled_runs.sql: duplicate routine id 'D1' in state.stalled_runs' "
+            "`cls` CTE" in out)
+    assert "JOIN cls c USING (routine)" in out
+    # The set-based membership comparison itself must stay clean -- this is a DIFFERENT class of
+    # error than a missing/extra id, and must not also spuriously report either of those.
+    assert "MISSING from bigquery/900_test_stalled_runs.sql" not in out
+    assert "but not a routine id in ops/cadence.yaml" not in out
+
+
 def test_check_o_vacuity_guard_canonical_file_not_found_errors(tmp_path, monkeypatch, capsys):
     # If NO bigquery/*.sql file defines `CREATE OR REPLACE VIEW state.stalled_runs` at all, check O
     # must ERROR loudly -- never a silent pass (requirement: "a checker that quietly validates nothing
@@ -2459,3 +2789,21 @@ def test_check_q_missing_owner_from_table_is_caught(tmp_path, monkeypatch):
     _writeQ(tmp_path, monkeypatch, _Q_TABLE.replace(" · SL5 19:25", ""))
     errs = cc.queue_owner_slot_mirror_errors(_cadQ())
     assert any("omits SL5" in e for e in errs), errs
+
+
+def test_check_q_duplicate_id_in_table_is_caught(tmp_path, monkeypatch):
+    # THE regression test for 'queue-slot-table-duplicate-id-uncaught' (2026-09-02): a routine id
+    # restated TWICE in the slot table must be caught -- even when the SECOND (kept-by-dict()) value
+    # happens to already agree with ops/cadence.yaml. Pre-fix, `dict(QUEUE_OWNER_SLOT_PAIR.findall
+    # (para))` collapses straight to the last occurrence (19:05, correct), so the per-id drift loop
+    # sees a clean match and reports NOTHING even though the paragraph restates SL2 twice -- this
+    # fixture reproduces exactly that "stale first occurrence, correct second occurrence" shape.
+    dup_table = _Q_TABLE.replace(
+        "SL5 19:25** (read the file).",
+        "SL5 19:25 · SL2 19:05** (read the file).")
+    _writeQ(tmp_path, monkeypatch, dup_table)
+    errs = cc.queue_owner_slot_mirror_errors(_cadQ())
+    assert any("names 'SL2' more than once" in e and "19:05, 19:05" in e for e in errs), errs
+    # The ordinary per-id drift check must NOT ALSO fire -- both occurrences match cadence.yaml, so
+    # this is purely the new duplicate guard, not a rediscovery of the existing mismatch path.
+    assert not any("fires at" in e for e in errs), errs

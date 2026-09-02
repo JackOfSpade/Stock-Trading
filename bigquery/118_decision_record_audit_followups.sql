@@ -38,9 +38,10 @@
 -- is_go_family, the same single source conviction_features and thesis_outcome_summary now use, so a
 -- future vocabulary fix lands in ONE place instead of needing to be remembered in four.
 --
--- SUPERSEDED LIVE by bigquery/131_declared_vs_realized_distinct_positions.sql — current single
--- source of truth for analytics.declared_vs_realized. Kept here, unmodified, for DR-rebuild
--- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
+-- bigquery/131_declared_vs_realized_distinct_positions.sql picked up this fix and became canonical
+-- next (2026-08-03) -- and was itself superseded the very next day by bigquery/136 (see the single
+-- marker at the end of this comment block, which names the CURRENT canonical file). Do not stop at
+-- 131 -- it is an intermediate, also-superseded pointer, not the live definition.
 --
 -- The paragraph below is the ORIGINAL 2026-07-30 note, retained as provenance. It correctly
 -- identified the opened-leg double-count and deliberately declined to fix it under cover of an

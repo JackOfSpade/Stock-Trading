@@ -82,7 +82,6 @@ except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
     raise SystemExit(2) from None
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.textio import load_yaml, read_text
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -167,9 +166,22 @@ def required_identifiers(steps):
                 continue
             if PYTEST_RUN.search(line):
                 required.append(("pytest", name))
+            # BUG FIX (finding adopt-gate-search-drops-second-match-per-line): `.search()` finds
+            # only the FIRST match on a line, so a `run:` line invoking two scripts on one
+            # physical line -- `python scripts/a.py && python scripts/b.py`, a normal shell idiom
+            # -- silently dropped the second script from `required`, making it invisible to both
+            # the precondition-5 comparison and the postmerge-mirror comparison below. No live
+            # ci.yml step does this today (every checks-job step runs exactly one script per
+            # `run:` line), so the gap was dormant, but nothing enforced that convention and a
+            # future step consolidation (this repo has done exactly that before, for CI-minute
+            # cost reasons) could reintroduce it with this checker itself reporting OK
+            # throughout -- the identical drift shape this whole script exists to catch, just
+            # originating in its own extraction logic instead of the prose list it audits.
+            # `finditer()` instead of `search()` captures every match on the line; the `seen`
+            # dedup sets in main()/find_postmerge_missing() already handle the resulting
+            # duplicate identifiers when only one script appears, so this is a pure widening.
             for pattern in (PY_RUN, BASH_TEST_RUN, NODE_RUN):
-                m = pattern.search(line)
-                if m:
+                for m in pattern.finditer(line):
                     required.append((os.path.basename(m.group(1)), name))
     return required
 
@@ -214,9 +226,11 @@ def postmerge_step_identifiers(step):
             continue
         if PYTEST_RUN.search(stripped):
             found.add("pytest")
+        # Same `.search()`-drops-the-second-match fix as required_identifiers() above, and for
+        # the identical reason: a `run_check` line invoking two scripts would otherwise only
+        # register the first. `found` is a set, so widening to every match is a pure addition.
         for pattern in (PY_RUN, BASH_TEST_RUN, NODE_RUN):
-            m = pattern.search(stripped)
-            if m:
+            for m in pattern.finditer(stripped):
                 found.add(os.path.basename(m.group(1)))
     return found
 

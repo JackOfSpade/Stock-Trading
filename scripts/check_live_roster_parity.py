@@ -33,7 +33,6 @@ import argparse
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.bq_json import run_bq_query
 from lib.textio import load_yaml
 from lib.roster_common import roster_active_codes as _roster_active_codes_for_doc

@@ -27,6 +27,17 @@
 --                        connector holding when they drift (the connector is always truth). No cash
 --                        impact (gross/commission 0). First used 2026-06-19 to remove a +0.4722 sh
 --                        pre-connector screenshot-era capture drift (events 92.7714 -> connector 92.2992).
+--
+-- SUPERSEDED LIVE by bigquery/54_park_policy_voo_cutover.sql — current single source of truth for
+-- state.sgov_position. 54 (the 2026-07-15 SGOV->VOO park-vehicle cutover) generalizes this rollup
+-- into a vehicle-agnostic state.park_position and redefines state.sgov_position as a thin,
+-- ticker='SGOV'-filtered wrapper over it, freezing this name as the permanent SGOV-only historical
+-- record — D2 Step 0 / Operating_Protocols.md §13.A read state.park_reconciliation going forward,
+-- not this. Re-applying the CREATE below in isolation would revert the wrapper to the pre-cutover
+-- direct-from-parking_events definition, which is behavior-preserving only until a VOO parking_events
+-- row exists (54's own header: "every parking_events row is still ticker='SGOV' until the owner's
+-- manual transfer") and silently blends VOO activity back into an SGOV-named view once one does.
+-- Kept here, unmodified, for DR-rebuild apply-in-order reference only.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.sgov_position` AS
 SELECT
   SUM(CASE action WHEN 'BUY' THEN shares
@@ -54,6 +65,14 @@ FROM `stock-trading-498512.events.parking_events`;
 -- cash, expected ~$0) to the connector NLV; an UNEXPLAINED residual > ~$1 trips the §13.A hard stop.
 -- Per-strategy attribution is intentionally absent (dissolved — see header); use analytics.strategy_nav
 -- for per-strategy budget and analytics.account_reconciliation for the total NAV identity.
+--
+-- SUPERSEDED LIVE by bigquery/54_park_policy_voo_cutover.sql — current single source of truth for
+-- state.sgov_reconciliation, for the same reason as this file's state.sgov_position above: 54
+-- generalizes the comparison contract into vehicle-agnostic state.park_reconciliation and redefines
+-- this name as a frozen, ticker='SGOV'-filtered wrapper over the new state.sgov_position wrapper.
+-- D2 Step 0 / Operating_Protocols.md §13.A read state.park_reconciliation going forward. Kept here,
+-- unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement
+-- live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.sgov_reconciliation` AS
 WITH p AS (SELECT * FROM `stock-trading-498512.state.sgov_position`),
 mark AS (

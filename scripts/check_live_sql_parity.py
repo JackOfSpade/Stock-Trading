@@ -127,9 +127,7 @@ import argparse
 import os
 import re
 import subprocess  # noqa: F401 — kept so tests can monkeypatch subprocess.run/TimeoutExpired at the module level
-import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.bq_json import run_bq_query
 from lib.sql_files import normalize_kind, sql_file_paths
 from lib.textio import read_text

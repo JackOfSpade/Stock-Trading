@@ -1048,6 +1048,89 @@ def test_aggregate_alias_over_unrelated_column_does_not_false_fail(repo_copy):
     assert rc.main() == 0
 
 
+# ---- R-B/R-C: FIXED_DIVISOR only matched an infix `/` CHARACTER, so a hardcoded roster-size
+#      equal-split spelled as SAFE_DIVIDE(x, N) or DIV(x, N) instead of `x / N` evaded R-B/R-C entirely
+#      — this repo already ships SAFE_DIVIDE idiomatically (bigquery/03_twr_engine.sql, /04_analytics.sql,
+#      /100_market_only_order_guard.sql), so this restyle is ordinary, not adversarial. Reproduced against
+#      the pre-fix code: `SAFE_DIVIDE(cf.amount, 5)` in place of the real as-of-flow-date divisor printed
+#      "ROSTER CONSISTENCY: OK". FUNC_DIVISOR (scanned by the same _divisor_context()/_money_nearby()
+#      pipeline as FIXED_DIVISOR) closes this. ----
+def test_fixed_divisor_via_safe_divide_is_caught_in_derived_sql(repo_copy):
+    target = next(p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql"))
+    txt = _read(target)
+    _write(target, txt + (
+        "\n-- regression: hardcoded equal split spelled as SAFE_DIVIDE(x, N) instead of a bare `/`\n"
+        "SELECT SAFE_DIVIDE(cf.amount, 5) AS per_strategy_amount FROM cash_flows cf;\n"
+    ))
+    assert rc.main() == 1
+
+
+def test_fixed_divisor_via_div_function_is_caught_in_derived_sql(repo_copy):
+    target = next(p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql"))
+    txt = _read(target)
+    _write(target, txt + (
+        "\n-- regression: hardcoded equal split spelled as DIV(x, N) instead of a bare `/`\n"
+        "SELECT DIV(cf.amount, 5) AS per_strategy_amount FROM cash_flows cf;\n"
+    ))
+    assert rc.main() == 1
+
+
+def test_fixed_divisor_via_safe_divide_is_caught_in_dbt_reconcile(repo_copy):
+    p = rc.DBT_RECONCILE
+    txt = _read(p)
+    _write(p, txt + (
+        "\n-- regression: same SAFE_DIVIDE(x, N) restyle in the dbt reconcile test\n"
+        "SELECT SAFE_DIVIDE(amount, 5) AS expected_share FROM cash_flows\n"
+    ))
+    assert rc.main() == 1
+
+
+def test_func_divisor_with_no_money_marker_nearby_does_not_false_fail(repo_copy):
+    """FUNC_DIVISOR must go through the same money-adjacency guard as FIXED_DIVISOR, not fire on ANY
+    SAFE_DIVIDE/DIV call — an unrelated ratio computation (no amount/cash_flow/deposit anywhere nearby)
+    must stay clean, mirroring test_unrelated_slash_digit_in_derived_sql_without_amount_does_not_fail."""
+    target = next(p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql"))
+    txt = _read(target)
+    _write(target, txt + "\nSELECT SAFE_DIVIDE(win_count, 5) AS win_rate FROM t;\n")
+    assert rc.main() == 0
+
+
+# ---- R-B/R-C: this checker never stripped SQL comments before regex-scanning, unlike
+#      check_sq_version_registry.py in this same lib/ slice (which already imports and applies
+#      lib/sql_files.py's strip_sql_comments() for exactly this reason). bigquery/22_cash_flows.sql:70
+#      already carries the narration "bare ['A'..'E'] / 5 literals. BUG FIX: ..." as part of this file's
+#      own dense, ever-present historical-prose style — these fixtures mirror that real comment shape.
+#      Reproduced against the pre-fix code: both fixtures below flipped ROSTER CONSISTENCY to FAIL with
+#      zero live SQL change. ----
+def test_bare_literal_inside_sql_comment_does_not_false_fail_r_b(repo_copy):
+    target = next(p for p in rc.DERIVED_LIVE_SQL if p.endswith("22_cash_flows.sql"))
+    txt = _read(target)
+    _write(target, txt + (
+        "\n-- historical note: the old query enumerated UNNEST(['A','B','C','D','E']) AS strat directly\n"
+    ))
+    assert rc.main() == 0
+
+
+def test_amount_flavored_divisor_comment_does_not_false_fail_r_b(repo_copy):
+    target = next(p for p in rc.DERIVED_LIVE_SQL if p.endswith("22_cash_flows.sql"))
+    txt = _read(target)
+    _write(target, txt + (
+        "\n-- historical note: this view once bare-enumerated the amount split as a fixed cf.amount / 5\n"
+        "-- divisor before the roster-derived fix landed\n"
+    ))
+    assert rc.main() == 0
+
+
+def test_amount_flavored_divisor_comment_does_not_false_fail_r_c(repo_copy):
+    p = rc.DBT_RECONCILE
+    txt = _read(p)
+    _write(p, txt + (
+        "\n-- historical note: the old reconcile test hardcoded the deposit amount split as amount / 5\n"
+        "-- before the count-agnostic rewrite landed\n"
+    ))
+    assert rc.main() == 0
+
+
 # ---- R-E: the cooldown_days sub-block (a SEPARATE comparison loop from the top-level rails) —
 #      both the mismatch and the missing-key vacuous-pass directions (2026-07-17 audit) ----
 def test_cooldown_rail_disagreement_is_caught(repo_copy):
@@ -1077,6 +1160,31 @@ def test_rail_const_shape_rot_is_caught(repo_copy, capsys):
     _write(arsenal, txt.replace("8  AS n_max,", "n_max = 8,"))
     assert rc.main() == 1
     assert "rail constants" in capsys.readouterr().out
+
+
+# ---- R-E: arsenal_rails_sql_consts() used to silently keep only the LAST `<N> AS <name>` match per
+#      rail name (a plain {name: (...)} dict build over findall()'s textual order), with no duplicate
+#      detection — the same failure shape check_sq_version_registry.py's parse_registry() already guards
+#      against for its own STRUCT rows. Pinned here with a SAME-VALUE duplicate (both real n_min consts
+#      say 2, matching roster.yaml's real n_min: 2) specifically so the pre-fix silent-collapse bug is a
+#      SILENT PASS, not merely a differently-worded FAIL — the strongest form of the bug, and the one the
+#      finding's own repro (a same-value retune-documentation aside) hits. Confirmed this discriminates:
+#      reverting arsenal_rails_sql_consts() to the pre-fix one-line dict comprehension makes this exact
+#      fixture return rc.main() == 0 with no duplicate anywhere in the output, since both occurrences
+#      resolve to the SAME int and R-E's ordinary mismatch check has nothing to trip on. ----
+def test_duplicate_rail_constant_is_caught(repo_copy, capsys):
+    arsenal = rc.ARSENAL_SQL
+    txt = _read(arsenal)
+    assert "2  AS n_min," in txt, "fixture assumption about the arsenal_rails consts CTE shape drifted"
+    # A second, REAL (non-comment) `<N> AS n_min` constant elsewhere in the file — same value as the
+    # genuine one, so a last-write-wins collapse would silently keep 2 and never disagree with
+    # roster.yaml's own n_min: 2, exactly the "no parse error, exit 0" failure mode being closed.
+    _write(arsenal, txt + "\n-- regression: a second, real n_min constant appears later in the file\n"
+                          "SELECT 2 AS n_min FROM `stock-trading-498512.state.dummy_regression_probe`;\n")
+    assert rc.main() == 1
+    out = capsys.readouterr().out
+    assert "duplicate" not in out.lower()  # message says "has N `<N> AS n_min>` rail constants", not "duplicate"
+    assert "n_min` rail constants at lines" in out
 
 
 # ---- R-E: a present-but-non-integer rail value is a CLEAN error, not an int() crash (2026-07-17 fix) ----

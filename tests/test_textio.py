@@ -14,7 +14,9 @@ import warnings
 
 import pytest
 
-from lib.textio import load_yaml, read_bytes, read_text, read_text_preserving_newlines
+from lib.textio import (
+    load_yaml, read_bytes, read_text, read_text_preserving_newlines, validate_hhmm_field,
+)
 
 
 def test_read_text_and_read_bytes_agree_on_a_utf8_file_with_non_ascii_content(tmp_path):
@@ -146,3 +148,48 @@ def test_load_yaml_missing_default_returns_independent_dicts_not_a_shared_mutabl
     b = load_yaml(str(tmp_path / "gone2.yaml"))
     a["x"] = 1
     assert b == {}
+
+
+# ---- validate_hhmm_field: the single-sourced "quoted HH:MM string, else YAML base-60" guard
+# extracted 2026-09-02 ('hhmm-validation-triplicated' finding) out of THREE independent copies in TWO
+# files (check_cadence_consistency.py's checks D and I, check_cron_dst_safety.py's load_cadence()) ----
+def test_validate_hhmm_field_accepts_a_quoted_hhmm_string():
+    assert validate_hhmm_field("21:00", "ops/cadence.yaml: cadence_watch_deadline_local") is None
+    assert validate_hhmm_field("09:30", "D1: expected_trigger.time_local") is None
+
+
+def test_validate_hhmm_field_rejects_an_unquoted_int_the_base_60_trap():
+    # An unquoted `21:00` in YAML parses to the base-60 sexagesimal int 1260, not a string -- this is
+    # the exact live trap the check exists to catch (see ops/cadence.yaml's own history and
+    # check_cron_dst_safety.py's load_cadence() regression test).
+    err = validate_hhmm_field(1260, "ops/cadence.yaml: cadence_watch_deadline_local")
+    assert err is not None
+    assert "ops/cadence.yaml: cadence_watch_deadline_local must be a quoted \"HH:MM\" string" in err
+    assert "(got 1260 —" in err  # the int's own repr, not a stringified "1260"
+    assert "YAML base-60 = 1260" in err
+
+
+def test_validate_hhmm_field_rejects_a_malformed_string():
+    # Right type (str), wrong shape (single-digit hour) -- must still be rejected, not just the
+    # int-vs-str case.
+    err = validate_hhmm_field("9:30", "D1: expected_trigger.time_local")
+    assert err is not None
+    assert "D1: expected_trigger.time_local must be a quoted \"HH:MM\" string" in err
+    assert "'9:30'" in err
+
+
+def test_validate_hhmm_field_rejects_none():
+    err = validate_hhmm_field(None, "ops/cadence.yaml: cadence_watch_deadline_local")
+    assert err is not None and "None" in err
+
+
+def test_validate_hhmm_field_message_is_parameterized_by_field_name():
+    # The whole point of extracting this into a shared helper is that every call site's message
+    # carries ITS OWN field-path text, not a hardcoded one -- prove two different field_name values
+    # produce two differently-prefixed messages from the SAME function.
+    err_a = validate_hhmm_field(None, "ops/cadence.yaml: cadence_watch_deadline_local")
+    err_b = validate_hhmm_field(None, "D1: expected_trigger.time_local")
+    assert err_a.startswith("ops/cadence.yaml: cadence_watch_deadline_local must be a quoted")
+    assert err_b.startswith("D1: expected_trigger.time_local must be a quoted")
+    # ...but the shared explanatory tail (the actual rule) is byte-identical between them.
+    assert err_a.split("must be a quoted", 1)[1] == err_b.split("must be a quoted", 1)[1]

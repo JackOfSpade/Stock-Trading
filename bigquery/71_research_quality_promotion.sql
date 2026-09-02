@@ -14,6 +14,15 @@
 -- ops.loop_promotion_log UNIFIED SCHEMA (shared with any sibling loop-promotion work in this same
 -- audit pass, e.g. LC-3's cross_model_referee promotion substrate) — CREATE TABLE IF NOT EXISTS
 -- makes whichever file applies first the creator and any other a harmless no-op.
+--
+-- SUPERSEDED LIVE by bigquery/84_referee_promotion.sql — current single source of truth for
+-- ops.loop_promotion_log. The schema below carries forward BYTE-IDENTICAL: 84's own header calls its
+-- copy a "Verbatim mirror of bigquery/71's block so this file is self-contained and apply-order-
+-- tolerant" — CREATE TABLE IF NOT EXISTS means whichever of the two applies first creates the table
+-- and the other is a harmless no-op, so there is no behavior to re-derive here, only which file to
+-- treat as authoritative for future edits to the shape. Any future schema change lands as a NEW file
+-- that supersedes 84, never as an edit to either definition in place. Kept here, unmodified, for
+-- DR-rebuild apply-in-order reference only.
 
 CREATE TABLE IF NOT EXISTS `stock-trading-498512.ops.loop_promotion_log` (
   promotion_id STRING DEFAULT GENERATE_UUID(),

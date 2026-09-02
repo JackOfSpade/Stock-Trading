@@ -5,9 +5,10 @@ WHY THIS EXISTS. This system's real source code is prose (Strategy.md, Operating
 Claude_Task_Plan.md routine bodies) read fresh by an LLM every routine run. Every existing CI check
 (scripts/check_cadence_consistency.py, check_roster_consistency.py, check_autonomy_consistency.py,
 split_strategy.py --check) is a STRUCTURAL fact scraper — none of them evaluate what a routine would
-DECIDE when it reads the prose. tests/golden_scenarios/scenarios.yaml pins 31 concrete decision
-scenarios (regime-router edge cases, kill-trigger/gate mechanics, per-strategy entry criteria, the AI
-Park Allocator's daily call, the AI Research-Significance Screen) with an expected GO/NO-GO |
+DECIDE when it reads the prose. tests/golden_scenarios/scenarios.yaml pins concrete decision scenarios
+(34 as of 2026-09-02 — see that file's own header for the current count and per-category/per-governing-
+file breakdown; regime-router edge cases, kill-trigger/gate mechanics, per-strategy entry criteria, the
+AI Park Allocator's daily call, the AI Research-Significance Screen) with an expected GO/NO-GO |
 CONTINUE/TERMINATE | ACTIVATE/DO-NOT-ACTIVATE call and the specific rule that produces it. This script
 is the runner.
 
@@ -490,6 +491,19 @@ def validate_offline(scenarios):
     scenarios.yaml now declares governing_sections widely, and the per-scenario report is routine output.)"""
     errors = []
     seen_ids = set()
+    # PERF FIX (validate-offline-redundant-heading-reparse): governing_sections validation used to open,
+    # read, and heading-parse each governing file FRESH for every (scenario, governing_files-entry) pair,
+    # even though the same file is scoped by many scenarios (measured against the live scenarios.yaml:
+    # Strategy.md by 18, Claude_Task_Plan.md by 12, Operating_Protocols.md by 11, Experiment_Parameters.md
+    # by 6) and its on-disk content is static for the whole duration of one validate_offline() call. Worse,
+    # the anchors-ok branch below then called extract_sections(), which INTERNALLY re-ran _document_headings()
+    # a second time on the same text — so a file scoped by N scenarios got 2N full-document heading scans in
+    # one run instead of 1. This dict caches (file_text, headings) per governing-file path across the whole
+    # scenarios loop, and the computed `headings` is threaded straight into extract_sections() below (see its
+    # own optional `headings` parameter) so that second internal scan is skipped too. Unlike
+    # _read_governing_text()'s `file_cache` (shared across a --live RUN, passed in by the caller), this cache
+    # is local and offline-only — validate_offline() has no caller-shared cache to reuse, so it keeps its own.
+    gov_file_cache = {}
     for i, sc in enumerate(scenarios):
         label = sc.get("id", f"<index {i}>") if isinstance(sc, dict) else f"<index {i}>"
         if not isinstance(sc, dict):
@@ -579,22 +593,33 @@ def validate_offline(scenarios):
                     full_path = os.path.join(ROOT, gf)
                     if not os.path.isfile(full_path):
                         continue  # already reported as a missing governing_file by the gov-files loop above
-                    try:
-                        with open(full_path, encoding="utf-8") as fh:
-                            file_text = fh.read()
-                    # BUG FIX (2026-08-31 code-quality pass): UnicodeDecodeError is a ValueError
-                    # subclass, not an OSError, so a governing file with invalid UTF-8 bytes (e.g. a
-                    # stray non-UTF-8 paste into Strategy.md/Operating_Protocols.md/Claude_Task_Plan.md/
-                    # Experiment_Parameters.md) used to escape this handler and crash validate_offline()
-                    # with a raw traceback instead of the clean, listed schema error below — exactly the
-                    # failure mode main()'s own `except (OSError, ValueError, yaml.YAMLError)` around
-                    # load_scenarios() already guards against for the same kind of read.
-                    except (OSError, UnicodeDecodeError) as exc:
-                        errors.append(
-                            f"{label}: could not read '{gf}' to validate governing_sections anchors: {exc}"
-                        )
-                        continue
-                    headings = _document_headings(file_text)
+                    # Cache hit: a prior scenario already read+heading-parsed this exact governing file this
+                    # run (gov_file_cache is keyed by repo-relative path and shared across the WHOLE scenarios
+                    # loop above — see the comment where it's initialized). A read/decode FAILURE is
+                    # deliberately never cached, so a broken file still gets its own error reported for every
+                    # scenario that references it, unchanged from pre-cache behavior — only a successful
+                    # (file_text, headings) pair is worth memoizing.
+                    cached = gov_file_cache.get(gf)
+                    if cached is not None:
+                        file_text, headings = cached
+                    else:
+                        try:
+                            with open(full_path, encoding="utf-8") as fh:
+                                file_text = fh.read()
+                        # BUG FIX (2026-08-31 code-quality pass): UnicodeDecodeError is a ValueError
+                        # subclass, not an OSError, so a governing file with invalid UTF-8 bytes (e.g. a
+                        # stray non-UTF-8 paste into Strategy.md/Operating_Protocols.md/Claude_Task_Plan.md/
+                        # Experiment_Parameters.md) used to escape this handler and crash validate_offline()
+                        # with a raw traceback instead of the clean, listed schema error below — exactly the
+                        # failure mode main()'s own `except (OSError, ValueError, yaml.YAMLError)` around
+                        # load_scenarios() already guards against for the same kind of read.
+                        except (OSError, UnicodeDecodeError) as exc:
+                            errors.append(
+                                f"{label}: could not read '{gf}' to validate governing_sections anchors: {exc}"
+                            )
+                            continue
+                        headings = _document_headings(file_text)
+                        gov_file_cache[gf] = (file_text, headings)
                     anchors_ok = True
                     checked_keys = set()
                     for a in anchors:
@@ -631,7 +656,10 @@ def validate_offline(scenarios):
                     # The percentage is reported for context but does NOT decide the advisory — that is an
                     # absolute byte floor; see MIN_EXCERPT_BYTES / _excerpt_size_verdict() for why.
                     if anchors_ok:
-                        excerpt_text, n_blocks, n_anchors = extract_sections(file_text, anchors)
+                        # Pass the already-computed `headings` through so extract_sections() doesn't re-run
+                        # _document_headings() over this same full_text a second time (see the gov_file_cache
+                        # comment above — this was the other half of the redundant-reparse fix).
+                        excerpt_text, n_blocks, n_anchors = extract_sections(file_text, anchors, headings=headings)
                         full_bytes = len(file_text.encode("utf-8"))
                         excerpt_bytes = len(excerpt_text.encode("utf-8"))
                         pct = (100.0 * excerpt_bytes / full_bytes) if full_bytes else 0.0
@@ -1425,8 +1453,25 @@ def build_batch_prompt(group, gov_text, id_to_scenario=None):
 # model's exact markdown habits are not something this repo controls. The id itself is captured verbatim
 # and compared CASE-SENSITIVELY against the caller's real ids in parse_batch_reply() — a model that
 # mangled/invented the id must not fuzzy-match onto a real one.
+#
+# BUG FIX (batch-decision-line-hijack, verified against live parse_batch_reply()): this pattern was
+# applied with .search() on the RAW line, i.e. it could match a "DECISION[<id>]:" shape ANYWHERE in a
+# line, not just at line-start. A free-text RATIONALE line for one scenario that happens to mention a
+# sibling scenario's id in that literal shape — plausible, since BATCH_EVAL_PROMPT_TEMPLATE groups
+# scenarios that share governing files and scenarios.yaml deliberately cross-references siblings (e.g.
+# "Same facts as KT-01 except...") — could hijack that sibling's line via parse_batch_reply()'s own
+# documented "last occurrence wins" rule, silently overwriting an already-correctly-parsed decision with
+# text lifted out of someone else's rationale. Reproduced directly: parse_batch_reply() on a reply whose
+# KT-02 rationale read "...would instead force DECISION[KT-01]: TERMINATE, so KT-02 itself still
+# continues" clobbered KT-01's real, earlier "CONTINUE" answer with "TERMINATE, so KT-02 itself still
+# continues." — a silently wrong grade for a scenario the model actually answered correctly. The sibling
+# _SINGLE_DECISION_RE below already identified and closed this exact hijack risk for the single-scenario
+# path (anchored + .match()); this pattern now gets the same treatment — anchored with '^' and applied via
+# .match() against each line.strip() in parse_batch_reply(), never .search() — so a DECISION[<id>]: marker
+# must be the start of its own line, matching BATCH_EVAL_PROMPT_TEMPLATE's own contract that the marker is
+# always its own line ("no other lines mixed in among them").
 _BATCH_DECISION_RE = re.compile(
-    r"[*_`\s]*DECISION[*_`\s]*\[\s*(?P<id>[^\]]*?)\s*\][*_`\s]*:\s*(?P<decision>.*)",
+    r"^[*_`\s]*DECISION[*_`\s]*\[\s*(?P<id>[^\]]*?)\s*\][*_`\s]*:\s*(?P<decision>.*)",
     re.IGNORECASE,
 )
 
@@ -1460,7 +1505,7 @@ def parse_batch_reply(reply, ids):
             return result
         id_set = set(ids)
         for line in reply.splitlines():
-            m = _BATCH_DECISION_RE.search(line)
+            m = _BATCH_DECISION_RE.match(line.strip())
             if not m:
                 continue
             found_id = (m.group("id") or "").strip()
@@ -1633,7 +1678,7 @@ def _ancestor_breadcrumb(headings, idx):
     return chain
 
 
-def extract_sections(full_text, anchors):
+def extract_sections(full_text, anchors, headings=None):
     """Extract and assemble the scoped excerpt of `full_text` selected by `anchors` (a list of heading-line
     strings — see the governing_sections schema in the SECTION SCOPING comment above). Returns
     (excerpt_text, n_blocks, n_anchors):
@@ -1645,13 +1690,21 @@ def extract_sections(full_text, anchors):
       * n_anchors    — the number of DISTINCT (de-duplicated) anchors in `anchors` that resolved to exactly
         one heading — the denominator render_scoped_block() below reports in its "K of N sections" label.
 
+    `headings` (PERF FIX, validate-offline-redundant-heading-reparse) is OPTIONAL: a caller that already
+    ran _document_headings(full_text) itself (validate_offline() does, to check anchor match-counts before
+    ever calling this function) can pass that result straight through and skip a second full-document
+    heading scan of the SAME text. When omitted (None — every pre-existing call site: render_scoped_block(),
+    the test file), this function computes it itself exactly as before, so this parameter is purely additive
+    and changes no caller's behavior.
+
     CALLER CONTRACT: validate_offline() is the hard gate that guarantees every anchor reaching this function
     in a real CI run matches exactly one heading. This function stays DEFENSIVE anyway (an anchor matching
     zero or 2+ headings is silently skipped, never raises) so it stays safe to call from inside
     validate_offline() itself — to compute the size report — even while that same anchor's own zero/
     ambiguous-match error is still being assembled by the caller, and so a caller never sees an excerpt
     silently include text twice for an unresolved anchor."""
-    headings = _document_headings(full_text)
+    if headings is None:
+        headings = _document_headings(full_text)
     lines = full_text.splitlines()
 
     seen_keys = []

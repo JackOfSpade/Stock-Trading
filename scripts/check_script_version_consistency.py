@@ -15,15 +15,12 @@ Usage:  python scripts/check_script_version_consistency.py    # exit 0 if consis
 """
 import os
 import re
-import sys
 
 # ORGANIZATION FIX (2026-08-31 code-quality pass, contracts#2): this file predates lib.textio.py
 # (2026-07-15 vs 2026-07-29) and its two bare open(path, encoding="utf-8").read() call sites survived
 # the 2026-08-08 whole-repo consolidation pass untouched -- every sibling checker on this audit surface
 # (check_handoff_contracts.py, check_superseded_by_discipline.py, check_superseded_markers.py,
-# check_sq_version_registry.py) already reads through lib.textio.read_text() exclusively. Same
-# sys.path.insert + import idiom those siblings use.
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# check_sq_version_registry.py) already reads through lib.textio.read_text() exclusively.
 from lib.report import fail_or_ok
 from lib.textio import read_text
 

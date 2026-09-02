@@ -58,6 +58,17 @@ WHERE NOT EXISTS (SELECT 1 FROM `stock-trading-498512.events.cash_flows` WHERE s
 -- If this ever returns a row, the backfill above does NOT reproduce history and the redefined views
 -- below would shift the NAV/tripwire/sizing baseline on first read -- STOP and investigate before
 -- relying on analytics.strategy_nav / analytics.account_reconciliation.
+--
+-- SUPERSEDED LIVE by bigquery/148_audit_2026_08_08_fixes.sql (chain: 22 -> 68 -> 148) — current
+-- single source of truth for state.cash_flows_backfill_check. 68 DATE-SCOPED the comparison to
+-- `flow_date <= DATE '2026-07-03'` (the backfill's own effective date) so the check stays meaningful
+-- forever instead of flipping FALSE the instant any legitimate future deposit/withdrawal is
+-- recorded. 148 then wrapped the `reconciled` equality in COALESCE(..., FALSE): the version below
+-- reads `reconciled` as NULL (not FALSE) if the backfill rows were ever fully deleted (SUM over zero
+-- matching rows is NULL), and the consumer's `WHERE NOT reconciled` silently drops a NULL row, so
+-- the alert never raises in exactly the total-loss corruption case this check exists to catch. Kept
+-- here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE OR
+-- REPLACE VIEW statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.cash_flows_backfill_check` AS
 SELECT
   (SELECT ROUND(SUM(amount), 2) FROM `stock-trading-498512.events.cash_flows`) AS cash_flows_total,

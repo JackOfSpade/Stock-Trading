@@ -206,10 +206,17 @@ except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
     raise SystemExit(2) from None
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.textio import read_bytes, read_text, load_yaml
 from lib.md_fence import fence_mask
 from lib.roster_common import roster_active_codes
+# strip_sql_comments() -- shared with check_sq_version_registry.py / check_superseded_markers.py --
+# blanks `--`/`/* */` SQL comments to spaces (preserving every byte offset and newline) before R-B/R-C's
+# BARE_LITERAL/FIXED_DIVISOR/FUNC_DIVISOR scans and arsenal_rails_sql_consts()'s RAIL_CONST scan run over
+# the text (roster-group bug, 2026-09-02: this checker read raw SQL text directly and had NO comment
+# stripping anywhere, unlike check_sq_version_registry.py in this same lib/ slice, so a documentation
+# aside narrating the exact forbidden pattern -- e.g. this file's own dense "BUG FIX: ..." comment style --
+# could flip R-B/R-C/R-E false-FAIL or false-PASS with zero live SQL change; see the call sites below).
+from lib.sql_files import strip_sql_comments
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ROSTER = os.path.join(ROOT, "strategy", "roster.yaml")
@@ -351,6 +358,20 @@ BARE_LITERAL = re.compile(r"\[\s*(['\"])[A-Z]{1,3}\1\s*[,\]]")
 # A fixed equal-split divisor `/ N` for ANY integer N (R-B / R-C forbid a fixed divisor, and the roster
 # size is not always 5 — SISA resizes N autonomously — so match any /<int>, not just /5).
 FIXED_DIVISOR = re.compile(r"/\s*\d+\b")
+# BUG FIX (roster-group finding, 2026-09-02, CI-BLOCKING fixed-divisor evasion, VERIFIED CONFIRMED against
+# a scratch repo copy): FIXED_DIVISOR only matches an infix `/` CHARACTER. BigQuery Standard SQL also
+# supports SAFE_DIVIDE(x, y) and DIV(x, y) as ordinary divide operations -- and this repo already ships
+# SAFE_DIVIDE idiomatically elsewhere (bigquery/03_twr_engine.sql, bigquery/04_analytics.sql,
+# bigquery/100_market_only_order_guard.sql) -- so restyling a forbidden `cf.amount / 5` equal-split as
+# `SAFE_DIVIDE(cf.amount, 5)` is an ORDINARY restyle in this codebase's own idiom, not a contrived
+# adversarial input, and it evaded R-B/R-C entirely: reproduced end-to-end, replacing the live as-of-
+# flow-date divisor with `SAFE_DIVIDE(cf.amount, 5)` still printed "ROSTER CONSISTENCY: OK". FUNC_DIVISOR
+# matches that same fixed-literal-N shape through either function call and is scanned by the identical
+# _divisor_context() / _money_nearby() / money_aliases pipeline as FIXED_DIVISOR below -- the money marker
+# sits INSIDE the same call (e.g. `SAFE_DIVIDE(cf.amount, 5)`), so the adjacency guard passes trivially,
+# with no new false-positive risk. `[^,()]*` (not `.*`) keeps the first-argument scan from crossing into an
+# unrelated later divide call sharing the same statement.
+FUNC_DIVISOR = re.compile(r"\b(?:SAFE_DIVIDE|DIV)\s*\(\s*[^,()]*,\s*\d+\s*\)", re.I)
 # A SIMPLE `<col> AS <alias>` binding — one identifier, optionally table-qualified (`cf.amount`), followed
 # by `AS <alias>` (case-insensitive). Deliberately restricted to a single bare identifier on the source
 # side (NOT an arbitrary expression like `a + b AS x`) so alias resolution stays the same precise
@@ -810,8 +831,50 @@ def spec_hash_module_coverage_gaps(spec_inputs=None):
 
 
 def arsenal_rails_sql_consts():
-    txt = read_text(ARSENAL_SQL)
-    return {name: int(val) for val, name in RAIL_CONST.findall(txt)}
+    """R-E: ({rail_name: int value}, [duplicate-rail error strings]) parsed from bigquery/35_strategy_
+    arsenal_sql's `consts AS (SELECT <N> AS <name>, ...)` CTE.
+
+    BUG FIX (roster-group finding, 2026-09-02). This used to be a one-line dict comprehension —
+    `{name: int(val) for val, name in RAIL_CONST.findall(txt)}` — over the RAW (uncommented) file text,
+    in textual order. That silently keeps only the LAST match per rail name with no duplicate-value
+    detection: the identical failure shape check_sq_version_registry.py's parse_registry() already
+    guards against for its own STRUCT rows (see that function's docstring: "A plain {name: (...)} dict
+    build silently collapses two ... rows sharing the same ... name to whichever one finditer() visits
+    LAST — no parse error, exit 0."). Reproduced against the pre-fix code: appending a plausible retune-
+    documentation comment after the real `2  AS n_min,` line — `-- (if the floor is ever relaxed again:
+    1  AS n_min)`, in this repo's own commit-history style (CLAUDE.md's "2026-08-30 retune" notes
+    narrate exactly this shape of alternative-value aside) — made this function return n_min=1 instead
+    of the live 2, since the comment's match sits textually LATER, and R-E printed a false
+    "roster.yaml rails.n_min=2 but ... arsenal_rails.n_min=1" mismatch with zero actual SQL/YAML
+    disagreement. The same last-write-wins mechanism fails open in the OTHER direction too: a stale
+    comment repeating an OLD value positioned after a genuinely-changed live constant would make R-E
+    silently PASS despite real rails drift.
+
+    strip_sql_comments() FIRST closes the comment half of that hole (a `-- ... AS n_min)` aside can
+    never contribute a match once blanked). Tracking every line each rail name is matched on — not just
+    the value — closes the other half: a genuine duplicate (two REAL, non-comment `<N> AS <name>`
+    constants for the same rail) is now a reported R-E error naming both line numbers, instead of one
+    silently shadowing the other with no signal at all. The existing `len(sql_consts) < len(RAIL_NAMES)`
+    undercount guard at this function's call site stays as-is — it is unaffected by (and redundant with,
+    for the duplicate case) this fix, but still the only guard for a genuine miss (a `<N> AS <name>`
+    shape change dropping a rail's match count to zero)."""
+    txt = strip_sql_comments(read_text(ARSENAL_SQL))
+    lines_by_name = {}
+    sql_consts = {}
+    for m in RAIL_CONST.finditer(txt):
+        val, name = m.group(1), m.group(2)
+        lines_by_name.setdefault(name, []).append(_line_no(txt, m.start()))
+        sql_consts[name] = int(val)     # last-in-textual-order value; flagged below if not unique
+    errors = []
+    for name, seen_at in sorted(lines_by_name.items()):
+        if len(seen_at) > 1:
+            errors.append(
+                f"R-E: bigquery/35_strategy_arsenal.sql has {len(seen_at)} `<N> AS {name}` rail "
+                f"constants at lines {', '.join(str(n) for n in seen_at)} — arsenal_rails_sql_consts() "
+                f"used to silently keep only the LAST one, the identical bug class check_sq_version_"
+                f"registry.py's parse_registry() already guards against for its own STRUCT rows. Keep "
+                f"exactly one `<N> AS {name}` constant in the consts CTE.")
+    return sql_consts, errors
 
 
 def _compare_rails(mapping, container, prefix, sql_consts, errors):
@@ -1063,7 +1126,15 @@ def main():
         if not os.path.exists(path):
             errors.append(f"R-B: expected roster-derived file {rel} is missing")
             continue
-        txt = read_text(path)
+        # strip_sql_comments() FIRST (roster-group bug, 2026-09-02): this checker used to regex-scan
+        # the RAW file text, so a documentation comment narrating the exact forbidden pattern (this
+        # file's own dense "BUG FIX: ..." prose style already puts `/ 5` literals in a comment right
+        # next to bigquery/22_cash_flows.sql's real fix) could match BARE_LITERAL/FIXED_DIVISOR and
+        # false-FAIL this CI-BLOCKING gate with zero live SQL change — check_sq_version_registry.py
+        # (same lib/ slice) already strips comments before its own regex scans for this exact reason.
+        # strip_sql_comments() blanks stripped characters to spaces and keeps every newline, so every
+        # _line_no()/_divisor_context() byte offset below still lands on the right line unchanged.
+        txt = strip_sql_comments(read_text(path))
         for m in BARE_LITERAL.finditer(txt):
             n = _line_no(txt, m.start())
             snippet = " ".join(m.group(0).split())
@@ -1078,6 +1149,16 @@ def main():
             if _money_nearby(ctx, ("amount",), money_aliases):
                 errors.append(f"R-B: {rel}:{n} still has a fixed `/ N` equal-split divisor — use an "
                               f"as-of-flow-date COUNT(*) FROM state.strategy_roster: {ctx.strip()}")
+        # FUNC_DIVISOR: the same fixed-N equal-split divisor spelled as SAFE_DIVIDE(x, N) / DIV(x, N)
+        # instead of a bare `/` (see FUNC_DIVISOR's own comment above for why this evaded R-B entirely
+        # until now). Reuses the identical _divisor_context()/_money_nearby()/money_aliases pipeline —
+        # the money marker sits INSIDE the matched call itself, so the adjacency guard passes trivially.
+        for m in FUNC_DIVISOR.finditer(txt):
+            n, ctx = _divisor_context(txt, m)
+            if _money_nearby(ctx, ("amount",), money_aliases):
+                errors.append(f"R-B: {rel}:{n} still has a fixed SAFE_DIVIDE/DIV(x, N) equal-split "
+                              f"divisor — use an as-of-flow-date COUNT(*) FROM state.strategy_roster: "
+                              f"{ctx.strip()}")
 
     # ---- R-C: count-agnostic dbt reconcile test ----
     if not os.path.exists(DBT_RECONCILE):
@@ -1093,7 +1174,9 @@ def main():
         # still found when the wrap separates it from the divisor. money_aliases: same alias-resolution
         # layer as R-B (codebase audit 2026-07-26) so an aliased money column (e.g. `cf.amount AS raw`
         # then `SUM(raw) / 5`) still trips this guard — see _money_alias_names() docstring.
-        txt = read_text(DBT_RECONCILE)
+        # strip_sql_comments() first, mirroring R-B above — same false-FAIL-on-a-doc-comment exposure
+        # (roster-group bug, 2026-09-02) applies equally to this file's own dense inline commentary.
+        txt = strip_sql_comments(read_text(DBT_RECONCILE))
         money_aliases = _money_alias_names(txt, ("amount", "cash_flow", "deposit"))
         for m in FIXED_DIVISOR.finditer(txt):
             n, ctx = _divisor_context(txt, m)
@@ -1101,6 +1184,14 @@ def main():
                 errors.append(f"R-C: dbt/tests/assert_cash_flows_reconcile.sql:{n} hardcodes the roster "
                               f"size (a `/ N` amount-split assumption) — the reconciliation must be "
                               f"count-agnostic (per-strategy sum): {ctx.strip()}")
+        # FUNC_DIVISOR: SAFE_DIVIDE(x, N) / DIV(x, N) spelling of the same forbidden fixed-N divisor —
+        # see R-B's identical FUNC_DIVISOR loop above for the full rationale.
+        for m in FUNC_DIVISOR.finditer(txt):
+            n, ctx = _divisor_context(txt, m)
+            if _money_nearby(ctx, ("amount", "cash_flow", "deposit"), money_aliases):
+                errors.append(f"R-C: dbt/tests/assert_cash_flows_reconcile.sql:{n} hardcodes the roster "
+                              f"size (a SAFE_DIVIDE/DIV(x, N) amount-split assumption) — the "
+                              f"reconciliation must be count-agnostic (per-strategy sum): {ctx.strip()}")
 
     # ---- R-D: per-strategy routines named in roster.yaml exist in cadence.yaml ----
     if not os.path.exists(CADENCE):
@@ -1121,7 +1212,8 @@ def main():
         errors.append("R-E: bigquery/35_strategy_arsenal.sql absent but strategy/roster.yaml has a rails "
                       "block — nothing to compare arsenal_rails' SQL constants against")
     else:
-        sql_consts = arsenal_rails_sql_consts()
+        sql_consts, rail_dup_errors = arsenal_rails_sql_consts()
+        errors.extend(rail_dup_errors)
         if len(sql_consts) < len(RAIL_NAMES):
             errors.append(f"R-E: parsed only {len(sql_consts)}/{len(RAIL_NAMES)} rail constants from "
                           f"bigquery/35_strategy_arsenal.sql's consts CTE — did the `<N> AS <name>` shape "

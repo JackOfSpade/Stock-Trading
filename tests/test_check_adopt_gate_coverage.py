@@ -335,6 +335,49 @@ def test_postmerge_step_not_found_fails_loudly(tmp_path, monkeypatch, capsys):
     assert "could not locate" in out
 
 
+# ---- adopt-gate-search-drops-second-match-per-line: two scripts chained on one run: line --------
+
+def test_required_identifiers_captures_both_scripts_chained_on_one_line():
+    """Regression for adopt-gate-search-drops-second-match-per-line. `pattern.search(line)` finds
+    only the FIRST match on a physical line, so a `run:` line invoking two scripts with `&&` -- a
+    normal shell idiom -- silently dropped the second script from `required`, making it invisible
+    to both the precondition-5 comparison and the postmerge-mirror comparison. No live ci.yml step
+    chains two scripts on one line today (every checks-job step runs exactly one script per `run:`
+    line, verified by grep), so this fixture is synthetic -- but nothing enforces that convention,
+    and a future step consolidation (this repo has done exactly that before, for CI-minute cost
+    reasons) could reintroduce this shape with the checker itself reporting OK throughout."""
+    steps = [{"name": "chained pair", "run": "python scripts/a.py && python scripts/b.py"}]
+    required = cs.required_identifiers(steps)
+    idents = {i for i, _ in required}
+    assert idents == {"a.py", "b.py"}
+
+
+def test_missing_second_chained_script_is_caught_end_to_end(tmp_path, monkeypatch, capsys):
+    """End-to-end version of the same regression: a ci.yml step chaining two scripts on one line,
+    with precondition 5's prose naming only the first, must FAIL. Pre-fix, `.search()` never even
+    asked whether the second script was required, so this passed regardless of the prose -- a
+    weaker-than-CI local gate exactly like the six-script gap this whole script exists to catch."""
+    wire(
+        tmp_path, monkeypatch,
+        steps=[{"name": "chained pair",
+                "run": ("python scripts/check_cadence_marker.py && "
+                        "python scripts/check_cron_dst_safety.py")}],
+        script_mentions=["check_cadence_marker.py"],  # second script NOT mentioned
+    )
+    assert cs.main() == 1
+    out = capsys.readouterr().out
+    assert "check_cron_dst_safety.py" in out
+    assert "FAIL" in out
+
+
+def test_postmerge_step_identifiers_captures_both_scripts_on_one_run_check_line():
+    """Same fix, the postmerge-mirror extraction function (roster#0's second hand-kept ci.yml
+    copy). A `run_check` line invoking two scripts must register both, not just the first."""
+    step = {"run": "run_check python scripts/a.py && python scripts/b.py\n"}
+    found = cs.postmerge_step_identifiers(step)
+    assert found == {"a.py", "b.py"}
+
+
 # ---- the real repo must satisfy its own contract -----------------------------------------------
 
 def test_real_repo_passes_the_adopt_gate_coverage_check():

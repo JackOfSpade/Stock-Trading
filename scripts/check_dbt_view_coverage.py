@@ -31,7 +31,6 @@ except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
     raise SystemExit(2) from None
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.sql_files import DBT_DATASETS, numbered_sql_files, strip_sql_comments
 from lib.textio import load_yaml, read_text
 
@@ -53,13 +52,31 @@ DBT_SOURCES_YML = os.path.join(ROOT, "dbt", "models", "sources.yml")
 # on it, which is why that caller's order was the one kept.
 DATASETS = DBT_DATASETS
 
+# ANCHORED at column 0 (^, re.MULTILINE) — 2026-09-02 adversarial review. Before this fix these two
+# matched CREATE OR REPLACE VIEW / DROP VIEW ANYWHERE in the comment-stripped text, with no defense
+# against a string literal: check_live_sql_parity.py's sibling CREATE_STMT/DROP_STMT regexes already
+# anchor the same way, specifically so a CREATE/DROP embedded in a FORMAT()/EXECUTE IMMEDIATE payload
+# (the documented bigquery/17_restore_drill.sql idiom) can never match — see that module's own
+# "KNOWN, ACCEPTED LIMIT" comment. Reproduced live here: a file whose only top-level statement is a
+# PROCEDURE containing `EXECUTE IMMEDIATE "CREATE OR REPLACE VIEW ...`stock-trading-498512.state.x`
+# AS SELECT 1";` registered state.x as a phantom "live view" — an object never actually created by a
+# real top-level DDL statement, just referenced inside a dynamic-SQL string. That phantom then fed
+# main()'s `uncovered = sorted(live - covered)` as pure noise in a report whose whole stated value
+# (module docstring) is "a trustworthy count." A genuine top-level CREATE/DROP VIEW always starts a
+# line at column 0 in this repo's DDL, so the anchor alone closes the reproduced case: the payload
+# above sits indented inside a quoted string, never at column 0. Residual, deliberately-accepted
+# limit (matching DROP_STMT's own precedent): a column-0 CREATE/DROP VIEW inside a TRIPLE-quoted,
+# multi-line EXECUTE IMMEDIATE string would still match — no string-literal masking is added here to
+# close that, because today's only triple-quoted EXECUTE IMMEDIATE blocks (bigquery/75) contain only
+# EXPORT DATA, never a column-0 CREATE/DROP, and lib.sql_files has no literal-masking helper to reuse
+# (strip_sql_comments() deliberately copies literals verbatim rather than masking them).
 VIEW_DDL = re.compile(
-    r"CREATE\s+OR\s+REPLACE\s+VIEW\s+`stock-trading-498512\.(state|analytics|perf)\.(\w+)`",
-    re.IGNORECASE,
+    r"^CREATE\s+OR\s+REPLACE\s+VIEW\s+`stock-trading-498512\.(state|analytics|perf)\.(\w+)`",
+    re.IGNORECASE | re.MULTILINE,
 )
 DROP_VIEW_DDL = re.compile(
-    r"DROP\s+VIEW\s+(?:IF\s+EXISTS\s+)?`stock-trading-498512\.(state|analytics|perf)\.(\w+)`",
-    re.IGNORECASE,
+    r"^DROP\s+VIEW\s+(?:IF\s+EXISTS\s+)?`stock-trading-498512\.(state|analytics|perf)\.(\w+)`",
+    re.IGNORECASE | re.MULTILINE,
 )
 
 

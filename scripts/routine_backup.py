@@ -57,7 +57,6 @@ import tempfile
 import uuid
 from datetime import datetime, timezone
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.routine_manifest import cadence_routines
 from lib.textio import load_yaml
 
@@ -113,12 +112,6 @@ SCOPE_ADDENDUM = ("\n\nDo not give final response until you have resolved every 
 # routine currently carrying this value so it is never silently mistaken for a real schedule.
 CRON_UNCONFIRMED = "TO_POPULATE"
 
-# Volatile RemoteTrigger response fields that create pure diff noise (server-timestamped or
-# server-assigned, never something a human edits) -- normalize_trigger() strips these BY CONSTRUCTION:
-# it only ever copies the named fields below into the canonical shape, so an ingest can never leak
-# next_run_at / last_fired_at / updated_at / created_at / ended_reason / suspension_reason /
-# api_token_hint / creator, or job_config.ccr.session_context.outcomes (the auto-assigned
-# `claude/<random>` working branch a run happens to land on).
 FLEET_REPO_URL = "https://github.com/JackOfSpade/Stock-Trading"
 
 # ---- the 7 MCP connectors (owner-supplied 2026-08-01) ----------------------------------------------
@@ -299,8 +292,9 @@ def normalize_trigger(raw):
     """One RemoteTrigger list/get response element -> the canonical, volatile-stripped shape used
     throughout this module. Only ever COPIES the named fields below out of `raw` -- next_run_at,
     last_fired_at, updated_at, created_at, ended_reason, suspension_reason, api_token_hint, creator,
-    and session_context.outcomes are never read, so they can never leak into ops/routine_backup.json
-    regardless of what a real API response happens to include.
+    and session_context.outcomes (the auto-assigned `claude/<random>` working branch a run happens to
+    land on) are never read, so they can never leak into ops/routine_backup.json regardless of what a
+    real API response happens to include.
 
     PER-CONNECTION POLICY FIELDS (2026-08-08): each mcp_connections element also copies
     permitted_tools, tool_policy_overrides, and clear_tool_policy_overrides -- see the module
@@ -659,9 +653,17 @@ def ingest(path):
         # to silently resolve by priority -- with a stale/duplicated ops/trigger_ids.json that would
         # overwrite the WRONG routine's stored config. Record it loudly and leave every existing entry
         # untouched rather than guess.
-        conflict = match_conflict(normalized, trigger_ids_doc, triggers_doc)
-        if conflict is not None:
-            tid_rid, instr_rid = conflict
+        #
+        # DEDUPED LOOKUP (quality pass 2026-09-02): match_conflict() and match_routine_id() each
+        # independently recompute _trigger_id_match()/_instruction_match() over this same normalized
+        # trigger -- calling both back-to-back (as this loop used to) redid the identical two linear
+        # scans a second time for nothing. Compute each match ONCE here and derive both the conflict
+        # check and the resolved id from these two locals, mirroring the two functions' own bodies
+        # exactly (match_conflict()/match_routine_id() are left unedited -- still directly unit-tested
+        # below -- only this call site changes).
+        tid_rid = _trigger_id_match(normalized["trigger_id"], trigger_ids_doc)
+        instr_rid = _instruction_match(normalized["instruction"], triggers_doc)
+        if tid_rid is not None and instr_rid is not None and tid_rid != instr_rid:
             conflicts.append({
                 "trigger_id": normalized["trigger_id"],
                 "trigger_id_routine": tid_rid,
@@ -669,7 +671,7 @@ def ingest(path):
             })
             continue
 
-        rid = match_routine_id(normalized, trigger_ids_doc, triggers_doc)
+        rid = tid_rid if tid_rid is not None else instr_rid
         if rid is None and is_personal(normalized):
             rid = _personal_id(normalized["name"])
         if rid is None:
@@ -702,12 +704,33 @@ def ingest(path):
         #
         # Resolution mirrors B5: record it loudly, keep the FIRST-filed entry, and let cmd_ingest's
         # existing non-zero exit surface it, rather than silently picking a side.
-        claimant = claimed_by.get(rid)
-        if claimant is not None and claimant != normalized["trigger_id"]:
+        #
+        # BUG FIX (routine-backup#3, 2026-09-02): this guard used to be `claimant is not None and
+        # claimant != normalized["trigger_id"]` -- the identical `None == None` null-coalescing
+        # accident _trigger_id_match() was fixed for one call earlier in this same file
+        # (routine-backup#1, see that function's docstring), reintroduced fresh in this guard the very
+        # next audit pass. `claimed_by[rid]` is set to `normalized["trigger_id"]`, which is legitimately
+        # None when a raw has no id/trigger_id field at all (normalize_trigger()'s `raw.get("id") or
+        # raw.get("trigger_id")`) -- and _dedup_raw_triggers() deliberately keeps every id-less raw as
+        # its own entry rather than collapsing them (its own docstring). So two DISTINCT id-less live
+        # triggers that both resolve to the same rid via the instruction fallback (e.g. D1 recreated
+        # without deleting the old trigger, and the operator's saved payload for the new one happens to
+        # be missing its id field too) hit `claimant is not None` == False on the second one -- the
+        # duplicate guard never fires, and the second raw silently overwrites doc["routines"][rid] with
+        # zero record anywhere (not conflicts, not _unmatched) that a second live trigger ever existed.
+        # Reproduced: two id-less raws both resolving to D1 landed as one "added" entry with the SECOND
+        # raw's data, no conflict recorded at all.
+        #
+        # Membership-only (`rid in claimed_by`) closes this: any second raw landing on an already-
+        # claimed rid is flagged regardless of whether either trigger_id is None, because
+        # _dedup_raw_triggers() already guarantees two raws sharing the same NON-None trigger_id were
+        # collapsed into one entry upstream -- so a rid can only be claimed twice here if the two raws
+        # are genuinely distinct triggers (the case this guard exists for).
+        if rid in claimed_by:
             conflicts.append({
                 "trigger_id": normalized["trigger_id"],
                 "duplicate_of_routine": rid,
-                "kept_trigger_id": claimant,
+                "kept_trigger_id": claimed_by[rid],
             })
             continue
         claimed_by[rid] = normalized["trigger_id"]

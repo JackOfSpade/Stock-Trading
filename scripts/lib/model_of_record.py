@@ -424,20 +424,36 @@ def check_model_of_record(cadence_path, mirror_paths, root, doc=None):
         if not os.path.exists(path):
             continue
         rel = os.path.relpath(path, root)
-        for n, line in enumerate(open(path, encoding="utf-8"), 1):
-            if MODEL_EXEMPT.search(line):
-                continue
-            scanned = URL_RE.sub(" ", line)
-            # dict.fromkeys, not set(...): de-dupes while preserving FIRST-APPEARANCE order, so two
-            # distinct wrong ids on one line report in a deterministic (left-to-right) order instead of
-            # one that varies with PYTHONHASHSEED (2026-07-28 adversarial review).
-            for found in dict.fromkeys(MODEL_ID_RE.findall(scanned)):
-                if found == model or _is_subtracted_non_assertion(found):
+        # RESOURCE-LEAK FIX (finding model-of-record-bare-open): this used to be a bare
+        # `open(path, encoding="utf-8")` handed straight to enumerate(), with no `with` block and no
+        # variable binding — the exact idiom lib/textio.py's own module docstring names as problem #1
+        # it exists to retire repo-wide ("fine on CPython, a ResourceWarning under -W error and a real
+        # leak on any other runtime"). Every other lib/*.py file that opens a file (textio.py,
+        # mcp_tokens.py, slice_writer.py) already uses `with open(...) as f`; this was the sole
+        # holdout despite importing lib.textio two lines above. The risk isn't cosmetic: if
+        # MODEL_ID_RE.findall() or this loop body ever raised mid-file (a future mirror file with
+        # invalid UTF-8, or any other exception), the bare-open handle stays referenced by the
+        # exception's traceback/frame and is not promptly released — confirmed live (see
+        # tests/test_model_of_record.py): catching such an exception with the traceback still bound
+        # leaves the old form's handle open, while the `with` form closes it during unwind, before the
+        # exception ever reaches the caller. A full-file read via lib.textio.read_text is unnecessary
+        # here since the loop only needs line-by-line access, so keep the generator — just bind and
+        # close it properly.
+        with open(path, encoding="utf-8") as mirror_file:
+            for n, line in enumerate(mirror_file, 1):
+                if MODEL_EXEMPT.search(line):
                     continue
-                errs.append(
-                    f"{rel}:{n}: names model '{found}' but ops/cadence.yaml routine_model is "
-                    f"'{model}'. All remote routines run the SAME model, so every mirror must "
-                    f"quote it. If the owner changed the fleet model, update routine_model AND "
-                    f"this line in the same pass; if this line is illustrative or historical "
-                    f"rather than a fleet assertion, add the marker 'model-id-exempt' to it.")
+                scanned = URL_RE.sub(" ", line)
+                # dict.fromkeys, not set(...): de-dupes while preserving FIRST-APPEARANCE order, so
+                # two distinct wrong ids on one line report in a deterministic (left-to-right) order
+                # instead of one that varies with PYTHONHASHSEED (2026-07-28 adversarial review).
+                for found in dict.fromkeys(MODEL_ID_RE.findall(scanned)):
+                    if found == model or _is_subtracted_non_assertion(found):
+                        continue
+                    errs.append(
+                        f"{rel}:{n}: names model '{found}' but ops/cadence.yaml routine_model is "
+                        f"'{model}'. All remote routines run the SAME model, so every mirror must "
+                        f"quote it. If the owner changed the fleet model, update routine_model AND "
+                        f"this line in the same pass; if this line is illustrative or historical "
+                        f"rather than a fleet assertion, add the marker 'model-id-exempt' to it.")
     return errs, model

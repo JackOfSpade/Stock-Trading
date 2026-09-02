@@ -79,7 +79,7 @@ import re
 import subprocess
 import sys
 
-from lib.sql_files import strip_sql_comments
+from lib.sql_files import _string_literal_end, strip_sql_comments
 
 PROJECT = "stock-trading-498512"
 
@@ -186,9 +186,10 @@ _SET_OP_KEYWORD_RE = re.compile(r"\b(?:UNION|INTERSECT|EXCEPT)\b", re.IGNORECASE
 def _blank_string_literals(text):
     """Blank the CONTENTS (and, for string literals, the delimiters too) of every quoted region in
     `text` with spaces, preserving every newline and the overall length — the same length/newline-
-    preserving contract as `lib.sql_files.strip_sql_comments` (whose literal-walking logic this
-    mirrors), so a position or line number computed against the result still lands correctly against
-    the ORIGINAL text.
+    preserving contract as `lib.sql_files.strip_sql_comments` (whose literal SPAN is found by the
+    exact same shared `_string_literal_end` helper this function calls below — see that helper's
+    docstring for why the walk lives in one place instead of two), so a position or line number
+    computed against the result still lands correctly against the ORIGINAL text.
 
     Handles BOTH string literals ('...', "...", triple-quoted) AND backtick-quoted identifiers
     (`` `p.d.t` ``). Backticks are load-bearing here, not just for completeness: GoogleSQL has no
@@ -237,20 +238,7 @@ def _blank_string_literals(text):
                 i += 1
             continue
         if c in ("'", '"'):
-            quote = c
-            triple = text[i:i + 3] == quote * 3
-            j = i + (3 if triple else 1)
-            end = quote * 3 if triple else quote
-            while j < n:
-                if not triple and text[j] == "\\":
-                    j += 2
-                    continue
-                if text[j:j + len(end)] == end:
-                    j += len(end)
-                    break
-                if not triple and text[j] == "\n":   # unterminated single-line literal — stop here
-                    break
-                j += 1
+            j = _string_literal_end(text, i)
             out.append("".join(ch if ch == "\n" else " " for ch in text[i:j]))
             i = j
             continue

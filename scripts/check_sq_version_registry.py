@@ -51,9 +51,7 @@ import bisect
 import collections
 import os
 import re
-import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.report import fail_or_ok
 from lib.sql_files import (
     line_offsets, numbered_sql_files, resolve_canonical, strip_sql_comments,

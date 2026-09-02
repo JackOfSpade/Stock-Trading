@@ -38,6 +38,14 @@
  *                           below against the live .gs const
  *   - buildSubject_        (weekly_report.gs)
  *   - esc_                 (weekly_report.gs)
+ *   - PROJECT_ID           (weekly_report.gs) -- 2026-09-02: copied so bq_ below can resolve verbatim,
+ *                           same literal as alert_emailer.gs's ALERT_PROJECT_ID
+ *   - bq_                  (weekly_report.gs) -- 2026-09-02: BigQuery job-poll-and-paginate helper,
+ *                           previously an unguarded duplicate of alert_emailer.gs's bqAlerts_ (no sync
+ *                           comment, no parity test, unlike the esc_/esc2_ pair); now parity-tested
+ *                           against BigQuery.Jobs.query/getQueryResults stand-ins
+ *   - getUserTzWeekly_     (weekly_report.gs) -- 2026-09-02: same unguarded-duplication gap as bq_
+ *                           above, now parity-tested against getUserTzAlerts_
  *   - VOO_COLOR            (weekly_report.gs)
  *   - clr_                 (weekly_report.gs) -- 2026-07-29: was only exercised indirectly via pctCellHtml_
  *   - fallbackBarsHtml_    (weekly_report.gs)
@@ -45,6 +53,13 @@
  *   - buildParkSection_    (weekly_report.gs) -- 2026-07-29: was zero-coverage; pluralization bugs here
  *                           (e.g. "1 days") would be silent in the rendered email
  *   - esc2_                (alert_emailer.gs)
+ *   - ALERT_PROJECT_ID     (alert_emailer.gs) -- 2026-09-02: copied so bqAlerts_ below can resolve
+ *                           verbatim, same literal as weekly_report.gs's PROJECT_ID
+ *   - bqAlerts_            (alert_emailer.gs) -- 2026-09-02: parity-tested against weekly_report.gs's
+ *                           bq_ (see that entry above) -- both must return identical rows / throw
+ *                           identically for a single-page response, a paginated response, and a
+ *                           permanently-incomplete job
+ *   - getUserTzAlerts_     (alert_emailer.gs) -- 2026-09-02: parity-tested against getUserTzWeekly_
  *   - ROSTER_NOTICE_CATEGORIES (alert_emailer.gs) -- 2026-08-04 v5: new const, the six roster-change
  *                           alert categories; isRosterNotice_ depends on it
  *   - pl_                  (alert_emailer.gs) -- 2026-08-04 v5: new, defensive payload JSON parse
@@ -202,6 +217,53 @@ function altTextFor_(d) {
 
 function esc_(s)  { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+// PROJECT_ID copied so bq_/getUserTzWeekly_ below resolve verbatim -- same literal as
+// alert_emailer.gs's ALERT_PROJECT_ID copy further down.
+const PROJECT_ID = 'stock-trading-498512';
+
+// bq_ / getUserTzWeekly_ (2026-09-02 audit finding): these were an UNGUARDED duplicate of
+// alert_emailer.gs's bqAlerts_ / getUserTzAlerts_ -- byte-near-identical, including the same inline
+// comment word-for-word, but with no "KEEP IN SYNC MANUALLY" comment and no parity test, unlike the
+// esc_/esc2_ pair just above (which has both, see the esc_/esc2_ parity test near the bottom of this
+// file). Copied verbatim here (both function bodies close over global BigQuery/Utilities, Apps Script
+// services this file stubs deterministically below, mirroring the "deterministic stand-in for an
+// Apps-Script-only global" pattern already used for fmtAlertTs_) so the bq_/bqAlerts_ parity test near
+// the bottom of this file can assert both twins behave identically instead of only one of them being
+// exercised at all.
+function bq_(sql) {
+  let res = BigQuery.Jobs.query({ query: sql, useLegacySql: false, timeoutMs: 30000, maxResults: 10000 }, PROJECT_ID);
+  let guard = 0;
+  while (!res.jobComplete && guard++ < 10) {
+    Utilities.sleep(1000);
+    res = BigQuery.Jobs.getQueryResults(PROJECT_ID, res.jobReference.jobId);
+  }
+  // A query that never completes must FAIL the send (no heartbeat -> dead-man's switch), not render empty.
+  if (!res.jobComplete) throw new Error('BigQuery job did not complete after 10s poll: ' + sql.slice(0, 120));
+  const fields = (res.schema && res.schema.fields) ? res.schema.fields.map(f => f.name) : [];
+  const rows = res.rows || [];
+  let pageToken = res.pageToken;
+  while (pageToken) {
+    const page = BigQuery.Jobs.getQueryResults(PROJECT_ID, res.jobReference.jobId,
+      { pageToken: pageToken, maxResults: 10000 });
+    rows.push.apply(rows, page.rows || []);
+    pageToken = page.pageToken;
+  }
+  return rows.map(r => {
+    const o = {};
+    r.f.forEach((cell, i) => { o[fields[i]] = cell.v; });
+    return o;
+  });
+}
+
+let _tzCache = null;
+function getUserTzWeekly_() {
+  if (_tzCache) return _tzCache;
+  try {
+    _tzCache = (bq_(`SELECT tz FROM \`${PROJECT_ID}.state.user_tz\``)[0] || {}).tz || 'America/Denver';
+  } catch (e) { Logger.log('getUserTzWeekly_ failed, defaulting to America/Denver: ' + e); _tzCache = 'America/Denver'; }
+  return _tzCache;
+}
+
 const VOO_COLOR = '#5f7d95';
 function clr_(p)  { return p >= 0 ? '#1a7f5a' : '#c0392b'; }
 
@@ -328,6 +390,43 @@ function buildSubject_(d) {
 // ===== copied verbatim from ops/monitoring/alert_emailer.gs ==================================
 
 function esc2_(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ALERT_PROJECT_ID copied so bqAlerts_/getUserTzAlerts_ below resolve verbatim -- same literal as
+// weekly_report.gs's PROJECT_ID copy above.
+const ALERT_PROJECT_ID = 'stock-trading-498512';
+
+// bqAlerts_ / getUserTzAlerts_ (2026-09-02 audit finding) -- see the bq_/getUserTzWeekly_ comment above
+// for the full story: these are that pair's un-cross-referenced twin, now covered by the same
+// bq_/bqAlerts_ parity test near the bottom of this file.
+function bqAlerts_(sql) {
+  let res = BigQuery.Jobs.query({ query: sql, useLegacySql: false, timeoutMs: 30000, maxResults: 10000 }, ALERT_PROJECT_ID);
+  let g = 0;
+  while (!res.jobComplete && g++ < 10) { Utilities.sleep(1000); res = BigQuery.Jobs.getQueryResults(ALERT_PROJECT_ID, res.jobReference.jobId); }
+  // A query that never completes must FAIL the send (no heartbeat -> dead-man's switch), not render empty.
+  if (!res.jobComplete) throw new Error('BigQuery job did not complete after 10s poll: ' + sql.slice(0, 120));
+  const fields = (res.schema && res.schema.fields) ? res.schema.fields.map(f => f.name) : [];
+  const rows = res.rows || [];
+  let pageToken = res.pageToken;
+  while (pageToken) {
+    const page = BigQuery.Jobs.getQueryResults(ALERT_PROJECT_ID, res.jobReference.jobId,
+      { pageToken: pageToken, maxResults: 10000 });
+    rows.push.apply(rows, page.rows || []);
+    pageToken = page.pageToken;
+  }
+  return rows.map(r => { const o = {}; r.f.forEach((c, i) => o[fields[i]] = c.v); return o; });
+}
+
+let _alertTzCache = null;
+function getUserTzAlerts_() {
+  if (_alertTzCache) return _alertTzCache;
+  try {
+    _alertTzCache = (bqAlerts_(`SELECT tz FROM \`${ALERT_PROJECT_ID}.state.user_tz\``)[0] || {}).tz || 'America/Denver';
+  } catch (e) {
+    Logger.log('getUserTzAlerts_ failed, defaulting to America/Denver: ' + e);
+    _alertTzCache = 'America/Denver';
+  }
+  return _alertTzCache;
+}
 
 // ROSTER-CHANGE NOTICES (owner directive 2026-08-04, bigquery/134_roster_change_notifications.sql).
 // The autonomous SISA loop (SL1-SL5) adds and removes trading strategies with no human approval step --
@@ -947,6 +1046,128 @@ t('esc_ and esc2_ (the two hand-synced HTML-escape twins) agree for every input'
   cases.forEach(c => {
     assert.strictEqual(esc_(c), esc2_(c), `esc_/esc2_ diverged for input ${JSON.stringify(c)}`);
   });
+});
+
+// ---- bq_ / bqAlerts_ parity, and getUserTzWeekly_ / getUserTzAlerts_ parity — the SAME
+//      "hand-synced twin with no sync comment and no parity test" gap the esc_/esc2_ test above closes,
+//      found unguarded on the BigQuery job-poll-and-paginate helper (2026-09-02 audit finding).
+//      bqAlerts_ (alert_emailer.gs) is a byte-near-identical copy of bq_ (weekly_report.gs) --
+//      including the identical inline "no heartbeat -> dead-man's switch" comment word-for-word -- and
+//      getUserTzAlerts_/getUserTzWeekly_ are the same pattern one layer up. Both pairs close over
+//      Apps-Script-only globals (BigQuery, Utilities, Logger) that plain Node does not provide, so this
+//      stubs them deterministically -- the same "deterministic stand-in for an Apps-Script-only global"
+//      approach this file already uses for fmtAlertTs_ -- covering the three response shapes that
+//      matter: a normal single-page response, a paginated multi-page response, and a job that never
+//      completes (must throw, not hang or render empty).
+function withBqStubs_(stubs, fn) {
+  const savedBQ = global.BigQuery, savedUtil = global.Utilities, savedLogger = global.Logger;
+  global.BigQuery = { Jobs: { query: stubs.query, getQueryResults: stubs.getQueryResults } };
+  global.Utilities = { sleep: () => {} }; // no-op: a real 1s x10 sleep would make the "never completes" case slow
+  global.Logger = { log: () => {} };
+  try {
+    return fn();
+  } finally {
+    global.BigQuery = savedBQ; global.Utilities = savedUtil; global.Logger = savedLogger;
+  }
+}
+function assertThrowsMessage_(fn, expectedMsg, label) {
+  let threw = false;
+  try { fn(); } catch (e) { threw = true; assert.strictEqual(e.message, expectedMsg, `${label}: unexpected error message`); }
+  assert.ok(threw, `${label}: expected a throw and none occurred`);
+}
+
+t('bq_ and bqAlerts_ return identical rows for a normal single-page response', () => {
+  const fields = [{ name: 'strategy' }, { name: 'activation' }];
+  const rows = [{ f: [{ v: 'A' }, { v: 'ACTIVATE' }] }, { f: [{ v: 'B' }, { v: 'DO-NOT-ACTIVATE' }] }];
+  const stubs = {
+    query: (req, projectId) => {
+      assert.ok([PROJECT_ID, ALERT_PROJECT_ID].includes(projectId), `unexpected projectId: ${projectId}`);
+      return { jobComplete: true, schema: { fields }, rows, jobReference: { jobId: 'job-single' } };
+    },
+    // A single-page, already-complete job must never touch pagination/polling at all.
+    getQueryResults: () => { throw new Error('getQueryResults must not be called for a single-page, already-complete job'); }
+  };
+  const expected = [{ strategy: 'A', activation: 'ACTIVATE' }, { strategy: 'B', activation: 'DO-NOT-ACTIVATE' }];
+  withBqStubs_(stubs, () => {
+    assert.deepStrictEqual(bq_('SELECT strategy, activation FROM x'), expected);
+    assert.deepStrictEqual(bqAlerts_('SELECT strategy, activation FROM x'), expected);
+  });
+});
+
+t('bq_ and bqAlerts_ walk pageToken identically and return the same combined rows for a paginated response', () => {
+  const fields = [{ name: 'v' }];
+  let getCalls;
+  const stubs = {
+    query: () => ({ jobComplete: true, schema: { fields }, rows: [{ f: [{ v: 'p1' }] }],
+                     pageToken: 'tok-1', jobReference: { jobId: 'job-paged' } }),
+    getQueryResults: (projectId, jobId, opts) => {
+      getCalls++;
+      assert.strictEqual(jobId, 'job-paged');
+      if (getCalls === 1) {
+        assert.strictEqual(opts.pageToken, 'tok-1');
+        return { rows: [{ f: [{ v: 'p2' }] }], pageToken: 'tok-2' }; // a SECOND page, to prove the loop, not just one hop
+      }
+      assert.strictEqual(opts.pageToken, 'tok-2');
+      return { rows: [{ f: [{ v: 'p3' }] }], pageToken: undefined };
+    }
+  };
+  const expected = [{ v: 'p1' }, { v: 'p2' }, { v: 'p3' }];
+  withBqStubs_(stubs, () => {
+    getCalls = 0;
+    assert.deepStrictEqual(bq_('SELECT v FROM x'), expected);
+    getCalls = 0;
+    assert.deepStrictEqual(bqAlerts_('SELECT v FROM x'), expected);
+  });
+});
+
+t('bq_ and bqAlerts_ both throw the identical error, after the identical 10x1s poll guard, for a job that never completes', () => {
+  let getCalls;
+  const stubs = {
+    query: () => ({ jobComplete: false, jobReference: { jobId: 'job-stuck' } }),
+    getQueryResults: () => { getCalls++; return { jobComplete: false, jobReference: { jobId: 'job-stuck' } }; }
+  };
+  const sql = 'SELECT * FROM never_completes';
+  const expectedMsg = 'BigQuery job did not complete after 10s poll: ' + sql.slice(0, 120);
+  withBqStubs_(stubs, () => {
+    getCalls = 0;
+    assertThrowsMessage_(() => bq_(sql), expectedMsg, 'bq_');
+    assert.strictEqual(getCalls, 10, 'bq_ must poll getQueryResults exactly 10 times (guard++ < 10) before giving up');
+    getCalls = 0;
+    assertThrowsMessage_(() => bqAlerts_(sql), expectedMsg, 'bqAlerts_');
+    assert.strictEqual(getCalls, 10, 'bqAlerts_ must poll getQueryResults exactly 10 times (g++ < 10) before giving up');
+  });
+});
+
+t('getUserTzWeekly_ and getUserTzAlerts_ return the same tz on a successful query, each caching independently', () => {
+  _tzCache = null; _alertTzCache = null; // start both from a cold cache regardless of test order
+  const fields = [{ name: 'tz' }];
+  const stubs = {
+    query: () => ({ jobComplete: true, schema: { fields }, rows: [{ f: [{ v: 'America/Toronto' }] }],
+                     jobReference: { jobId: 'job-tz' } }),
+    getQueryResults: () => { throw new Error('getQueryResults must not be called for a single-page, already-complete job'); }
+  };
+  withBqStubs_(stubs, () => {
+    assert.strictEqual(getUserTzWeekly_(), 'America/Toronto');
+    assert.strictEqual(getUserTzAlerts_(), 'America/Toronto');
+  });
+  // Cached: a second call with NO stub installed must still return the cached value -- a cache miss here
+  // would throw "BigQuery is not defined" and fail the test, proving the cache actually short-circuits.
+  assert.strictEqual(getUserTzWeekly_(), 'America/Toronto');
+  assert.strictEqual(getUserTzAlerts_(), 'America/Toronto');
+  _tzCache = null; _alertTzCache = null; // leave the module-level cache clean for any later test
+});
+
+t('getUserTzWeekly_ and getUserTzAlerts_ both fall back to America/Denver, without throwing, when the query fails', () => {
+  _tzCache = null; _alertTzCache = null;
+  const stubs = {
+    query: () => { throw new Error('simulated BigQuery outage'); },
+    getQueryResults: () => { throw new Error('simulated BigQuery outage'); }
+  };
+  withBqStubs_(stubs, () => {
+    assert.strictEqual(getUserTzWeekly_(), 'America/Denver');
+    assert.strictEqual(getUserTzAlerts_(), 'America/Denver');
+  });
+  _tzCache = null; _alertTzCache = null;
 });
 
 // ---- buildHealthReasons_ ----

@@ -55,6 +55,62 @@ def test_fenced_heading_shaped_example_does_not_split_the_active_prompt():
     assert "W3" in sections and "Run get_price_history." in sections["W2"]
 
 
+# ---- routine_sections(): a heading-SHAPED aside inside a body must not become a new boundary ------
+# BUG FIX (finding routine-scope-duplicate-heading-detector). check_routine_scope.py used to
+# identify a routine-section boundary with its OWN, independently maintained regex
+# (``ROUTINE_HEADING = re.compile(r"^##\s+([A-Za-z0-9_]+)\.\s")``), which accepted ANY
+# "## <token>. " line as a new routine start -- coded routine heading or not. The canonical
+# detector (scripts/split_task_plan.py's own is_routine(), built on scripts/lib/routine_manifest.py's
+# ROUTINE_SUFFIX) additionally requires the heading END with its "— (deep research|regular routine)"
+# type tag before it counts as a routine boundary. Without that extra requirement, a heading-SHAPED
+# line sitting inside some OTHER routine's own body -- a numbered aside like "## 3. See the note
+# below" -- satisfied the old, looser test and was misread as a NEW routine boundary: it truncated
+# the real routine's section right there and silently reassigned everything after it to a bogus id no
+# _check_present/_check_absent rule names. Whatever forbidden- or required-pattern text landed after
+# the accidental heading dropped out of every ownership-boundary rule's view with no error reported --
+# defeating the whole point of this script. Reproduced below against W4's forbidden
+# create_order_instruction/ORDER_STAGED overlap rule, the same class of guard the module docstring
+# cites as the reason this check exists.
+#
+# This fixture is a hand-written literal, not built from _plan() above: routine_sections() keeps its
+# own narrow boundary-walking loop instead of delegating wholesale to scripts/split_task_plan.split()
+# (see routine_sections()'s own docstring in scripts/check_routine_scope.py) because split() requires
+# a `# ` cadence-group header before the first routine and raises ValueError without one -- and every
+# fixture in this file, including _plan()'s output, is deliberately a bare "## <ID>. ... — regular
+# routine" heading with no such group header.
+PLAN_WITH_NUMBERED_ASIDE = (
+    "## D1. Example — regular routine\n"
+    "D1 uses regular-session daily bars. Route a qualifying mover to Strategy B as a B candidate.\n"
+    "\n"
+    "## W4. Example — regular routine\n"
+    "Route weekly findings to D2 via idempotent PENDING_ANALYSIS queue items.\n"
+    "\n"
+    "## 3. A numbered illustrative aside, not a routine heading\n"
+    "W4 calls create_order_instruction then writes ORDER_STAGED.\n"
+)
+
+
+def test_numbered_aside_inside_a_routine_body_is_not_a_new_boundary():
+    """routine_sections() must not carve a heading-shaped numbered aside (no routine-suffix type
+    tag) out of the routine whose body it sits in.  Under the old ROUTINE_HEADING regex, "## 3. A
+    numbered illustrative aside..." matched (any "## <token>. " shape counted), producing a bogus
+    "3" section and truncating W4's real body right before the forbidden text."""
+    sections = crs.routine_sections(PLAN_WITH_NUMBERED_ASIDE)
+    assert "3" not in sections
+    assert "create_order_instruction" in sections["W4"]
+    assert "ORDER_STAGED" in sections["W4"]
+
+
+def test_numbered_aside_does_not_hide_a_forbidden_overlap_from_check():
+    """End-to-end: the W4 forbidden-overlap rule must still see the violation that lands after the
+    fake heading. Under the old, looser ROUTINE_HEADING regex this silently passed with ZERO
+    errors -- the exact silent-miss defect this fix closes -- because W4's body was truncated to
+    end right before "## 3. ...", leaving the forbidden create_order_instruction/ORDER_STAGED text
+    stranded inside a bogus "3" section that no ownership-boundary rule ever inspects."""
+    errors = crs.check(PLAN_WITH_NUMBERED_ASIDE)
+    assert any("W4: forbidden overlap reappeared — direct weekly exit crafting" in e for e in errors)
+
+
 def test_w2_broad_rescan_and_price_pull_are_rejected():
     errors = crs.check(_plan({
         "W2": (

@@ -64,7 +64,6 @@ Exit 0 = all good. Exit 1 = at least one violation. Run from the repo root.
 from __future__ import annotations
 
 import json
-import re
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -78,9 +77,8 @@ from zoneinfo import ZoneInfo
 # load_cadence(), but this script's own load_cadence() hand-rolled a SEPARATE, still-unguarded
 # extraction (`cad["routines"] if ... else cad`) that pass never reached -- a fifth copy of the same
 # fragile idiom (2026-08-08 audit finding). Import only; scripts/lib/** is owned by another agent.
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 from lib.routine_manifest import cadence_routines
-from lib.textio import load_yaml
+from lib.textio import load_yaml, validate_hhmm_field
 
 CADENCE = Path("ops/cadence.yaml")
 BACKUP = Path("ops/routine_backup.json")
@@ -260,12 +258,14 @@ def load_cadence():
     # explicitly records a failure and keeps going instead of stopping at the first red check, so this
     # script still ran (and still crashed with a raw traceback) even after check_cadence_consistency.py
     # already failed loudly on the SAME malformed field, one step earlier in that same run_check() list.
-    # Fail with the same clear, actionable message check_cadence_consistency.py already gives for this
-    # field instead of a bare traceback.
-    if not (isinstance(deadline, str) and re.fullmatch(r"\d{2}:\d{2}", deadline)):
-        raise SystemExit(
-            f"ops/cadence.yaml: cadence_watch_deadline_local must be a quoted \"HH:MM\" string "
-            f"(got {deadline!r} — an UNquoted 21:00 is YAML base-60 = 1260; always quote it)")
+    # Delegates to lib.textio.validate_hhmm_field (2026-09-02, 'hhmm-validation-triplicated' finding)
+    # rather than re-literalizing the shape test + message inline -- this was ONE of three independent
+    # copies of the exact same message (the other two live in check_cadence_consistency.py's checks D
+    # and I), with nothing that kept them in sync; a wording or regex fix landed in one could silently
+    # desync the others. See that helper's own docstring for the full history.
+    hhmm_err = validate_hhmm_field(deadline, "ops/cadence.yaml: cadence_watch_deadline_local")
+    if hhmm_err:
+        raise SystemExit(hhmm_err)
     hh, mm = (int(x) for x in deadline.split(":"))
     return routines, (hh, mm)
 

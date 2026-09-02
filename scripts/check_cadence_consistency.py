@@ -39,6 +39,13 @@ ops/cadence.yaml + Claude_Task_Plan.md the SOURCE OF TRUTH and verifies the two 
      classes). Also requires every cadence.yaml routine to declare an explicit `catchup_safe` boolean
      (missing key = error, mirroring the monitor_class presence check) — these two lists are a
      DECLARED capital-adjacency judgment, never derived from monitor_class (ARCH-3 Item 30b).
+     EXTENDED 2026-09-02 ('catchup-yesterday-list-unwatched' finding) to TWO more hand-copies of the
+     SAME daily tier that were, until then, entirely invisible to this check: bigquery/90_catchup_
+     inprogress_guard.sql's own inert duplicate of bigquery/31's list, and — the actual live gap —
+     state.catchup_refire_readiness's `yesterday_daily_misses` CTE (originally bigquery/59, now
+     canonically resolved the same way check D/O resolve their own superseded objects, never
+     hardcoded to a filename), which had drifted in production for six weeks before bigquery/208
+     fixed it.
   L. The ROUTINE INVENTORY table in Claude_Task_Plan.md (the section between the "# ROUTINE INVENTORY
      & BIGQUERY RESPONSIBILITIES" heading and the next `---` divider) lists exactly the cadence.yaml
      routine ids, and each row's "Cadence · Type" cell agrees with that routine's monitor_class (ARCH-3
@@ -69,13 +76,12 @@ except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
     raise SystemExit(2) from None
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.routine_manifest import (
     heading_to_id, parse_routine_headings, build_triggers_manifest, instruction_text, cadence_routines,
 )
 from lib.report import fail_or_ok
 from lib.sql_files import numbered_sql_files, resolve_canonical, strip_sql_comments
-from lib.textio import read_text, load_yaml
+from lib.textio import read_text, load_yaml, validate_hhmm_field
 from lib.model_of_record import (
     # Check N's extraction (2026-08-31 code-quality pass, cadence#2) moved these out of this file;
     # imported by name (not `import lib.model_of_record as ...`) because
@@ -122,6 +128,20 @@ AUTO_MERGE_YML = os.path.join(ROOT, ".github", "workflows", "auto-merge-claude.y
 AUTO_MERGE_DECISION_SH = os.path.join(ROOT, "scripts", "auto_merge_decision.sh")
 CATCHUP_NOTIFY_SQL = os.path.join(ROOT, "bigquery", "31_catchup_notify.sql")
 CATCHUP_AUTOFIRE_SQL = os.path.join(ROOT, "bigquery", "59_catchup_autofire.sql")
+# The THIRD hand-copy of the daily catchup-safe tier (2026-09-02, 'catchup-yesterday-list-unwatched'
+# finding): bigquery/90_catchup_inprogress_guard.sql's own header explains it reproduces bigquery/31's
+# and bigquery/59's UNNEST lists verbatim "only because a view's full CTE chain must be reproduced to
+# add a LEFT JOIN exclusion" and calls its own copies "inert duplicates ... never read by that check" --
+# true until now. Hardcoded to this one file, same convention as CATCHUP_NOTIFY_SQL/CATCHUP_AUTOFIRE_SQL
+# above (check K anchors on the DECLARED-judgment-call files, not on whichever file currently happens to
+# deploy the view — see catchup_list_errors()'s own docstring); do NOT canonicalize this to bigquery/184
+# (which superseded bigquery/90's VIEW but reproduces the identical inert copy for the identical reason).
+CATCHUP_INPROGRESS_GUARD_SQL = os.path.join(ROOT, "bigquery", "90_catchup_inprogress_guard.sql")
+# Directory scanned for the canonical state.catchup_refire_readiness definition (check K's yesterday-
+# tier extension) -- a SEPARATE module constant from BIGQUERY_DIR/STALLED_RUNS_BIGQUERY_DIR, for the
+# identical test-isolation reason STALLED_RUNS_BIGQUERY_DIR's own comment (above) gives: so a test can
+# monkeypatch THIS check's search directory without disturbing check D-extended's or check O's.
+CATCHUP_REFIRE_READINESS_BIGQUERY_DIR = BIGQUERY_DIR
 
 # ---- check N: MODEL OF RECORD mirrors -- EXTRACTED to scripts/lib/model_of_record.py (2026-08-31
 # code-quality pass, cadence#2). This block used to live here in full (~400 self-contained lines / 25%
@@ -294,6 +314,32 @@ PERIOD_WATCH_ROUTINE_ROW = re.compile(
 SQL_LINE_COMMENT = re.compile(r"--[^\n]*")
 UNNEST_ROUTINE_BRACKET = re.compile(r"UNNEST\(\[(.*?)\]\)\s*AS routine", re.S)
 QUOTED_ID = re.compile(r"'([A-Za-z0-9_]+)'")
+
+# ---- check K (yesterday-tier extension, 2026-09-02, 'catchup-yesterday-list-unwatched' finding):
+# state.catchup_refire_readiness's `yesterday_daily_misses` CTE carries a SECOND, independent
+# hand-copy of the SAME daily catchup-safe tier bigquery/31 declares -- see bigquery/208's own header.
+# It was invisible to the check above for two compounding reasons: (1) UNNEST_ROUTINE_BRACKET.search()
+# above only ever looks at the FIRST bracket in the file it is pointed at, and (2) this bracket lives
+# in an ENTIRELY DIFFERENT file (originally bigquery/59, then re-anchored by bigquery/112, now
+# bigquery/208) from the two files check K was already reading (bigquery/31/59's own first brackets) --
+# nothing ever pointed a parser at it at all. `stock-trading-498512.` is the same live project id
+# CADENCE_WATCH_VIEW_DDL/STALLED_RUNS_VIEW_DDL below already hardcode for this exact object-DDL
+# false-positive discipline.
+CATCHUP_REFIRE_READINESS_VIEW_DDL = re.compile(
+    r"CREATE\s+(?:OR\s+REPLACE\s+)?VIEW\s+`stock-trading-498512\.state\.catchup_refire_readiness`",
+    re.IGNORECASE,
+)
+# Scoped to the `yesterday_daily_misses` CTE BY NAME -- not a blind first-bracket-in-the-file scan --
+# so the target is explicit rather than positional (the same discipline CLS_CTE_UNNEST_RE below already
+# uses for check O's `cls` CTE). This is deliberately a DEDICATED regex rather than a second call to
+# UNNEST_ROUTINE_BRACKET.search(): reusing the generic, first-match-only scraper on a file that could
+# grow ANOTHER earlier UNNEST([...]) AS routine bracket for an unrelated reason would silently start
+# returning the WRONG bracket with no error -- precisely the failure shape this whole extension exists
+# to close. `.*?` (non-greedy, re.S) between the CTE's `SELECT` and its own `FROM UNNEST([` tolerates
+# the CTE selecting several columns first (miss_key, routine, tier, as_of), unlike CLS_CTE_UNNEST_RE's
+# `SELECT \*` (state.stalled_runs' `cls` CTE selects only the whole UNNEST row, this one does not).
+YESTERDAY_TIER_CTE_UNNEST_RE = re.compile(
+    r"yesterday_daily_misses\s+AS\s*\(\s*SELECT\b.*?FROM\s+UNNEST\(\s*\[(.*?)\]\s*\)", re.S)
 
 # ---- check L: the ROUTINE INVENTORY table section of Claude_Task_Plan.md (scoped between its own
 # heading and the NEXT '---' divider -- the strategy slice-map table elsewhere in the file also has
@@ -615,6 +661,67 @@ def parse_stalled_runs_cls_ids(scan=None):
     return CLS_ENTRY_RE.findall(m.group(1)), number, fn, None
 
 
+def find_canonical_catchup_refire_readiness_file(scan=None):
+    """(number, filename, ambiguous_files) for the highest-numbered bigquery/*.sql file that defines
+    `CREATE OR REPLACE VIEW state.catchup_refire_readiness` — check K's yesterday-tier extension
+    (2026-09-02, 'catchup-yesterday-list-unwatched' finding). The object has moved twice already
+    (59 -> 112 -> 208, and counting); resolution mirrors find_canonical_cadence_watch_file() and
+    find_canonical_stalled_runs_file() above EXACTLY, including their ambiguous-winner contract (D6,
+    2026-08-06) — deliberately NOT hardcoded to "208", which would rot the same way hardcoding "112"
+    (the previous canonical file) already did for six weeks before this fix.
+
+    `scan` -- see the PERF NOTE above _scan_bigquery_dir(); a fresh _scan_bigquery_dir
+    (CATCHUP_REFIRE_READINESS_BIGQUERY_DIR) walk is done here when omitted.
+
+    Returns (None, None, None) if no occurrence is found at all (should never happen on a real
+    checkout — bigquery/59 itself always defines one)."""
+    files = scan if scan is not None else _scan_bigquery_dir(CATCHUP_REFIRE_READINESS_BIGQUERY_DIR)
+    occurrences = []
+    for number, path, text in files:
+        if CATCHUP_REFIRE_READINESS_VIEW_DDL.search(text):
+            occurrences.append((number, os.path.basename(path)))
+    if not occurrences:
+        return None, None, None
+    winner_number, winner_files = resolve_canonical(occurrences)
+    if len(winner_files) > 1:
+        return winner_number, None, winner_files
+    return winner_number, winner_files[0], None
+
+
+def parse_yesterday_tier_ids(scan=None):
+    """([routine_id, ...], number, filename, ambiguous_files) — the routine ids inside the
+    `yesterday_daily_misses` CTE's UNNEST([...]) bracket of the CANONICAL (highest-numbered)
+    bigquery/*.sql file currently defining state.catchup_refire_readiness (check K's yesterday-tier
+    extension, 2026-09-02). Mirrors parse_stalled_runs_cls_ids() above exactly, one canonical object
+    over: comments are stripped first (the scan is already comment-stripped — see
+    _scan_bigquery_dir()), so bigquery/208's own header — which narrates the OLD, pre-fix list by name
+    in prose — can never be read as a live entry, and the parse is scoped to the CTE's own bracket
+    (YESTERDAY_TIER_CTE_UNNEST_RE) rather than a blind first-bracket-in-the-file scan (see that
+    regex's own comment for why this is a DEDICATED parser, not a second call to the generic
+    UNNEST_ROUTINE_BRACKET.search() check K already uses for bigquery/31/59/90).
+
+    `scan` -- the SAME _scan_bigquery_dir(CATCHUP_REFIRE_READINESS_BIGQUERY_DIR) result passed to
+    find_canonical_catchup_refire_readiness_file(); reusing it avoids a second re-read/re-strip of the
+    winning file. Omitted -> a fresh walk.
+
+    Returns ([], number, filename, None) — an EMPTY list, never None — if the file was found but the
+    CTE/bracket could not be parsed (regex rot): main() must treat that as a hard error, mirroring
+    parse_stalled_runs_cls_ids()'s DISARMED contract exactly. ambiguous_files mirrors find_canonical_
+    catchup_refire_readiness_file()'s contract: non-None means the file itself could not be uniquely
+    resolved, in which case ids is always []."""
+    files = scan if scan is not None else _scan_bigquery_dir(CATCHUP_REFIRE_READINESS_BIGQUERY_DIR)
+    number, fn, ambiguous_files = find_canonical_catchup_refire_readiness_file(files)
+    if ambiguous_files is not None:
+        return [], number, None, ambiguous_files
+    if fn is None:
+        return [], number, fn, None
+    text = next(t for _n, p, t in files if os.path.basename(p) == fn)
+    m = YESTERDAY_TIER_CTE_UNNEST_RE.search(text)
+    if m is None:
+        return [], number, fn, None
+    return QUOTED_ID.findall(m.group(1)), number, fn, None
+
+
 def cadence_deadline_yaml(doc=None):
     """Top-level cadence_watch_deadline_local from ops/cadence.yaml (raw value, or None). `doc` --
     see the PERF NOTE above load_cadence()."""
@@ -713,13 +820,57 @@ def generate_triggers_manifest(head_by_id, cad):
 def check_depends_on(cad):
     """Error strings for any depends_on entry that is not a known routine id in cad (a dangling/typo'd
     dependency -- it feeds the FATAL ops.sp_assert_deps gate, so a silent typo here would abort a live
-    routine at runtime instead of failing this offline check)."""
+    routine at runtime instead of failing this offline check), PLUS any depends_on CYCLE -- a direct
+    self-reference or an indirect/mutual chain across two or more routines (2026-09-02,
+    'depends-on-no-cycle-check' finding). Every depends_on chain in ops/cadence.yaml today is acyclic,
+    so this was dormant, not a live bug -- but sp_assert_deps can never be satisfied for a routine
+    caught in a cycle (each participant's precondition depends on the other's, which can never
+    complete first), so a future edit that introduces one -- directly, or indirectly across two edits
+    each individually passing the dangling-id check above -- would silently deadlock every participant
+    every single day with no other CI signal."""
     errors = []
     for rid, r in cad.items():
         for dep in (r.get("depends_on") or []):
             if dep not in cad:
                 errors.append(f"{rid}: depends_on '{dep}' is not a routine id in ops/cadence.yaml "
                               f"(dangling/typo'd dependency — it feeds the FATAL sp_assert_deps gate)")
+
+    # Cycle detection: DFS from each routine over the depends_on graph (KNOWN ids only -- a dangling
+    # dep is already reported above and is treated as a dead end here, never a cycle edge). "start is
+    # reachable from itself in >=1 hop" catches BOTH shapes with no special-casing needed: a DIRECT
+    # self-reference (depends_on: [X] on X itself) is the 1-hop case, and an INDIRECT/mutual cycle
+    # across any number of routines is the same check at a longer hop count.
+    for start in sorted(cad):
+        # Reset PER start, not shared across the outer loop: a cycle A->B->A discovered while
+        # start="A" and the SAME cycle discovered while start="B" have the same sorted-node-set key
+        # ({A, B}) but must each still produce their own error line (one per participating routine,
+        # per the finding's own spec) -- sharing this set across starts would suppress the second one
+        # as a spurious "duplicate".
+        reported_cycles = set()
+        stack = [(start, (start,))]
+        while stack:
+            node, path = stack.pop()
+            for dep in (cad.get(node, {}).get("depends_on") or []):
+                if dep not in cad:
+                    continue  # dangling -- already reported above, not this walk's job
+                if dep == start:
+                    # Found a cycle rooted at `start`. Key on the FULL set of routines it passes
+                    # through (not the path tuple itself) so the same cycle discovered via two
+                    # different DFS orderings from the same `start` is reported only once.
+                    key = tuple(sorted(set(path)))
+                    if key in reported_cycles:
+                        continue
+                    reported_cycles.add(key)
+                    errors.append(
+                        f"{start}: depends_on cycle detected: {' -> '.join((*path, start))} "
+                        f"(feeds the FATAL sp_assert_deps gate — a self/mutual dependency can never "
+                        f"be satisfied)")
+                    continue
+                if dep in path:
+                    continue  # revisits a node already on THIS path without returning to `start` --
+                              # a DIFFERENT cycle, not rooted here; it is caught when that node is
+                              # itself walked as `start`, so descending further here would only loop
+                stack.append((dep, (*path, dep)))
     return errors
 
 
@@ -811,7 +962,20 @@ def queue_owner_slot_mirror_errors(cad):
                 f"queue_item_stale suppress/raise decision reads. Restore it, or update this "
                 f"checker's anchor."]
     para = txt[i:txt.find("\n\n", i) if txt.find("\n\n", i) > 0 else len(txt)]
-    pairs = dict(QUEUE_OWNER_SLOT_PAIR.findall(para))
+    # Keep the RAW findall() list before collapsing to a dict (2026-09-02, 'queue-slot-table-
+    # duplicate-id-uncaught' finding), mirroring cadence_duplicate_ids()'s walk-before-collapsing
+    # pattern for the structurally identical risk: `dict(pairs_list)` below silently keeps only the
+    # LAST occurrence of a routine id restated twice with different times, so an incomplete edit that
+    # appends a corrected time without removing the stale original would go unnoticed whenever the
+    # SECOND (kept) value happens to already agree with cadence.yaml.
+    pairs_list = QUEUE_OWNER_SLOT_PAIR.findall(para)
+    ids_seen = [rid for rid, _t in pairs_list]
+    for rid in sorted({r for r in ids_seen if ids_seen.count(r) > 1}):
+        times = [t for r, t in pairs_list if r == rid]
+        errs.append(f"Claude_Task_Plan.md: the OWNER-ELIGIBLE-DAY BRANCH slot table names '{rid}' "
+                    f"more than once ({', '.join(times)}) — the paragraph is self-contradictory; "
+                    f"remove the stale restatement.")
+    pairs = dict(pairs_list)
     expect_ids = set(QUEUE_DRIVEN_OWNERS) | {"D3"}
     if not pairs:
         return ["Claude_Task_Plan.md: found the OWNER-ELIGIBLE-DAY BRANCH clause-(b) paragraph but "
@@ -871,6 +1035,8 @@ def main():
     bq_scan = _scan_bigquery_dir(BIGQUERY_DIR)
     stalled_scan = (bq_scan if STALLED_RUNS_BIGQUERY_DIR == BIGQUERY_DIR
                      else _scan_bigquery_dir(STALLED_RUNS_BIGQUERY_DIR))
+    refire_scan = (bq_scan if CATCHUP_REFIRE_READINESS_BIGQUERY_DIR == BIGQUERY_DIR
+                    else _scan_bigquery_dir(CATCHUP_REFIRE_READINESS_BIGQUERY_DIR))
     headings = plan_headings()
     errors = []
 
@@ -956,10 +1122,15 @@ def main():
         errors.append("ops/cadence.yaml: missing top-level 'cadence_watch_deadline_local' "
                       "(declares the state.cadence_watch deadline-guard time)")
         deadline_ok = False
-    elif not (isinstance(want_deadline, str) and HHMM.match(want_deadline)):
-        errors.append(f"ops/cadence.yaml: cadence_watch_deadline_local must be a quoted \"HH:MM\" string "
-                      f"(got {want_deadline!r} — an UNquoted 21:00 is YAML base-60 = 1260; always quote it)")
-        deadline_ok = False
+    else:
+        # Delegates to lib.textio.validate_hhmm_field (2026-09-02, 'hhmm-validation-triplicated'
+        # finding) rather than re-literalizing the isinstance/HHMM.match test + message inline -- see
+        # that helper's own docstring for the full WHY (this was one of THREE independent copies of
+        # the same message, with nothing keeping them in sync).
+        hhmm_err = validate_hhmm_field(want_deadline, "ops/cadence.yaml: cadence_watch_deadline_local")
+        if hhmm_err:
+            errors.append(hhmm_err)
+            deadline_ok = False
     if not have_deadlines:
         errors.append("bigquery/12_cadence_monitor.sql: could not parse the DATETIME(e.today, TIME '..') "
                       "deadline-guard literal from state.cadence_watch (did the clause change shape?)")
@@ -1059,6 +1230,60 @@ def main():
         cad, CATCHUP_NOTIFY_SQL, "bigquery/31_catchup_notify.sql", "daily", DAILY_CLASSES))
     errors.extend(catchup_list_errors(
         cad, CATCHUP_AUTOFIRE_SQL, "bigquery/59_catchup_autofire.sql", "period", PERIOD_CLASSES))
+    # bigquery/90's own COPY of the daily list (see CATCHUP_INPROGRESS_GUARD_SQL's own comment) --
+    # inert for query purposes today, but was, until now, EQUALLY unwatched by this check as the
+    # yesterday-tier bracket immediately below, and drift here would be just as confusing to a future
+    # reader even though it cannot itself misfire a live refire.
+    errors.extend(catchup_list_errors(
+        cad, CATCHUP_INPROGRESS_GUARD_SQL, "bigquery/90_catchup_inprogress_guard.sql",
+        "daily", DAILY_CLASSES))
+
+    # ---- K (yesterday-tier extension, 2026-09-02, 'catchup-yesterday-list-unwatched' finding):
+    # state.catchup_refire_readiness's `yesterday_daily_misses` CTE is a SECOND, independent hand-copy
+    # of the SAME daily catchup-safe tier bigquery/31 declares -- it lives in a DIFFERENT file
+    # (currently bigquery/208, canonically resolved, never hardcoded) than the two files the check
+    # above already reads, and UNNEST_ROUTINE_BRACKET.search()'s first-match-only scan of THOSE two
+    # files could never have seen it regardless. Resolved the same way check D-extended/check O
+    # resolve their own superseded objects -- see find_canonical_catchup_refire_readiness_file()'s own
+    # docstring for why hardcoding a filename here would rot exactly the way hardcoding "112" already
+    # did. This bridge is what D3's OPS0-WATCHDOG-FALLBACK step relies on to recover a routine that
+    # missed BOTH its last expected day AND OPS0's same-day catch-up sweep -- an id silently absent
+    # here means that routine is never auto-recovered even though ops/cadence.yaml, bigquery/31 and
+    # bigquery/90 all say it should be (state.cadence_watch's own missed_run alert still fires
+    # independently, so the miss itself is never silent to the operator — only the automated recovery
+    # path no-ops). ----
+    refire_ids, refire_number, refire_fn, refire_ambiguous = parse_yesterday_tier_ids(refire_scan)
+    if refire_ambiguous is not None:
+        errors.append(
+            f"AMBIGUOUS canonical file for state.catchup_refire_readiness — bigquery/{refire_number} "
+            f"is the winning (highest) leading number, but {len(refire_ambiguous)} DIFFERENT files "
+            f"share it and each defines `CREATE OR REPLACE VIEW state.catchup_refire_readiness`: "
+            f"{', '.join('bigquery/' + fn for fn in refire_ambiguous)}. Check K's yesterday-tier drift "
+            f"guard cannot determine which is actually deployed — renumber one file so the leading "
+            f"number is unique, or determine which definition is actually deployed and "
+            f"delete/renumber the other.")
+    elif refire_fn is None:
+        errors.append(
+            "could not find any bigquery/*.sql file defining `CREATE OR REPLACE VIEW "
+            "state.catchup_refire_readiness` at all — check K's yesterday-tier drift guard cannot run")
+    elif not refire_ids:
+        errors.append(
+            f"bigquery/{refire_fn}: could not parse any routine id out of state.catchup_refire_"
+            f"readiness's `yesterday_daily_misses` CTE UNNEST([...]) bracket — check K's yesterday-"
+            f"tier drift guard is DISARMED (regex rot? e.g. a reformat of the CTE or bracket shape). "
+            f"Restore a parseable bracket.")
+    else:
+        refire_want = {rid for rid, r in cad.items()
+                       if r.get("catchup_safe") is True and r.get("monitor_class") in DAILY_CLASSES}
+        refire_have = set(refire_ids)
+        if refire_have != refire_want:
+            errors.append(
+                f"bigquery/{refire_fn} state.catchup_refire_readiness `yesterday_daily_misses` UNNEST "
+                f"list DRIFT — file has {sorted(refire_have)}, cadence.yaml-derived (catchup_safe AND "
+                f"daily tier) wants {sorted(refire_want)}. This bridge is what D3's OPS0-WATCHDOG-"
+                f"FALLBACK step relies on to recover a routine that missed BOTH its last expected day "
+                f"and OPS0's same-day catch-up sweep — an absent id here is never auto-recovered even "
+                f"though bigquery/31/90 and ops/cadence.yaml all say it should be.")
 
     # ---- L. Claude_Task_Plan.md's ROUTINE INVENTORY table == cadence.yaml ids, and each row's
     # 'Cadence · Type' cell agrees with that routine's monitor_class (ARCH-3 Item 30b). ----
@@ -1177,10 +1402,11 @@ def main():
                     errors.append(f"{rid}: expected_trigger missing 'enabled'")
                 if rec in ("daily", "weekly"):
                     tl = et.get("time_local")
-                    if not (isinstance(tl, str) and HHMM.match(tl)):
-                        errors.append(f"{rid}: expected_trigger.time_local must be a quoted \"HH:MM\" "
-                                      f"string for recurrence={rec} (got {tl!r} — an unquoted HH:MM is "
-                                      f"YAML base-60, same caveat as cadence_watch_deadline_local)")
+                    # Delegates to lib.textio.validate_hhmm_field, same as check D above -- this was
+                    # the THIRD of the three copies the 'hhmm-validation-triplicated' finding closed.
+                    hhmm_err = validate_hhmm_field(tl, f"{rid}: expected_trigger.time_local")
+                    if hhmm_err:
+                        errors.append(hhmm_err)
                 elif rec == "custom_cron":
                     cu = et.get("cron_utc")
                     if not (isinstance(cu, str) and cu.strip()):
@@ -1292,6 +1518,19 @@ def main():
                       f"DISARMED (regex rot? e.g. a reformat of the STRUCT(...) rows, or of the "
                       f"`cls AS (... UNNEST([...]) ...)` shape itself). Restore a parseable `cls` CTE.")
     else:
+        # Duplicate-id guard (2026-09-02, 'cls-list-duplicate-id-uncaught' finding), mirroring
+        # cadence_duplicate_ids()'s walk-before-collapsing pattern for the structurally identical risk:
+        # collapsing straight to `set(cls_ids)` below silently discards a repeated id, so a copy-paste
+        # duplicate STRUCT row (two 'D1' entries, possibly with DIFFERENT min_stale_hours values) would
+        # fan out `JOIN cls c USING (routine)` -- producing a repeated or ambiguous-threshold
+        # routine_stalled evaluation for that routine -- with both directions of the set comparison
+        # below still balancing cleanly. Must run BEFORE the set-collapse so it sees every occurrence.
+        cls_dupes = sorted({i for i in cls_ids if cls_ids.count(i) > 1})
+        for rid in cls_dupes:
+            errors.append(f"bigquery/{cls_fn}: duplicate routine id '{rid}' in state.stalled_runs' "
+                          f"`cls` CTE UNNEST([...]) STRUCT list — each routine id must appear exactly "
+                          f"once (a duplicate fans out `JOIN cls c USING (routine)`, producing a "
+                          f"repeated or ambiguous-threshold entry in the routine_stalled alert).")
         cls_set, cad_set = set(cls_ids), set(cad)
         for rid in sorted(cad_set - cls_set):
             errors.append(f"{rid}: in ops/cadence.yaml but MISSING from bigquery/{cls_fn}'s "

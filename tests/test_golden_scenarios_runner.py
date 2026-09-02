@@ -248,20 +248,6 @@ def test_category_tokens_cover_park_allocator_and_research_screener():
 # ---- live-provider selection + Gemini ladder (2026-07-17) — all network-free ----
 
 
-@contextlib.contextmanager
-def _env(**overrides):
-    """Temporarily set/unset env vars (None = unset), restoring the prior state afterward, so a real
-    GEMINI_API_KEY/ANTHROPIC_API_KEY in the test runner's environment cannot leak into these unit tests."""
-    saved = {k: os.environ.get(k) for k in overrides}
-    try:
-        for k, v in overrides.items():
-            os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v)
-        yield
-    finally:
-        for k, v in saved.items():
-            os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v)
-
-
 def test_allowed_decisions_scoped_by_category():
     # Each category offers ONLY its own tokens (so the model cannot answer a correct-sentiment but
     # wrong-vocabulary token, e.g. DO-NOT-ACTIVATE on a strategy-entry scenario).
@@ -297,18 +283,26 @@ def test_gemini_model_ladder_wellformed():
     assert "lite" not in rg.GEMINI_MODEL_LADDER[0]
 
 
-def test_select_live_caller_none_without_gemini_key():
+def test_select_live_caller_none_without_gemini_key(monkeypatch):
     # Gemini is the sole provider (2026-07-17). No GEMINI_API_KEY => skip (None), even if a stray
     # ANTHROPIC_API_KEY is present (it must NOT enable anything anymore).
-    with _env(GEMINI_API_KEY=None, ANTHROPIC_API_KEY="ignored"):
-        assert rg._select_live_caller() is None
+    # DEDUP FIX (env-context-manager-reinvents-monkeypatch): this used to go through a hand-rolled
+    # `_env()` contextmanager that duplicated pytest's own monkeypatch fixture — the established
+    # convention everywhere else in this file (see e.g. test_group_scenarios_for_batching_max_group_arg_
+    # overrides_env below) already uses monkeypatch.setenv/delenv, which auto-reverts at teardown with no
+    # hand-written save/restore logic to get wrong. monkeypatch.delenv(..., raising=False) is the direct
+    # translation of _env(GEMINI_API_KEY=None): "unset if present, no-op if already absent."
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "ignored")
+    assert rg._select_live_caller() is None
 
 
-def test_select_live_caller_returns_gemini_when_key_set():
+def test_select_live_caller_returns_gemini_when_key_set(monkeypatch):
     # With GEMINI_API_KEY set, a callable is returned. Only assert callable — never invoke it (no
     # network in unit tests).
-    with _env(GEMINI_API_KEY="test-key", ANTHROPIC_API_KEY=None):
-        caller = rg._select_live_caller()
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    caller = rg._select_live_caller()
     assert callable(caller)
 
 
@@ -1413,6 +1407,29 @@ def test_parse_batch_reply_never_raises_on_malformed_input():
     assert rg.parse_batch_reply(12345, ["A"]) == {"A": None}  # non-string reply -- must degrade, not raise
 
 
+def test_parse_batch_reply_mid_sentence_mention_does_not_hijack_sibling_line():
+    # REGRESSION (batch-decision-line-hijack): _BATCH_DECISION_RE used to be applied with .search() on the
+    # RAW line, so a "DECISION[<id>]:" shape ANYWHERE in a line -- not just at line-start -- could match.
+    # A free-text RATIONALE line for one scenario mentioning a SIBLING id in that literal shape (plausible:
+    # BATCH_EVAL_PROMPT_TEMPLATE groups scenarios sharing governing files, and scenarios.yaml deliberately
+    # cross-references siblings, e.g. "Same facts as KT-01 except...") would hijack that sibling's line via
+    # parse_batch_reply()'s own documented "last occurrence wins" rule -- silently overwriting KT-01's real,
+    # already-correctly-parsed CONTINUE with text lifted mid-sentence out of KT-02's own rationale, purely
+    # because it appeared LATER in the reply. Reproduced verbatim against the pre-fix regex/scan (unanchored
+    # .search()): this exact reply returned {"KT-01": "TERMINATE, so KT-02 itself still continues.", ...}.
+    # Anchoring the marker to line-start (mirroring _SINGLE_DECISION_RE, which already closed this same
+    # hijack for the single-scenario path) makes the mid-sentence mention invisible to the scanner, so
+    # KT-01's real DECISION[KT-01]: CONTINUE line -- which appears earlier and is never restated -- survives.
+    reply = (
+        "RATIONALE[KT-01]: The 46% drawdown does not breach the 50% kill threshold.\n"
+        "DECISION[KT-01]: CONTINUE\n"
+        "RATIONALE[KT-02]: This differs from the counterfactual where a 52% drawdown would instead "
+        "force DECISION[KT-01]: TERMINATE, so KT-02 itself still continues.\n"
+        "DECISION[KT-02]: CONTINUE\n"
+    )
+    assert rg.parse_batch_reply(reply, ["KT-01", "KT-02"]) == {"KT-01": "CONTINUE", "KT-02": "CONTINUE"}
+
+
 # ---- run_live() end-to-end grading (the core of --live mode) — all network-free ----
 # run_live composes already-tested helpers, but its OWN logic had zero direct coverage: the DECISION-line
 # scan (must find a non-first, case-insensitive line), the split/reply.strip() fallback, match-vs-flip
@@ -2383,6 +2400,72 @@ def test_validate_offline_governing_sections_invalid_utf8_file_caught_not_raised
     assert any(
         "could not read 'Strategy.md' to validate governing_sections anchors" in e for e in errs
     ), errs
+
+
+def test_validate_offline_reads_and_parses_each_governing_file_at_most_once(tmp_path, monkeypatch):
+    # REGRESSION (validate-offline-redundant-heading-reparse): before caching, validate_offline() re-read
+    # and re-heading-parsed each governing file FROM SCRATCH for every scenario that scoped it — once
+    # directly (the anchor match-count check) and AGAIN inside extract_sections()'s excerpt-size report,
+    # since extract_sections() used to always recompute _document_headings() itself with no way for a
+    # caller to hand in an already-computed result. Two scenarios sharing ONE governing file therefore drove
+    # FOUR full-document heading scans of that file in a single validate_offline() call (2 scenarios x 2
+    # scans each), scaling linearly with scenario count instead of staying pinned to the distinct-file count.
+    # Wrap _document_headings() with a call counter that still DELEGATES to the real implementation (so
+    # correctness/output is provably unaffected) and assert it fires exactly ONCE for two scenarios that
+    # share a governing file with clean (anchors-resolve) governing_sections — this assertion sees 4 calls
+    # and FAILS against the pre-fix code, and sees 1 call and PASSES against the cached fix.
+    monkeypatch.setattr(rg, "ROOT", str(tmp_path))
+    (tmp_path / "Shared.md").write_text(_SPACED_MD)
+    calls = []
+    orig_document_headings = rg._document_headings
+
+    def counting_document_headings(text):
+        calls.append(text)
+        return orig_document_headings(text)
+
+    monkeypatch.setattr(rg, "_document_headings", counting_document_headings)
+
+    sc_a = _sc_with_sections(["Shared.md"], {"Shared.md": ["## Alpha"]})
+    sc_a["id"] = "SHARE-A"
+    sc_b = _sc_with_sections(["Shared.md"], {"Shared.md": ["## Beta"]})
+    sc_b["id"] = "SHARE-B"
+
+    errs = rg.validate_offline([sc_a, sc_b])
+    assert errs == []  # caching must not change the (zero-error) outcome, only how many times it's computed
+    assert len(calls) == 1, (
+        f"expected _document_headings() to run exactly once for 2 scenarios sharing one governing file "
+        f"(cached), got {len(calls)} calls"
+    )
+
+
+def test_extract_sections_honors_supplied_headings_param_instead_of_recomputing():
+    # REGRESSION (validate-offline-redundant-heading-reparse, the extract_sections() half of the fix):
+    # validate_offline() now passes its own already-computed `headings` straight into extract_sections()
+    # (see the gov_file_cache comment in validate_offline()) so that function doesn't run a SECOND
+    # _document_headings() pass over text it just parsed. Pin two things: (1) the `headings` kwarg exists
+    # and produces the identical result to the pre-existing self-computed path when given the CORRECT
+    # headings (so passing it through is safe), and (2) a caller-supplied `headings` is actually USED, not
+    # silently ignored in favor of an internal recompute — proven by handing in an EMPTY headings list for
+    # text that unambiguously contains the anchor: if the parameter were a no-op, extract_sections() would
+    # still find "## Alpha" via its own internal scan and return a non-empty excerpt; with the parameter
+    # honored, zero supplied headings means zero resolvable anchors and an EMPTY excerpt. This call also
+    # simply doesn't exist pre-fix (extract_sections(full_text, anchors) took no `headings` kwarg at all),
+    # so this test raises TypeError and fails outright against the old code.
+    full_text = _SPACED_MD
+    real_headings = rg._document_headings(full_text)
+
+    excerpt_default, n_blocks_default, n_anchors_default = rg.extract_sections(full_text, ["## Alpha"])
+    excerpt_supplied, n_blocks_supplied, n_anchors_supplied = rg.extract_sections(
+        full_text, ["## Alpha"], headings=real_headings
+    )
+    assert (excerpt_supplied, n_blocks_supplied, n_anchors_supplied) == (
+        excerpt_default, n_blocks_default, n_anchors_default,
+    )
+    assert "alpha body 1" in excerpt_supplied
+
+    excerpt_stale, n_blocks_stale, n_anchors_stale = rg.extract_sections(full_text, ["## Alpha"], headings=[])
+    assert n_blocks_stale == 0
+    assert excerpt_stale == ""
 
 
 def test_validate_offline_real_scenarios_yaml_governing_sections_all_declared_and_valid():

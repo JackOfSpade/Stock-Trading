@@ -616,6 +616,12 @@ function beat_(pollOk) {
 }
 
 // ===== BigQuery =====
+// KEEP IN SYNC MANUALLY with bq_() in ops/weekly_report/weekly_report.gs -- byte-for-byte identical on
+// purpose (each file must keep working if re-pasted/redeployed independent of the other). See that
+// function's comment for why this stays two copies instead of one shared helper, and
+// ops/weekly_report/test_pure_helpers.js's bq_/bqAlerts_ parity test for the actual drift guard --
+// this comment is only a pointer to it (2026-09-02 audit finding -- previously unguarded, unlike the
+// esc_/esc2_ pair below).
 function bqAlerts_(sql) {
   let res = BigQuery.Jobs.query({ query: sql, useLegacySql: false, timeoutMs: 30000, maxResults: 10000 }, ALERT_PROJECT_ID);
   let g = 0;
@@ -637,6 +643,11 @@ function bqAlerts_(sql) {
 // Detected DISPLAY timezone (state.user_tz — bigquery/20_user_prefs.sql). Purely cosmetic: it changes
 // how a timestamp is RENDERED to the operator, never any alert logic. Falls back to America/Denver on
 // any error so a BigQuery hiccup on this read can never block delivery.
+// KEEP IN SYNC MANUALLY with getUserTzWeekly_() in ops/weekly_report/weekly_report.gs -- byte-for-byte
+// identical on purpose, same reasons as the bqAlerts_/bq_ pair above (this caches into its own
+// _alertTzCache, distinct from that file's _tzCache, so the two never collide despite sharing one Apps
+// Script project's scope). Also covered by ops/weekly_report/test_pure_helpers.js's parity test
+// (2026-09-02 audit finding).
 let _alertTzCache = null;
 function getUserTzAlerts_() {
   if (_alertTzCache) return _alertTzCache;
