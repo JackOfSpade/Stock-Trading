@@ -128,6 +128,84 @@ def _check_absent(sections: dict[str, str], routine: str, description: str,
         errors.append(f"{routine}: forbidden overlap reappeared — {description}")
 
 
+# --------------------------------------------------------------------------
+# PRE-MORTEM OWNER <-> CONSUMING-STEP COUPLING (added 2026-09-01, closing ops.alerts
+# premortem_live_gate_defect 6c670d35-c44a-416d-b3e6-73209e66fc3f, AR_orc on
+# premortem-C-2026-a3 cycle 17).
+#
+# strategy/08_pre_mortems.md assigns its review triggers by writing "Owner: <ROUTINE>" into the
+# trigger's own text.  Nothing ever checked that the named routine had a step which reads the file.
+# For six weeks it did not: seven live loci sat on M4, whose 66-line body contained no mention of
+# pre-mortems, Section 6 or any Known Limitation, so every one of them was a trigger that could not
+# fire while the document read as though each were owned.  The plan's SL2 section already PINS the
+# rule in prose ("AN OUT-OF-SECTION ESCALATION MUST NAME A VERIFIED CONSUMER, NEVER AN ASSUMED
+# ONE", 2026-08-27) and the shared OUT-OF-SCOPE FINDINGS rule generalizes it -- and rev 17 reused
+# exactly the evidence that pin disqualifies (a slice-map row granting READ access "for reviews")
+# three days after it was pinned.  This is that pin made mechanical, in BOTH directions: an
+# assignment with no consuming step fails, and deleting a consuming step while assignments remain
+# also fails.
+#
+# The marker is a fixed phrase, not a filename match, on purpose: the plan names 08_pre_mortems.md
+# in read-scope lines, slice-map rows and A1's context-budget note, none of which is an executed
+# step -- and mistaking one of those for a step is the precise error being guarded.
+#
+# The owner pattern is deliberately tight.  It is CASE-SENSITIVE on "Owner:" and requires the
+# captured token to have routine SHAPE (1-4 capitals then a digit then an optional lowercase
+# letter, or AR_att / AR_orc).  A loose [A-Z]\w* would capture a filename out of an
+# "OWNER: <surface>" escalation line and fail the build on prose.  "Owner: the participant" does
+# not match (lowercase), and must not -- a human owner is what the 2026-07-10 SISA directive
+# removed from this loop.
+PREMORTEM = os.path.join(ROOT, "strategy", "08_pre_mortems.md")
+PREMORTEM_OWNER = re.compile(r"Owner:\s*\*{0,2}((?:AR_(?:att|orc))|(?:[A-Z]{1,4}[0-9][a-z]?))\b")
+WALK_MARKER = "PRE-MORTEM OWNER-ASSIGNED CHECK WALK"
+# AR_att / AR_orc read the artifact under review by queue contract (artifact_path), and their
+# headings carry no "<id>." prefix so routine_sections() cannot produce them.  Their consumption of
+# this file is structural rather than prose-declared, so an Owner: naming them is satisfied by
+# construction.
+CONTRACTUAL_OWNERS = frozenset({"AR_att", "AR_orc"})
+
+
+def premortem_owner_routines(premortem_text: str) -> set[str]:
+    """Routine ids named as ``Owner:`` anywhere in the pre-mortem slice.
+
+    Deliberately over-broad WITHIN routine-shaped tokens: it also matches the non-assigning
+    revision-note mentions and the explains-why-unowned mention at Known Limitation 9.  Over-
+    matching can only demand a consuming step that already exists; under-matching would let a real
+    assignment through, which is the failure being fixed.
+    """
+    return {match.group(1) for match in PREMORTEM_OWNER.finditer(premortem_text)}
+
+
+def check_premortem_consumers(plan_text: str, premortem_text: str) -> list[str]:
+    """Return coupling errors between pre-mortem ``Owner:`` names and plan walk steps."""
+    sections = routine_sections(plan_text)
+    errors: list[str] = []
+    owners = premortem_owner_routines(premortem_text) - CONTRACTUAL_OWNERS
+    for routine in sorted(owners):
+        body = sections.get(routine)
+        if body is None:
+            errors.append(
+                f"{routine}: strategy/08_pre_mortems.md assigns `Owner: {routine}` but no such "
+                f"routine section exists in {os.path.basename(PLAN)} -- an owner that cannot be "
+                f"invoked is an unassigned locus wearing an owner's name")
+        elif WALK_MARKER not in body:
+            errors.append(
+                f"{routine}: strategy/08_pre_mortems.md assigns `Owner: {routine}`, but its section "
+                f"carries no '{WALK_MARKER}' step, so the trigger cannot fire. Fix: add the walk "
+                f"step to {routine}. NOTE this matcher is deliberately over-broad and also matches "
+                f"non-assigning revision-note prose, which survives an unassignment -- so removing "
+                f"the live loci does NOT clear this error, and must not be attempted as the remedy. "
+                f"Retiring the step entirely is a deliberate scope change: drop {routine} from the "
+                f"coupling rule here, in the same commit, with the reason")
+    for routine, body in sorted(sections.items()):
+        if WALK_MARKER in body and routine not in owners:
+            errors.append(
+                f"{routine}: carries a '{WALK_MARKER}' step but strategy/08_pre_mortems.md assigns "
+                f"it no `Owner: {routine}` locus -- restore the assignment or delete the step; a "
+                f"walk over an empty scope writes a receipt that certifies nothing")
+    return errors
+
+
 def check(text: str) -> list[str]:
     """Return ownership-boundary errors for a plan body."""
     sections = routine_sections(text)
@@ -225,17 +303,34 @@ def check(text: str) -> list[str]:
 def main() -> int:
     try:
         with open(PLAN, encoding="utf-8") as file:
-            errors = check(file.read())
+            plan_text = file.read()
     except OSError as exc:
         print(f"ROUTINE SCOPE: FAIL — cannot read {PLAN}: {exc}")
         return 1
+
+    errors = check(plan_text)
+
+    # Cross-file: every `Owner:` named in the pre-mortem slice must have a consuming step in the
+    # plan.  Kept OUT of check() deliberately -- check() takes a plan body and nothing else, and
+    # tests/test_check_routine_scope.py exercises it with synthetic plans that contain no M4
+    # section; reading the real pre-mortem from inside check() would fail every one of them.
+    try:
+        with open(PREMORTEM, encoding="utf-8") as file:
+            premortem_text = file.read()
+    except OSError as exc:
+        errors.append(
+            f"strategy/08_pre_mortems.md unreadable ({exc}) — fail closed: the pre-mortem "
+            f"owner <-> consuming-step coupling cannot be verified without it")
+    else:
+        errors.extend(check_premortem_consumers(plan_text, premortem_text))
 
     if errors:
         print("ROUTINE SCOPE: FAIL")
         for error in errors:
             print(f"  - {error}")
         return 1
-    print("ROUTINE SCOPE: OK — daily/weekly ownership boundaries hold")
+    print("ROUTINE SCOPE: OK — daily/weekly ownership boundaries hold; "
+          "every pre-mortem Owner: names a routine with a walk step")
     return 0
 
 
