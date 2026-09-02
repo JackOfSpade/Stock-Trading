@@ -172,3 +172,41 @@ def test_w5_still_rejects_an_active_operational_drift_alert():
         "W5": "W5 reports a trend, then raises an operational drift alert for the reconciliation.\n"
     }))
     assert any("W5: forbidden overlap reappeared — embedding catch-up" in e for e in errors)
+
+
+def test_premortem_owner_with_a_walk_step_passes():
+    plan = _plan({"M4": "M4 runs I. PRE-MORTEM OWNER-ASSIGNED CHECK WALK each cycle.\n"})
+    premortem = "Review trigger: audit the record. **Owner: M4 (Monthly Action Conversion)**\n"
+    assert crs.check_premortem_consumers(plan, premortem) == []
+
+
+def test_premortem_owner_without_a_walk_step_fails():
+    plan = _plan({"M4": "M4 converts M1b/M2/M3 outputs into actions.\n"})
+    premortem = "Review trigger: audit the record. **Owner: M4 (Monthly Action Conversion)**\n"
+    errors = crs.check_premortem_consumers(plan, premortem)
+    assert any("carries no 'PRE-MORTEM OWNER-ASSIGNED CHECK WALK' step" in e for e in errors)
+
+
+def test_premortem_owner_naming_a_nonexistent_routine_fails():
+    premortem = "Review trigger: audit the record. **Owner: Z9**\n"
+    errors = crs.check_premortem_consumers(_plan(), premortem)
+    assert any("no such routine section exists" in e for e in errors)
+
+
+def test_walk_step_without_any_assignment_fails():
+    plan = _plan({"M4": "M4 runs I. PRE-MORTEM OWNER-ASSIGNED CHECK WALK each cycle.\n"})
+    errors = crs.check_premortem_consumers(plan, "No owner is named anywhere here.\n")
+    assert any("assigns it no `Owner: M4` locus" in e for e in errors)
+
+
+def test_human_owner_and_surface_owner_are_not_routine_assignments():
+    premortem = (
+        "manually verified by Owner: the participant against both code paths.\n"
+        "OWNER: Claude_Task_Plan.md (nearest owning routine: W5)\n"
+    )
+    assert crs.premortem_owner_routines(premortem) == set()
+
+
+def test_contractual_owners_need_no_declared_walk_step():
+    premortem = "**Owner: AR_orc** adjudicates this by queue contract.\n"
+    assert crs.check_premortem_consumers(_plan(), premortem) == []
