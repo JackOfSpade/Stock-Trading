@@ -1747,6 +1747,13 @@ the BigQuery value-weighted daily TOTAL-return TWR (`events.daily_marks` → `an
      `contract_id=13455763` with `security_type='IND'`, `exchange='CBOE'`, `step='ONE_DAY'`, which D1's
      PARK ALLOCATION CALL now names as its PRIMARY VIX source — corrected there 2026-08-24. This ingest
      predates that discovery and remains the isolated evidence layer for the full menu).
+     **`source` for a `^VIX` row is the literal token `'FMP'`, NEVER `'FMP-fallback'` (pinned 2026-09-02, D2a).**
+     FMP is this ticker's PRIMARY, so `'FMP-fallback'` — which everywhere else in this step means *IBKR was
+     primary and failed* — is factually wrong for it, and this bullet had never named a token at all. Measured
+     that day on `state.signal_marks_curated`: the daily `^VIX` ingest had drifted across BOTH values with no
+     rule, 19 rows `'FMP-fallback'` (2026-07-20..2026-08-31) against 14 rows `'FMP'` (2026-07-31..2026-09-02),
+     interleaved day to day. The already-landed rows stay as they are (`events.*` is append-only and the split
+     is cosmetic); write `'FMP'` from here on so the fallback token keeps meaning what it means.
      **`mark_date` is the RETURNED BAR's own `date` field, NEVER `state.trading_day_today.today`** — on a
      Sunday run recovering Friday's close, the bar's `date` is Friday, and that is what `mark_date` must carry;
      stamping `today` would silently misdate the close as a Sunday reading that never existed.
