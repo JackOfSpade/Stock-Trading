@@ -1,6 +1,18 @@
 -- 209_owner_confirmation_park_tap_liveness.sql (2026-09-02)
 -- Project: stock-trading-498512.
 --
+-- SUPERSEDED LIVE 2026-09-03 by bigquery/211_owner_confirmation_pending_case_fold.sql — that file is
+-- the current single source of truth for the state.owner_confirmation_liveness VIEW BODY. It carries
+-- this body forward byte-identical except one term: the `pending` CTE re-filters
+-- LOWER(status) = 'pending' instead of status = 'pending'. state.open_orders already filters
+-- LOWER(status) and projects the RAW status, so the case-sensitive re-filter here could silently drop
+-- an admitted row — and because n_pending_instructions is a conjunct of entries_halted, dropping one
+-- fails OPEN on a gate that exists to halt. Kept here, unmodified, for DR-rebuild apply-in-order
+-- reference only; do NOT re-apply this CREATE statement live in isolation.
+-- The PROSE below is NOT superseded and is not duplicated in 211: this file remains the canonical
+-- home of the PARK-TAP argument, the DRIP/order_id='0' exclusion, and the action_date-not-event_ts
+-- reasoning.
+--
 -- SUPERSEDES the state.owner_confirmation_liveness view definition in
 -- bigquery/76_owner_confirmation_liveness.sql. That file is unchanged below its header and remains
 -- the canonical home of this gate's DESIGN PROSE -- the SCOPE note and the "ops.trading_control

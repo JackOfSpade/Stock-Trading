@@ -51,6 +51,36 @@
 --       is ticker + action + action_date, because events.parking_events carries no contract_id, and
 --       action_date is the FILL date (event_ts is the WRITE time — see bigquery/209's header).
 --
+--       GRAIN CORRECTION 2026-09-03 (interactive triage; the arm shipped 2026-09-02 with `>=`).
+--       The strategy arm gets its "the fill must not pre-date the order" safety free, at TIMESTAMP
+--       grain, from `f.fill_ts >= s.staged_ts`. events.parking_events carries NO fill timestamp —
+--       action_date is a DATE — so the park arm's join is DATE-grain, and `>=` there means "a fill
+--       ANYWHERE ON the staging day exempts", including one that filled hours BEFORE the order was
+--       staged. That is not the same predicate; it is a weaker one, and it was already false-negative
+--       on the only row in the live registry: sweep-SGOV-20260902 (staged 2026-09-02 16:59 MT) was
+--       exempted by the two parkswitch-SGOV-buy-20260901 second-leg fills (order_id 1850320454) that
+--       filled at 07:30 MT the same morning — ~9.5h before it existed. So the arm added to close a
+--       false positive had opened a false NEGATIVE on its first live row. The predicate is now a
+--       STRICT `>`.
+--       LOSSLESS ON ALL HISTORY, measured rather than argued: of the 23 park ORDER_STAGED item_keys
+--       this registry has ever held, 9 have a same-Denver-date park match; 8 of those 9 also have a
+--       LATER-day match (3-14 rows each) and stay exempt under `>`. The 9th is sweep-SGOV-20260902,
+--       whose only matches are the false ones above. So `>` removes exactly one exemption and it is
+--       the wrong one.
+--       WHY `>` is safe at DATE grain and not merely tighter: park orders are staged in the EVENING.
+--       All 23 items were staged 05:06-18:43 MT and only two before the 14:00 MT close — both on
+--       Sunday 2026-07-26, a non-trading day that cannot produce a same-day fill. A same-Denver-date
+--       park fill therefore belongs to a DIFFERENT order, which is exactly what the live case shows.
+--       RESIDUAL, stated rather than hidden: a park order staged BEFORE the open on a trading day and
+--       filled that same day, whose ORDER_STAGED row was then never flipped, would now be flagged.
+--       That has never happened (0 of 23), and it is the fail-SAFE direction — a noisy flag is
+--       triaged, a silently-missed orphan keeps cash reserved and shadows the confirm slot, which is
+--       the whole reason this test exists.
+--       ALTERNATIVE REJECTED ON MEASUREMENT, not taste: matching `REGEXP_CONTAINS(p.note, s.item_key)`
+--       is an exact link (D2a writes the registry item_key into the park note). Measured across all 23
+--       items, the number of park rows that the note-link would exempt but `>` would not is ZERO for
+--       every item — it buys nothing today and adds a free-text regex surface, so it is not added.
+--
 -- A row with a closed window, no matching fill, and a D2 cycle since the close is still a genuine
 -- orphan and still fails — which is the case this test exists to catch. See Operating_Protocols.md
 -- §11 and "The registry is not the broker" in Claude_Task_Plan.md's Shared rules.
@@ -89,7 +119,7 @@ filled AS (
   JOIN {{ source('events', 'parking_events') }} p
     ON UPPER(p.action) = s.side
    AND p.ticker = s.ticker
-   AND p.action_date >= DATE(s.staged_ts, 'America/Denver')
+   AND p.action_date >  DATE(s.staged_ts, 'America/Denver')
 )
 
 SELECT s.item_key, s.ticker, s.side, s.entry_window_close, s.today

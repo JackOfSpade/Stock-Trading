@@ -1,4 +1,18 @@
 -- 175_selfheal_candidate_completion_guard.sql (2026-08-17, W5)
+--
+-- SUPERSEDED LIVE 2026-09-03 by bigquery/210_selfheal_inflight_guard.sql — that file is the current
+-- single source of truth for the state.run_log_selfheal_candidates VIEW BODY. It carries the
+-- latest_marker CTE and the halt regex below forward byte-identical and adds two terms: (TERM 2) no
+-- terminal run_log row of ANY status, widening this file's 'completed'-only test so a run that HALTS
+-- cannot be healed into a completion — the class alert 7144dbf6 named and that the commit-subject
+-- regex structurally cannot catch, because the commit is written BEFORE the halt exists to describe;
+-- and (TERM 1) no in-flight session, deferring the heal while a live 'started' row is younger than
+-- the repo-wide 3h dead-run proxy. Kept here, unmodified, for DR-rebuild apply-in-order reference
+-- only. DO NOT re-apply this CREATE statement live in isolation — doing so restores the path that
+-- minted a 'completed' over a still-running SL2 on 2026-09-02 and a still-running SL3 on 2026-08-20.
+-- The PROSE below is NOT superseded and is not duplicated in 210: this file remains the canonical
+-- home of the halt-regex rationale, the write-side-CI-guard vs read-side-backstop argument, the SCOPE
+-- note, the 2026-08-18 CORRECTION, the known-accepted W4 false positive, and the BIAS paragraph.
 -- Project: stock-trading-498512. Apply after 174_web_call_telemetry.sql.
 --
 -- SUPERSEDES bigquery/38_run_log_selfheal.sql's definition of state.run_log_selfheal_candidates.
@@ -94,8 +108,15 @@
 -- ops/connector_tools.yaml, which IS OPS1's real output) is a true landed-but-unlogged strand, and it
 -- still backfills after this change. So do all six D1 markers. Only halt-declaring subjects drop out.
 --
--- Idempotent (CREATE OR REPLACE VIEW); safe to re-run. No dbt port exists for this view, so no
--- dbt-parity mirror is owed.
+-- Idempotent (CREATE OR REPLACE VIEW); safe to re-run.
+-- CORRECTION 2026-09-03 (interactive triage). This header previously ended "No dbt port exists for
+-- this view, so no dbt-parity mirror is owed." That was true when written and is now FALSE:
+-- dbt/models/state/run_log_selfheal_candidates.sql was added 2026-09-01 by the dbt view-coverage
+-- burn-down, is generated mechanically by scripts/gen_dbt_port.py, and is proved by
+-- scripts/verify_dbt_port.py on every CI run. Any change to this view's body therefore DOES owe a
+-- regenerated port. (It is NOT in dbt/parity_live_scope.yml, so no live EXCEPT comparison is owed —
+-- but token-identity to the canonical body is.) Retired here rather than deleted, per the standing
+-- rule that a landed header is corrected in place with a dated line, never silently rewritten.
 
 -- ===== state.run_log_selfheal_candidates — marker present, completed run_log row absent, AND the
 -- ===== marker's own commit subject does not declare the run a non-completion.

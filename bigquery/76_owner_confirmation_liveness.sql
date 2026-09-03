@@ -1,5 +1,6 @@
--- SUPERSEDED LIVE by bigquery/209_owner_confirmation_park_tap_liveness.sql (2026-09-02) — that file
--- is the current single source of truth for the state.owner_confirmation_liveness VIEW BODY. It
+-- SUPERSEDED LIVE by bigquery/209_owner_confirmation_park_tap_liveness.sql (2026-09-02) and then by
+-- bigquery/211_owner_confirmation_pending_case_fold.sql (2026-09-03) — bigquery/211 is now the
+-- current single source of truth for the state.owner_confirmation_liveness VIEW BODY. It
 -- carries everything below forward byte-identical except the "last owner confirm-tap" the staleness
 -- counter measures from, which stops being MAX(fill_ts) over events.trade_fills ALONE and becomes the
 -- later of that and MAX(action_date) over events.parking_events BUY/SELL rows. Park sweep / cover /
