@@ -1,3 +1,19 @@
+-- SUPERSEDED LIVE by bigquery/209_owner_confirmation_park_tap_liveness.sql (2026-09-02) — that file
+-- is the current single source of truth for the state.owner_confirmation_liveness VIEW BODY. It
+-- carries everything below forward byte-identical except the "last owner confirm-tap" the staleness
+-- counter measures from, which stops being MAX(fill_ts) over events.trade_fills ALONE and becomes the
+-- later of that and MAX(action_date) over events.parking_events BUY/SELL rows. Park sweep / cover /
+-- switch fills are recorded ONLY to events.parking_events (Operating_Protocols.md §13.D and §13.E
+-- step 5/6), yet each one is an owner confirm-tap on the same IBKR surface as any other order — so
+-- this file's body reported the owner as unresponsive on days they had demonstrably tapped, and both
+-- times this gate has ever fired it was that false positive. Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation — doing so
+-- makes the liveness signal park-blind again.
+--
+-- The PROSE below is NOT superseded and is not duplicated in 209: this file remains the canonical
+-- home of the SCOPE note and of the "ops.trading_control usage convention for this gate" block that
+-- ops/prose_invariants.yaml names as a source_of_truth. Read both files together.
+--
 -- Owner-confirmation liveness — absence model for the system's one sanctioned human dependency
 -- (completeness-critic finding N-2, 2026-07-16). Project: stock-trading-498512.
 -- Apply after 01_schema.sql (state.open_orders), 09_market_calendar.sql (state.market_calendar /

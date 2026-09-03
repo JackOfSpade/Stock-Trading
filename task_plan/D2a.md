@@ -1223,7 +1223,22 @@ Concretely, every run:
   deficit clears.
 - **Owner-confirmation liveness gate (completeness-critic N-2, 2026-07-16) — the absence model for the
   one sanctioned human touch.** `SELECT * FROM state.owner_confirmation_liveness`
-  (`bigquery/76_owner_confirmation_liveness.sql`). If `entries_halted = TRUE` (>=1 `state.open_orders`
+  (`bigquery/209_owner_confirmation_park_tap_liveness.sql`, which supersedes the view body in
+  `bigquery/76_owner_confirmation_liveness.sql`; 76 remains the canonical home of this gate's SCOPE note
+  and its `ops.trading_control` usage convention). **PARK CONFIRM-TAPS COUNT (2026-09-02).**
+  `trading_days_since_last_fill` measures from the LATER of the last `events.trade_fills` fill and the
+  last `events.parking_events` `BUY`/`SELL` `action_date`, because a park sweep / cover / switch leg is an
+  owner confirm-tap on the same IBKR surface as any other order (Operating_Protocols.md §13.E, "the
+  operator still taps to confirm") and is recorded ONLY in `parking_events` (§13.D, §13.E step 5/6). Do NOT
+  narrow it back to `trade_fills` alone: both times this gate has ever fired — 2026-07-19 and 2026-09-02 —
+  it was that blindness, not a real absence, and it is self-sustaining because D2a's own mandatory §13.E
+  sweep craft re-arms `n_pending_instructions` every evening the book is parked. `last_park_fill_date` and
+  `last_owner_tap_date` are on the view so the reading is auditable. **AND AN AUTOMATIC DRIP IS NOT A TAP,
+  ON EITHER SIDE.** `events.parking_events` `DIVIDEND_REINVEST` / `RECON_ADJUST` are excluded by the
+  BUY/SELL allowlist, and `events.trade_fills` rows with `order_id = '0'` — IBKR's automatic reinvests,
+  5 of 50 rows, no broker order id because the owner placed no order — are excluded too. The owner tapped
+  nothing on those days; counting them would report responsiveness that did not happen. Inert today
+  (newest such row 2026-07-23, account on Receive Cash since 2026-08-02) but re-armable per §13.C. If `entries_halted = TRUE` (>=1 `state.open_orders`
   row still `pending` AND `trading_days_since_last_fill >= 3` — the operator has not confirmed a single
   order in 3+ trading days while something is still waiting on a tap): (a) OPEN THE MARKER — keyed on the
   CONTROL-ROW state, never on an alert existing: `INSERT INTO ops.trading_control (halt_all, mode, reason,
@@ -1242,7 +1257,9 @@ Concretely, every run:
   liveness: <n_pending_instructions> pending instruction(s), <trading_days_since_last_fill> trading days
   since the last fill — D2 NEW-ENTRY staging (fresh GO decisions only) is paused; already-staged orders —
   entries and exits alike — keep re-crafting daily, unaffected.', <JSON:
-  n_pending_instructions, trading_days_since_last_fill, last_fill_ts>)`. D2's "2. NEW ENTRY CANDIDATES"
+  n_pending_instructions, trading_days_since_last_fill, last_fill_ts, last_park_fill_date,
+  last_owner_tap_date>)` — carry BOTH tap sources in the payload, so a reader can tell a genuine absence
+  from a measurement artifact without re-querying. D2's "2. NEW ENTRY CANDIDATES"
   step reads this same view before crafting any new entry and skips staging (logging the GO as
   staged-but-paused, same pattern as the PENDING-NEWCOMER FROZEN CHECK) while `entries_halted = TRUE`;
   this routine's own Staged-order registry reconciliation above (§11) — which re-crafts ANY already-staged
@@ -1252,15 +1269,24 @@ Concretely, every run:
   alert ever raised was resolved out of band by an interactive session the next morning, which left its paired
   `mode='entries_halted'` row open with no later run able to satisfy an alert-conditioned close — and nothing
   else in the system emits that close.
-  (i) ALERT RESOLVE — only when an unresolved `owner_confirmation_stale` alert exists (a fill has since
-  landed — auto-clears with no operator action): `UPDATE ops.alerts SET resolved = TRUE, resolved_note =
-  'auto-resolved: a fill was reconciled, state.owner_confirmation_liveness.entries_halted is now FALSE'
-  WHERE category = 'owner_confirmation_stale' AND NOT resolved`. Correctly alert-scoped and unchanged: with no
-  alert open there is nothing to resolve.
+  (i) ALERT RESOLVE — only when an unresolved `owner_confirmation_stale` alert exists (the gate has since
+  cleared — auto-clears with no operator action): `UPDATE ops.alerts SET resolved = TRUE, resolved_ts =
+  CURRENT_TIMESTAMP(), resolved_note = 'auto-resolved: state.owner_confirmation_liveness.entries_halted is
+  now FALSE — <name what actually cleared it: the owner confirm-tap, strategy or park, or the other change>'
+  WHERE category = 'owner_confirmation_stale' AND NOT resolved`. Correctly alert-scoped: with no alert open
+  there is nothing to resolve. TWO CORRECTIONS (2026-09-02 triage of `owner_confirmation_stale` 5cd75118).
+  `resolved_ts` was OMITTED from this arm while the sibling `book_drawdown_soft_breach` HEAL below AND W5's
+  SPEC-DEFECT NOTICE INTAKE branch 1 both set it — so this arm alone left a resolved row with a NULL
+  `resolved_ts`. And the note asserted "a fill was reconciled" UNCONDITIONALLY, which is a FALSE RECEIPT
+  whenever anything else cleared the gate: on 2026-09-02 what cleared it was
+  `bigquery/209_owner_confirmation_park_tap_liveness.sql` correcting the measurement, with no new fill at
+  all. Write what actually cleared it — a receipt that names the wrong cause is worse than none, because a
+  later reader trusts it.
   (ii) AUDIT-TRAIL CLOSE — fires whenever the marker lane is still OPEN (some `mode='entries_halted'` row has
   no LATER `mode='entries_halted_cleared'` row), whether or not an alert exists or ever did: `INSERT INTO
-  ops.trading_control (halt_all, mode, reason, set_by) SELECT FALSE, 'entries_halted_cleared', '<the fill that
-  cleared it, plus the control_id of the entries_halted row being closed>', 'D2a' FROM UNNEST([1]) AS _t
+  ops.trading_control (halt_all, mode, reason, set_by) SELECT FALSE, 'entries_halted_cleared', '<WHAT ACTUALLY
+  cleared it — the owner confirm-tap (strategy fill OR park fill), or the other change that did, never assume a
+  fill; plus the control_id of the entries_halted row being closed>', 'D2a' FROM UNNEST([1]) AS _t
   WHERE EXISTS (SELECT 1 FROM ops.trading_control o WHERE o.mode = 'entries_halted' AND NOT EXISTS
   (SELECT 1 FROM ops.trading_control c WHERE c.mode = 'entries_halted_cleared' AND c.control_ts > o.control_ts))
   AND NOT COALESCE((SELECT halt_all FROM ops.trading_control ORDER BY control_ts DESC LIMIT 1), FALSE)`. Keying

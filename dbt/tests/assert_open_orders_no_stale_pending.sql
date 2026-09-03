@@ -30,6 +30,27 @@
 --       fill rows to match against and this exemption is inert. Guard (1) is what makes the outage
 --       case safe; guard (2) catches the partial-reconciliation bug that guard (1) would let through.
 --
+--       PARK ARM ADDED 2026-09-02 (park-tap blindness class sweep, alongside bigquery/209). Guard (2)
+--       matched ONLY state.trade_fills_curated, while park sweep / cover / switch fills are recorded to
+--       events.parking_events (Operating_Protocols.md §13.D, §13.E step 5/6) — so for every one of the
+--       20 park ORDER_STAGED item_keys this registry has ever held, guard (2) was STRUCTURALLY
+--       incapable of exempting them, whether or not they filled. Say that precisely rather than
+--       "park fills never reach trade_fills", which is one row short of true: state.trade_fills_curated
+--       holds EXACTLY ONE park-ticker row over its whole history — the 2026-06-30 RUNBOOK §29 SGOV
+--       leak, which the sibling assert_no_park_ticker_in_strategy_positions.sql carves out by trade_id.
+--       It cannot rescue guard (2) either, because guard (2) also requires f.fill_ts >= s.staged_ts and
+--       a side match, so a lone 2026-06-30 row can never exempt a later park order. Either way this was
+--       not "rarely matches" — it was never going to match. Only guard (1) kept it quiet,
+--       and guard (1) is a timing accident, not a correctness argument: the nearest miss on record is
+--       sweep-VOO-20260827 (window close 2026-08-28), which sat `pending` until the 2026-08-30 flip
+--       and escaped only because D2 is Sun-Thu and its last completed run_date was still 2026-08-27.
+--       A park order whose window closes on a Thursday it FILLS, whose Thursday-evening D2a flip
+--       fails, is then flagged by Sunday's D2 run: guard (1) satisfied, guard (2) unable to exempt,
+--       test fails on an order that demonstrably filled. Live today this test returns 0 rows — this
+--       arm closes a reachable false positive, it does not change any current verdict. Matching key
+--       is ticker + action + action_date, because events.parking_events carries no contract_id, and
+--       action_date is the FILL date (event_ts is the WRITE time — see bigquery/209's header).
+--
 -- A row with a closed window, no matching fill, and a D2 cycle since the close is still a genuine
 -- orphan and still fails — which is the case this test exists to catch. See Operating_Protocols.md
 -- §11 and "The registry is not the broker" in Claude_Task_Plan.md's Shared rules.
@@ -59,6 +80,16 @@ filled AS (
          (s.contract_id IS NOT NULL AND f.contract_id = s.contract_id)
       OR (s.contract_id IS NULL AND f.ticker = s.ticker)
        )
+
+  UNION DISTINCT
+
+  -- park arm (see the PARK ARM note above): a park sweep/cover/switch leg's fill lands ONLY here.
+  SELECT DISTINCT s.item_key
+  FROM staged s
+  JOIN {{ source('events', 'parking_events') }} p
+    ON UPPER(p.action) = s.side
+   AND p.ticker = s.ticker
+   AND p.action_date >= DATE(s.staged_ts, 'America/Denver')
 )
 
 SELECT s.item_key, s.ticker, s.side, s.entry_window_close, s.today

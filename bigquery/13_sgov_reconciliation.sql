@@ -5,6 +5,13 @@
 -- the 2026-06-06 cutover and is no longer in the repo, and (b) events.parking_events.strategy is NULL
 -- on every row — SGOV is a SHARED, account-level park with no per-strategy tag, so a per-strategy
 -- SGOV-share ledger cannot be (and should not be) reconstructed.
+-- PRECISION CORRECTION 2026-09-02 (park-tap blindness class sweep): "NULL on every row" is 65 of 66,
+-- not 66 of 66. Exactly one row carries a strategy tag — event_id bb4d1216-fe64-4658-85a1-3539262720c4,
+-- the 2026-06-30 SGOV BUY, strategy 'B' — which is the events.parking_events twin of the RUNBOOK §29
+-- leak that dbt/tests/assert_no_park_ticker_in_strategy_positions.sql watches for on the trade_fills
+-- side. The CONCLUSION above is unaffected: one mis-tagged row is a known, already-adjudicated
+-- anomaly, not a per-strategy ledger. But do NOT re-derive "strategy is always NULL here" from this
+-- file and build on it — a GROUP BY or a NULL-assuming join would silently split that row out.
 --
 -- RESOLUTION (matches the v2 redesign's "reframe §13 to account level"):
 --   * The TOTAL SGOV share count + cash flow ARE event-sourceable from events.parking_events with no

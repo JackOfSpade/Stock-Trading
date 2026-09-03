@@ -103,13 +103,23 @@ def substitute(body, known_models, sources, self_name):
     return QUALIFIED.sub(repl, body), unresolved
 
 
+# HEADER is stamped on EVERY generated port, including a REGENERATION of a port that has existed for
+# weeks. It therefore must not assert anything this script cannot know at generation time. It used to
+# open "Added 2026-09-01 (dbt view-coverage burn-down): this view had NO dbt presence, so
+# check_dbt_view_coverage.py reported it uncovered and it carried no port at all" — a hardcoded date
+# and an origin story, both FALSE for any port that already existed. Found 2026-09-02 regenerating
+# state/owner_confirmation_liveness.sql (a port added 2026-08-22), whose true header the operator then
+# had to restore by hand, exactly as dbt/models/state/catchup_refire_readiness.sql's was on the same
+# day. Provenance — when a port was added, and which canonical file it was REPOINTED from — is
+# hand-maintained in the file and survives regeneration only if a human puts it back; this constant
+# states only what is true of every run. Do not reintroduce a literal date here.
 HEADER = (
     "-- Parallel-run dbt port of bigquery/{src}:{ds}.{name} — canonical source is that file until\n"
-    "-- owner cutover. Added 2026-09-01 (dbt view-coverage burn-down): this view had NO dbt presence,\n"
-    "-- so scripts/check_dbt_view_coverage.py reported it uncovered and it carried no port at all.\n"
-    "-- Generated MECHANICALLY by scripts/gen_dbt_port.py from the canonical body — the only edit is\n"
-    "-- ref()/source() substitution for fully-qualified names — and proved token-identical to that body\n"
-    "-- by scripts/verify_dbt_port.py. Do not hand-edit: re-generate, then re-verify.\n"
+    "-- owner cutover. Generated MECHANICALLY by scripts/gen_dbt_port.py from that canonical body — the\n"
+    "-- only edit is ref()/source() substitution for fully-qualified names — and proved token-identical\n"
+    "-- to it by scripts/verify_dbt_port.py. Do not hand-edit the BODY: re-generate, then re-verify.\n"
+    "-- Regenerating REPLACES this header, so any hand-written provenance above the body must be put\n"
+    "-- back by the person who regenerates it.\n"
 )
 
 
