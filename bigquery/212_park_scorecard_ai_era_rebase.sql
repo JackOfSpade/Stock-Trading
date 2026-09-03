@@ -235,6 +235,7 @@ rule_cum AS (
 -- asserted RECORD_ONLY was "the only other value present in history" -- measured false, and a header
 -- that misstates its own evidence is precisely the failure bigquery/93's mis-citation of
 -- 03_twr_engine.sql already caused once in this very view family.
+--
 -- Reads state.decision_log_current, NOT the raw events.decision_log. This is a SEMANTIC read ("when
 -- did the allocator first bind a call"), which is exactly the population bigquery/144 routes to the
 -- final-effective view; the raw-table allowlist in scripts/check_superseded_by_discipline.py is
