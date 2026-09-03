@@ -2,7 +2,10 @@
 -- non-NULL strategy in state.trade_fills_curated.
 --
 -- Rationale: SGOV/VOO are the shared, ACCOUNT-LEVEL idle-capital park (event-sourced through
--- events.parking_events, strategy NULL on every row) -- never a per-strategy deployed position. A
+-- events.parking_events, where strategy is NULL on 65 of 66 rows -- the single exception, event_id
+-- bb4d1216-fe64-4658-85a1-3539262720c4, is this very same 2026-06-30 incident mirrored on the
+-- parking_events side, corrected here 2026-09-02 from a flat "NULL on every row") -- never a
+-- per-strategy deployed position. A
 -- park-sweep fill that leaks into trade_fills with a strategy tag is exactly the RUNBOOK §29
 -- 2026-06-30 anomaly (a 0.2468-share SGOV BUY, tagged strategy B, minted a phantom open lot in
 -- analytics.position_lifecycle and contaminated strategy B's deployed-TWR return). That specific
