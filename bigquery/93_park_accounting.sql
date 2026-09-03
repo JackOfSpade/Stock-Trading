@@ -253,7 +253,14 @@ LEFT JOIN policy_asof pa ON pa.as_of_date = a.as_of_date;
 
 -- ===== analytics.park_counterfactuals -- SGOV / VOO / v1-rule-shadow / AI, same axis, four chained
 -- total-return indices (PARK_ROUTER_DESIGN.md §9's three-way evaluation benchmark) =====
--- SUPERSEDED LIVE by bigquery/179_park_twr_fill_anchored.sql (2026-08-18), for two reasons: (1)
+-- SUPERSEDED LIVE by bigquery/212_park_scorecard_ai_era_rebase.sql -- current single source of truth
+-- for this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation.
+-- Supersession chain for this object: 93 -> 179 (2026-08-18) -> 212 (2026-09-03). The two defects
+-- bigquery/179 fixed in THIS body are recorded immediately below and are still accurate history;
+-- bigquery/212 then ADDED the AI-era attribution columns on top of 179's body without changing any
+-- of the five original columns.
+-- Superseded first by bigquery/179_park_twr_fill_anchored.sql (2026-08-18), for two reasons: (1)
 -- ai_index inherits analytics.park_nav_daily's switch-day marking bias (see that view's note above);
 -- (2) `rule_leg` below joins `prs.mark_date = a.as_of_date`, paying the v1 rule shadow day d's own
 -- close-to-close return for a classification state.park_rule_shadow derives from day d's OWN closing

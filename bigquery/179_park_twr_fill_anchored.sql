@@ -281,6 +281,20 @@ LEFT JOIN policy_asof pa ON pa.as_of_date = a.as_of_date;
 -- shadow is CAUSAL (decide on day d-1's close, earn day d's return), matching the AI's own
 -- decide-after-close / execute-next-open cadence. Column shape UNCHANGED (as_of_date, sgov_index,
 -- voo_index, rule_index, ai_index). sgov_leg / voo_leg are byte-identical to bigquery/93.
+--
+-- SUPERSEDED LIVE by bigquery/212_park_scorecard_ai_era_rebase.sql -- current single source of truth
+-- for this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation.
+-- WHY (2026-09-03): this body's five columns are all inception-anchored, and the axis begins at PARK
+-- inception (2026-04-17) -- three months before the allocator's first BOUND call (2026-07-26) and
+-- spanning the owner's own manual 2026-07-15 VOO cutover. W5 grades "the AI allocator's own" TWR
+-- against same-window benchmarks, so the published AI-vs-SGOV verdict was inherited from decisions
+-- the allocator never made. bigquery/212 keeps every column below byte-identical and ADDS
+-- ai_era_start_date + four AI-era-rebased columns. It is the SAME defect class this file fixed --
+-- the graded series and the grading series not measured on the same footing -- applied to WHERE the
+-- AI's series starts rather than to HOW its switch days are marked.
+-- NOTE: this file's analytics.park_nav_daily definition (above) is NOT superseded and remains
+-- canonical; only park_counterfactuals moved on.
 -- ============================================================================
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.park_counterfactuals` AS
 WITH axis AS (

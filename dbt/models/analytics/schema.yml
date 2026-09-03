@@ -338,6 +338,29 @@ models:
         description: The v1 deterministic rule table, running record-only (state.park_rule_shadow) — never trades.
       - name: ai_index
         description: park_nav_daily.twr_index joined by date — the AI's actual realized book performance.
+      - name: ai_era_start_date
+        description: >-
+          bigquery/212. The last axis date STRICTLY BEFORE the AI Park Allocator's first BOUND
+          park-allocation call (derived from state.decision_log_current; expected 2026-07-24, the
+          close before the 2026-07-26 call). Constant across all rows — a property of the view,
+          repeated so a single-row read is self-describing about its baseline. NULL if no BOUND
+          call exists, in which case all four *_ai_era columns are NULL for every row.
+      - name: sgov_index_ai_era
+        description: sgov_index rebased to ai_era_start_date. NULL strictly before the anchor, 0 at it.
+      - name: voo_index_ai_era
+        description: >-
+          voo_index rebased to ai_era_start_date. NULL strictly before the anchor, 0 at it; also
+          inherits voo_index's own null-on-gap discipline.
+      - name: rule_index_ai_era
+        description: rule_index rebased to ai_era_start_date. NULL strictly before the anchor, 0 at it.
+      - name: ai_index_ai_era
+        description: >-
+          ai_index rebased to ai_era_start_date — the allocator graded on ITS OWN decisions only.
+          The inception-anchored ai_index spans the owner's manual 2026-07-15 VOO cutover, which
+          went underwater immediately, so the published AI-vs-SGOV verdict was inherited rather
+          than earned. Measured 2026-09-02: inception-anchored says AI −1.17pp vs SGOV; AI-era says
+          AI +0.67pp vs SGOV. The sign flips. Not a whitewash — the same re-anchoring widens the
+          AI's deficit against rule_index from −27bp to −179bp.
 
   - name: strategy_unit_value_7d_ago
     description: Nearest perf.strategy_daily row to "7 days ago" per strategy — feeds strategy_scorecard's Δ Wk column.
