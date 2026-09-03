@@ -1087,6 +1087,34 @@ Concretely, every run:
   SAME never-completed fallback every other CATCH-UP EVIDENCE WINDOW consumer in this file already falls
   back to, rather than inventing a second one. D2a has run continuously since inception, so this path is a
   defensive floor, not a case expected to fire.
+
+  **WHAT THIS PREDICATE ACTUALLY RETURNS ON AN ORDINARY DAY — 1, NAMING TODAY, NOT 0 (measured 2026-09-03,
+  D2a; `ops.alerts` info `d2a_missed_day_predicate_counts_today`).** The upper bound is `cal_date <=
+  last_trading_day`, and on a trading day `last_trading_day` IS today, so a run whose own last completion
+  was YESTERDAY counts today itself as a "missed" trading day. Measured that day: last completed `run_date`
+  2026-09-02, today 2026-09-03, and the query returned `missed_trading_days = 1` with
+  `first_missed = last_missed = 2026-09-03` — the day the run was processing. So `missed_trading_days >= 1`
+  is TRUE on EVERY ordinary consecutive-day run, not only after a real gap, and the four clauses it gates
+  (the stale-baseline annotation above, step 1's `daily_marks` backfill, step 1b's option backfill +
+  EXPIRY-DAY TERMINAL MARK, step 1d's `signal_marks` backfill) are permanently ON. **This is a MISLABEL, not
+  a data defect, and nothing is lost by it:** each backfill's "full missed-trading-day range" then reduces to
+  today alone, which the same step's ordinary same-day ingest already covers, and every one of them is
+  idempotent on its own `(mark_date, ticker)` / `(mark_date, occ_symbol)` key. The `>= 1` threshold was
+  chosen (see the Thu→Sun reasoning below) on the assumption this returns 0 on an ordinary day; it does not,
+  so the threshold cannot in fact distinguish a genuine single missed Friday from a routine Wednesday. Read
+  a `1` here as "no gap established," and only `>= 2` as evidence of a real miss.
+
+  **DO NOT "FIX" IT BY EXCLUDING TODAY WITHOUT FIRST HANDLING THE EXPIRY RULE.** The obvious correction —
+  changing the bound to `cal_date < state.trading_day_today.today`, which does return 0 on an ordinary day
+  and 1 on a Thu→Sun gap — is correct for three of the four consumers and WRONG for the fourth: step 1b's
+  **EXPIRY-DAY TERMINAL MARK** triggers on a held option whose `expiry` "falls inside the missed-trading-day
+  range," so excluding today would stop it firing for a contract expiring TODAY. That is precisely the case
+  it exists for, and the same-day spot ingest cannot cover it, because a contract expiring worthless with
+  zero trades has no quote to read — the residual that rule was written to close. So the fix is a predicate
+  change PLUS a carve-out at that one call site, not a one-line edit, and it must not be made from a
+  reconcile fire. It is filed, not applied. Nothing is live behind it today: Strategy C is the only strategy
+  `analytics.fn_is_occ_option_symbol` can match and it holds zero open positions (re-verified 2026-09-03).
+
   gated on `missed_trading_days >= 1` (never `> 1`) — on a read failure against `ops.run_log` /
   `state.market_calendar` / `state.trading_day_today`, fall back to `days since D2a's
   own last completed ops.run_log run > 0`. **Why a count, not the raw `state.routine_catchup_window.window_days`
