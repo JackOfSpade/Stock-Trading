@@ -56,8 +56,14 @@
 --   -107.7328    repo FIFO, LOSING LEGS ONLY (what this view scopes; winners add back +7.6695)
 -- The 49.12 gap between the first two is a BASIS-METHOD SEAM, not an un-disallowed remainder. The
 -- realized loss (-$149.18, broker-tied) is unaffected and still correct; the DISALLOWED portion was
--- overstated. The forward-looking statement in those documents — that the 09-04 rebuy will disallow
--- the loss — remains right, and becomes the dominant effect once it fills.
+-- overstated. The forward-looking statement in those documents — that the 09-04 rebuy will
+-- disallow the loss — is now CONFIRMED: it FILLED at the broker 2026-09-04 13:30 UTC
+-- (VOO 21 @ 709.89 ARCA + 0.4714 @ 709.83 IBKR = the staged 21.4714 exactly).
+-- state.wash_sale_exposure still reads 0.00 for 2026-09-02 until that session's D2a
+-- records the fill into events.parking_events; the flip to ~107.73 is then EXPECTED and
+-- is NOT a regression. dbt/tests/assert_wash_sale_allocation_invariants.sql therefore
+-- guards the DEFECT (no own-basis lot may be its own replacement -- 13 leaked under 178,
+-- 0 under this file) rather than the dollar, so the flip cannot turn CI red.
 --
 -- MEASURED EFFECT AT LANDING is asserted at the foot of this file rather than asserted in prose.
 

@@ -160,6 +160,12 @@ qualifying_replacements AS (
 -- overlap silently allocates lots to closes that never qualified for them.
 -- Correct form: walk the qualifying (close, lot) pairs in (close_date, close_trade_id,
 -- replacement_date, replacement_trade_id) order, threading BOTH per-lot remaining supply and
+-- ORDERING HONESTY: oldest-close-first is honored at DATE GRAIN only. Within one date the
+-- tie-break is close_trade_id, a GENERATE_UUID() string with NO economic meaning — it is chosen
+-- for DETERMINISM, not correctness. Per-share losses differ across legs of one order
+-- (-5.7508 / -5.81133 / -5.86137 on the three 2026-07-27 legs), so a different within-date order
+-- moves the group total 51.36 -> 51.59, about $0.23. That is the bounded size of the arbitrariness;
+-- it does not affect the DATE-grain allocation, which is what the shared-pool fix is about.
 -- per-close remaining demand, and allocate LEAST(lot_remaining, close_remaining) at each step.
 -- Cardinality is tiny (10 closes x 13 lots on VOO today), so the recursion is cheap.
 ordered AS (

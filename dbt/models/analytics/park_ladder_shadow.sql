@@ -129,7 +129,7 @@ joined AS (
   SELECT s.as_of_date, s.standing, s.firing, s.gate, s.conviction, s.crisis, s.crisis_recent,
          s.testable_axes, s.axis_set_fingerprint, s.r_risk, s.r_def, s.actual_f_pct,
          LAG(s.actual_f_pct) OVER (ORDER BY s.as_of_date) AS actual_f_prev_pct,
-         s.cap_idx * 25 AS cap_pct,
+         s.cap_idx * 25 AS confirmed_cap_pct,
          s.target_idx * 25 AS conviction_target_pct,
          w.f_idx * 25 AS f_pct,
          LAG(w.f_idx * 25) OVER (ORDER BY s.as_of_date) AS f_prev_pct
@@ -160,7 +160,13 @@ SELECT
   crisis,
   crisis_recent,
   conviction                                 AS conviction_pct,
-  cap_pct,
+  -- NAMED confirmed_cap_pct, NOT cap_pct (renamed 2026-09-04). state.park_axis_daily publishes a
+  -- DIFFERENT quantity under the name cap_pct: the RAW cap off today's standing count. This one is
+  -- the DECAY-CONFIRMED cap produced by the cap_walk recursion. They disagreed on 8 of 68 live
+  -- sessions, max gap 75pp (2026-06-05: raw 25, confirmed 100), so one name for both was a trap.
+  -- The confirmed cap is PATH-DEPENDENT: a fixed-width MAX over the raw series does NOT recover it
+  -- (a 3-session MAX misses all eight disagreements).
+  confirmed_cap_pct,
   conviction_target_pct,
   f_pct,
   f_prev_pct,

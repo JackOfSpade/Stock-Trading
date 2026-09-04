@@ -6,7 +6,7 @@
 -- back by the person who regenerates it.
 WITH s AS (
   SELECT as_of_date, f_prev_pct, r_ladder, r_actual, r_binary, r_risk, r_def,
-         standing_defensive_count, cap_pct, conviction_pct
+         standing_defensive_count, confirmed_cap_pct, conviction_pct
   FROM {{ ref('park_ladder_shadow') }}
 ),
 runs AS (
