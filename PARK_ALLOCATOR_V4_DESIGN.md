@@ -80,7 +80,7 @@ daily by AI judgment (D1 call → D2 conversion → next-open fills, owner confi
 
 **What v4 fixes** (all re-derived from primary sources, 2026-09-03/04 session):
 - The 09-01→09-03 VOO→SGOV→VOO round trip: exit fired on ONE evidence axis, re-entry required TWO;
-  cost $214.32 + $107.73 of the $149.18 realized loss wash-sale-disallowed. Execution blameless.
+  cost $214.32 + $107.73 of the $149.18 realized loss reported wash-sale-disallowed at the time (that $107.73 figure was SUPERSEDED 2026-09-04 by bigquery/219 and is now measured at $0.00 pre-rebuy — 13 of its 14 "replacements" were the sale's own basis seen through sibling legs of the same exchange-split order, so a full liquidation was being washed by itself; the realized loss is unaffected, and the 09-04 rebuy is a genuine replacement that does disallow it). Execution blameless.
 - AI-era scorecard (anchor 2026-07-24→09-03, post-212 rebase): AI +1.073% vs SGOV +0.402% (+67bp) vs
   never-switch VOO +4.650% (**−357.7bp**) vs rejected rule shadow +2.865% (−179.3bp). Defensive
   excursions **0-for-2**: −2.841pp (SGOV 07-27..08-04) and −1.019pp (SGOV 09-02..09-03). The
@@ -314,7 +314,20 @@ across qualifying closes oldest-close-first, replacing bigquery/178's per-close 
   bigquery/179's prev-lag idiom, strict `>` on DATE joins; columns include `ladder_start_date` (first
   date all live axes measurable) and `ladder_index_ai_era` (NULL before
   `GREATEST(ladder_start_date, ai_era_start_date)`); never coalesce an unmeasured axis to "not
-  defensive". Acceptance: reproduce the replay table (f=25 only on 09-01/09-02; the 09-02 vol margin
+  defensive". **ACCEPTANCE RE-PINNED 2026-09-04 TO THE FIVE-AXIS SET NOW LIVE** (the three-axis path below is
+  SUPERSEDED; kept only to show what moved and why). Phase 1 landed the Brent feed (bigquery/217), so
+  the shock axis is testable and the replay changed exactly as the re-pin rule anticipated:
+  **09-01 standing 2 (breadth, volatility) → cap 50 → f=25; 09-02 standing 3 (shock ENTERS as Brent
+  crosses 95) → cap 75 → f=50; 09-03 and 09-04 standing 1 but STRICT confirmation holds the cap at
+  75, so f stays 50.** Measured four-arm result over the AI era (31 sessions), all on one
+  close-to-close TOTAL-return ruler inside `analytics.park_ladder_shadow`: never-switch VOO
+  **+4.732%** | graded ladder **+2.995%** (3 f-changes, engaged 35.5% of sessions) | actual binary
+  allocator **+0.758%** | always-SGOV **+0.432%**. The ladder recovers **+2.237pp** of the
+  allocator's shortfall — ~57% of the 3.974pp gap to never switching — while still trailing
+  never-switching by 1.737pp. Read in both directions: real evidence that GRADING beats the binary
+  switch (the owner's thesis), and NOT evidence the allocator should de-risk at all. n=31 and ONE
+  episode: a direction, not a verdict.
+  Superseded three-axis acceptance: reproduce the replay table (f=25 only on 09-01/09-02; the 09-02 vol margin
   of 0.04; the 08-11 breadth carry-forward) with these conventions pinned in the header: 20d SMA
   includes current close **and is computed from `state.signal_marks_curated`, NEVER
   `events.signal_marks`** (bigquery/91 mandates the curated view for all consumers; the raw table
@@ -466,7 +479,7 @@ then build the FULL five-step v4. No intermediate variant is ever acceptable.**
    and accept the risk that ai may be wrong at times... We can always pull out of a trade at any
    time... that's fine with me."* A 2-axis MEDIUM-60 de-risk capped at f≤50 economically assumes the
    first analysis is only half right. The new evidence: the named compensating control has now been
-   exercised and priced — defensive excursions 0-for-2, −357.7bp vs never-switch, $214.32 + $107.73
+   exercised and priced — defensive excursions 0-for-2, −357.7bp vs never-switch, $214.32 (the $107.73 wash-sale figure once cited here was an artifact, corrected by bigquery/219; the round-trip cost stands) + $107.73
    on one round trip, 33.3% two-session reversal base rate. v4 asks the owner to trade "assume fully
    right" for "size to evidence." Also named here: a Thursday crisis f=100 sits unmodulated ~3 days
    (D1 is Sun–Thu).
