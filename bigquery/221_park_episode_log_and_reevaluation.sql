@@ -119,11 +119,32 @@ SELECT
   (SELECT COUNTIF(ladder_edge_vs_binary_pp > 0) FROM eps)          AS episodes_ladder_beat_binary
 FROM cfg;
 
--- Post-condition: the countdown starts at zero on activation day and is not already due.
+-- Post-condition, a TRUE INVARIANT: the guarded INSERT below may never produce a second marker.
+-- True before it (0 rows) and after it (1 row), so a DR replay passes at both points, and it never
+-- expires. It replaces an ASSERT that pinned `episodes_since_activation = 0` here and was WRONG TWICE
+-- OVER (both found 2026-09-04, by dry run):
+--   1. UNRUNNABLE, from the moment it landed. BigQuery rejects "WITH RECURSIVE is not supported in
+--      ASSERT statements", and this file's own countdown view reaches a recursive one:
+--      state.park_reevaluation_due -> analytics.park_episode_log -> analytics.park_ladder_shadow,
+--      whose ladder walk (bigquery/218) is WITH RECURSIVE. Same defect bigquery/219 hit, and the
+--      boundary rule that ASSERT was reaching for has moved to the same place 219's post-conditions
+--      did: dbt/tests/assert_park_reevaluation_countdown_boundary.sql.
+--   2. AN EXPIRING PIN even if it had run. A zero episode count is what the forward test exists to
+--      invalidate, and sitting HERE — ahead of the marker INSERT — it would have aborted a DR replay
+--      at the first post-activation episode, before the INSERT and before every check below it.
+--
+-- WHATEVER STANDS HERE MUST BEGIN AT COLUMN 0 WITH A NEXT_TOP_LEVEL KEYWORD (CREATE / INSERT / MERGE
+-- / UPDATE / DELETE / TRUNCATE / DROP / ALTER / GRANT / REVOKE / CALL / EXPORT / ASSERT — see
+-- scripts/check_live_sql_parity.py). That set deliberately excludes IF, so this statement is the ONLY
+-- thing terminating state.park_reevaluation_due's extracted body before the `IF NOT EXISTS` block
+-- below. Remove it without leaving a boundary statement and the extractor swallows the whole marker
+-- block into that view's definition, and live-sql-parity reports state.park_reevaluation_due as
+-- PERMANENTLY drifted — un-fixable by any re-apply, because no live definition can ever match. That
+-- is not hypothetical: it was measured here on 2026-09-04 by doing exactly that.
 ASSERT (
-  SELECT episodes_since_activation = 0 AND NOT due
-  FROM `stock-trading-498512.state.park_reevaluation_due`
-) AS '221: the forward-test countdown must start at zero episodes on activation day.';
+  (SELECT COUNT(*) FROM `stock-trading-498512.events.park_policy_changes`
+   WHERE note LIKE 'PARK-V4-SCHEMA-VERSION%') <= 1
+) AS '221: at most one PARK-V4-SCHEMA-VERSION activation marker row may ever exist.';
 
 -- ============================ ACTIVATION MARKER (Phase 3 go-live) ==============================
 -- Writing this row flips state.park_policy_current.graded_enabled to TRUE, which is what permits D2
@@ -158,12 +179,19 @@ IF NOT EXISTS (
   FROM `stock-trading-498512.state.park_policy_current` p;
 END IF;
 
--- Post-conditions: the marker flips the pin, and it did NOT move the book.
+-- Post-condition, a TRUE INVARIANT: the marker flips the pin. Deliberately BEFORE the dated receipt
+-- below so the receipt can never abort the file ahead of it.
 ASSERT (
   SELECT graded_enabled FROM `stock-trading-498512.state.park_policy_current`
 ) AS '221: graded_enabled must be TRUE after the activation marker lands.';
 
+-- ============================ POST-CONDITION (measured 2026-09-04) =============================
+-- DATED RECEIPT, NOT AN INVARIANT — same convention, and the same reason, as the closing receipt in
+-- bigquery/220_park_two_sleeve_book.sql. It pins the book as it stood at landing and is EXPECTED to
+-- go false the first time the ladder THIS FILE ACTIVATES moves f off 0. When that happens, RE-PIN it
+-- to the newly measured values; do NOT delete it. It is deliberately LAST so it can never mask the
+-- two invariants above.
 ASSERT (
   SELECT target_f_pct = 0 AND vehicle = 'VOO'
   FROM `stock-trading-498512.state.park_policy_current`
-) AS '221: the activation marker must be a NO-OP on the book (policy still VOO at f=0).';
+) AS '221: the activation marker must be a NO-OP on the book (policy still VOO at f=0) (dated receipt).';
