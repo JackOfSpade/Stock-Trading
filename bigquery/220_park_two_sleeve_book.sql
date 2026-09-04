@@ -37,6 +37,10 @@
 -- target_weight_pct are added alongside for consumers that want the richer signal.
 --
 -- ============================ PHASE-2 SAFETY PIN (mechanical, not prose) ========================
+-- PHASE 3 ACTIVATED 2026-09-04 by owner directive: the graded ladder now sizes LIVE idle capital.
+-- The activation marker is in bigquery/221; the mechanical pin is state.park_policy_current.
+-- graded_enabled. The Phase-1 framing below is RETAINED DELIBERATELY as the record of what was
+-- measured BEFORE activation -- do not delete it, and do not read it as current scope.
 -- Phase 2 lands the PLUMBING only; the ladder does not bind until Phase 3. The pin is enforced
 -- MECHANICALLY rather than by an instruction nobody re-reads: state.park_policy_current exposes
 -- `graded_enabled`, which is TRUE only once a schema-version marker row exists in
@@ -137,31 +141,67 @@ FROM (
   SELECT * FROM residual_rows
 );
 
--- ============================ POST-CONDITIONS ==================================================
--- (1) Legacy mapping is correct on the live book: the current policy is VOO (effective 2026-09-03),
--- which under the legacy rule is f=0 with SGOV as the named defensive sleeve.
-ASSERT (
-  SELECT target_f_pct = 0 AND risk_sleeve = 'VOO' AND defensive_sleeve = 'SGOV'
-  FROM `stock-trading-498512.state.park_policy_current`
-) AS '220: legacy VOO policy must map to f=0 / VOO risk / SGOV defensive.';
+-- ============================ STRUCTURAL INVARIANTS ===========================================
+-- ORDERING IS LOAD-BEARING (fixed 2026-09-04). BigQuery aborts at the FIRST failing ASSERT, so the
+-- replay-invariant structural checks must come BEFORE any dated receipt. They previously sat last,
+-- underneath a receipt that had already gone false live (the Phase-2 pin, which asserted
+-- NOT graded_enabled and was invalidated by the activation marker hours later) — which made every
+-- structural check below it UNREACHABLE on every future apply. These four hold at EVERY point of an
+-- apply-in-order rebuild, before and after activation.
 
--- (2) The Phase-2 pin is CLOSED until the schema-version marker lands.
-ASSERT (
-  SELECT NOT graded_enabled FROM `stock-trading-498512.state.park_policy_current`
-) AS '220: graded_enabled must be FALSE until the PARK-V4-SCHEMA-VERSION marker row is written.';
-
--- (3) ANTI-MASK: no ticker the book actually holds above dust may be BOTH a weighted sleeve and
--- flagged stranded. This is the assertion that would have caught the two-sleeve destroyer.
+-- (1) SLEEVE WEIGHTS MATCH THE POLICY. The defensive sleeve carries exactly target_f_pct and the risk
+-- sleeve exactly its complement. THIS is the check that catches a sign error or a dropped UNION arm
+-- in the weight assignment — the real two-sleeve destroyer class. The previous form of this
+-- assertion compared target_weight_pct > 0 against is_policy_vehicle, which the view DEFINES three
+-- lines apart as `target_weight_pct > 0 AS is_policy_vehicle`; it was tautological and passed 9-for-9
+-- against a simulated sign error and a dropped UNION arm at f in {0,50,100}.
+-- The `ticker != <other> sleeve` guards keep the DEGENERATE same-ticker policy (declared legal above,
+-- and collapsed to one row by targets_dedup) from tripping this. Do NOT strengthen this to
+-- COUNT(*) = 2 for the same reason: it would hard-fail a sanctioned migration.
 ASSERT (
   SELECT COUNT(*) = 0
-  FROM `stock-trading-498512.state.park_position_current`
-  WHERE target_weight_pct > 0 AND NOT is_policy_vehicle
-) AS '220: a weighted sleeve must never be flagged as a stranded leg.';
+  FROM `stock-trading-498512.state.park_position_current` pos
+  CROSS JOIN `stock-trading-498512.state.park_policy_current` pol
+  WHERE (pos.ticker = pol.defensive_sleeve AND pos.ticker != pol.risk_sleeve
+         AND pos.target_weight_pct != pol.target_f_pct)
+     OR (pos.ticker = pol.risk_sleeve AND pos.ticker != pol.defensive_sleeve
+         AND pos.target_weight_pct != 100 - pol.target_f_pct)
+) AS '220: each named sleeve must carry exactly its policy weight.';
 
--- (4) CASH is barred as a fractional sleeve.
+-- (2) The target sleeves partition the book exactly once.
+ASSERT (
+  SELECT SUM(target_weight_pct) = 100
+  FROM `stock-trading-498512.state.park_position_current`
+  WHERE is_target_sleeve
+) AS '220: target sleeve weights must sum to 100.';
+
+-- (3) CASH is barred as a fractional sleeve.
 ASSERT (
   SELECT COUNT(*) = 0
   FROM `stock-trading-498512.state.park_policy_current`
   WHERE target_f_pct NOT IN (0, 100)
     AND 'CASH' IN (risk_sleeve, defensive_sleeve)
 ) AS '220: CASH may not be a sleeve at any 0<f<100 (park_mv is instrument-only).';
+
+-- (4) THE PHASE PIN, AS A BICONDITIONAL rather than a dated state. graded_enabled must be TRUE if and
+-- only if a schema-version marker row exists. This is the replay-invariant form of the old assert:
+-- true BEFORE activation (no marker, pin closed) and true AFTER it (marker, pin open), so a DR
+-- rebuild passes at both points instead of aborting the moment 221 lands.
+ASSERT (
+  SELECT p.graded_enabled = (
+    SELECT COUNT(*) > 0 FROM `stock-trading-498512.events.park_policy_changes`
+    WHERE note LIKE 'PARK-V4-SCHEMA-VERSION%')
+  FROM `stock-trading-498512.state.park_policy_current` p
+) AS '220: graded_enabled must be TRUE exactly when a PARK-V4-SCHEMA-VERSION marker row exists.';
+
+-- ============================ POST-CONDITIONS (measured 2026-09-04) ============================
+-- DATED RECEIPT, NOT AN INVARIANT — it pins the book as it stood at landing and is EXPECTED to go
+-- false the first time the ladder actually moves f off 0. When that happens, RE-PIN it to the newly
+-- measured values; do NOT delete it. It is deliberately LAST so it can never mask the four above.
+-- (Same convention as dbt/tests/assert_wash_sale_allocation_invariants.sql's expiring pins.)
+-- Legacy mapping on the live book: policy VOO effective 2026-09-03, which under the legacy rule
+-- (target_f_pct IS NULL -> IF(vehicle='VOO', 0, 100)) is f=0 with SGOV as the named defensive sleeve.
+ASSERT (
+  SELECT target_f_pct = 0 AND risk_sleeve = 'VOO' AND defensive_sleeve = 'SGOV'
+  FROM `stock-trading-498512.state.park_policy_current`
+) AS '220: legacy VOO policy must map to f=0 / VOO risk / SGOV defensive (dated receipt).';

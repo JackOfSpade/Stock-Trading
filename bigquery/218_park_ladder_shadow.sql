@@ -3,6 +3,10 @@
 -- have held, priced against what the book actually did and against never-switching VOO.
 -- Apply after 216 (state.park_axis_daily) and 217 (Brent feed).
 --
+-- PHASE 3 ACTIVATED 2026-09-04 by owner directive: the graded ladder now sizes LIVE idle capital.
+-- The activation marker is in bigquery/221; the mechanical pin is state.park_policy_current.
+-- graded_enabled. The Phase-1 framing below is RETAINED DELIBERATELY as the record of what was
+-- measured BEFORE activation -- do not delete it, and do not read it as current scope.
 -- RECORD-ONLY. This view moves no capital and is read by no gate. It is the evidence gate for
 -- Phase 3, which is held behind owner word plus a written checklist (design doc §4). The operative
 -- rail remains the landed binary DE-RISK EVIDENCE CARDINALITY rule and fixture PA-07.
@@ -67,6 +71,12 @@
 --  2. It validates only the TESTABLE axis subset. rates is UNTESTABLE by documented property
 --     (FMP economics is plan-gated), so this is a five-axis shadow of a six-axis design, and
 --     axis_set_fingerprint on 216 records which set produced any given row.
+--  3. VINTAGE. This shadow scores each session with all five axes MEASURED, because it runs
+--     retrospectively. The LIVE path structurally cannot: D1 reads at 16:12-16:36 MT and D2a does
+--     not write signal_marks until 16:41 MT, so four of the five axes are always one session stale
+--     at the moment the call is made (216's axes_measured_today counts the fresh ones). Every
+--     episode delta reported below is therefore an UPPER BOUND on what the live ladder can
+--     achieve, and the Phase-3 re-evaluation must discount it rather than compare like for like.
 --
 -- ============================ MEASURED RESULT AT LANDING (the re-pin) ==========================
 -- Per the design doc's re-pin rule, landing the Brent feed CHANGED the pinned replay and these are
@@ -88,7 +98,8 @@
 --      a genuine all-clear are in direct tension, and this episode is the tension made concrete.
 -- On the one live EPISODE the richer axis set makes the ladder look worse than the 3-axis replay did.
 -- That is the finding Phase 1 exists to surface before any capital moves, and it is a reason to keep
--- Phase 3 held, not a reason to retune the axes until the numbers flatter the design.
+-- Phase 3 held AT THE TIME OF WRITING, not a reason to retune the axes until the numbers flatter
+-- the design. (Phase 3 was activated by owner directive later the same day; see the header.)
 --
 -- ============================ FOUR-ARM RESULT, ONE RULER (AI era 07-24..09-04, 31 sessions) =====
 -- All four arms are close-to-close TOTAL-return chains computed inside this view, so nothing here is
@@ -104,7 +115,10 @@
 -- binary all-or-nothing switch, which is the owner's proportional-sizing thesis. It is NOT evidence
 -- that the allocator should be de-risking at all: never-switching still wins by a wide margin over
 -- this window, and the single cheapest intervention on the measured record remains "de-risk less".
--- n = 31 sessions and ONE de-risk episode. This is a direction, not a verdict, and Phase 3 stays held
+-- n = 31 sessions and ONE de-risk episode. This is a direction, not a verdict. Phase 3 was held on
+-- this evidence and then activated by explicit owner directive the same day, which is a decision the
+-- owner is entitled to make against a direction rather than a verdict -- it does not upgrade the
+-- evidence, and the forward test in bigquery/221 exists precisely because it does not.
 -- until the shadow has accumulated genuinely independent episodes.
 -- Cross-check that validated the total-return fix: always-SGOV here (+0.432%) reproduces
 -- park_counterfactuals' independently-computed SGOV leg (+0.402% to 09-03) to within the extra
@@ -236,7 +250,7 @@ joined AS (
   SELECT s.as_of_date, s.standing, s.firing, s.gate, s.conviction, s.crisis, s.crisis_recent,
          s.testable_axes, s.axis_set_fingerprint, s.r_risk, s.r_def, s.actual_f_pct,
          LAG(s.actual_f_pct) OVER (ORDER BY s.as_of_date) AS actual_f_prev_pct,
-         s.cap_idx * 25 AS cap_pct,
+         s.cap_idx * 25 AS confirmed_cap_pct,
          s.target_idx * 25 AS conviction_target_pct,
          w.f_idx * 25 AS f_pct,
          LAG(w.f_idx * 25) OVER (ORDER BY s.as_of_date) AS f_prev_pct
@@ -267,7 +281,13 @@ SELECT
   crisis,
   crisis_recent,
   conviction                                 AS conviction_pct,
-  cap_pct,
+  -- NAMED confirmed_cap_pct, NOT cap_pct (renamed 2026-09-04). state.park_axis_daily publishes a
+  -- DIFFERENT quantity under the name cap_pct: the RAW cap off today's standing count. This one is
+  -- the DECAY-CONFIRMED cap produced by the cap_walk recursion. They disagreed on 8 of 68 live
+  -- sessions, max gap 75pp (2026-06-05: raw 25, confirmed 100), so one name for both was a trap.
+  -- The confirmed cap is PATH-DEPENDENT: a fixed-width MAX over the raw series does NOT recover it
+  -- (a 3-session MAX misses all eight disagreements).
+  confirmed_cap_pct,
   conviction_target_pct,
   f_pct,
   f_prev_pct,

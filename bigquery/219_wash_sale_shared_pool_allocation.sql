@@ -45,8 +45,16 @@
 -- both are fixed here; the shared-pool allocation still matters independently, because under the
 -- graded ladder several SEPARATE de-risk steps (different orders, different days) draw on one
 -- replacement pool.
--- NOTE FOR ANYONE RE-READING THE 09-01..09-03 ROUND-TRIP WRITE-UPS: bigquery/213's header and
--- PARK_ALLOCATOR_V4_DESIGN.md quote "$107.73 of the $149.18 disallowed" from the pre-fix view. The
+-- NOTE FOR ANYONE RE-READING THE 09-01..09-03 ROUND-TRIP WRITE-UPS. FIVE documents quote the
+-- pre-fix figure: bigquery/213's header, PARK_ALLOCATOR_V4_DESIGN.md, Claude_Task_Plan.md,
+-- task_plan/D1.md and PARK_ROUTER_DESIGN.md. The last three were corrected 2026-09-04; the first
+-- two are LANDED HEADERS and are deliberately NOT edited (editing a landed bigquery/*.sql header
+-- is parity drift, and the design doc is the historical handoff record).
+-- THREE DIFFERENT RULERS are in play and must never be netted against one another:
+--   -149.180705  IBKR account-level realized, AVERAGE-COST basis (ties to the connector exactly)
+--   -100.0633    repo FIFO, WHOLE liquidation (analytics.park_tax_lots: 20 fragments, 21.888 sh)
+--   -107.7328    repo FIFO, LOSING LEGS ONLY (what this view scopes; winners add back +7.6695)
+-- The 49.12 gap between the first two is a BASIS-METHOD SEAM, not an un-disallowed remainder. The
 -- realized loss (-$149.18, broker-tied) is unaffected and still correct; the DISALLOWED portion was
 -- overstated. The forward-looking statement in those documents — that the 09-04 rebuy will disallow
 -- the loss — remains right, and becomes the dominant effect once it fills.
@@ -210,6 +218,12 @@ qualifying_replacements AS (
 -- overlap silently allocates lots to closes that never qualified for them.
 -- Correct form: walk the qualifying (close, lot) pairs in (close_date, close_trade_id,
 -- replacement_date, replacement_trade_id) order, threading BOTH per-lot remaining supply and
+-- ORDERING HONESTY: oldest-close-first is honored at DATE GRAIN only. Within one date the
+-- tie-break is close_trade_id, a GENERATE_UUID() string with NO economic meaning — it is chosen
+-- for DETERMINISM, not correctness. Per-share losses differ across legs of one order
+-- (-5.7508 / -5.81133 / -5.86137 on the three 2026-07-27 legs), so a different within-date order
+-- moves the group total 51.36 -> 51.59, about $0.23. That is the bounded size of the arbitrariness;
+-- it does not affect the DATE-grain allocation, which is what the shared-pool fix is about.
 -- per-close remaining demand, and allocate LEAST(lot_remaining, close_remaining) at each step.
 -- Cardinality is tiny (10 closes x 13 lots on VOO today), so the recursion is cheap.
 ordered AS (
@@ -290,7 +304,16 @@ LEFT JOIN agg a ON a.close_trade_id = c.close_trade_id;
 -- became recursive when the joint allocation walk landed, and BigQuery rejects
 -- "WITH RECURSIVE is not supported in ASSERT statements". They were moved verbatim rather than
 -- dropped, to dbt/tests/assert_wash_sale_allocation_invariants.sql, which pins:
---   2026-09-02 VOO  -> 0.00   (full liquidation, own basis is not a replacement; pre-rebuy)
+--   2026-09-02 VOO  -> 0.00   TWO mechanisms, not one -- do not restate this as "there is no
+--                            external replacement", which the view's own replacement_trades
+--                            contradicts. (a) The order-level sibling exclusion removes 13 of the
+--                            14 candidate lots as the sale's OWN basis. (b) The 14th, lot
+--                            129b0405 (0.8477 sh), IS a genuine external candidate and still
+--                            appears on all five legs at offset -29 -- but the JOINT allocation
+--                            walk had already consumed it entirely at the earlier 2026-07-27
+--                            close, where the same lot qualifies at offset +8. Zero shares remain
+--                            to allocate to 09-02. Mechanism (b) is exactly what the shared-pool
+--                            fix exists to model, so this row guards it too.
 --   2026-07-27 VOO  -> 77.18  (fully disallowed; the starving allocator read 51.36)
 --   2026-06-29 HCA  -> 0.00   (strategy-side arm untouched by the park-specific fix)
 -- Realized P&L is broker-tied and unchanged throughout: the 09-02 legs still sum to -107.73.

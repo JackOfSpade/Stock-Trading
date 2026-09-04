@@ -2,6 +2,10 @@
 -- Project: stock-trading-498512. Creates state.park_axis_daily: the mechanical six-axis state
 -- machine that PARK_ALLOCATOR_V4_DESIGN.md §2.2 specifies. Apply after 215.
 --
+-- PHASE 3 ACTIVATED 2026-09-04 by owner directive: the graded ladder now sizes LIVE idle capital.
+-- The activation marker is in bigquery/221; the mechanical pin is state.park_policy_current.
+-- graded_enabled. The Phase-1 framing below is RETAINED DELIBERATELY as the record of what was
+-- measured BEFORE activation -- do not delete it, and do not read it as current scope.
 -- RECORD-ONLY BY CONSTRUCTION. Nothing reads this view to move capital. Phase 1 ships the
 -- measurement substrate and the evidence clock ONLY; the ladder does not bind until Phase 3, which
 -- is held behind owner word plus a written checklist (§4). Until then the operative rail remains the
@@ -208,7 +212,7 @@ entered AS (
   FROM ev
 ),
 flagged AS (
-  SELECT as_of_date, axis, measured_on, sessions_since_measured, testable, level_int,
+  SELECT as_of_date, axis, measured_on, sessions_since_measured, testable, level_int, raw_level,
          COALESCE(level_int = 1, FALSE) AS is_defensive,
          -- Fired this session, or the session before: the design's 2-session event window.
          COALESCE(
@@ -230,8 +234,19 @@ SELECT
   COUNTIF(is_defensive) OVER d AS standing_defensive_count,
   COUNTIF(is_firing)    OVER d AS firing_count,
   COUNTIF(testable)     OVER d AS testable_axes,
+  -- MIXED VINTAGE, EXPOSED AS DATA (2026-09-04). `testable` counts axes with a USABLE level,
+  -- carried or fresh; this counts only those MEASURED TODAY. The two differ on a live D1 read by
+  -- construction, not by accident: ops.run_log has D1 at 16:12-16:36 MT and D2a from 16:41 MT, and
+  -- D2a STEP 1d is what writes events.signal_marks. So at D1's read moment volatility, credit,
+  -- index and shock are ALWAYS one session stale, and only breadth is same-session (D1 writes
+  -- EQUITY_BREADTH_PCT itself, mid-run, before the park call). analytics.park_ladder_shadow runs
+  -- retrospectively and therefore scores every session at full vintage, which the live path can
+  -- never do -- see 218's BLIND SPOTS. Do NOT gate on this column: a freshness gate here would
+  -- blank four axes every session and disengage the ladder permanently.
+  COUNTIF(raw_level IS NOT NULL) OVER d AS axes_measured_today,
   LEAST(100, 25 * COUNTIF(is_defensive) OVER d) AS cap_pct,
-  -- The entry gate is reported for convenience but binds nothing in Phase 1 (§2.3).
+  -- The entry gate. As of the 2026-09-04 activation this BINDS: D1's GRADED ALLOCATION step may not
+  -- increase f unless it is open (§2.3). It remains a NECESSARY condition, never a trigger.
   (COUNTIF(is_firing) OVER d >= 1 AND COUNTIF(is_defensive) OVER d >= 2) AS increase_gate_open,
   -- Axis-set fingerprint, so a stale acceptance table is self-evident rather than something an
   -- implementer reconciles by adjusting axis definitions (§2.2 re-pin rule).
