@@ -204,11 +204,20 @@ FROM open_remainder;
 -- disallow MORE than the original loss), and the disallowed amount is the sale's loss prorated by
 -- (capped replacement shares / shares sold) — full disallowance once replacement shares >= shares sold.
 --
--- SUPERSEDED LIVE by bigquery/178_park_wash_sale_exposure.sql (2026-08-18) — extends the
+-- HISTORICAL (no longer the current truth — see the SUPERSEDED LIVE banner below): this object was
+-- first superseded by bigquery/178_park_wash_sale_exposure.sql (2026-08-18), which extends the
 -- loss-realizing and replacement-candidate populations to also cover park (VOO / future menu-ticker)
 -- round trips sourced from events.parking_events, previously invisible here entirely (park fills
 -- never enter events.trade_fills). analytics.tax_lots above is UNCHANGED by that file and remains
 -- canonical at bigquery/50 — only this state.wash_sale_exposure definition is further superseded.
+-- SUPERSEDED LIVE by bigquery/219_wash_sale_shared_pool_allocation.sql (2026-09-04) — current
+-- single source of truth for state.wash_sale_exposure. 219 fixes two independent defects: the
+-- per-close INDEPENDENT replacement cap (one lot could be counted in full against several closes,
+-- which the graded park ladder would multiply by the number of steps), and the sibling-leg own-basis
+-- gap (an exchange-split park SELL's other legs' basis lots were counted as external replacements,
+-- which manufactured $107.73 of disallowance out of an ordinary full liquidation). Kept here,
+-- unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.wash_sale_exposure` AS
 WITH losing_sells AS (
   SELECT trade_id AS sell_trade_id, strategy AS sell_strategy, ticker,

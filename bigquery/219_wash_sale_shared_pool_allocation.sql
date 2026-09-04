@@ -1,15 +1,65 @@
--- Parallel-run dbt port of bigquery/219_wash_sale_shared_pool_allocation.sql:state.wash_sale_exposure — canonical source is that file until
--- owner cutover. Generated MECHANICALLY by scripts/gen_dbt_port.py from that canonical body — the
--- only edit is ref()/source() substitution for fully-qualified names — and proved token-identical
--- to it by scripts/verify_dbt_port.py. Do not hand-edit the BODY: re-generate, then re-verify.
--- Regenerating REPLACES this header, so any hand-written provenance above the body must be put
--- back by the person who regenerates it.
+-- 219_wash_sale_shared_pool_allocation.sql (2026-09-04) — PARK ALLOCATOR v4, PHASE 1.
+-- Project: stock-trading-498512. SUPERSEDES the definition of state.wash_sale_exposure in
+-- bigquery/178_park_wash_sale_exposure.sql (chain: 41 -> 178 -> 219). 178 keeps analytics.park_tax_lots
+-- and the whole matching/exclusion apparatus, which is carried through here byte-identically apart
+-- from the one block named below. Apply after 218.
+--
+-- ============================ THE DEFECT ========================================================
+-- 178 capped each loss-realizing close INDEPENDENTLY at its own close_shares:
+--     LEAST(SUM(replacement_shares), close_shares)
+-- but the SAME replacement lot was free to be counted IN FULL against EVERY qualifying close. A
+-- replacement lot can only replace its own shares ONCE; counting it against several closes
+-- double-counts the disallowance.
+--
+-- WHY IT WAS INVISIBLE AND WHY IT MATTERS NOW. With one close per de-risk episode there is nothing
+-- to double-count. The graded ladder (PARK_ALLOCATOR_V4_DESIGN.md §2.3) turns one de-risk into
+-- SEVERAL partial closes across sessions, so the same replacement buy becomes a candidate against
+-- each step and the overstatement scales with the number of steps. The 2x shape is already visible
+-- in live data: the 2026-09-02 park sale is EIGHT partial closes (one order, exchange-split), and
+-- every one of them draws on the same August sweep buys.
+--
+-- ============================ THE FIX ===========================================================
+-- Allocate each replacement lot's shares across its qualifying closes OLDEST-CLOSE-FIRST, using the
+-- same interval-overlap arithmetic this file already uses to match tax lots to sells:
+--     allocated = GREATEST(0, LEAST(consumed_before + close_shares, lot_shares) - consumed_before)
+-- Oldest-first is the conservative and conventional reading: the earliest loss in the window is the
+-- one the replacement is treated as replacing. The per-close LEAST(..., close_shares) cap is RETAINED
+-- downstream, so a close can still never be more than fully replaced.
+--
+-- SCOPE, unchanged from 178: detection-only. The IBKR 1099-B remains authoritative — see 178's own
+-- header and the ~$49 repo-FIFO-vs-broker basis seam recorded in PARK_ALLOCATOR_V4_DESIGN.md §2.6.
+-- This view is not a tax filing and no consumer treats it as one.
+--
+-- ============================ SECOND DEFECT, FOUND WHILE VERIFYING THE FIRST ==================
+-- The shared-pool fix alone moved the 2026-09-02 park sale from $107.73 disallowed to $0.33, a
+-- reduction too large to accept without asking WHY. It has a second, independent cause, and the
+-- right answer was reached partly for the wrong reason until this was fixed:
+-- A park SELL is split by the exchange into several partial fills (the 09-02 sale is EIGHT), each
+-- with its own parking_events.event_id and therefore its own sell_trade_id. 178's own-basis
+-- exclusion is keyed on sell_trade_id, so it removed only the lots FIFO-assigned to THAT leg —
+-- leaving the SAME sale's other legs' basis lots to be counted as external replacement purchases.
+-- MEASURED: of the 14 replacement lots listed against the 09-02 sale, 13 were that sale's own basis.
+-- So the $107.73 figure was substantially an ARTIFACT: a full liquidation cannot be washed by its
+-- own basis, and before the 09-04 rebuy the correct exposure on that sale is ~0.
+-- Fixed at the root by taking the exclusion set at ORDER level (below). Both defects are real and
+-- both are fixed here; the shared-pool allocation still matters independently, because under the
+-- graded ladder several SEPARATE de-risk steps (different orders, different days) draw on one
+-- replacement pool.
+-- NOTE FOR ANYONE RE-READING THE 09-01..09-03 ROUND-TRIP WRITE-UPS: bigquery/213's header and
+-- PARK_ALLOCATOR_V4_DESIGN.md quote "$107.73 of the $149.18 disallowed" from the pre-fix view. The
+-- realized loss (-$149.18, broker-tied) is unaffected and still correct; the DISALLOWED portion was
+-- overstated. The forward-looking statement in those documents — that the 09-04 rebuy will disallow
+-- the loss — remains right, and becomes the dominant effect once it fills.
+--
+-- MEASURED EFFECT AT LANDING is asserted at the foot of this file rather than asserted in prose.
+
+CREATE OR REPLACE VIEW `stock-trading-498512.state.wash_sale_exposure` AS
 WITH losing_sells AS (
   -- Loss-realizing SELLs (closes a LONG strategy position) — unchanged from bigquery/50.
   SELECT trade_id AS close_trade_id, strategy AS close_strategy, ticker,
          DATE(fill_ts, 'America/New_York') AS close_date,
          shares AS close_shares, realized_pnl, 'SELL' AS close_side
-  FROM {{ ref('trade_fills_curated') }}
+  FROM `stock-trading-498512.state.trade_fills_curated`
   WHERE side = 'SELL' AND ticker != 'SGOV'
     AND realized_pnl IS NOT NULL AND realized_pnl < 0
     AND shares IS NOT NULL AND shares > 0 AND fill_ts IS NOT NULL
@@ -24,7 +74,7 @@ WITH losing_sells AS (
   FROM (
     SELECT sell_trade_id, ANY_VALUE(ticker) AS ticker, ANY_VALUE(exit_date) AS close_date,
            SUM(shares) AS close_shares, SUM(realized_gain_loss) AS realized_pnl
-    FROM {{ ref('park_tax_lots') }}
+    FROM `stock-trading-498512.analytics.park_tax_lots`
     WHERE status = 'CLOSED'
     GROUP BY sell_trade_id
   )
@@ -36,7 +86,7 @@ losing_covers AS (
   SELECT trade_id AS close_trade_id, strategy AS close_strategy, ticker,
          DATE(fill_ts, 'America/New_York') AS close_date,
          shares AS close_shares, realized_pnl, 'BUY' AS close_side
-  FROM {{ ref('trade_fills_curated') }}
+  FROM `stock-trading-498512.state.trade_fills_curated`
   WHERE side = 'BUY' AND ticker != 'SGOV'
     AND realized_pnl IS NOT NULL AND realized_pnl < 0
     AND shares IS NOT NULL AND shares > 0 AND fill_ts IS NOT NULL
@@ -50,7 +100,7 @@ candidate_buys AS (
   -- Strategy-side replacement-purchase candidates — unchanged from bigquery/50.
   SELECT trade_id AS buy_trade_id, strategy AS buy_strategy, ticker,
          DATE(fill_ts, 'America/New_York') AS buy_date, shares AS buy_shares
-  FROM {{ ref('trade_fills_curated') }}
+  FROM `stock-trading-498512.state.trade_fills_curated`
   WHERE side = 'BUY' AND ticker != 'SGOV'
     AND shares IS NOT NULL AND shares > 0 AND fill_ts IS NOT NULL
   UNION ALL
@@ -60,7 +110,7 @@ candidate_buys AS (
   -- view's own long-standing whole-taxpayer rationale, extended from cross-strategy to cross-source).
   SELECT event_id AS buy_trade_id, 'PARK' AS buy_strategy, ticker,
          DATE(event_ts, 'America/New_York') AS buy_date, shares AS buy_shares
-  FROM {{ source('events', 'parking_events') }}
+  FROM `stock-trading-498512.events.parking_events`
   WHERE action IN ('BUY', 'DIVIDEND_REINVEST') AND ticker != 'SGOV'
     AND shares IS NOT NULL AND shares > 0 AND event_ts IS NOT NULL
 ),
@@ -70,7 +120,7 @@ candidate_sells AS (
   -- liquidates a long position, it is not "opening a new short", so it has no place in this pool.
   SELECT trade_id AS sell_trade_id, strategy AS sell_strategy, ticker,
          DATE(fill_ts, 'America/New_York') AS sell_date, shares AS sell_shares
-  FROM {{ ref('trade_fills_curated') }}
+  FROM `stock-trading-498512.state.trade_fills_curated`
   WHERE side = 'SELL' AND ticker != 'SGOV'
     AND shares IS NOT NULL AND shares > 0 AND fill_ts IS NOT NULL
 ),
@@ -83,7 +133,7 @@ own_basis_for_sell AS (
   SELECT sell_trade_id, ARRAY_AGG(DISTINCT buy_trade_id) AS own_buy_trade_ids
   FROM (
     SELECT sell_trade_id, buy_trade_id
-    FROM {{ ref('tax_lots') }}
+    FROM `stock-trading-498512.analytics.tax_lots`
     WHERE sell_trade_id IS NOT NULL AND buy_trade_id IS NOT NULL
     UNION ALL
     -- SIBLING-LEG EXCLUSION (bigquery/219, 2026-09-04) — a park SELL is split by the exchange into
@@ -95,12 +145,12 @@ own_basis_for_sell AS (
     -- set is therefore taken at ORDER level — every buy lot that is basis for ANY leg of the same
     -- disposing order is excluded for EVERY leg of it.
     SELECT ptl.sell_trade_id, sib.buy_trade_id
-    FROM {{ ref('park_tax_lots') }} ptl
-    JOIN {{ source('events', 'parking_events') }} pe
+    FROM `stock-trading-498512.analytics.park_tax_lots` ptl
+    JOIN `stock-trading-498512.events.parking_events` pe
       ON pe.event_id = ptl.sell_trade_id
-    JOIN {{ source('events', 'parking_events') }} pe_sib
+    JOIN `stock-trading-498512.events.parking_events` pe_sib
       ON pe_sib.order_id = pe.order_id AND pe_sib.order_id IS NOT NULL
-    JOIN {{ ref('park_tax_lots') }} sib
+    JOIN `stock-trading-498512.analytics.park_tax_lots` sib
       ON sib.sell_trade_id = pe_sib.event_id
     WHERE ptl.sell_trade_id IS NOT NULL AND sib.buy_trade_id IS NOT NULL
   )
@@ -110,7 +160,7 @@ own_basis_for_buy AS (
   -- The sell lot(s) that a given losing BUY (cover) itself closed — unchanged from bigquery/50. Park
   -- never covers a short, so a park buy_trade_id never needs an exclusion set here.
   SELECT buy_trade_id, ARRAY_AGG(DISTINCT sell_trade_id) AS own_sell_trade_ids
-  FROM {{ ref('tax_lots') }}
+  FROM `stock-trading-498512.analytics.tax_lots`
   WHERE buy_trade_id IS NOT NULL AND sell_trade_id IS NOT NULL
   GROUP BY buy_trade_id
 ),
@@ -194,4 +244,31 @@ SELECT
         * SAFE_DIVIDE(LEAST(COALESCE(a.total_replacement_shares_uncapped, 0), c.close_shares), c.close_shares),
         2) AS estimated_disallowed_loss
 FROM losing_closes c
-LEFT JOIN agg a ON a.close_trade_id = c.close_trade_id
+LEFT JOIN agg a ON a.close_trade_id = c.close_trade_id;
+
+-- ============================ POST-CONDITIONS (measured 2026-09-04) =============================
+-- (1) The 2026-09-02 park sale liquidated the ENTIRE VOO position, and the 09-04 rebuy has not
+-- filled, so there is no external replacement and the correct exposure is ZERO. Pre-fix this read
+-- $107.73, of which 13 of 14 listed "replacements" were the sale's own basis seen through sibling
+-- legs. This assertion is the regression guard on that artifact. NOTE: it becomes FALSE BY DESIGN
+-- once the 09-04 VOO rebuy fills — that purchase IS a genuine replacement within 30 days and the
+-- loss then becomes properly disallowed. Re-pin it to the new measured value; do not delete it.
+ASSERT (
+  SELECT COALESCE(SUM(estimated_disallowed_loss), 0) = 0
+  FROM `stock-trading-498512.state.wash_sale_exposure`
+  WHERE ticker = 'VOO' AND close_date = DATE '2026-09-02'
+) AS 'wash-sale 219: the 2026-09-02 full liquidation must show ZERO disallowed pre-rebuy.';
+
+-- (2) The REALIZED loss is broker-tied and must be untouched — only the DISALLOWED portion moves.
+ASSERT (
+  SELECT ROUND(SUM(close_realized_pnl), 2) = -107.73
+  FROM `stock-trading-498512.state.wash_sale_exposure`
+  WHERE ticker = 'VOO' AND close_date = DATE '2026-09-02'
+) AS 'wash-sale 219: realized loss on the 2026-09-02 legs must be unchanged at -107.73.';
+
+-- (3) The strategy-side arm must be untouched, proving the park-specific fix did not leak sideways.
+ASSERT (
+  SELECT COALESCE(SUM(estimated_disallowed_loss), 0) = 0
+  FROM `stock-trading-498512.state.wash_sale_exposure`
+  WHERE ticker = 'HCA' AND close_date = DATE '2026-06-29'
+) AS 'wash-sale 219: strategy-side HCA 2026-06-29 disposition must be unchanged.';

@@ -140,7 +140,9 @@ mkr AS (
 ),
 conv AS (
   SELECT entry_date, MAX(conviction_pct) AS conviction_pct
-  FROM `stock-trading-498512.events.decision_log`
+  -- state.decision_log_current, NOT the raw table: a corrected park-allocation row must supply the
+  -- FINAL-EFFECTIVE conviction, not the superseded one it replaced (bigquery/144's anti-join).
+  FROM `stock-trading-498512.state.decision_log_current`
   WHERE entry_type = 'park-allocation' AND conviction_pct IS NOT NULL
   GROUP BY entry_date
 ),

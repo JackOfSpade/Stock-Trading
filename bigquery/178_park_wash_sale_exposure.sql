@@ -210,6 +210,14 @@ FROM open_remainder;
 -- (losing_covers / candidate_sells / own_basis_for_buy) is copied verbatim from bigquery/50 —
 -- park never shorts, so nothing there needed to change.
 -- ============================================================================
+-- SUPERSEDED LIVE by bigquery/219_wash_sale_shared_pool_allocation.sql (2026-09-04) — current
+-- single source of truth for state.wash_sale_exposure. 219 fixes two independent defects: the
+-- per-close INDEPENDENT replacement cap (one lot could be counted in full against several closes,
+-- which the graded park ladder would multiply by the number of steps), and the sibling-leg own-basis
+-- gap (an exchange-split park SELL's other legs' basis lots were counted as external replacements,
+-- which manufactured $107.73 of disallowance out of an ordinary full liquidation). Kept here,
+-- unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.wash_sale_exposure` AS
 WITH losing_sells AS (
   -- Loss-realizing SELLs (closes a LONG strategy position) — unchanged from bigquery/50.

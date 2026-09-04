@@ -136,8 +136,21 @@ connectors:
       - name: commitmentOfTraders
         use: unused
       - name: commodity
-        use: unused
+        use: required
         prose_ambiguous: true
+        note: >-
+          D2a STEP 1d BRENT LIMB (Claude_Task_Plan.md D2a step 1d) — `commodities-historical-price-eod-light`
+          with symbol `BZUSD` is the ONLY source for Brent crude, which is the PRICE limb of the park v4
+          SHOCK axis (`state.park_axis_daily`, bigquery/216; seeded by bigquery/217). Brent is not an
+          IBKR menu instrument, so there is no IBKR primary and no fallback: if this endpoint denies,
+          ingest nothing and let the axis freeze semantics carry the last measured level.
+          PROMOTED unused -> required 2026-09-04 together with the D2a prose that calls it; the two must
+          move in one commit (this file's EDIT DISCIPLINE header).
+          MEASURED WORKING on the current plan tier 2026-09-04, and it cross-validates against a record
+          written independently of it (BZUSD prints 94.65 on 2026-09-01, the figure D1's own 09-01
+          de-risk record cites). Contrast `economics`, measured DENIED on the same tier the same day —
+          which is why the park v4 RATES axis is UNTESTABLE by documented property rather than a gap.
+          Do NOT raise `fmp_quote_plan_gated` for either fact; both are STANDING tier constraints.
       - name: company
         use: required
         prose_ambiguous: true
