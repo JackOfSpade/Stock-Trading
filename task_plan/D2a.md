@@ -1414,7 +1414,15 @@ Concretely, every run:
     note recording what WOULD have moved, and move nothing.
   - **`blocked_no_recipient = TRUE`** (`bigquery/215`; capital to sweep, but EVERY capital-enabled
     strategy is itself nomadic, so there is nowhere legal to put it) → move nothing and `CALL
-    ops.sp_raise_alert_once('warning','D2a','regime_sweep_blocked', ...)`. Exactly the sibling handler
+    ops.sp_raise_alert_once('warning','D2a','regime_sweep_blocked', <the EXACT STABLE message below>,
+    <JSON payload>)`. **PIN THE MESSAGE — it is `sp_raise_alert_once`'s dedup key, so any varying value
+    in it raises a NEW alert EVERY run.** Use verbatim, with no interpolation: `'Regime sweep blocked:
+    a capital-disabled strategy holds sweepable idle cash, but every capital-enabled strategy is
+    nomadic, so there is no eligible recipient and nothing moved. Strategies and amounts in payload.'`
+    The varying figures — `strategy`, `amount`, the capital-enabled set, NAV share — go in the PAYLOAD,
+    never the message. This condition persists for as long as the router leaves the roster deactivated
+    (it is not self-clearing in a session), so an interpolated message would emit one warning per day
+    indefinitely — the permanently-red-advisory failure this fleet has hit before. Exactly the sibling handler
     of the nomadic bullet below, and it exists for the same reason: without it the view returns ZERO
     rows and a whole-roster deactivation is **indistinguishable from the healthy empty-view steady
     state**, so do NOT treat it as a no-op. Founding case, measured 2026-09-03: AR_orc `div-E-202608-1`
