@@ -72,7 +72,7 @@
 -- repeated on every axis row for that date, so one view answers both the per-axis and the
 -- date-level question without a second object. cap = LEAST(100, 25 * standing) per §2.3's table.
 -- The ENTRY GATE (>=1 fresh firing AND standing>=2), conviction sizing, the crisis override, the
--- decay confirmation and the clamp are all LADDER rules and live in the shadow (bigquery/217),
+-- decay confirmation and the clamp are all LADDER rules and live in the shadow (bigquery/218),
 -- never here: this view reports STATE, not decisions.
 
 CREATE OR REPLACE VIEW `stock-trading-498512.state.park_axis_daily` AS
