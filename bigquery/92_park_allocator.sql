@@ -400,6 +400,14 @@ CROSS JOIN missing;
 -- above-dust shares (a switch-in-progress leg not yet fully sold) is unioned in as a residual row
 -- with is_policy_vehicle=FALSE.
 -- ============================================================================
+-- SUPERSEDED LIVE by bigquery/220_park_two_sleeve_book.sql (2026-09-04) — current single source of
+-- truth for this object. 220 generalizes the park book from ONE vehicle to TWO SLEEVES with a
+-- defensive fraction f: events.park_policy_changes gains target_f_pct / risk_sleeve /
+-- defensive_sleeve (additive, legacy rows map VOO->f=0 and anything-else->f=100), and
+-- is_policy_vehicle is REDEFINED as `target_weight_pct > 0` so §13.E's stranded-leg rule stops
+-- treating the second sleeve as a leg to liquidate. Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.park_position_current` AS
 WITH cur AS (SELECT vehicle FROM `stock-trading-498512.state.park_policy_current`),
 policy_row AS (

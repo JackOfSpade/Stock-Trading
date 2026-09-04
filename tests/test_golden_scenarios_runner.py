@@ -2646,7 +2646,7 @@ def test_golden_section_scope_escape_hatch_real_scenarios_yaml_on_vs_off(monkeyp
     # it declares the SAME governing_files/governing_sections set as PA-01..04, so batching correctly
     # folds it into this group — that is the batching contract working, not drift. Membership is pinned
     # rather than counted so a scenario SILENTLY changing its governing set still trips this.
-    assert [sc["id"] for sc in pa_group] == ["PA-01", "PA-02", "PA-03", "PA-04", "PA-07"]
+    assert [sc["id"] for sc in pa_group] == ["PA-01", "PA-02", "PA-03", "PA-04", "PA-07", "PA-08"]
     gov_files = pa_group[0].get("governing_files") or []
     gov_sections = pa_group[0].get("governing_sections")
 

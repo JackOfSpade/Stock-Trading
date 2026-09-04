@@ -81,7 +81,7 @@
 # ALLOCATION CALL + D2's PARK ALLOCATION CONVERSION step), and the AI Research-Significance Screen's
 # two-layer conversion (RS-*, added 2026-07-19 per Redesign C, owner reversal of the same-day DEFER —
 # Operating_Protocols.md §19 / Claude_Task_Plan.md's D1/W2/M2 research-screen calls).
-# 35 cases total (brief calls for 12-20; SE-02 added 2026-08-30; PA-07 added 2026-09-03 for the de-risk
+# 36 cases total (brief calls for 12-20; SE-02 added 2026-08-30; PA-07 added 2026-09-03 for the de-risk
 # evidence-cardinality rule). COUNT CORRECTED 2026-08-20 (D3): this line read "31" and had
 # been stale since the four RS-* scenarios landed 2026-07-19 — the id numbering has gaps (no RR-10,
 # KT-03, SB-03), so the count is not derivable from the ids and a reader has no way to notice the drift.
@@ -772,6 +772,36 @@ scenarios:
       intraday) and the de-risk binds and converts same-day exactly as before; and contrast PA-04, a
       re-risk, which this rule does not touch at all. Vehicle is unchanged, so D2's PARK ALLOCATION
       CONVERSION step sees a bound KEEP and no-ops -- no new status token and no D2 change. NO-GO.
+
+  - id: PA-08
+    category: park_allocator
+    situation: >
+      GRADED LADDER ERA (activated 2026-09-04). The park is a two-sleeve book, risk sleeve VOO and
+      defensive sleeve SGOV, currently at defensive fraction f = 0 (all VOO). Today
+      state.park_axis_daily reports TWO axes standing defensive (volatility and breadth), at least one
+      of which entered defensive within the last two sessions, so cap_pct = 50 and
+      increase_gate_open = TRUE. D1 judges MEDIUM conviction, conviction_pct 60, that the park should
+      de-risk. What defensive fraction does the call emit, and does D2 convert it?
+    governing_files: [Operating_Protocols.md, Claude_Task_Plan.md]
+    governing_sections:
+      Operating_Protocols.md: ["## 13. Account-Level Cash/Park Reconciliation, Drift Attribution & Cash Flattening"]
+      Claude_Task_Plan.md: ["## D1. Market Development Scan — deep research", "## D2. Daily Action Conversion — regular routine"]
+    expected_decision: "GO (f = 25 -- conviction 60 x cap 50 = 30, nearest step 25; a weight delta IS a conversion, so D2 converges the book)"
+    rationale: >
+      Claude_Task_Plan.md D1's GRADED ALLOCATION rule: the increase gate is satisfied (>=1 fresh firing
+      AND standing >= 2), so f may rise toward cap_pct = LEAST(100, 25 x 2) = 50. Conviction then SIZES
+      within that cap: the suggested target is the step NEAREST to conviction_pct x cap = 60% x 50 = 30,
+      and the nearest step to 30 among {0,25,50,75,100} is 25 (distance 5, versus 20 to 50). Ties round
+      DOWN but this is not a tie. So the call emits target_f_pct = 25 -- NOT 50. This is the owner's
+      proportional-sizing ask made mechanical: the same two-axis evidence at HIGH conviction would size
+      larger, and before the ladder this identical call moved ~97% of NAV. D2's GRADED CONVERSION step
+      compares TARGET WEIGHTS rather than the vehicle string, so moving from f=0 to f=25 is a real
+      conversion even though VOO remains the majority sleeve and the `vehicle` column still reads VOO;
+      the 25pp delta clears the 10pp convergence band and each resulting leg is far above the $25
+      per-leg minimum on a ~$15.3k park. Both sleeves then carry target_weight_pct > 0, so
+      is_policy_vehicle is TRUE for both and §13.E strands NEITHER -- the single most dangerous failure
+      mode in the two-sleeve migration, and the reason is_policy_vehicle was redefined as
+      target_weight_pct > 0 rather than left keyed on the vehicle name. GO.
 
   # ---- AI Research-Significance Screen scenarios (RS-*) ----
   # Added 2026-07-19 (Redesign C -- owner reversal of the same-day DEFER verdict; AI_DECISION_REDESIGN.md

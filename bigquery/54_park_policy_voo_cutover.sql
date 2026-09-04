@@ -99,6 +99,14 @@ WHERE NOT EXISTS (
 -- requiring no change to bigquery/55/56 or any caller. effective_date is kept as a plain descriptive
 -- column (still NOT NULL, still owner-supplied for the audit trail) -- it is simply no longer the
 -- selection key.
+-- SUPERSEDED LIVE by bigquery/220_park_two_sleeve_book.sql (2026-09-04) — current single source of
+-- truth for this object. 220 generalizes the park book from ONE vehicle to TWO SLEEVES with a
+-- defensive fraction f: events.park_policy_changes gains target_f_pct / risk_sleeve /
+-- defensive_sleeve (additive, legacy rows map VOO->f=0 and anything-else->f=100), and
+-- is_policy_vehicle is REDEFINED as `target_weight_pct > 0` so §13.E's stranded-leg rule stops
+-- treating the second sleeve as a leg to liquidate. Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.park_policy_current` AS
 SELECT vehicle, effective_date, note
 FROM `stock-trading-498512.events.park_policy_changes`
@@ -146,13 +154,22 @@ GROUP BY ticker;
 -- naming the current vehicle even when it has zero recorded events yet, with 0s (not NULLs) making the
 -- "nothing recorded for this vehicle" state an explicit, visible discrepancy rather than an absent view.
 --
--- SUPERSEDED LIVE by bigquery/92_park_allocator.sql — current single source of truth for this
+-- HISTORICAL (no longer the current truth — see the SUPERSEDED LIVE banner above): this object was
+-- first superseded by bigquery/92_park_allocator.sql, which was then the single source of truth for this
 -- object. bigquery/92 generalizes this single-vehicle-only definition to one row per above-dust
 -- ticker in state.park_position (plus is_policy_vehicle), for the multi-instrument park menu
 -- (PARK_ROUTER_DESIGN.md), while PRESERVING this view's zero-row-gap LEFT-JOIN fix and every column
 -- below. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this
 -- CREATE statement live in isolation — it would silently drop is_policy_vehicle and any residual
 -- switch-in-progress ticker row bigquery/92 added.
+-- SUPERSEDED LIVE by bigquery/220_park_two_sleeve_book.sql (2026-09-04) — current single source of
+-- truth for this object. 220 generalizes the park book from ONE vehicle to TWO SLEEVES with a
+-- defensive fraction f: events.park_policy_changes gains target_f_pct / risk_sleeve /
+-- defensive_sleeve (additive, legacy rows map VOO->f=0 and anything-else->f=100), and
+-- is_policy_vehicle is REDEFINED as `target_weight_pct > 0` so §13.E's stranded-leg rule stops
+-- treating the second sleeve as a leg to liquidate. Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.park_position_current` AS
 SELECT
   cur.vehicle                                AS ticker,
