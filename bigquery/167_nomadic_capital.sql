@@ -302,7 +302,7 @@ AS (
 -- ~$0 under steady state anyway (excluding a ~$0-capacity donor from a SUM of positive capacities
 -- changes nothing). Every other line of bigquery/98's definition is UNCHANGED, copied verbatim. =====
 --
--- SUPERSEDED LIVE by bigquery/168_nomadic_capital_fixes.sql — current single source of truth for
+-- SUPERSEDED LIVE by bigquery/215_regime_sweep_blocked_no_recipient.sql — current single source of truth for
 -- this view. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
 -- this CREATE statement live in isolation. 168 splits this definition's single nomadic-exclusive
 -- enabled_set into two: a nomadic-EXCLUSIVE set for sweep recipients and restore donors (the actual

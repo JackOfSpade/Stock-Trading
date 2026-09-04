@@ -1604,6 +1604,17 @@ Concretely, every run:
   Empty (the steady state) → no-op, nothing to log. Non-empty:
   - `control_enabled = FALSE` (the `ops.capital_control` kill-switch) → log a one-line `events.decision_log`
     note recording what WOULD have moved, and move nothing.
+  - **`blocked_no_recipient = TRUE`** (`bigquery/215`; capital to sweep, but EVERY capital-enabled
+    strategy is itself nomadic, so there is nowhere legal to put it) → move nothing and `CALL
+    ops.sp_raise_alert_once('warning','D2a','regime_sweep_blocked', ...)`. Exactly the sibling handler
+    of the nomadic bullet below, and it exists for the same reason: without it the view returns ZERO
+    rows and a whole-roster deactivation is **indistinguishable from the healthy empty-view steady
+    state**, so do NOT treat it as a no-op. Founding case, measured 2026-09-03: AR_orc `div-E-202608-1`
+    moved E to DO-NOT-ACTIVATE, leaving nomadic C as the sole capital-enabled strategy and **$15,368.39
+    — 96.7% of book NAV — owed a sweep with no eligible recipient**. Do NOT "unblock" it by widening
+    the recipient set; `capital_enabled AND NOT nomadic` is load-bearing (`bigquery/168` FIX 7, and
+    `sweep_recipient_view_drift` records what happened the last time the set was taken from elsewhere).
+    The correct response is an owner decision about the roster.
   - SWEEP rows (a capital-disabled strategy with `available_funds ≥ $25`): **THE RECIPIENT SET IS THE
     `counterparty_strategy` VALUES `state.regime_capital_sync_pending` ITSELF RETURNS — that view is the
     sole authority on recipient ELIGIBILITY (`bigquery/168` FIX 7: `capital_enabled AND NOT nomadic`).

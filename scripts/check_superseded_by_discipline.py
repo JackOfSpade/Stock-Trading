@@ -204,6 +204,14 @@ ALLOWLIST = {
         "is to hide rows on the basis of that column. The file's second ASSERT reads "
         "state.park_allocation_recent, which already goes through state.decision_log_current, and is "
         "not covered by this entry.",
+    ("214_park_reentry_breadth_count_correction.sql", FILE_LEVEL):
+        "Same two raw-table needs as 213's entry above, for the sibling correction note on the "
+        "2026-09-03 re-risk record: (1) an IF NOT EXISTS re-apply guard that must see raw history or "
+        "it re-inserts a duplicate on DR rebuild, and (2) an ASSERT whose SUBJECT is the superseded_by "
+        "column and so cannot be evaluated through the view that filters on it. This file's SECOND "
+        "ASSERT reads state.park_allocation_latest — which resolves through state.decision_log_current "
+        "— and is deliberately there to prove the note did not displace the live call; it is not "
+        "covered by this entry and must not be repointed at the raw table.",
     ("173_freshness_cadence_aware.sql", "state.freshness"):
         "DEAD-MAN'S SWITCH. MAX(entry_date) is a proxy for 'was this table written recently'. A "
         "correction append IS such a write, so a filtered read would report STALE on a day whose only "

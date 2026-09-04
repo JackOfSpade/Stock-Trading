@@ -115,7 +115,7 @@ LEFT JOIN restored rs ON rs.strategy = r.strategy_code;
 -- (capped at donor capacity; >= $25-or-full-debt floor). D2a executes ONE movement per read
 -- (Operating_Protocols.md §16 — stale-snapshot rule).
 --
--- SUPERSEDED LIVE by bigquery/168_nomadic_capital_fixes.sql — current single source of truth for
+-- SUPERSEDED LIVE by bigquery/215_regime_sweep_blocked_no_recipient.sql — current single source of truth for
 -- this view (bigquery/167_nomadic_capital.sql is an intermediate, also-superseded definition — do
 -- not stop there; it first added a nomadic-strategy exclusion to the enabled_set CTE below, but
 -- applied it to BOTH the sweep-recipient set AND restore_candidates, which made a nomadic debtor's
