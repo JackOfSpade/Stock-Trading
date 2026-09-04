@@ -1,0 +1,419 @@
+# PARK ALLOCATOR v4 — GRADED ALLOCATION HANDOFF SPEC
+
+Status: **DESIGN COMPLETE, NOT IMPLEMENTED. Owner-mandated handoff** (directive 2026-09-04, in-session:
+proportional sizing required + "every other improvement you recommend... complete redesign of how we
+handle the allocation of idle capital", full redesign freedom granted). This document is the complete
+spec for the implementing instance. It was produced by a 10-agent research/red-team pass (4 recon
+including a historical replay against the real tape, 5 adversarial lenses, 1 adjudicator); every rule
+below already has the red-team's 15 required changes folded in. Full agent reports:
+`~/.claude/projects/-Users-jack-Desktop-My-Apps-Stock-Trading/4f960ac5-f1f1-479b-8ca3-bf5834b4f467/subagents/workflows/wf_0770f68e-cb4/journal.jsonl`
+(R1 there holds the exhaustive change-surface inventory; this doc carries the load-bearing subset).
+Companion memory notes: `project_park_v4_handoff_state`, `project_park_v4_invariants_draft`.
+
+Until Phase 3 activates, the landed binary **DE-RISK EVIDENCE CARDINALITY** rule (Claude_Task_Plan.md
+D1, Operating_Protocols.md §13.F, fixture PA-07, commit 98fd40a) remains the operative rail. Do not
+remove it early.
+
+---
+
+## 0. READ FIRST — traps with recorded incidents (likeliest silent violations: 1, 6, 9)
+
+1. **park_allocation_latest HIJACK.** `state.park_allocation_recent.is_call` keys on
+   `JSON_VALUE(fields,'$.status') IS NOT NULL`; `_latest` is bare `is_call ORDER BY event_ts DESC
+   LIMIT 1`. ANY `entry_type='park-allocation'` row carrying a `fields.status` key written after the
+   16:00 call BECOMES the call D2 executes at 17:15. Outcome rows and corrections use a DISTINCT
+   entry_type and omit `fields.status`. Worked examples of the safe form: bigquery/213, 214.
+2. **Append-only corrections.** Never UPDATE/DELETE `events.*`; corrections are new numbered CALL-only
+   files (213/214 precedent); superseded-marker edits to old headers land same commit; NEVER renumber
+   a landed `bigquery/*.sql`; run `sp_sq_embed_pending` after any manual decision_log INSERT.
+3. **Ask before commit/push** in interactive sessions, always (CLAUDE.md incident 2026-07-21). The
+   gate-free posture belongs to the cron fleet only.
+4. **Batch pushes; no new crons.** ~4 billable min/push; one push per completed phase; new views ride
+   existing D1/D2a runs. Per-push conversion of scheduled work is ~10x cost — settled, don't re-argue.
+5. **Worktree isolation.** Routines sweep the shared checkout (commit 98fd40a swept this session's
+   uncommitted tree mid-work). Each phase: one worktree, one branch, one push. Review subagents get
+   their own worktrees (a reviewer once ran `git stash` on the main tree).
+6. **Parity discipline.** Every state/analytics view change needs a token-identical dbt port; live MCP
+   apply + repo landing + dbt port + (default-NO) `parity_live_scope.yml` decision = ONE unit of work,
+   verified with a fresh `check_live_sql_parity.py` before session end. `sources.yml` carries a live
+   `not_null` test on `park_policy_changes.vehicle` — keep it populated (majority sleeve; f=50 tie →
+   risk sleeve) or change the test in the same commit. Its "NOT dbt-ported" comment is STALE
+   (dbt/models/state/park_policy_current.sql exists) — fix when touching.
+7. **Generated files.** `task_plan/*.md` from `split_task_plan.py` (rerun after every
+   Claude_Task_Plan.md edit); `ops/triggers.json` from cadence.yaml; editing 00_preamble's park-menu/
+   contract lists moves ALL FIVE strategy spec_hashes — recompute same commit.
+8. **Timezones / date joins.** New date keys pinned America/Denver; `DATE(ts)` in verification queries
+   is UTC and has over-reported before; DATE-grain joins use strict `>` (`>=` admits pre-event rows).
+9. **Sign convention.** `dd_from_252d_high` is stored NEGATIVE. The index-axis limb is
+   `dd < -0.03`, never "drawdown > 3%". A wrong sign yields a plausible-looking inverted axis.
+10. **Alerts.** `sp_raise_alert_once` needs a STABLE message; every new category needs a reachable
+    closure path; CI writes `ops.ci_findings`, never `ops.alerts`; durable state keys on tables, never
+    on an alert's existence.
+11. **Golden.** Fixture rewrites + new fixtures + the hand-maintained count line in scenarios.yaml
+    land in the SAME commit as Phase 3; §13's heading text stays byte-stable or all five PA
+    `governing_sections` update same commit; `run_golden.py --offline` pre-push; park tokens are
+    {GO, NO-GO}; do NOT wire BigQuery writes into golden-scenarios.yml (settled — D3+AR_orc own it).
+    The batching-group pin test (`test_golden_section_scope_escape_hatch...`) pins PA-group membership
+    — update the pinned id list deliberately, never loosen it to a count.
+12. **No price bands.** `fn_order_guard` checks only MARKET/qty>0/ref_price>0 (bigquery/104, owner
+    directive). D5's ~2% share-arithmetic cross-check is the sanctioned substitute.
+13. **Settled, do not re-propose:** 5-day cooldown and HIGH-conviction re-risk gate (both re-measured
+    2026-09-03 — they block only the profitable moves), human gates on the park path, Terraform
+    adoption, dynamic operating timezone.
+14. **Heartbeat.** `loop:park_allocator`'s daily heartbeat (3-trading-day staleness, live body
+    bigquery/111) must survive every refactor.
+15. **Duplicate-prefix race.** Phases 2 and 3 redefine the SAME objects — a duplicate numeric prefix
+    here is the genuine same-OBJECT collision class (unlike the tolerated 114/185/213-214 pairs).
+    Check object overlap with any concurrent park-family branch before landing.
+16. **Anchor re-assert.** After each phase's live apply:
+    `SELECT DISTINCT ai_era_start_date` must equal `2026-07-24`, and TWR-continuity EXCEPT queries
+    (old vs new body, both directions, 0 rows) run before applying any park_nav_daily /
+    park_counterfactuals successor.
+
+---
+
+## 1. Mandate and measured motivation
+
+**The park** = idle capital (~$15.3k, ~97% of NAV), one vehicle from a 12-instrument menu, chosen
+daily by AI judgment (D1 call → D2 conversion → next-open fills, owner confirm-tap per order).
+
+**What v4 fixes** (all re-derived from primary sources, 2026-09-03/04 session):
+- The 09-01→09-03 VOO→SGOV→VOO round trip: exit fired on ONE evidence axis, re-entry required TWO;
+  cost $214.32 + $107.73 of the $149.18 realized loss wash-sale-disallowed. Execution blameless.
+- AI-era scorecard (anchor 2026-07-24→09-03, post-212 rebase): AI +1.073% vs SGOV +0.402% (+67bp) vs
+  never-switch VOO +4.650% (**−357.7bp**) vs rejected rule shadow +2.865% (−179.3bp). Defensive
+  excursions 0-for-3 (−2.841, −0.352, −1.019pp). All value-destruction came from defensive
+  excursions; all edge over SGOV came from defaulting to VOO. 4 switches / 42 calls — an
+  evidence-economics and sizing problem, not churn.
+- Two consecutive records overstated a count in the direction of the call (bigquery/213 load-bearing,
+  214 harmless). Nothing mechanically verifies cited statistics.
+- `shock_overlay` read `acute` 08-14..09-03 continuously — a standing state counted as fresh news.
+  `hy_oas` UNTESTABLE for weeks. `conviction_pct` logged on every call, gates nothing.
+- Reversal base rates: re-entry cleared ≤2 sessions in 33.3% of 42 analogues; P(VIX back under 20d
+  ≤2 sessions | spike setup) = 31%.
+
+**The owner's specific ask:** "a MEDIUM-60 two-axis de-risk moves the same 97% of NAV as a HIGH-95
+five-axis one — we need this" → conviction- and evidence-proportional sizing.
+
+---
+
+## 2. Architecture
+
+### 2.1 Two-sleeve book
+Risk sleeve (default **VOO**) + defensive sleeve (default **SGOV**). Decision variable = defensive
+fraction **f ∈ {0, 25, 50, 75, 100}%**. `state.park_policy_current` generalizes to target weights;
+`events.park_policy_changes` rows carry f + sleeve tickers (`vehicle` column stays NOT NULL, populated
+as the majority sleeve; f=50 tie → risk sleeve; documented in the ALTER header — a live dbt `not_null`
+test depends on it). **CASH may remain a 100% degenerate policy but is BARRED as a sleeve at any
+0<f<100** until park_nav_daily carries an explicit cash leg (twr_index is instrument-only; a
+fractional CASH sleeve makes the scorecard grade a book that doesn't exist). Phase-2 dry-run asserts
+no policy row with 0<f<100 names CASH. Other menu instruments: reachable only via an explicit
+SPECIAL-SITUATIONS call (own rationale for why the VOO/SGOV pair is wrong, e.g. duration-rally thesis
+→ IEF as defensive sleeve). Menu stays the allowlist rail. VOO↔VTI are treated as
+substantially-identical for wash-sale purposes pending owner ratification item 4.
+
+### 2.2 Axis state machine — `state.park_axis_daily` (new view)
+Six axes. Each has a **LEVEL** (defensive state, boolean, from primary series) and an **EVENT**
+(fired = ENTERED defensive state within the last 2 sessions). Mechanical definitions (conventions
+pinned in the view header; these exact forms):
+
+| Axis | Defensive LEVEL iff | Source / reality check |
+|---|---|---|
+| volatility | VIX > 20d SMA **and** VIX > 15 | SMA built from `events.signal_marks` (park_signal_daily has `vix_med3`, NOT a 20d SMA — the SMA must be built; convention: includes current close) |
+| breadth | `EQUITY_BREADTH_PCT` < 66 | `events.regime_events`; carry-forward ≤ 2 sessions, then UNTESTABLE |
+| index | SPY < 50dma **or** `dd_from_252d_high` **< −0.03** | `state.park_signal_daily` (dd is stored NEGATIVE — trap #9) |
+| rates | 10Y ≥ 4.90 | NO daily in-house series today — see Phase-1 data decision. Hike-odds limb launches data-permitting-OFF (no series exists) |
+| credit | hy_oas fresh and above bar | UNTESTABLE today (FRED dark, month-old aggregate). HYG/IEF ratio proxy from signal_marks is the candidate feed |
+| shock | `shock_overlay='acute'` **and** a commodity/geopolitical PRICE limb confirms (Brent > 95) | NO Brent series exists anywhere in the stack today — the axis CANNOT fire until the feed lands. The overlay alone standing for weeks is a LEVEL, never an EVENT |
+
+Per-axis columns: `as_of_date`, `sessions_since_measured`, `testable BOOL`. A carried level is never
+re-stamped fresh. A series coarser than daily grain is UNTESTABLE at daily grain. A never-yet-measured
+axis contributes to NEITHER firing counts NOR the standing cap.
+
+**AI judgment preserved:** these are DEFAULTS. The AI may override any LEVEL or EVENT with a named
+reason recorded in `fields.axis_overrides` (so decay is defeasible through the same judgment channel
+as entry). The cap arithmetic itself is not overridable except via the ±1-step deviation and the
+crisis override.
+
+**Phase-1 data decision (mandatory, in writing — silence is not an option).** Choose ONE:
+(a) land the three feeds — daily DGS10 via FMP economics, HY-OAS proxy from the HYG/IEF ratio, Brent
+via FMP commodity — **verifying FMP plan-tier access FIRST** (the economics endpoint returned ACCESS
+DENIED on the current tier, measured 2026-09-04), before the shadow's evidence clock starts; or
+(b) renormalize the ladder table to testable-axis count; or (c) document in §13.F that f=100 is
+reachable via crisis override only, by construction. `state.park_axis_daily` reports `testable_axes`
+weekly through W5; both sides of W5's drift check pin the same anchor AND the same axis set (a
+3-testable-axis machine graded as 6-axis is the bigquery/212 wrong-window class).
+
+### 2.3 The ladder (rails on SIZE — same-day binding, no cooldowns, no approval gates)
+
+- `standing_defensive_count` = COUNT of axes whose **LAST MEASURED** level is defensive, over axes
+  ever measured. Measurement date never gates membership: a connectors-down day is a no-op (counts
+  unchanged → cap unchanged → clamp idempotent); weekend/holiday gaps harmless. A D1 **HOLD** session
+  applies NO clamp and writes NO f change. D2's evidence-freshness rail (stale row → HOLD) is
+  preserved verbatim for f-target rows.
+- **INCREASE (de-risking):** f may rise toward `cap(standing_count)` when (a) ≥1 axis ENTERED
+  defensive within the last 2 sessions AND (b) `standing_count ≥ 2`. Cap table: 0→0, 1→25*, 2→50,
+  3→75, 4+→100. A single standing axis never engages an increase from 0 (the landed cardinality floor,
+  preserved — all 15 measured one-day single-axis episodes in history cost $0). *cap(1)=25 exists for
+  the maintenance/decay path only. Deliberate residue, stated for the owner: mid-crash deepening with
+  no fresh axis entry licenses no increase except via crisis days or the ±1-step deviation.
+- **CRISIS OVERRIDE (entry):** single-session index move ≤ −2.5% or VIX ≥ 28 → treated as 4+ (straight
+  to 100 allowed). Measured: 11 qualifying days in ~26 months, all the right days, arriving in 3-day
+  clusters; zero since 07-24.
+- **MAINTENANCE + DECAY (time-hysteresis; no price hysteresis anywhere):** every session f is clamped
+  to `cap(standing_count)`, with: (i) a crisis-entered increase is exempt from the clamp for
+  2 sessions; (ii) the cap steps DOWN only after the lower standing count holds for 2 consecutive
+  MEASURED sessions (unmeasured sessions don't count — outage gaps heal in 2 sessions post-recovery);
+  (iii) any clamp from f ≥ 50 unwinds at most ONE step per session; (iv) a clamp crossing only 25→0
+  executes immediately (fast full re-risks preserved — 08-03 and 09-03 were both right). Cap increases
+  and AI-initiated re-risk decreases are never delayed. Rationale: the un-dwelled crisis+clamp
+  composition was measured as a sell-low/buy-high machine (5 of 6 historical clusters bought back
+  higher, −1.3 to −4.3pp per 26 months — several times the allocator's entire +67bp edge).
+- **RE-RISK:** decreasing f is always allowed (measured: re-entries have been right).
+- **UNTESTABLE FREEZE with release path:** a frozen axis holds its last measured state and cannot
+  newly fire. At `sessions_since_measured ≥ 5` with a frozen-DEFENSIVE level, `sp_raise_alert_once`
+  fires (stable message keyed on the frozen last-measured date; closure = the axis measuring again;
+  frozen-NORMAL axes are inert). While open, every D1 call records keep-counting vs release in
+  `fields.axis_overrides` with a named reason. Hard backstop: UNTESTABLE > 20 consecutive sessions →
+  the axis drops from the STANDING count (it still can never newly fire), executing through the normal
+  session call and decay-confirmation rules — never an out-of-session write. Phase-3 review checklist
+  includes: "enumerate every axis-machine state with no exit transition."
+- **CONVICTION SIZING (the owner's ask):** suggested target = the step **NEAREST** to
+  `conviction_pct × cap`; ties round DOWN (toward less defensive — the measured record's direction);
+  AI may deviate ±1 step with a named reason; never above cap. Worked examples: MEDIUM-60 × cap 50 =
+  30 → **25**. HIGH-95 × cap 100 = 95 → **100**. Conviction-85 × cap 100 = 85 → **75**. Honest note:
+  the CAP does most of the sizing work; conviction moves the answer only near step boundaries. It
+  stays in the formula as the owner's ask, but this doc does not oversell it.
+- **No f-changing write ever occurs outside a session** (this is what keeps v4 on the right side of
+  the v1 rule-table rejection): each D1 session computes the cap, applies decay/confirmation, states
+  them, and emits the (possibly clamped) call; D2 converts the weight delta. D1 runs Sun–Thu; the
+  Thursday→Sunday dark window is pre-existing and accepted (a Thursday crisis f=100 sitting
+  unmodulated ~3 days is named in ratification item 3).
+
+### 2.4 Execution and cash-flow rules (replaces all drafted sweep/band text)
+
+- **SWEEPS** < $1,000: buy ONLY the most-underweight sleeve; if any risk-sleeve loss-sale exists in
+  the trailing 30d, route sweeps to the defensive sleeve regardless of underweight. Sweeps ≥ $1,000
+  (deposit scale): pro-rata, suppressing any leg under the $25 floor.
+- **CONVERGENCE BAND:** converge only when |actual−target| > 10pp AND each resulting leg ≥ $25 — the
+  $ term is a per-leg minimum, NEVER an OR-trigger.
+- **COVER:** sell from the most overweight-vs-target sleeve; ties/on-target → defensive first;
+  empty-sleeve fallthrough to the other.
+- **WITHDRAWAL:** an external outflow raises cash pro-rata to target weights whenever a single-sleeve
+  raise would breach the band (≈ >$2.6k at f=50 today); below that, defensive-first. Target f is a
+  WEIGHT — it re-bases over live park_mv; no policy write for any external flow.
+- **NETTING:** before crafting any park leg, net it against any pending or re-crafted opposite-side
+  leg for the SAME ticker in `state.open_orders`; craft only the netted order (kills PDT pairing,
+  wasted round trips, double-reserved cash).
+- **BROKEN ROTATION:** first response is always re-crafting the expired funding leg and bridging one
+  settlement cycle; §13.E.4's cover fires only if the debit survives a SECOND cycle, and sells the
+  overweight-vs-target sleeve; cover and re-crafted SELL never both stand live for overlapping
+  notional. Park step legs ride the existing ORDER_STAGED registry with a stable `item_key` per
+  `(sleeve_ticker, side)` — never per (target_f, date) — so a target change supersedes rather than
+  stacking siblings.
+
+### 2.5 Evidence integrity (Phase 1 — this is the "our mistake" fix, and it ships first)
+
+- Every numeric claim in a call's rationale must appear in `fields.readings` with source + as-of.
+- D2's conversion recomputes counts/threshold-crossings FROM the recorded readings and REFUSES
+  conversion when the rationale's arithmetic contradicts them (the bigquery/213 class: counts are
+  computed, never asserted). **Polarity is a one-way ratchet:** in the binary era (Phases 1–2) the
+  recompute may BLOCK or demote a conversion, and feeds the shadow; it NEVER upgrades a KEEP to a
+  conversion or a 1-axis call to 2-axis (mechanical scoring finds MORE 2-axis days — unratcheted, it
+  would have flipped the landed rule's $0 KEEP on 09-01 into a −$225 full convert). AI hand-scoring
+  stays authoritative for action until Phase 3. D1's new fields contract, D5's recompute, and the
+  format fixture land in ONE commit; D5 accepts the legacy readings shape through Phase 2 and
+  hard-refuses only from Phase 3. A refusal raises
+  `sp_raise_alert_once('park_conversion_refused_evidence_mismatch')` (stable message, details in
+  payload; closure = next successful conversion; two consecutive refusals → WARNING). The recompute
+  includes the share-arithmetic cross-check: step shares × ref_price within ~2% of Δf × park_mv
+  (evidence integrity, not a pre-trade rail — trap #12).
+
+### 2.6 Tax awareness (transparency, not a gate)
+
+A de-risk call states the FIFO-projected realized P&L of the specific step (from park tax lots' open
+lots, not position-level unrealized) and the wash-sale-disallowed portion if re-entry occurs within
+30d; partial steps shrink both pro-rata (measured on the actual 09-02 book, a 25% step would have
+realized a +$8.9 GAIN with zero wash-sale, vs the full-book −$149.18 with $107.73 disallowed).
+Phase 1 also ships the `state.wash_sale_exposure` refinement: allocate each replacement lot's shares
+across qualifying closes oldest-close-first, replacing bigquery/178's per-close independent capping
+(which double-counts under ladders). Detection-only; the IBKR 1099-B stays authoritative.
+
+### 2.7 Measurement and learning loop
+
+- `park_nav_daily` successor emits BOTH `target_f` (policy_asof semantics) and
+  `actual_defensive_weight` (from holdings CTEs); the one-session policy lead is documented in column
+  descriptions; W5's drift check compares the ladder shadow against ACTUAL weight; `target_f` serves
+  only the convergence-band read.
+- `analytics.park_ladder_shadow` (new, Phase 1): `r_ladder(d) = (1−f(d−1))·r_risk(d) + f(d−1)·r_def(d)`,
+  bigquery/179's prev-lag idiom, strict `>` on DATE joins; columns include `ladder_start_date` (first
+  date all live axes measurable) and `ladder_index_ai_era` (NULL before
+  `GREATEST(ladder_start_date, ai_era_start_date)`); never coalesce an unmeasured axis to "not
+  defensive". Acceptance: reproduce the replay table (f=25 only on 09-01/09-02; the 09-02 vol margin
+  of 0.04; the 08-11 breadth carry-forward) with four conventions pinned in the header: 20d SMA
+  includes current close; index limb coded `dd_from_252d_high < -0.03`; breadth carry-forward ≤ 2
+  sessions then UNTESTABLE; decision_log dedup = last well-formed row per Denver day. Structural
+  honesty, stated in the view header: the shadow computes from the same axis view, so it is blind to
+  frozen-axis stuck states; and it validates only the testable-axis subset (Phase-1 data decision).
+- **Excursion outcomes:** rows use `entry_type='park-excursion-outcome'` and carry NO `fields.status`
+  key (trap #1). Acceptance: after the first outcome write, assert zero status-bearing non-call rows
+  under `entry_type='park-allocation'`; golden fixture asserts an outcome row never surfaces in
+  `park_allocation_latest`.
+- **Drift watcher:** D2a raises `sp_raise_alert_once('park_convergence_overdue')` (stable message
+  keyed on drift start date) when drift_pp > band for ≥2 consecutive sessions AND no park fill or
+  live pending park leg exists; closure = drift in-band or a pending leg appears. From Phase 3 day 1,
+  W5 treats "D2 logged no-op on a day the ladder shadow shows Δf≠0" as a named CRITICAL signature.
+- Text corrections owed nearby (same commits as the sections they touch): the Q1 park retrospective
+  bullet either lands (outcome rows are its substrate) or §13.F/PARK_ROUTER_DESIGN stop claiming it;
+  `sources.yml`'s stale "NOT dbt-ported" sentence; `autonomy_levels`' stale "92 is canonical" prose;
+  VOO/VTI equivalence joins into the 178-successor at Phase 4.
+
+---
+
+## 3. The replay's verdict (and its honest limits)
+
+- **08-05..09-03:** ladder path f=0 every day except 25 on 09-01/09-02, decayed to 0 on 09-03.
+  Close-to-close: ladder +0.076% | actual binary −1.015% | never-switch VOO +0.441%. Ladder vs actual
+  **+1.091pp ≈ +$167**; ladder vs never-switch −0.365pp ≈ −$56.
+- **The 09-01 episode:** actual cost −$225 close-to-close ($214.32 on real fills). Ladder at f=25:
+  −$56 (**74% cost reduction**). The landed binary rule's KEEP: $0 — best of all variants, but only
+  because the AI hand-counted one axis; MECHANICALLY 09-01 was a 2-axis day (VIX 16.34 > 20d 15.19
+  and > 15; breadth 62.62 first sub-66 print), so a mechanical binary rule converts at full size
+  (−$225). **The ladder's value is capping mechanically-legitimate conversions at quarter cost, not
+  blocking them.**
+- **July reconstruction (the strongest motivator, restated honestly):** ladder engages 07-17,
+  noise-exits 07-21 on a 0.06-VIX margin (−$52, 4 taps, zero information), re-engages 07-23, decays
+  07-31 — two sessions before the actual 08-03 re-risk. Net ≈ −0.60pp vs the actual −2.841pp: **4–5x
+  better** (not the ~90% an earlier flap-blind computation implied). With the 2-session decay
+  confirmation the 07-21 flap disappears and ~90% is roughly recovered.
+- **Oscillation:** zero in the 21-session window, but that window is unrepresentative — over 26
+  months the vol axis had 23 episodes, 61% lasting ≤2 sessions, 11 re-firing within ≤2 sessions of
+  exit. The fix is TIME-hysteresis (2.3), not price bands: **no price hysteresis anywhere**; re-open
+  per-axis bands only if the Phase-1 shadow shows an axis flapping through an ENGAGED boundary
+  >~2x/quarter.
+- **Tap load:** ~11–15/mo vs today's 10–14. Worst realistic year ≈ 26 step-pairs — fewer pairs than
+  the unconstrained binary allocator's annualized 35 — but crisis quarters concentrate (March-2026
+  shape: ~6 pairs at 50–75%-of-book scale in 6 weeks). Ratification item 7.
+- **Sample honesty:** the live quantification rests on ONE de-risk episode and 21 breadth
+  observations, and in that one episode the landed binary rule beat the ladder. The case for the
+  ladder is the July reconstruction, the asymmetric-cost logic, and the base rates — not September.
+
+---
+
+## 4. Rollout ruling
+
+Cost structure: fractional-f plumbing ≈ 75–80% of v4 and is identical for any f∉{0,100}; the axis
+machine + feeds ≈ 15–20%; D5 ≈ 5%.
+
+**RULING: ship Phase 1 standalone now; hold the Phase-2/3 build until the shadow accumulates 2–3 more
+genuine multi-axis episodes (~1 per 6 weeks observed) or the owner explicitly orders immediate build;
+then build the FULL five-step v4. No intermediate variant is ever acceptable.**
+
+- **Phase 1 now** — `state.park_axis_daily` (with the one-way ratchet), D5 evidence integrity, the
+  ladder shadow, the RC-7 data decision, the wash-sale refinement: ~20–25% of cost, **100% of the
+  integrity benefit** (kills the load-bearing-miscount class), starts the evidence clock. It captures
+  0% of the P&L benefit — stated plainly.
+- **Phase 2** — two-sleeve plumbing, f still mechanically pinned to {0,100}: rewrite in ONE unit of
+  work (i) §13.E's stranded-leg predicate → "target weight 0 and held above 0.0005 sh"; (ii)
+  bigquery/92's `residual_rows` successor (`is_policy_vehicle` → `is_target_sleeve` + weight,
+  preserving the per-sleeve LEFT-JOIN zero-row-gap guarantee); (iii) Claude_Task_Plan.md D2 item 6's
+  SELL-craft SELECT; (iv) D2's KEEP/no-op test and EARLY-EXIT checklist → compare TARGET WEIGHTS,
+  never a vehicle string (a weight-delta IS a conversion). On completion, write a schema-version
+  marker row into `events.park_policy_changes`; D2's checklist REFUSES any f∉{0,100} until the marker
+  exists (BigQuery has no CHECK constraints — the guard lives in the checklist, quoted verbatim).
+  Acceptance includes the anti-mask fixture: dry-run SELECTs proving a synthetic 25/75 book yields
+  ZERO stranded-leg rows and correct per-sleeve reconciliation drift. The pin is MECHANICAL, not
+  aspirational prose (green tests miss future-INSERT paths — recorded trap).
+- **Phase 3** — ladder + conviction sizing live; supersedes the binary cardinality rule; golden
+  rewrites land same commit (PA-01: 3+ axes crisis → GO at f=100; PA-02 KEEP; PA-04 re-risk GO
+  untouched; **PA-07 needs NO expected_decision change** — single-axis → bound KEEP + park_watch is
+  identical under the ladder floor; only its rationale citation moves). New fixtures: two-axis→cap 50
+  with conviction quantization; decay-out with 2-session confirmation; crisis dwell; untestable
+  freeze + release; outcome-row non-hijack. Activation is by owner word against a WRITTEN calendar
+  checklist (feeds live ≥N sessions; ≥2–3 shadow multi-axis episodes; quantization landed; worked
+  examples corrected) — a checklist, never a self-counting readiness gate (the v2 latched-gate class).
+- **Phase 4** — special-situations path, VTI equivalence table, adaptive extras.
+
+**Rejected variants (kill chains recorded so no future session re-tries them):**
+- Three steps {0,50,100}: same blocking rewrites the moment any f∉{0,100} is legal (~95% of cost),
+  half the resolution, and floor quantization maps the owner's headline MEDIUM-60 two-axis case to
+  ZERO action.
+- Informal partial switch under the current book: **destructive** — §13.E's backstop full-SELLs the
+  split within one D2a pass and re-crafts the SELL every session if the tap is declined. The
+  backstop's persistence is a feature; give it a machine-readable target, never suppress it.
+- Tier-stepping via AOR: every tier step realizes 100% of the book's lots (the measured $107.73
+  disallowance shape) vs a 25% step realizing only the moved quarter (+$8.9 gain, zero wash-sale, on
+  the actual 09-02 book), plus unchosen duration exposure. This also discharges §11's "AOR covers the
+  blend" with numbers.
+- Stop at the landed binary rule ("option d"): the strongest cheap baseline — it already delivers the
+  highest-EV single intervention (de-risking less) at zero cost, and v4's benefit must be framed
+  against IT, not the pre-09-03 status quo. v4's incremental value over (d) is confined to genuine
+  multi-axis excursions: ~2.5pp ≈ $385 saved per episode at ~1/6wk observed frequency. If the owner
+  reads the scorecard as "stop de-risking entirely," (d) is rational and v4 is over-engineering; v4
+  is justified only to KEEP the de-risk capability while capping its measured cost.
+- Deferral price of the Phase-2 hold: ~2 episodes ≈ ~$770 foregone ladder savings, against
+  mis-building 75–80% of the system on a sample of one live episode in which the ladder LOST to the
+  incumbent rule. The wait converts the ratification conversation from argument to data.
+
+---
+
+## 5. OWNER RATIFICATION — seven items, none may be buried
+
+1. **Mechanical decay vs "AI judgment end to end."** Standing: *"v1's deterministic regime→vehicle
+   rule table is rejected as the decision-maker — this is an AI-based trading system, and the park
+   allocation decision must be AI judgment, end to end"*; *"no thresholds, no lookup table, no
+   formula anywhere in the decision path"* (PARK_ROUTER_DESIGN.md). The ladder bounds f's choice-set
+   the way the menu bounds the vehicle — rail territory — but the maintenance cap is the park's FIRST
+   binding maintenance mechanism ever (prose invalidation sets were never binding), acting only
+   THROUGH a daily session that computes, states, and emits the clamped call, with named overrides on
+   any axis level or event. A session still decides; rails bound. That is an addition of binding
+   authority and only the owner can ratify it.
+2. **Conviction sizing vs the 07-26 retirement.** Standing: *"conviction_pct... never gates whether a
+   call binds (owner directive 2026-07-26)"*. v4 makes conviction binding on SIZE — a deliberate
+   reversal, authorized by the owner's own new ask, presented as reversal, not continuity. Caveat:
+   42+ logged calls of conviction_pct had zero consequence — an uncalibrated number is being promoted
+   to a control; W5's calibration sample begins at Phase-3 activation and pre-Phase-3 history is
+   never pooled.
+3. **The 07-26 risk posture itself.** Standing verbatim: *"assume the ai is correct on first analysis
+   and accept the risk that ai may be wrong at times... We can always pull out of a trade at any
+   time... that's fine with me."* A 2-axis MEDIUM-60 de-risk capped at f≤50 economically assumes the
+   first analysis is only half right. The new evidence: the named compensating control has now been
+   exercised and priced — defensive excursions 0-for-3, −357.7bp vs never-switch, $214.32 + $107.73
+   on one round trip, 33.3% two-session reversal base rate. v4 asks the owner to trade "assume fully
+   right" for "size to evidence." Also named here: a Thursday crisis f=100 sits unmodulated ~3 days
+   (D1 is Sun–Thu).
+4. **VOO↔VTI.** Two standing sentences say VTI *"doubles as the wash-sale alternate after a VOO
+   loss-sale"*; the draft says never use it that way. Contradictory — the implementer cannot hold
+   both. Recommendation: adopt the conservative reading and edit both standing sentences, noting the
+   standing text has the more common tax reading (S&P-500 vs total-market are generally argued NOT
+   substantially identical). One explicit owner decision.
+5. **Two-sleeve book vs §11's "do not re-propose without new evidence."** Standing: *"Weighted
+   multi-vehicle park — deferred option... Rebuilds park machinery and multiplies taps at $9.2k
+   scale; AOR covers the blend."* New evidence: (i) the owner's proportional-sizing ask is the
+   graduation condition arriving by owner word; (ii) the park is $15.3k; (iii) measured tax asymmetry
+   (partial steps realize pro-rata and, on the actual 09-02 book, gain-side); (iv) "AOR covers the
+   blend" refuted with numbers (§4).
+6. **Axis view vs the 07-20 evidence-freedom directive.** Standing: *"a briefing view or precomputed
+   table is evidence the session may weigh or override, never a mechanical input."* The 07-20 sweep
+   granted INPUT-side freedom; output-side rails were expressly not relaxed. The ladder is an
+   output-side rail; the named-override channel is the judgment path. The tension is named here so
+   the owner sees it, not discovers it.
+7. **Tap and burst profile.** ~11–15 park taps/mo average; fewer annual pairs than the binary
+   allocator's realized 35; but crisis quarters concentrate (~6 pairs at 50–75%-of-book scale in 6
+   weeks, March-2026 shape), and per bigquery/104 the confirm-tap is the SOLE discretionary backstop
+   — now exercised ~4x as often at quarter blast radius each. Ratify the burst shape knowingly.
+
+---
+
+## 6. Implementation order for the handoff instance
+
+1. Read this doc end to end, then the journal's R1 inventory (exhaustive change surface) and the
+   adjudication (full text: `scratchpad/v4_verdict.md` of session 4f960ac5, or re-derive from the
+   journal's final result line).
+2. Present §5 (ratification) to the owner; obtain the Phase-2/3 timing decision (§4 ruling: shadow
+   first) and the RC-7 data decision.
+3. Phase 1 in a worktree: axis view + shadow + D5 + wash-sale refinement + heartbeat/parity/dbt
+   discipline per §0. One branch, one push. The Phase-1 acceptance list is in §2.7.
+4. Phases 2–4 per §4, each its own worktree/branch/push, each with its acceptance fixtures, each
+   ending with the §0-16 anchor re-asserts and a fresh live-parity run.
+5. The binary cardinality rule and PA-07 stay operative until Phase 3's commit removes them.
