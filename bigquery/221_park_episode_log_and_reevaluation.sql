@@ -45,7 +45,7 @@
 
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.park_episode_log` AS
 WITH s AS (
-  SELECT as_of_date, f_prev_pct, r_ladder, r_actual, r_risk, r_def,
+  SELECT as_of_date, f_prev_pct, r_ladder, r_actual, r_binary, r_risk, r_def,
          standing_defensive_count, cap_pct, conviction_pct
   FROM `stock-trading-498512.analytics.park_ladder_shadow`
 ),
@@ -68,7 +68,13 @@ SELECT
   ROUND(((EXP(SUM(LN(1 + IFNULL(r_ladder, 0)))) - 1)
        - (EXP(SUM(LN(1 + IFNULL(r_actual, 0)))) - 1)) * 100, 4) AS ladder_edge_vs_actual_pp,
   ROUND(((EXP(SUM(LN(1 + IFNULL(r_ladder, 0)))) - 1)
-       - (EXP(SUM(LN(1 + IFNULL(r_risk,   0)))) - 1)) * 100, 4) AS ladder_edge_vs_never_pp
+       - (EXP(SUM(LN(1 + IFNULL(r_risk,   0)))) - 1)) * 100, 4) AS ladder_edge_vs_never_pp,
+  -- THE DECISION-RELEVANT CRITERION once the book follows the ladder. ladder_edge_vs_actual_pp goes
+  -- to ~0 then (shadow and book are the same thing, which is correct, not failure); this is the arm
+  -- that keeps answering "does grading beat the all-or-nothing switch it replaced".
+  ROUND((EXP(SUM(LN(1 + IFNULL(r_binary, 0)))) - 1) * 100, 4)    AS binary_pct,
+  ROUND(((EXP(SUM(LN(1 + IFNULL(r_ladder, 0)))) - 1)
+       - (EXP(SUM(LN(1 + IFNULL(r_binary, 0)))) - 1)) * 100, 4) AS ladder_edge_vs_binary_pp
 FROM runs
 WHERE engaged
 GROUP BY grp;
@@ -90,11 +96,27 @@ SELECT
   cfg.activation_date,
   cfg.episodes_required,
   (SELECT COUNT(*) FROM eps)                                        AS episodes_since_activation,
-  (SELECT COUNT(*) FROM eps) >= cfg.episodes_required               AS due,
+  -- SELF-TERMINATING. Without the second conjunct this flag is MONOTONE — cfg is pinned literals and
+  -- the episode count never falls — so W5 would re-raise the identical warning every week FOREVER
+  -- after the owner had already answered it. sp_raise_alert_once dedupes only on an UNRESOLVED row,
+  -- so resolving it simply licences the next raise. The closure path is therefore made machine-
+  -- readable here rather than left to prose: once a park-ladder-reevaluation decision has been
+  -- recorded after activation, the reminder has served its purpose and stops.
+  (SELECT COUNT(*) FROM eps) >= cfg.episodes_required
+    AND NOT (SELECT COUNT(*) > 0
+             FROM `stock-trading-498512.state.decision_log_current`
+             WHERE entry_type = 'park-ladder-reevaluation'
+               AND entry_date >= cfg.activation_date)                AS due,
+  (SELECT COUNT(*) > 0
+   FROM `stock-trading-498512.state.decision_log_current`
+   WHERE entry_type = 'park-ladder-reevaluation'
+     AND entry_date >= cfg.activation_date)                          AS already_reevaluated,
   (SELECT MAX(episode_end) FROM eps)                                AS latest_episode_end,
   (SELECT ROUND(AVG(ladder_edge_vs_actual_pp), 4) FROM eps)         AS mean_edge_vs_actual_pp,
   (SELECT ROUND(AVG(ladder_edge_vs_never_pp), 4)  FROM eps)         AS mean_edge_vs_never_pp,
-  (SELECT COUNTIF(ladder_edge_vs_actual_pp > 0) FROM eps)           AS episodes_ladder_beat_actual
+  (SELECT COUNTIF(ladder_edge_vs_actual_pp > 0) FROM eps)           AS episodes_ladder_beat_actual,
+  (SELECT ROUND(AVG(ladder_edge_vs_binary_pp), 4) FROM eps)        AS mean_edge_vs_binary_pp,
+  (SELECT COUNTIF(ladder_edge_vs_binary_pp > 0) FROM eps)          AS episodes_ladder_beat_binary
 FROM cfg;
 
 -- Post-condition: the countdown starts at zero on activation day and is not already due.

@@ -10,15 +10,26 @@ WITH sessions AS (
   WHERE is_trading_day
     AND cal_date BETWEEN DATE '2025-07-18' AND CURRENT_DATE('America/Denver')
 ),
+-- SESSION-ANCHORED, NOT TICKER-ANCHORED. Grouping the raw marks by mark_date makes the row set the
+-- UNION of the four tickers' dates, and the 20-row windows below are ROWS-based — so ANY date one
+-- ticker has and another lacks silently shifts every other ticker's window. Measured 2026-09-04:
+-- 286 distinct mark_dates against 285 trading sessions, with 1 Brent-only date and 2 dates missing
+-- ^VIX. Because the axes guard on COUNT(...) OVER w20 = 20, the effect is not a wrong number but a
+-- BLANKED axis — volatility and credit go UNTESTABLE for up to 19 sessions after each intruding
+-- date, which silently lowers standing_defensive_count and can hold the ladder disengaged.
+-- Anchoring to the sessions CTE makes the row set exactly the trading days, so a vendor date the
+-- equity calendar does not have can never perturb another ticker's lookback.
 px AS (
-  SELECT mark_date,
-         MAX(IF(ticker = '^VIX',  close, NULL)) AS vix,
-         MAX(IF(ticker = 'HYG',   close, NULL)) AS hyg,
-         MAX(IF(ticker = 'IEF',   close, NULL)) AS ief,
-         MAX(IF(ticker = 'BZUSD', close, NULL)) AS brent
-  FROM {{ source('state_external', 'signal_marks_curated') }}
-  WHERE ticker IN ('^VIX', 'HYG', 'IEF', 'BZUSD')
-  GROUP BY mark_date
+  SELECT s.as_of_date AS mark_date,
+         MAX(IF(m.ticker = '^VIX',  m.close, NULL)) AS vix,
+         MAX(IF(m.ticker = 'HYG',   m.close, NULL)) AS hyg,
+         MAX(IF(m.ticker = 'IEF',   m.close, NULL)) AS ief,
+         MAX(IF(m.ticker = 'BZUSD', m.close, NULL)) AS brent
+  FROM sessions s
+  LEFT JOIN {{ source('state_external', 'signal_marks_curated') }} m
+    ON m.mark_date = s.as_of_date
+   AND m.ticker IN ('^VIX', 'HYG', 'IEF', 'BZUSD')
+  GROUP BY s.as_of_date
 ),
 -- Rolling windows are computed over MEASURED rows only, so a missing session never silently
 -- shortens a 20-session average.
@@ -80,11 +91,19 @@ idx AS (
 staleness AS (
   SELECT as_of_date, axis, raw_level, measured_on, carried_level,
          sess_i - measured_sess_i AS sessions_since_measured,
-         -- Breadth carries forward at most 2 sessions (pinned convention); every other axis carries
-         -- indefinitely under FREEZE semantics until the >20-session backstop in §2.3.
+         -- Breadth carries forward at most 2 sessions (pinned convention). Every other axis carries
+         -- under FREEZE semantics up to the >20-SESSION BACKSTOP (§2.3) — which is IMPLEMENTED HERE,
+         -- not merely referenced. It was missing until 2026-09-04 and its absence was a liveness
+         -- defect, not a cosmetic one: a frozen-DEFENSIVE axis pinned standing_defensive_count >= 1
+         -- forever, which floors cap_pct at 25, which pins the ladder's f at 25, which means the
+         -- engagement episode NEVER ENDS, which means analytics.park_episode_log never opens a new
+         -- episode, which means state.park_reevaluation_due.episodes_since_activation is stuck at 0
+         -- and the owner is NEVER emailed the re-evaluation reminder. The whole point of that
+         -- reminder is that the owner said they would not otherwise remember.
          CASE
            WHEN carried_level IS NULL THEN FALSE
            WHEN axis = 'breadth' AND sess_i - measured_sess_i > 2 THEN FALSE
+           WHEN sess_i - measured_sess_i > 20 THEN FALSE
            ELSE TRUE
          END AS testable
   FROM idx
@@ -95,22 +114,37 @@ lvl AS (
   FROM staleness
 ),
 -- EVENT: entered defensive within the last 2 sessions, in the axis's own session index.
+-- EVENT DETECTION. The naive form LAGs level_int and COALESCEs a NULL (untestable) neighbour to 0,
+-- which reads "I do not know" as "was not defensive" and so manufactures a PHANTOM ENTRY when an
+-- axis goes UNTESTABLE while defensive and comes back still defensive. That axis never exited, so it
+-- never entered — reporting a firing there contradicts this file's own rule that a standing state is
+-- not an event, and a phantom firing raises firing_count, which can open increase_gate_open and let
+-- the ladder RAISE f on no new information. Fixed by comparing against the last KNOWN level rather
+-- than the last row: prev_known_level skips untestable gaps entirely.
+-- FIRST-EVER MEASUREMENT IS NOT AN EVENT: prev_known_level IS NULL yields no firing. That is a
+-- deliberate spec choice and it governs a PENDING-FEED axis activating (the shock axis when
+-- bigquery/217 landed BZUSD).
 ev AS (
   SELECT *,
-         LAG(level_int, 1) OVER (PARTITION BY axis ORDER BY as_of_date) AS lvl_1,
-         LAG(level_int, 2) OVER (PARTITION BY axis ORDER BY as_of_date) AS lvl_2,
-         LAG(level_int, 3) OVER (PARTITION BY axis ORDER BY as_of_date) AS lvl_3
+         LAST_VALUE(level_int IGNORE NULLS) OVER (
+           PARTITION BY axis ORDER BY as_of_date
+           ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS prev_known_level
   FROM lvl
+),
+entered AS (
+  SELECT *, COALESCE(level_int = 1 AND prev_known_level = 0, FALSE) AS entered_defensive
+  FROM ev
 ),
 flagged AS (
   SELECT as_of_date, axis, measured_on, sessions_since_measured, testable, level_int,
          COALESCE(level_int = 1, FALSE) AS is_defensive,
-         -- Fired this session, or one session ago: a 0->1 transition in either position.
+         -- Fired this session, or the session before: the design's 2-session event window.
          COALESCE(
-           (level_int = 1 AND COALESCE(lvl_1, 0) = 0)
-           OR (lvl_1 = 1 AND COALESCE(lvl_2, 0) = 0 AND level_int = 1),
+           entered_defensive
+           OR (LAG(entered_defensive) OVER (PARTITION BY axis ORDER BY as_of_date)
+               AND level_int = 1),
            FALSE) AS is_firing
-  FROM ev
+  FROM entered
 )
 SELECT
   as_of_date,

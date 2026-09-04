@@ -144,7 +144,7 @@ FROM ctrl;
 -- per the task spec: "parsing fields JSON via JSON_VALUE"). Newest-first LIMIT 10, same
 -- ORDER BY ... LIMIT N idiom as bigquery/02_ai_layer.sql's precedent-retrieval view.
 -- ============================================================================
--- SUPERSEDED LIVE by bigquery/144_decision_log_correction_consumers.sql — current single source of
+-- HISTORICAL (no longer current truth — see the banner below): first superseded by bigquery/144_decision_log_correction_consumers.sql — current single source of
 -- truth for BOTH views below. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
 -- DO NOT re-apply these CREATE statements live in isolation. Two later changes are missing from the
 -- definitions below: (a) the 2026-08-04 call-shape fix added an is_call flag (fields.status IS NOT
@@ -154,6 +154,13 @@ FROM ctrl;
 -- row (vehicle and status both NULL) shadowed D1's real SWITCH SGOV->VOO call and would have silently
 -- dropped a park switch worth 92.5% of NLV (alert c5044046-53da-4d91-be8d-4002d1882ec0); (b) 144
 -- repoints the source at state.decision_log_current, ahead of the LIMIT.
+-- SUPERSEDED LIVE by bigquery/222_park_allocation_recent_graded_fields.sql (2026-09-04) — current
+-- single source of truth for state.park_allocation_recent. 222 surfaces the v4 graded fields
+-- (target_f_pct / risk_sleeve / defensive_sleeve) and `readings` from the decision row's `fields`
+-- JSON, which D1 is told to write and D2 is told to read but which no version of this view
+-- projected. is_call semantics are UNCHANGED. Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.park_allocation_recent` AS
 SELECT
   entry_id,

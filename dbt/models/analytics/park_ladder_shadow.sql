@@ -48,14 +48,20 @@ conv AS (
 -- park_policy_changes is append-only and 2026-09-03 carries a CORRECTED REPLACEMENT row for the same
 -- vehicle/date, so the vehicle is taken from the LATEST event_ts per effective_date.
 pol AS (
-  SELECT effective_date, vehicle
+  SELECT effective_date, vehicle, target_f_pct
   FROM {{ source('events', 'park_policy_changes') }}
   QUALIFY ROW_NUMBER() OVER (PARTITION BY effective_date ORDER BY event_ts DESC) = 1
 ),
 base AS (
   SELECT a.as_of_date, a.standing, a.firing, a.cap_raw, a.gate, a.testable_axes,
          a.axis_set_fingerprint,
-         IF(p.vehicle = 'VOO', 0, 100) AS actual_f_pct,
+         -- MUST read target_f_pct (added 2026-09-04). bigquery/220 made it the authoritative
+         -- weight; deriving the actual arm from the vehicle STRING makes it fiction the moment a
+         -- graded call lands, because f=25 and f=50 both write vehicle='VOO' and would score as
+         -- f=0 — collapsing r_actual onto r_risk and turning ladder_edge_vs_actual_pp (the criterion
+         -- the re-evaluation turns on) into ladder_edge_vs_never_pp. The COALESCE keeps every
+         -- pre-v4 row reading exactly as before.
+         COALESCE(p.target_f_pct, IF(p.vehicle = 'VOO', 0, 100)) AS actual_f_pct,
          COALESCE(c.conviction_pct, 60) AS conviction,
          COALESCE(m.spy_ret <= -0.025 OR m.vix >= 28, FALSE) AS crisis,
          m.r_risk, m.r_def
@@ -71,22 +77,39 @@ base AS (
 seq AS (
   SELECT ROW_NUMBER() OVER (ORDER BY as_of_date) AS n, as_of_date, standing, firing, gate,
          conviction, crisis, r_risk, r_def, testable_axes, axis_set_fingerprint, actual_f_pct,
-         GREATEST(
-           CAST(MAX(cap_raw) OVER (ORDER BY as_of_date ROWS BETWEEN 2 PRECEDING AND CURRENT ROW)
-                / 25 AS INT64),
-           IF(crisis, 4, 0)) AS cap_idx,
+         cap_raw,
+         LAG(cap_raw, 1) OVER (ORDER BY as_of_date) AS cap_l1,
+         LAG(cap_raw, 2) OVER (ORDER BY as_of_date) AS cap_l2,
          COALESCE(crisis
                   OR LAG(crisis, 1) OVER (ORDER BY as_of_date)
                   OR LAG(crisis, 2) OVER (ORDER BY as_of_date), FALSE) AS crisis_recent
   FROM base
 ),
+-- STRICT three-consecutive-readings decay, as its own recursion. The cap does not depend on f, so it
+-- is walked separately; folding it into `walk` would strand target_idx, which seq2 derives from it.
+-- A cap INCREASE is taken immediately (never delayed, §2.3); a DECREASE is taken only when the new
+-- lower value has held for three consecutive readings — otherwise the previously held cap persists.
+cap_walk AS (
+  SELECT n, cap_raw AS cap_held FROM seq WHERE n = 1
+  UNION ALL
+  SELECT s.n,
+    CASE
+      WHEN s.cap_raw >= w.cap_held                      THEN s.cap_raw
+      WHEN s.cap_raw = s.cap_l1 AND s.cap_raw = s.cap_l2 THEN s.cap_raw
+      ELSE w.cap_held
+    END AS cap_held
+  FROM cap_walk w JOIN seq s ON s.n = w.n + 1
+),
 seq2 AS (
-  SELECT n, as_of_date, standing, firing, gate, conviction, crisis, crisis_recent, cap_idx,
-         r_risk, r_def, testable_axes, axis_set_fingerprint, actual_f_pct,
-         LEAST(cap_idx,
-               GREATEST(0, CAST(CEIL((conviction * cap_idx * 25 / 100 - 12.5) / 25) AS INT64)))
+  SELECT s.n, s.as_of_date, s.standing, s.firing, s.gate, s.conviction, s.crisis, s.crisis_recent,
+         s.r_risk, s.r_def, s.testable_axes, s.axis_set_fingerprint, s.actual_f_pct,
+         GREATEST(CAST(c.cap_held / 25 AS INT64), IF(s.crisis, 4, 0)) AS cap_idx,
+         LEAST(GREATEST(CAST(c.cap_held / 25 AS INT64), IF(s.crisis, 4, 0)),
+               GREATEST(0, CAST(CEIL((s.conviction
+                    * GREATEST(CAST(c.cap_held / 25 AS INT64), IF(s.crisis, 4, 0))
+                    * 25 / 100 - 12.5) / 25) AS INT64)))
            AS target_idx
-  FROM seq
+  FROM seq s JOIN cap_walk c ON c.n = s.n
 ),
 walk AS (
   SELECT n, CAST(IF(gate AND target_idx > 0, target_idx, 0) AS INT64) AS f_idx
@@ -118,7 +141,15 @@ priced AS (
          SAFE_MULTIPLY(1 - f_prev_pct / 100, r_risk)
            + SAFE_MULTIPLY(f_prev_pct / 100, r_def) AS r_ladder,
          SAFE_MULTIPLY(1 - actual_f_prev_pct / 100, r_risk)
-           + SAFE_MULTIPLY(actual_f_prev_pct / 100, r_def) AS r_actual
+           + SAFE_MULTIPLY(actual_f_prev_pct / 100, r_def) AS r_actual,
+         -- THE BINARY COUNTERFACTUAL AS ITS OWN NAMED ARM (added 2026-09-04). Once the book follows
+         -- the ladder, r_actual and r_ladder are the SAME expression and ladder_edge_vs_actual_pp is
+         -- identically 0 — so a criterion resting only on it reports 0-of-N forever and reads as
+         -- failure when it actually means "shadow and book merged". The all-or-nothing rule the
+         -- ladder replaced engages on exactly the same signal at full size, so it is f=100 whenever
+         -- the ladder holds anything at all. This arm is what ladder-vs-binary must be scored on.
+         SAFE_MULTIPLY(1 - IF(f_prev_pct > 0, 100, 0) / 100, r_risk)
+           + SAFE_MULTIPLY(IF(f_prev_pct > 0, 100, 0) / 100, r_def) AS r_binary
   FROM joined
 )
 SELECT
@@ -141,6 +172,8 @@ SELECT
   actual_f_pct,
   actual_f_prev_pct,
   r_actual,
+  IF(f_prev_pct > 0, 100, 0)                 AS binary_f_prev_pct,
+  r_binary,
   -- Flap counters (§2.7): a step change in f, and a conviction sitting within 5 points of the
   -- cap-100 step boundary at 62.5, which is dead centre of the allocator's empirical 50-76 range.
   (f_pct != f_prev_pct)                      AS f_changed,

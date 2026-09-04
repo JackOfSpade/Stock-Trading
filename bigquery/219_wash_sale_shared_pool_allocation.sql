@@ -54,7 +54,7 @@
 -- MEASURED EFFECT AT LANDING is asserted at the foot of this file rather than asserted in prose.
 
 CREATE OR REPLACE VIEW `stock-trading-498512.state.wash_sale_exposure` AS
-WITH losing_sells AS (
+WITH RECURSIVE losing_sells AS (
   -- Loss-realizing SELLs (closes a LONG strategy position) — unchanged from bigquery/50.
   SELECT trade_id AS close_trade_id, strategy AS close_strategy, ticker,
          DATE(fill_ts, 'America/New_York') AS close_date,
@@ -198,22 +198,60 @@ qualifying_replacements AS (
 -- full against EVERY qualifying close. With one close per episode that is invisible; under a graded
 -- ladder, where one de-risk becomes several partial closes, it multiplies the disallowance by the
 -- number of steps. A replacement lot can only replace its own shares ONCE.
--- Each lot's shares are allocated across its qualifying closes OLDEST-CLOSE-FIRST, by the same
--- interval-overlap arithmetic this file already uses to match lots to sells.
-allocated AS (
+-- Lot supply is allocated across qualifying closes OLDEST-CLOSE-FIRST.
+-- JOINT ALLOCATION (corrected 2026-09-04). The first cut of this file used a per-lot running sum of
+-- FULL close_shares as "demand". That STARVES later closes: a lot was booked as consumed by an
+-- earlier close even when that close had already been fully replaced by OTHER lots, and the surplus
+-- was then discarded by the downstream per-close cap. Measured on live data, the 2026-07-27 VOO group
+-- read $51.36 against a correct $77.17 — 4.4048 shares of genuine demand left unserved with 26.7739
+-- shares of supply available. Under-reporting a wash sale is the UNSAFE direction for a detector.
+-- A pair of scalar running balances cannot fix it, because the qualification graph is incomplete
+-- (the 09-02 legs qualify for 1 of the 13 VOO lots, the July legs for all 13), so a two-axis interval
+-- overlap silently allocates lots to closes that never qualified for them.
+-- Correct form: walk the qualifying (close, lot) pairs in (close_date, close_trade_id,
+-- replacement_date, replacement_trade_id) order, threading BOTH per-lot remaining supply and
+-- per-close remaining demand, and allocate LEAST(lot_remaining, close_remaining) at each step.
+-- Cardinality is tiny (10 closes x 13 lots on VOO today), so the recursion is cheap.
+ordered AS (
   SELECT qr.*,
-         COALESCE(SUM(qr.close_shares) OVER (
-           PARTITION BY qr.replacement_trade_id
-           ORDER BY qr.close_date, qr.close_trade_id
-           ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING), 0) AS pool_consumed_before
+         ROW_NUMBER() OVER (ORDER BY qr.close_date, qr.close_trade_id,
+                                     qr.replacement_date, qr.replacement_trade_id) AS k
   FROM qualifying_replacements qr
 ),
-allocated2 AS (
-  SELECT *,
-         GREATEST(0,
-           LEAST(pool_consumed_before + close_shares, replacement_shares) - pool_consumed_before
-         ) AS allocated_replacement_shares
-  FROM allocated
+lots AS (
+  SELECT ARRAY_AGG(STRUCT(lot, shares)) AS l
+  FROM (SELECT replacement_trade_id AS lot, ANY_VALUE(replacement_shares) AS shares
+        FROM ordered GROUP BY replacement_trade_id)
+),
+alloc_walk AS (
+  SELECT o.k, o.close_trade_id,
+         LEAST(o.close_shares,
+               (SELECT x.shares FROM UNNEST(lots.l) x WHERE x.lot = o.replacement_trade_id)) AS alloc,
+         o.close_shares - LEAST(o.close_shares,
+               (SELECT x.shares FROM UNNEST(lots.l) x WHERE x.lot = o.replacement_trade_id)) AS close_left,
+         ARRAY(SELECT AS STRUCT x.lot,
+                      IF(x.lot = o.replacement_trade_id,
+                         x.shares - LEAST(o.close_shares, x.shares), x.shares) AS shares
+               FROM UNNEST(lots.l) x) AS lot_state
+  FROM ordered o, lots
+  WHERE o.k = 1
+  UNION ALL
+  SELECT o.k, o.close_trade_id,
+         LEAST(IF(o.close_trade_id = w.close_trade_id, w.close_left, o.close_shares),
+               (SELECT x.shares FROM UNNEST(w.lot_state) x WHERE x.lot = o.replacement_trade_id)) AS alloc,
+         IF(o.close_trade_id = w.close_trade_id, w.close_left, o.close_shares)
+           - LEAST(IF(o.close_trade_id = w.close_trade_id, w.close_left, o.close_shares),
+                   (SELECT x.shares FROM UNNEST(w.lot_state) x WHERE x.lot = o.replacement_trade_id)) AS close_left,
+         ARRAY(SELECT AS STRUCT x.lot,
+                      IF(x.lot = o.replacement_trade_id,
+                         x.shares - LEAST(IF(o.close_trade_id = w.close_trade_id, w.close_left, o.close_shares), x.shares),
+                         x.shares) AS shares
+               FROM UNNEST(w.lot_state) x) AS lot_state
+  FROM alloc_walk w JOIN ordered o ON o.k = w.k + 1
+),
+per_close AS (
+  SELECT close_trade_id, SUM(alloc) AS allocated_replacement_shares
+  FROM alloc_walk GROUP BY close_trade_id
 ),
 agg AS (
   SELECT
@@ -222,10 +260,11 @@ agg AS (
     ANY_VALUE(close_shares) AS close_shares, ANY_VALUE(close_side) AS close_side,
     ARRAY_AGG(STRUCT(replacement_trade_id, replacement_strategy, replacement_date, replacement_shares, days_offset)
               ORDER BY replacement_date) AS replacement_trades,
-    SUM(allocated_replacement_shares) AS total_replacement_shares_uncapped,
+    ANY_VALUE(pc.allocated_replacement_shares) AS total_replacement_shares_uncapped,
     MIN(days_offset) AS earliest_days_offset,
     MAX(days_offset) AS latest_days_offset
-  FROM allocated2
+  FROM qualifying_replacements qr
+  JOIN per_close pc USING (close_trade_id)
   GROUP BY close_trade_id
 )
 -- Base population = EVERY loss-realizing close (SELL closing a long -- strategy or park; BUY closing
@@ -246,29 +285,14 @@ SELECT
 FROM losing_closes c
 LEFT JOIN agg a ON a.close_trade_id = c.close_trade_id;
 
--- ============================ POST-CONDITIONS (measured 2026-09-04) =============================
--- (1) The 2026-09-02 park sale liquidated the ENTIRE VOO position, and the 09-04 rebuy has not
--- filled, so there is no external replacement and the correct exposure is ZERO. Pre-fix this read
--- $107.73, of which 13 of 14 listed "replacements" were the sale's own basis seen through sibling
--- legs. This assertion is the regression guard on that artifact. NOTE: it becomes FALSE BY DESIGN
--- once the 09-04 VOO rebuy fills — that purchase IS a genuine replacement within 30 days and the
--- loss then becomes properly disallowed. Re-pin it to the new measured value; do not delete it.
-ASSERT (
-  SELECT COALESCE(SUM(estimated_disallowed_loss), 0) = 0
-  FROM `stock-trading-498512.state.wash_sale_exposure`
-  WHERE ticker = 'VOO' AND close_date = DATE '2026-09-02'
-) AS 'wash-sale 219: the 2026-09-02 full liquidation must show ZERO disallowed pre-rebuy.';
-
--- (2) The REALIZED loss is broker-tied and must be untouched — only the DISALLOWED portion moves.
-ASSERT (
-  SELECT ROUND(SUM(close_realized_pnl), 2) = -107.73
-  FROM `stock-trading-498512.state.wash_sale_exposure`
-  WHERE ticker = 'VOO' AND close_date = DATE '2026-09-02'
-) AS 'wash-sale 219: realized loss on the 2026-09-02 legs must be unchanged at -107.73.';
-
--- (3) The strategy-side arm must be untouched, proving the park-specific fix did not leak sideways.
-ASSERT (
-  SELECT COALESCE(SUM(estimated_disallowed_loss), 0) = 0
-  FROM `stock-trading-498512.state.wash_sale_exposure`
-  WHERE ticker = 'HCA' AND close_date = DATE '2026-06-29'
-) AS 'wash-sale 219: strategy-side HCA 2026-06-29 disposition must be unchanged.';
+-- ============================ POST-CONDITIONS — SEE dbt/tests/, NOT HERE =======================
+-- These invariants were written as ASSERT statements in this file and CANNOT run that way: this view
+-- became recursive when the joint allocation walk landed, and BigQuery rejects
+-- "WITH RECURSIVE is not supported in ASSERT statements". They were moved verbatim rather than
+-- dropped, to dbt/tests/assert_wash_sale_allocation_invariants.sql, which pins:
+--   2026-09-02 VOO  -> 0.00   (full liquidation, own basis is not a replacement; pre-rebuy)
+--   2026-07-27 VOO  -> 77.18  (fully disallowed; the starving allocator read 51.36)
+--   2026-06-29 HCA  -> 0.00   (strategy-side arm untouched by the park-specific fix)
+-- Realized P&L is broker-tied and unchanged throughout: the 09-02 legs still sum to -107.73.
+-- The 09-02 row flips BY DESIGN once the staged 2026-09-04 VOO rebuy fills — re-pin it there, do not
+-- delete it.

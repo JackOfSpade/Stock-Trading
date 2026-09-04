@@ -19,9 +19,25 @@ SELECT
   cfg.activation_date,
   cfg.episodes_required,
   (SELECT COUNT(*) FROM eps)                                        AS episodes_since_activation,
-  (SELECT COUNT(*) FROM eps) >= cfg.episodes_required               AS due,
+  -- SELF-TERMINATING. Without the second conjunct this flag is MONOTONE — cfg is pinned literals and
+  -- the episode count never falls — so W5 would re-raise the identical warning every week FOREVER
+  -- after the owner had already answered it. sp_raise_alert_once dedupes only on an UNRESOLVED row,
+  -- so resolving it simply licences the next raise. The closure path is therefore made machine-
+  -- readable here rather than left to prose: once a park-ladder-reevaluation decision has been
+  -- recorded after activation, the reminder has served its purpose and stops.
+  (SELECT COUNT(*) FROM eps) >= cfg.episodes_required
+    AND NOT (SELECT COUNT(*) > 0
+             FROM {{ source('state_external', 'decision_log_current') }}
+             WHERE entry_type = 'park-ladder-reevaluation'
+               AND entry_date >= cfg.activation_date)                AS due,
+  (SELECT COUNT(*) > 0
+   FROM {{ source('state_external', 'decision_log_current') }}
+   WHERE entry_type = 'park-ladder-reevaluation'
+     AND entry_date >= cfg.activation_date)                          AS already_reevaluated,
   (SELECT MAX(episode_end) FROM eps)                                AS latest_episode_end,
   (SELECT ROUND(AVG(ladder_edge_vs_actual_pp), 4) FROM eps)         AS mean_edge_vs_actual_pp,
   (SELECT ROUND(AVG(ladder_edge_vs_never_pp), 4)  FROM eps)         AS mean_edge_vs_never_pp,
-  (SELECT COUNTIF(ladder_edge_vs_actual_pp > 0) FROM eps)           AS episodes_ladder_beat_actual
+  (SELECT COUNTIF(ladder_edge_vs_actual_pp > 0) FROM eps)           AS episodes_ladder_beat_actual,
+  (SELECT ROUND(AVG(ladder_edge_vs_binary_pp), 4) FROM eps)        AS mean_edge_vs_binary_pp,
+  (SELECT COUNTIF(ladder_edge_vs_binary_pp > 0) FROM eps)          AS episodes_ladder_beat_binary
 FROM cfg

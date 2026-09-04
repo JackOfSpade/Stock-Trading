@@ -49,10 +49,17 @@
 -- in principle push every genuine call off the end and leave _latest empty. 25 keeps roughly five weeks of
 -- daily calls in scope, so the filter can never starve on any realistic cover-row rate.
 -- =====================================================================================================
--- SUPERSEDED LIVE by bigquery/144_decision_log_correction_consumers.sql — current single source of truth
+-- HISTORICAL (no longer current truth — see the banner below): first superseded by bigquery/144_decision_log_correction_consumers.sql — current single source of truth
 -- for this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
 -- this CREATE statement live in isolation: it reads events.decision_log directly BEFORE its LIMIT 25, so an obsolete row could consume a slot
 -- and, via state.park_allocation_latest, shadow the standing park call.
+-- SUPERSEDED LIVE by bigquery/222_park_allocation_recent_graded_fields.sql (2026-09-04) — current
+-- single source of truth for state.park_allocation_recent. 222 surfaces the v4 graded fields
+-- (target_f_pct / risk_sleeve / defensive_sleeve) and `readings` from the decision row's `fields`
+-- JSON, which D1 is told to write and D2 is told to read but which no version of this view
+-- projected. is_call semantics are UNCHANGED. Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.park_allocation_recent` AS
 SELECT
   entry_id,

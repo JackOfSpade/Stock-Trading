@@ -5,7 +5,7 @@
 -- Regenerating REPLACES this header, so any hand-written provenance above the body must be put
 -- back by the person who regenerates it.
 WITH s AS (
-  SELECT as_of_date, f_prev_pct, r_ladder, r_actual, r_risk, r_def,
+  SELECT as_of_date, f_prev_pct, r_ladder, r_actual, r_binary, r_risk, r_def,
          standing_defensive_count, cap_pct, conviction_pct
   FROM {{ ref('park_ladder_shadow') }}
 ),
@@ -28,7 +28,13 @@ SELECT
   ROUND(((EXP(SUM(LN(1 + IFNULL(r_ladder, 0)))) - 1)
        - (EXP(SUM(LN(1 + IFNULL(r_actual, 0)))) - 1)) * 100, 4) AS ladder_edge_vs_actual_pp,
   ROUND(((EXP(SUM(LN(1 + IFNULL(r_ladder, 0)))) - 1)
-       - (EXP(SUM(LN(1 + IFNULL(r_risk,   0)))) - 1)) * 100, 4) AS ladder_edge_vs_never_pp
+       - (EXP(SUM(LN(1 + IFNULL(r_risk,   0)))) - 1)) * 100, 4) AS ladder_edge_vs_never_pp,
+  -- THE DECISION-RELEVANT CRITERION once the book follows the ladder. ladder_edge_vs_actual_pp goes
+  -- to ~0 then (shadow and book are the same thing, which is correct, not failure); this is the arm
+  -- that keeps answering "does grading beat the all-or-nothing switch it replaced".
+  ROUND((EXP(SUM(LN(1 + IFNULL(r_binary, 0)))) - 1) * 100, 4)    AS binary_pct,
+  ROUND(((EXP(SUM(LN(1 + IFNULL(r_ladder, 0)))) - 1)
+       - (EXP(SUM(LN(1 + IFNULL(r_binary, 0)))) - 1)) * 100, 4) AS ladder_edge_vs_binary_pp
 FROM runs
 WHERE engaged
 GROUP BY grp
