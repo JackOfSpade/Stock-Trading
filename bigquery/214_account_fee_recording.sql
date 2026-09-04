@@ -77,7 +77,7 @@
 -- the dbt-parity CI job fails closed on any mirror drift and would strand every open branch.
 
 -- ===== (1) state.cash_flow_source_unknown -- add 'account_fee' to the sanctioned set =====
--- SUPERSEDES the definition in bigquery/167_nomadic_capital.sql (chain: 163 -> 167 -> 213).
+-- SUPERSEDES the definition in bigquery/167_nomadic_capital.sql (chain: 163 -> 167 -> 214).
 -- Without this, every fee row this file writes is flagged by D3 as unsanctioned provenance and raises
 -- a WARNING cash_flow_source_unknown for 14 days. The allowlist is the whole point of the view: a new
 -- movement mechanism is added to the set in a successor file, never invented in-session.
@@ -109,7 +109,7 @@ WHERE ingest_ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 14 DAY)
 
 -- ===== (2) state.book_drawdown_watch -- exclude fee rows from cum_flows =====
 -- SUPERSEDES the definition in bigquery/155_snapshot_and_option_anomaly_d2a_gate.sql
--- (chain: 78 -> 153 -> 155 -> 213). ONLY the flowed CTE changes; every other line is byte-identical.
+-- (chain: 78 -> 153 -> 155 -> 214). ONLY the flowed CTE changes; every other line is byte-identical.
 --
 -- THIS AMENDMENT PRESERVES CURRENT BEHAVIOUR -- it does not change the breaker. Read carefully,
 -- because the naive reading is backwards. `snaps.nav` is ops.account_snapshot.nav, which is written
@@ -175,7 +175,7 @@ SELECT
 FROM agg CROSS JOIN ltd;
 
 -- ===== (3) state.cash_flows_backfill_check -- rebase expected_total for the in-window fee backfill =====
--- SUPERSEDES the definition in bigquery/148_audit_2026_08_08_fixes.sql (chain: 22 -> 68 -> 148 -> 213).
+-- SUPERSEDES the definition in bigquery/148_audit_2026_08_08_fixes.sql (chain: 22 -> 68 -> 148 -> 214).
 -- The check asserts SUM(amount) over flow_date <= 2026-07-03 against a literal, so that it keeps
 -- meaning something after legitimate later flows. THREE of the backfilled fees fall inside that
 -- window -- 2026-05-05 (4.51), 2026-06-03 (4.97) and 2026-07-03 (4.50), 13.98 total -- so the literal
