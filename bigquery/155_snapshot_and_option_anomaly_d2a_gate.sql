@@ -131,6 +131,13 @@
 -- Byte-for-byte reproduction of bigquery/153's view body (itself byte-for-byte over bigquery/78's,
 -- extracted mechanically) with exactly one change: snapshot_stale gains the D2a-opportunity EXISTS
 -- guard described above. Every other column, threshold and CTE is unchanged.
+-- SUPERSEDED LIVE by bigquery/214_account_fee_recording.sql -- current single source of truth for
+-- this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
+-- re-apply this CREATE statement live in isolation. 214 excludes source='account_fee' from the flowed CTE's cum_flows: a recurring account/market-data
+-- fee is an EXPENSE, not an external capital movement, and since ops.account_snapshot.nav is
+-- connector-sourced it ALREADY reflects the fee -- so without the exclusion, booking fee rows into
+-- events.cash_flows would drop cum_flows by the same amount and newly hide fees from the -15%/-40%
+-- breaker. Every other line of the view is byte-identical to the definition below.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.book_drawdown_watch` AS
 WITH snaps AS (
   SELECT snapshot_date, nav

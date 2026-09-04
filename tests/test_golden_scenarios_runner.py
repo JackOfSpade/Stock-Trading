@@ -2642,7 +2642,11 @@ def test_golden_section_scope_escape_hatch_real_scenarios_yaml_on_vs_off(monkeyp
     scenarios = rg.load_scenarios()
     groups = rg.group_scenarios_for_batching(scenarios)  # default env: scoping ON
     pa_group = next(g for g in groups if any(sc["id"] == "PA-01" for sc in g))
-    assert [sc["id"] for sc in pa_group] == ["PA-01", "PA-02", "PA-03", "PA-04"]  # real largest scoped group
+    # Real largest scoped group. PA-07 joined it 2026-09-03 (the de-risk evidence-cardinality fixture):
+    # it declares the SAME governing_files/governing_sections set as PA-01..04, so batching correctly
+    # folds it into this group — that is the batching contract working, not drift. Membership is pinned
+    # rather than counted so a scenario SILENTLY changing its governing set still trips this.
+    assert [sc["id"] for sc in pa_group] == ["PA-01", "PA-02", "PA-03", "PA-04", "PA-07"]
     gov_files = pa_group[0].get("governing_files") or []
     gov_sections = pa_group[0].get("governing_sections")
 

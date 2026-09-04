@@ -1,6 +1,5 @@
 -- Parallel-run dbt port of state.book_drawdown_watch — canonical source is
--- bigquery/155_snapshot_and_option_anomaly_d2a_gate.sql (which supersedes bigquery/153, which
--- superseded bigquery/78) until owner cutover (was 23; rebased 2026-07-17 whole-system audit finding
+-- bigquery/214_account_fee_recording.sql (chain 78 -> 153 -> 155 -> 213) until owner cutover (was 23; rebased 2026-07-17 whole-system audit finding
 -- C1). Mirrors the flow-adjusted, two-tier breaker: drawdown
 -- measured on flow-neutral trading gain (nav - cumulative external flows) so deposits/withdrawals
 -- cannot ratchet the peak or fake a breach; breach_soft (-15%) = entries-only, breach_hard (-40%) =
@@ -20,8 +19,12 @@ WITH snaps AS (
 ),
 flowed AS (
   SELECT s.snapshot_date, s.nav,
+    -- bigquery/214: source='account_fee' is EXCLUDED. A recurring account/market-data fee is an
+    -- EXPENSE of running the book, not an external capital movement, so it must stay inside the
+    -- flow-neutral trading gain rather than neutralising itself out of it.
     COALESCE((SELECT SUM(cf.amount) FROM {{ source('events', 'cash_flows') }} cf
-              WHERE cf.flow_date <= s.snapshot_date), 0) AS cum_flows
+              WHERE cf.flow_date <= s.snapshot_date
+                AND COALESCE(cf.source, '') <> 'account_fee'), 0) AS cum_flows
   FROM snaps s
 ),
 gained AS (

@@ -22,7 +22,7 @@
 -- convention, same pattern as bigquery/18/19_stack_review_fixes*.sql) -- this file's body is the
 -- one that should be live after both are applied in order.
 --
--- SUPERSEDED LIVE by bigquery/148_audit_2026_08_08_fixes.sql — current single source of truth for
+-- SUPERSEDED LIVE by bigquery/214_account_fee_recording.sql — current single source of truth for
 -- state.cash_flows_backfill_check. 148 wraps the `reconciled` column's bare equality in
 -- COALESCE(..., FALSE) so a SUM over zero matching rows (NULL) reads as broken (FALSE) instead of
 -- NULL — the version below silently returns NULL from `reconciled` if the backfill rows were ever

@@ -1,4 +1,4 @@
--- Parallel-run dbt port of bigquery/167_nomadic_capital.sql:state.cash_flow_source_unknown — canonical source is that file until
+-- Parallel-run dbt port of bigquery/214_account_fee_recording.sql:state.cash_flow_source_unknown — canonical source is that file until
 -- owner cutover. Added 2026-09-01 (dbt view-coverage burn-down): this view had NO dbt presence,
 -- so scripts/check_dbt_view_coverage.py reported it uncovered and it carried no port at all.
 -- Generated MECHANICALLY by scripts/gen_dbt_port.py from the canonical body — the only edit is
@@ -22,7 +22,8 @@ WHERE ingest_ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 14 DAY)
       'regime_capital_sweep', 'regime_capital_restore', 'external_withdrawal',
       'termination_redistribution', 'connector-reconciliation',
       'nomadic_capital_sweep',   -- bigquery/167 (renamed from capital_dormancy_sweep)
-      'nomadic_capital_restore'  -- bigquery/167 (renamed from capital_dormancy_restore)
+      'nomadic_capital_restore', -- bigquery/167 (renamed from capital_dormancy_restore)
+      'account_fee'              -- bigquery/213 (recurring IBKR account / market-data fee)
     )
     OR source LIKE 'backfill-%'
     )

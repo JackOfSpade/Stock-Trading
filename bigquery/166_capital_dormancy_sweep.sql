@@ -363,7 +363,7 @@ AS (
 -- that sanctioned set in a successor file, not inventing the value in-session." This is that successor
 -- file for exactly two new values.
 --
--- SUPERSEDED LIVE by bigquery/167_nomadic_capital.sql — current single source of truth for this
+-- SUPERSEDED LIVE by bigquery/214_account_fee_recording.sql — current single source of truth for this
 -- view. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this
 -- CREATE statement live in isolation. 167 renames the two values added here
 -- (capital_dormancy_sweep/capital_dormancy_restore) to nomadic_capital_sweep/nomadic_capital_restore

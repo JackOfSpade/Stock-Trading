@@ -171,7 +171,7 @@ WHERE nav IS NULL;
 -- n_snapshots, snapshot_stale, breach_soft, breach_hard, drawdown_breach) and every existing threshold
 -- (-15% soft, -40% hard, n_snapshots >= 5) is UNCHANGED.
 --
--- SUPERSEDED LIVE by bigquery/155_snapshot_and_option_anomaly_d2a_gate.sql (2026-08-08 — snapshot_stale
+-- SUPERSEDED LIVE by bigquery/214_account_fee_recording.sql (2026-08-08 — snapshot_stale
 -- below (`agg.latest.snapshot_date < ltd.last_trading_day`) fires TRUE every Friday/Saturday from
 -- 2026-08-14 onward: D2a (this table's only writer) moved to a Sunday-Thursday-only cron the same day
 -- this file landed, but Friday remains a real trading day — a DESIGNED cadence gap read as a fault,

@@ -140,6 +140,12 @@ WHERE LOWER(o.status) = 'pending'
 -- Same view name as bigquery/22_cash_flows.sql's CREATE OR REPLACE VIEW (retroactive-redefine
 -- convention, same pattern as bigquery/18/19_stack_review_fixes*.sql) -- this file's body is the
 -- one that should be live after both are applied in order.
+-- SUPERSEDED LIVE by bigquery/214_account_fee_recording.sql -- current single source of truth for
+-- this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
+-- re-apply this CREATE statement live in isolation. 214 rebases expected_total 9446.86 -> 9432.88 (chain: 22 -> 68 -> 148 -> 214). Three backfilled
+-- account-fee rows -- 2026-05-05 4.51, 2026-06-03 4.97, 2026-07-03 4.50, 13.98 total -- fall inside
+-- this check's flow_date <= 2026-07-03 window, so the literal must move with them or `reconciled`
+-- flips FALSE permanently and the ledger-corruption alarm becomes a standing false positive.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.cash_flows_backfill_check` AS
 SELECT
   (SELECT ROUND(SUM(amount), 2) FROM `stock-trading-498512.events.cash_flows`

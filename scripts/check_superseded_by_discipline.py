@@ -189,6 +189,21 @@ ALLOWLIST = {
     # adversarial_reviews' blanket rule.
     ("144_decision_log_correction_consumers.sql", "state.decision_log_current"):
         "This view IS the anti-join — it must read the base table to define the filtered set.",
+    ("213_park_derisk_record_correction.sql", FILE_LEVEL):
+        "RE-APPLY GUARD + AN ASSERTION *ABOUT* superseded_by — both require the RAW table, in "
+        "opposite ways, and the filtered view would silently break each. (1) The IF NOT EXISTS guard "
+        "is an idempotency existence check: ops.sp_log_decision mints a fresh UUID per call, so an "
+        "unguarded DR re-apply would DUPLICATE this correction note. It must see raw history — if the "
+        "note were ever itself superseded, a _current read would stop seeing it and the guard would "
+        "re-insert a duplicate, which is exactly the outcome the guard exists to prevent. Same "
+        "conservative-double-write-guard class as 148's entry above. (2) The first ASSERT verifies the "
+        "note carries superseded_by IS NULL (it is a NON-replacement note per bigquery/122's carve-out, "
+        "deliberately — see that file's header for why a superseding row here would hijack "
+        "state.park_allocation_latest and cause D2 to convert a stale de-risk). An assertion whose "
+        "SUBJECT is the superseded_by column cannot be evaluated through the view whose whole purpose "
+        "is to hide rows on the basis of that column. The file's second ASSERT reads "
+        "state.park_allocation_recent, which already goes through state.decision_log_current, and is "
+        "not covered by this entry.",
     ("173_freshness_cadence_aware.sql", "state.freshness"):
         "DEAD-MAN'S SWITCH. MAX(entry_date) is a proxy for 'was this table written recently'. A "
         "correction append IS such a write, so a filtered read would report STALE on a day whose only "

@@ -59,7 +59,7 @@ WHERE NOT EXISTS (SELECT 1 FROM `stock-trading-498512.events.cash_flows` WHERE s
 -- below would shift the NAV/tripwire/sizing baseline on first read -- STOP and investigate before
 -- relying on analytics.strategy_nav / analytics.account_reconciliation.
 --
--- SUPERSEDED LIVE by bigquery/148_audit_2026_08_08_fixes.sql (chain: 22 -> 68 -> 148) — current
+-- SUPERSEDED LIVE by bigquery/214_account_fee_recording.sql (chain: 22 -> 68 -> 148) — current
 -- single source of truth for state.cash_flows_backfill_check. 68 DATE-SCOPED the comparison to
 -- `flow_date <= DATE '2026-07-03'` (the backfill's own effective date) so the check stays meaningful
 -- forever instead of flipping FALSE the instant any legitimate future deposit/withdrawal is

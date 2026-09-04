@@ -407,6 +407,11 @@ ORDER BY action, strategy, counterparty_strategy;
 -- capital_dormancy_* tags for the new nomadic_capital_* ones. capital_dormancy_sweep/restore never
 -- appear in any live row (verified — zero rows ever written through bigquery/166's mechanism), so
 -- dropping them from the sanctioned set orphans nothing. =====
+-- SUPERSEDED LIVE by bigquery/214_account_fee_recording.sql -- current single source of truth for
+-- this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
+-- re-apply this CREATE statement live in isolation. 214 adds 'account_fee' to the sanctioned source allowlist (chain: 163 -> 167 -> 214), so the
+-- recurring-account-fee rows written by ops.sp_record_account_fee are not flagged as unsanctioned
+-- provenance. No other change.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.cash_flow_source_unknown` AS
 SELECT
   event_id, flow_date, flow_type, amount, strategy, source, ingest_ts,

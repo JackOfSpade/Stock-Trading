@@ -77,7 +77,7 @@ ALTER TABLE `stock-trading-498512.events.cash_flows`
   ALTER COLUMN source SET DEFAULT 'unspecified';
 
 -- ===== 2. state.cash_flow_source_unknown =====
--- SUPERSEDED LIVE by bigquery/167_nomadic_capital.sql — current single source of truth for this
+-- SUPERSEDED LIVE by bigquery/214_account_fee_recording.sql — current single source of truth for this
 -- view (bigquery/166_capital_dormancy_sweep.sql is an intermediate, also-superseded definition — do
 -- not stop there; it added capital_dormancy_sweep/capital_dormancy_restore to the sanctioned set
 -- below). Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this

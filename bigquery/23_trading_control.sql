@@ -75,7 +75,7 @@ QUALIFY ROW_NUMBER() OVER (ORDER BY control_ts DESC) = 1;
 -- state.system_health.all_green=FALSE and thus trading_enabled=FALSE) — this is the direct, same-signal
 -- path so the drawdown breaker's own staleness is legible without having to reason through that indirection.
 --
--- SUPERSEDED LIVE by bigquery/155_snapshot_and_option_anomaly_d2a_gate.sql (chain: 23 -> 78 -> 153 ->
+-- SUPERSEDED LIVE by bigquery/214_account_fee_recording.sql (chain: 23 -> 78 -> 153 ->
 -- 155) — current single source of truth for state.book_drawdown_watch. 78 rebuilt this view TWO-TIER
 -- and FLOW-ADJUSTED: the single -15% breach term below became breach_soft (-15%, pauses new-entry
 -- staging only) plus breach_hard (-40%, the genuine full-halt catastrophe tier), and raw NAV drawdown

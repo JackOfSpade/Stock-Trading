@@ -58,7 +58,7 @@
 -- protection while breaking the circularity — identical reasoning to 34's existing trading_halted
 -- exclusion. Both gates below now exclude category IN ('trading_halted','staleness').
 
--- SUPERSEDED LIVE by bigquery/155_snapshot_and_option_anomaly_d2a_gate.sql — current single source of
+-- SUPERSEDED LIVE by bigquery/214_account_fee_recording.sql — current single source of
 -- truth for state.book_drawdown_watch (chain: 78 -> 153 -> 155). 153 first reproduced this exact view
 -- body, byte-for-byte, adding ONE new column, peak_window_gap_days INT64 (a COUNT of
 -- state.account_snapshot_gap — trading days between the first and last ops.account_snapshot row that

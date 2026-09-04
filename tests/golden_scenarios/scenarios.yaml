@@ -81,7 +81,8 @@
 # ALLOCATION CALL + D2's PARK ALLOCATION CONVERSION step), and the AI Research-Significance Screen's
 # two-layer conversion (RS-*, added 2026-07-19 per Redesign C, owner reversal of the same-day DEFER —
 # Operating_Protocols.md §19 / Claude_Task_Plan.md's D1/W2/M2 research-screen calls).
-# 34 cases total (brief calls for 12-20; SE-02 added 2026-08-30). COUNT CORRECTED 2026-08-20 (D3): this line read "31" and had
+# 35 cases total (brief calls for 12-20; SE-02 added 2026-08-30; PA-07 added 2026-09-03 for the de-risk
+# evidence-cardinality rule). COUNT CORRECTED 2026-08-20 (D3): this line read "31" and had
 # been stale since the four RS-* scenarios landed 2026-07-19 — the id numbering has gaps (no RR-10,
 # KT-03, SB-03), so the count is not derivable from the ids and a reader has no way to notice the drift.
 # No CI check asserts this number; keep it in sync by hand when adding or removing a scenario.
@@ -739,6 +740,38 @@ scenarios:
       VOO snapshot exists. The successful SPY probe proves only that the surface is not account-wide; its
       price cannot authorize or size a VOO MARKET instruction. Reconciliation and history work continue,
       and the sweep is reconsidered only after a fresh valid VOO snapshot. NO-GO.
+
+  - id: PA-07
+    category: park_allocator
+    situation: >
+      The park's current vehicle is VOO (risk_tier 4). Today's PARK ALLOCATION CALL evidence: equity
+      breadth narrows for a sixth consecutive session and the step ACCELERATES, which D1 judges a
+      genuine deterioration. On every other axis nothing fires -- VIX closes 14.92, below both 15 and
+      its own 20d; the index sits above its 50dma and near its trailing closing high; the 10Y is
+      unchanged; hy_oas is a month-old monthly aggregate and untestable; shock_overlay has read 'acute'
+      continuously for three weeks with no new development today. D1 judges MEDIUM conviction
+      (conviction_pct 60) that the park should switch to SGOV (risk_tier 0) -- a de-risk. Does the park
+      convert to SGOV this evening?
+    governing_files: [Operating_Protocols.md, Claude_Task_Plan.md]
+    governing_sections:
+      Operating_Protocols.md: ["## 13. Account-Level Cash/Park Reconciliation, Drift Attribution & Cash Flattening"]
+      Claude_Task_Plan.md: ["## D1. Market Development Scan — deep research", "## D2. Daily Action Conversion — regular routine"]
+    expected_decision: "NO-GO (single-axis de-risk -- called as a bound KEEP carrying fields.park_watch, VOO continues, re-decided fresh next session)"
+    rationale: >
+      Claude_Task_Plan.md D1's DE-RISK EVIDENCE CARDINALITY rule (added 2026-09-03) and
+      Operating_Protocols.md §13.F's de-risk-evidence-cardinality qualifier: a de-risk converts only
+      when at least TWO INDEPENDENT evidence axes fire in the same session. Here exactly ONE fires
+      (breadth). Volatility, index level/trend, rates, credit and shock/commodity all fail to fire --
+      and note shock_overlay reading 'acute' for three weeks with nothing new today is a STANDING
+      state, not a firing axis, which is the distinction this rule turns on. So D1 calls KEEP with
+      fields.park_watch = true and fields.watch_axis naming breadth plus what a second independent axis
+      would have to do; the call is re-decided fresh next session on next session's evidence. This is
+      NOT a cooldown, budget, conviction gate or approval step, and it does NOT bind any later session
+      -- a second axis firing tomorrow converts tomorrow, same-day, at any conviction. Contrast PA-01,
+      where THREE axes fire (shock_overlay acute as a NEW acute read, VIX 34.5, hy_oas widening
+      intraday) and the de-risk binds and converts same-day exactly as before; and contrast PA-04, a
+      re-risk, which this rule does not touch at all. Vehicle is unchanged, so D2's PARK ALLOCATION
+      CONVERSION step sees a bound KEEP and no-ops -- no new status token and no D2 change. NO-GO.
 
   # ---- AI Research-Significance Screen scenarios (RS-*) ----
   # Added 2026-07-19 (Redesign C -- owner reversal of the same-day DEFER verdict; AI_DECISION_REDESIGN.md
