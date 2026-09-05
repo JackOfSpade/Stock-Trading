@@ -68,17 +68,29 @@
 -- block. Do not re-touch either string literal below on the strength of this note -- it is a record
 -- of what is live, not an instruction to re-apply.
 --
--- APPLY STATE -- weekly_report v10 row REPO-LANDED 2026-09-04, deliberately NOT APPLIED LIVE,
--- pending the operator re-paste. ops/weekly_report/weekly_report.gs's SCRIPT_VERSION was bumped
--- 'v9' -> 'v10' in the same commit as the weekly_report literal below, because
--- scripts/check_script_version_consistency.py requires that lockstep and CI fails on a one-sided
--- bump. The LIVE state.expected_script_versions.weekly_report row is left at v9 ON PURPOSE:
--- applying this MERGE before the owner has re-pasted weekly_report.gs into the live "Stock-Trading
--- Automation" Apps Script project would make state.script_version_drift read expected=v10 /
--- reported=v9 / drift=TRUE and MANUFACTURE the exact drift signal this registry exists to detect.
--- Same sequencing the alert_emailer v10 row above followed: .gs re-paste first, a v10 heartbeat
--- from testReport() second, this MERGE third. Until all three have happened the repo and the live
--- row are EXPECTED to disagree, and that disagreement is not itself a defect.
+-- APPLY STATE -- weekly_report v10 row COMPLETE as of 2026-09-05 (repo-landed 2026-09-04 with the
+-- LIVE row deliberately left at v9 pending the re-paste; that gap closed the next day). Two-step
+-- apply per OWNER_ACTIONS.md item WR-2 (now marked DONE), same sequencing the alert_emailer block
+-- above followed: .gs re-paste first, a v10 heartbeat second, this MERGE third.
+-- (1) Claude in Chrome re-pasted ops/weekly_report/weekly_report.gs v10 into the live
+-- "Stock-Trading Automation" project's Code.gs from the SHA-pinned blob at 7f59e83, re-hashing the
+-- SAVED content after a full editor reload -- sha256
+-- 0db300cbea0fa3cb4d7a8ae2f692a16bead5f23cd131b2ee47a3f5abc3bc0614, byte-identical to the repo
+-- file -- then testReport() sent the report cleanly and ops.heartbeat recorded version='v10'.
+-- (2) ONLY THEN was this MERGE applied, from an interactive repo session via the BigQuery MCP,
+-- executing the literal bytes of this file's MERGE statement at 7f59e83 (the relayed text was
+-- byte-compared against a sed-extracted copy of those lines before execution; sha256
+-- 912900fd789a41dfcff43d806e247f0e7379dd1e1a80b4b544bfddc44fec75ed). numDmlAffectedRows=1 --
+-- exactly the weekly_report row moved; the alert_emailer row was the guarded no-op the block
+-- above predicts for a re-apply.
+-- VERIFIED, not asserted: live state.expected_script_versions.weekly_report now reads
+-- expected_version='v10', git_note LENGTH 4644, SHA-256
+-- 15e668bd43bc3635b9617567a8fd4d44ab37adc88d2b0705a3f4070f871e6443 -- byte-identical to the
+-- weekly_report git_note literal in the MERGE below after SQL-unescaping (the same computation
+-- reproduces the alert_emailer block's LENGTH 10218 / 0557a2a9... figures exactly).
+-- state.script_version_drift now reads BOTH scripts expected=v10 / reported=v10 / drift=FALSE;
+-- the transient drift=TRUE window between (1) and (2) lasted ~26 minutes and raised no alert
+-- (ops.alerts empty over the surrounding 5 hours, checked before recording this).
 -- v10 in one line (full text in the git_note literal below): the cadence-aware data-trust predicate,
 -- the PARK v4 two-sleeve rendering, and the AI-era-anchored park counterfactual quartet.
 

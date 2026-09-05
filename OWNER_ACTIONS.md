@@ -131,7 +131,7 @@ Claude cannot reach `script.google.com`. **This weekly email gates nothing and s
 nothing is unsafe while this is outstanding; what is wrong until the paste lands is what the operator
 *reads*, not what the system *does*.
 
-## WR-2. Re-paste `weekly_report.gs` (v9 → v10, data-trust predicate + PARK v4 sleeves + AI-era counterfactuals), THEN apply the `bigquery/43` MERGE that seeds `expected_version='v10'` for `weekly_report` — `[OPEN — sequenced; repo v10 vs live v9 is EXPECTED and documented until both steps run, not drift]`
+## WR-2. Re-paste `weekly_report.gs` (v9 → v10, data-trust predicate + PARK v4 sleeves + AI-era counterfactuals), THEN apply the `bigquery/43` MERGE that seeds `expected_version='v10'` for `weekly_report` — `[DONE 2026-09-05]`
 
 **What changed (all three are rendering-only; every widened `SELECT` keeps an inner fallback to the
 pre-migration column list, so an unapplied `bigquery/220` or `bigquery/212` degrades to the v9
@@ -236,6 +236,17 @@ moves it: the `weekly_report` row's repo-side literal was rewritten on 2026-09-0
 `v9` → `v10`, and the `git_note` grew a v10 paragraph, so the 940-byte length no longer holds either).
 AE-3 itself is unchanged and stays `[DONE 2026-08-31]` — it closed the `alert_emailer` half, which is
 still correct at v10/v10. Read AE-3's `weekly_report` clause as history and this item as current.
+
+**Completed 2026-09-05.** Step (a) by Claude in Chrome: hash-verified paste of the `7f59e83` blob
+into the live project's `Code.gs` (the SAVED content was re-hashed after a full editor reload —
+sha256 `0db300cb…0614`, byte-identical to the repo file), then `testReport()` sent the report
+cleanly and `ops.heartbeat` recorded `version='v10'`. Step (b) from the repo session via the
+BigQuery MCP: `bigquery/43`'s MERGE executed verbatim from the file at `7f59e83` (the relayed text
+byte-compared against a sed-extracted copy before execution), `numDmlAffectedRows=1` — only the
+`weekly_report` row moved, `alert_emailer` was the predicted guarded no-op. Verified end state:
+live `git_note` LENGTH 4644 / SHA-256 `15e668bd…6443` matches the repo literal, and
+`state.script_version_drift` reads BOTH scripts v10/v10/`drift=FALSE`. The transient `drift=TRUE`
+window lasted ~26 minutes and raised no alert. Full record in `bigquery/43`'s APPLY STATE block.
 
 ```verify
 id: WR-2

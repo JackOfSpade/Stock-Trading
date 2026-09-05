@@ -67,7 +67,8 @@ def parse_seed_versions():
     in this group (touched on every .gs version bump) and its git_note fields are already multi-thousand-
     character prose change-logs, so narrating a prior row's STRUCT in a comment is a natural next edit.
     THE TRAP, checked before this landed: those git_note literals contain many `--` sequences INSIDE
-    single-quoted strings (182 in the file, 25 of which survive stripping), so a naive stripper would
+    single-quoted strings (198 in the file, 25 of which survive stripping — re-measured 2026-09-05
+    after the WR-2 APPLY STATE header edit; re-measure again on any bigquery/43 edit), so a naive stripper would
     blank the rest of the file mid-string. lib/sql_files.py's strip_sql_comments() is string-literal-aware
     (_string_literal_end) and is a verified no-op here: same length, same newline count, same parse.
 
