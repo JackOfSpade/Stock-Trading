@@ -204,6 +204,47 @@ def test_second_comma_hour_firing_past_deadline_is_caught(tmp_path, monkeypatch,
     assert "deadline" in capsys.readouterr().err
 
 
+def test_window_violation_is_reported_once_per_season_not_once_per_firing(tmp_path, monkeypatch, capsys):
+    """REGRESSION (fan-out fix, 2026-09-04 quality pass). Check 2 appended one error per FIRING
+    INSTANT, but both of its messages interpolate only the local %H:%M and the season -- and a
+    fixed-UTC cron renders ONE constant wall-clock time per season. So a single mis-timed daily
+    routine produced ~260 byte-identical lines under a wrong "FAIL — 260 DST-safety violation(s)"
+    header, burying any OTHER routine's genuine violation in the same run (check 1 avoids this by
+    `break`ing after the first violating firing).
+
+    `30 4 * * 1,2,3,4,5` fires 261 times in REF_YEAR and renders 22:30 MDT / 21:30 MST, both at or
+    past the 21:00 deadline -- so the honest report is TWO violations, one per season, and the count
+    in the FAIL header must say 2. Before the fix this asserted-on number was 261."""
+    write_cadence(tmp_path, monkeypatch, [
+        {"id": "DX", "monitor_class": "daily_sun_thu", "cron": "30 4 * * 1,2,3,4,5"},
+    ])
+    monkeypatch.setattr(cs, "EVENING_WINDOW_ROUTINE_IDS", {"DX"})
+    assert len(list(cs.cron_firings("30 4 * * 1,2,3,4,5"))) == 261     # the fan-out factor, measured
+    assert cs.check() == 1
+    err = capsys.readouterr().err
+    assert "FAIL — 2 DST-safety violation(s)" in err
+    assert err.count("cadence_watch deadline") == 2
+    assert "22:30 MT in MDT" in err and "21:30 MT in MST" in err       # one line per season, both kept
+
+
+def test_dedup_still_reports_every_distinct_firing_time_in_a_season(tmp_path, monkeypatch, capsys):
+    """The other half of the fan-out fix: de-duplicating on the local wall-clock time must NOT undo
+    the 2026-08-08 change that made check 2 look at every firing rather than locals_[0]. A comma-hour
+    cron's second daily firing is a DIFFERENT wall-clock time, so it survives the dedup.
+
+    `0 4,5 * * 1,2,3,4,5` renders 22:00 and 23:00 MDT / 21:00 and 22:00 MST -- four distinct
+    (season, time) pairs, all at or past the 21:00 deadline, so all four must still be reported."""
+    write_cadence(tmp_path, monkeypatch, [
+        {"id": "DX", "monitor_class": "daily_sun_thu", "cron": "0 4,5 * * 1,2,3,4,5"},
+    ])
+    monkeypatch.setattr(cs, "EVENING_WINDOW_ROUTINE_IDS", {"DX"})
+    assert cs.check() == 1
+    err = capsys.readouterr().err
+    assert "FAIL — 4 DST-safety violation(s)" in err
+    for rendered in ("22:00 MT in MDT", "23:00 MT in MDT", "21:00 MT in MST", "22:00 MT in MST"):
+        assert rendered in err
+
+
 # ---- daily_sun_thu coverage (EVENING_WINDOW_ROUTINE_IDS self-maintenance guard) ----------------
 #
 # REGRESSION GUARD (2026-08-08 follow-up): re-keying check 2 off a bare EVENING_WINDOW_ROUTINE_IDS

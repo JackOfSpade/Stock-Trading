@@ -48,6 +48,16 @@
 #
 # SCHEMA (validated offline, no network, by run_golden.py --offline — the CI HARD GATE):
 #   id                 — short stable identifier, unique across this file (e.g. RR-01, KT-05, SB-02).
+#   category           — required (2026-09-04: it always WAS required in effect, but this block did not
+#     list it, so the only signal a non-SL5 fixture author got was the offline gate's error). Scopes the
+#     decision vocabulary offered to the live judge to this scenario's own tokens (run_golden.py's
+#     CATEGORY_TOKENS); without it the judge is offered all six DECISION_LEAD_TOKENS and a
+#     correct-sentiment/wrong-vocabulary answer (e.g. ACTIVATE where the fixture expects GO) scores as a
+#     pure-vocabulary flip against nothing real. It is also cross-checked against expected_decision: a
+#     token outside the category's own set is reported as a mis-categorized/copy-paste fixture. One of:
+#     kill_trigger | park_allocator | regime_router | research_screener | strategy_a_entry |
+#     strategy_b_entry | strategy_d_entry | strategy_e_entry (the live CATEGORY_TOKENS keys — a new
+#     category needs an entry there too, or offline validation rejects it as a typo).
 #   situation          — self-contained prose description of the facts a routine session would be given.
 #     Concrete numbers only (no "roughly", no ambiguous qualifiers) so the expected_decision is the
 #     single correct mechanical read of current prose, not a judgment call the fixture itself is fuzzy on.

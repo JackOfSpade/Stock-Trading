@@ -542,17 +542,36 @@ def _hashable_json_list(items):
 
 
 def _conn_key(c):
-    """The full comparable identity of one mcp_connection dict (2026-08-08): connector_uuid PLUS the
-    per-tool policy fields (permitted_tools, tool_policy_overrides, clear_tool_policy_overrides) -- see
-    the module docstring's 2026-08-08 note. Two connections with the SAME connector_uuid but DIFFERENT
-    per-tool policy are NOT the same effective config and must not collapse together when
-    derive_profile() decides whether a routine matches a profile's mcp_connections. permitted_tools is
-    compared order-insensitively (a flat list of tool names, same as allowed_tools); every field
-    defaults the same way normalize_trigger() defaults an ingested connection ([] / [] / False), so a
-    profile connector dict written before this field existed (only 3 keys) still compares equal to a
-    live connection whose policy is genuinely empty -- the common case for every routine today."""
+    """The comparable identity of one mcp_connection dict: connector_uuid and `url`, PLUS the
+    per-tool policy fields (permitted_tools, tool_policy_overrides, clear_tool_policy_overrides,
+    2026-08-08) -- see the module docstring's 2026-08-08 note. Two connections with the SAME
+    connector_uuid but DIFFERENT per-tool policy are NOT the same effective config and must not
+    collapse together when derive_profile() decides whether a routine matches a profile's
+    mcp_connections. permitted_tools is compared order-insensitively (a flat list of tool names, same
+    as allowed_tools); every field defaults the same way normalize_trigger() defaults an ingested
+    connection ([] / [] / False), so a profile connector dict written before this field existed (only
+    3 keys) still compares equal to a live connection whose policy is genuinely empty -- the common
+    case for every routine today.
+
+    `url` JOINED THE KEY 2026-09-04 (quality pass). normalize_trigger() has always CAPTURED url per
+    connection and _restore_conn() emits it explicitly ("so a restore never depends on the live API
+    guessing a missing key's meaning"), but derive_profile() discarded it here -- so a live connector
+    endpoint migration (`.../mcp/v1` is exactly the versioned shape that migrates) matched the profile
+    with ZERO override recorded, and every restored trigger would point at the stale profile URL.
+    Nothing else in the repo can catch that: the CONNECTORS list and ops/routine_backup.json's
+    profiles are the only two places these URLs appear, ops/connector_tools.yaml carries no url field
+    at all, and check() never calls derive_profile(). The url is where the connector's calls actually
+    GO, so an endpoint change is real config, not boilerplate to absorb into the profile match.
+
+    `name` is DELIBERATELY still excluded. CONNECTORS' names are owner-supplied, slug-shaped strings
+    ('Interactive-Brokers--IBKR-') that may not be the API's verbatim `name`; if they differ, adding
+    name here would stamp an mcp_connections override onto all 34 entries on the next ingest -- correct
+    data, but it defeats the profiles' stated purpose ('a diff shows real config changes instead of
+    restating shared boilerplate') when the right fix would be to correct the profile. If a future
+    ingest ever produces a fleet-wide mcp_connections override burst, suspect the profile, not this."""
     return (
         c.get("connector_uuid"),
+        c.get("url"),
         tuple(sorted(c.get("permitted_tools") or [])),
         _hashable_json_list(c.get("tool_policy_overrides")),
         bool(c.get("clear_tool_policy_overrides")),
@@ -567,9 +586,10 @@ def derive_profile(normalized, profiles):
     """(profile_name, overrides) for `normalized` against the candidate `profiles` dict -- the
     best-scoring profile (most matching fields) wins, and every field that still differs from THAT
     profile is recorded in `overrides`. mcp_connections is compared as an UNORDERED set of each
-    connection's full identity -- connector_uuid AND its per-tool policy fields (_conn_key, 2026-08-08;
-    connector ORDER varies harmlessly between live routines -- see _conns' docstring, but the per-tool
-    POLICY of a given connector is real config, not noise), every other field is compared as-is.
+    connection's identity -- connector_uuid, url AND its per-tool policy fields (_conn_key,
+    2026-08-08 / 2026-09-04; connector ORDER varies harmlessly between live routines -- see _conns'
+    docstring, but the ENDPOINT and the per-tool POLICY of a given connector are real config, not
+    noise), every other field is compared as-is.
 
     TIE-BREAK (B7, 2026-08-01 audit): on an EQUAL score between two or more profiles, the
     lexicographically LOWEST profile name wins, deterministically, regardless of dict iteration
@@ -645,6 +665,10 @@ def ingest(path):
     # _dedup_raw_triggers() collapses repeats of the SAME trigger_id; this catches the different
     # problem of two DISTINCT live triggers resolving to one routine id. See the guard below.
     claimed_by = {}
+    # Synthetic `__no_id__:` keys claimed by THIS run (quality pass 2026-09-04). Scoped to the run,
+    # not to the persisted doc, so an entry filed by an EARLIER ingest is updated in place rather
+    # than suffixed -- see the collision comment in the `rid is None` branch below.
+    unmatched_claimed = set()
 
     for raw in _dedup_raw_triggers(_load_raw_triggers(path)):
         normalized = normalize_trigger(raw)
@@ -682,10 +706,52 @@ def ingest(path):
             # TypeError comparing None to the other str keys, losing the whole ingest. The synthetic
             # key mirrors _dedup_raw_triggers' own "__no_id__" convention and is readable in restore()'s
             # operator-facing messages, which echo _unmatched keys verbatim as the id to type.
-            key = (normalized["trigger_id"]
-                   or f"__no_id__:{_core_instruction(normalized['instruction'])[:60]}")
+            # COLLISION ON THE SYNTHETIC KEY (quality pass 2026-09-04). Two DISTINCT id-less raws can
+            # share their instruction's first 60 characters -- or both carry an EMPTY instruction, in
+            # which case every one of them keys to the bare "__no_id__:" (normalize_trigger() yields
+            # instruction="" whenever `ccr.events` is empty, the cheaper real-world trigger). A plain
+            # dict assignment silently kept only the LAST, so the first live trigger was recorded
+            # NOWHERE -- not in `routines`, not in `_unmatched`, not in `conflicts` -- the exact
+            # "record it rather than dropping it silently" violation the comment above states as this
+            # branch's contract and the duplicate-live-trigger guard below was hardened for twice.
+            # Suffix ONLY on a genuine collision so the common key stays short enough to type back in.
+            # Deliberately scoped to the id-less branch: a trigger_id-keyed entry MUST keep updating
+            # in place, since suffixing it would strand the prior copy under the un-suffixed key
+            # forever -- precisely the stale `_unmatched` copy B4's comment below warns a restore
+            # rebuilds as a DUPLICATE live trigger.
+            # CROSS-INGEST LAST-WINS (correction, same pass): the collision test is scoped to keys
+            # claimed by THIS run, NOT to the persisted doc. Testing against doc["_unmatched"] gave
+            # the id-less branch the very exposure the paragraph above rules out for the trigger_id
+            # branch -- an id-less trigger whose config changed between ingests was filed under a
+            # fresh `#N` while its stale copy survived at the base key forever (nothing prunes it:
+            # B4's cleanup pops by trigger_id, which an id-less entry never has). Run-scoping
+            # restores the pre-2026-09-04 in-place update ACROSS ingests while keeping the
+            # within-payload collision fix. The value-equality clause stays for the same reason:
+            # the SAME raw arriving twice in ONE payload (two overlapping saved `list` pages --
+            # see _dedup_raw_triggers, which cannot collapse id-less raws) must reuse its key
+            # instead of storing an identical duplicate under `#2`. BOTH conditions are load-
+            # bearing; dropping either one reintroduces one of the two hazards.
+            # Residual, accepted: a `#N` key minted by an earlier run whose trigger is absent from a
+            # later payload lingers unpruned -- inherent to a synthetic key with no stable identity
+            # across ingests, and matching the pre-existing per-run last-writer-wins contract. Do
+            # NOT try to prune un-reclaimed `__no_id__:` entries; a partial-payload ingest would
+            # then silently delete a real record.
+            if normalized["trigger_id"]:
+                key = normalized["trigger_id"]
+            else:
+                base = f"__no_id__:{_core_instruction(normalized['instruction'])[:60]}"
+                key, n = base, 2
+                # `doc["_unmatched"][key]` cannot KeyError: `key in unmatched_claimed` implies this
+                # run already stored it.
+                while key in unmatched_claimed and doc["_unmatched"][key] != normalized:
+                    key, n = f"{base}#{n}", n + 1
+                unmatched_claimed.add(key)
             doc["_unmatched"][key] = normalized
-            unmatched.append(key)
+            # `if key not in unmatched`: re-ingesting the SAME id-less raw twice in one payload lands
+            # on one stored entry (the loop above reuses the key when the value is identical), so
+            # reporting it twice would over-count the summary cmd_ingest prints.
+            if key not in unmatched:
+                unmatched.append(key)
             continue
 
         # DUPLICATE LIVE TRIGGER (quality pass 2026-08-22). Two DISTINCT trigger_ids in one ingest
@@ -1076,8 +1142,8 @@ def _verbatim_fields_errors(rid, normalized):
 def _fields_errors(rid, fields, entry):
     """Shared body of the B3 recovery-data validation: given an already-resolved `fields` dict (a
     profile+overrides resolution for a `routines` entry, or the verbatim entry itself for an
-    `_unmatched` one), report every field that is missing/empty. `entry` supplies `name`, which is
-    stored on the entry rather than resolved through a profile in either case.
+    `_unmatched` one), report every field that is missing/empty. `entry` supplies `name` and
+    `instruction`, which are stored on the entry rather than resolved through a profile in either case.
 
     Split out of _resolved_fields_errors() so the `_unmatched` restore path could reuse it without
     duplicating six near-identical isinstance checks that must stay in lockstep -- the two paths
@@ -1102,6 +1168,19 @@ def _fields_errors(rid, fields, entry):
                        f"channel.{{email,push,slack}} as bools ({notif!r})")
     if not entry.get("name"):
         errors.append(f"{rid}: name is missing/empty")
+    # `instruction` is the single most load-bearing recovery field -- it IS the routine; a create body
+    # built with an empty prompt recreates a live SCHEDULED trigger that fires and does nothing.
+    # Nothing else guarded it (quality pass 2026-09-04): not _schedule_errors(), not
+    # _one_shot_restore_error(), not the CRON_UNCONFIRMED guard. normalize_trigger() yields
+    # instruction="" whenever a payload's `ccr.events` is empty or its message carries no `content` --
+    # the same wiped-payload class as the B3 `session_context: {}` shape reproduced live (see
+    # _resolved_fields_errors' docstring). check() (2) covers only the 32 cadence routines'
+    # instructions; it never inspects `_unmatched` at all (restore()'s own 2026-08-22 comment) and
+    # never instruction-checks the personal_* entries, so for the LEAST trustworthy entries in the
+    # file this is the only guard there is. Checked here beside `name` because both live on the entry
+    # in both paths (the snapshot entry, or the normalized trigger itself for `_unmatched`).
+    if not (isinstance(entry.get("instruction"), str) and entry["instruction"].strip()):
+        errors.append(f"{rid}: instruction is missing/empty")
     return errors
 
 
@@ -1134,7 +1213,9 @@ def check():
     WARNING (routine-backup#0, 2026-08-31 code-quality pass: printed, but does not fail this check;
     see that warning's own inline comment below for why it stops short of being an error); (6) every
     entry's EFFECTIVE resolved fields (profile + overrides) are real, non-empty recovery data, not
-    just a profile name that happens to exist (B3); and (7) a fleet routine can never retain a
+    just a profile name that happens to exist (B3) -- including the two fields stored ON the entry
+    rather than resolved through a profile, `name` and `instruction` (see _fields_errors); and (7) a
+    fleet routine can never retain a
     TO_POPULATE schedule that restore refuses.
     Prints per-error ' - ' bullet lines, any WARNINGS block, and a FAIL/OK
     summary, mirroring scripts/check_cadence_consistency.py's conventions. Returns 0/1 (warnings never

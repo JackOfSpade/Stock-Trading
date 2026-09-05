@@ -1,5 +1,5 @@
-"""Guard scripts/gen_routine_lists.py — the generator for bigquery/12/15/24's marker-delimited
-routine-list STRUCT regions (ARCH-3 Item 30b). This module had NO dedicated test before now:
+"""Guard scripts/gen_routine_lists.py — the generator for bigquery/12/15/24/105/114/132/205's
+marker-delimited routine-list STRUCT regions (ARCH-3 Item 30b). This module had NO dedicated test before now:
 scripts/check_cadence_consistency.py only *checks* the regions agree with ops/cadence.yaml, while
 this script GENERATES them, so a generator bug (wrong filter, wrong indent, a stale --check that
 never flags drift) had zero coverage.
@@ -359,7 +359,13 @@ def _wire_fixture(tmp_path, monkeypatch, *, plan_headings=True, extra_routine=""
     # 132 (state.queue_driven_silence_watch, 2026-08-03) is the 6th target. Same lockstep rule as 114
     # above: unpatched, a --write test would mutate the REAL bigquery/132 in the working tree.
     f132 = tmp_path / "132.sql"
-    for f in (f12, f15, f24, f105, f114, f132):
+    # 205 (the SUPERSEDING, live copy of ops.sp_assert_deps' period_class CTE — see build_targets()'s
+    # own comment) is the 7th target, registered 2026-09-04. Same lockstep rule again, and here it is
+    # the sharpest: bigquery/205 is a frozen, live-parity-checked file, so an unpatched
+    # ALERT_MSG_STABILITY_SQL would let the --write round-trip tests below overwrite its real 20-row
+    # period_class region with this fixture's single W1 row, mid-test-run.
+    f205 = tmp_path / "205.sql"
+    for f in (f12, f15, f24, f105, f114, f132, f205):
         f.write_text(_sql_with_region("\nSTALE\n  "))
     monkeypatch.setattr(gr, "PLAN", str(plan))
     monkeypatch.setattr(gr, "CADENCE", str(cadence))
@@ -369,11 +375,12 @@ def _wire_fixture(tmp_path, monkeypatch, *, plan_headings=True, extra_routine=""
     monkeypatch.setattr(gr, "ROUTINE_CATCHUP_SQL", str(f105))
     monkeypatch.setattr(gr, "DEP_GATE_SQL", str(f114))
     monkeypatch.setattr(gr, "QUEUE_SILENCE_SQL", str(f132))
-    return f12, f15, f24, f105, f114, f132
+    monkeypatch.setattr(gr, "ALERT_MSG_STABILITY_SQL", str(f205))
+    return f12, f15, f24, f105, f114, f132, f205
 
 
 def test_main_write_then_check_is_a_clean_round_trip(tmp_path, monkeypatch, capsys):
-    f12, f15, f24, f105, _f114, _f132 = _wire_fixture(tmp_path, monkeypatch)
+    f12, f15, f24, f105, _f114, _f132, _f205 = _wire_fixture(tmp_path, monkeypatch)
 
     monkeypatch.setattr(sys, "argv", ["gen_routine_lists.py", "--write"])
     assert gr.main() == 0
@@ -408,7 +415,7 @@ def test_main_check_returns_1_and_reports_stale_region(tmp_path, monkeypatch, ca
 def test_main_check_returns_1_when_a_target_lacks_markers(tmp_path, monkeypatch, capsys):
     # --check on a file with no markers must report the marker problem (current_region()==None path)
     # and fail, NOT silently pass — a stripped/renamed marker would otherwise hide real staleness.
-    f12, _f15, _f24, _f105, _f114, _f132 = _wire_fixture(tmp_path, monkeypatch)
+    f12, _f15, _f24, _f105, _f114, _f132, _f205 = _wire_fixture(tmp_path, monkeypatch)
     f12.write_text("a file with no markers at all\n")
     monkeypatch.setattr(sys, "argv", ["gen_routine_lists.py", "--check"])
     assert gr.main() == 1
@@ -428,7 +435,7 @@ def test_main_write_check_round_trips_with_an_apostrophe_heading(tmp_path, monke
     # GENERIC FORM (2026-08-17): a CODED heading's description (where an apostrophe would live) is now
     # dropped from the instruction, so this needs an UNCODED heading (no "<id>. " prefix, same shape as
     # AR_att/AR_orc) to keep exercising the escape/round-trip path at all.
-    _f12, f15, _f24, _f105, _f114, _f132 = _wire_fixture(
+    _f12, f15, _f24, _f105, _f114, _f132, _f205 = _wire_fixture(
         tmp_path, monkeypatch, extra_routine="  - id: AR_att\n    monitor_class: queue_driven\n")
     plan = tmp_path / "Claude_Task_Plan.md"      # add an uncoded heading carrying an apostrophe
     plan.write_text(
@@ -443,12 +450,22 @@ def test_main_write_check_round_trips_with_an_apostrophe_heading(tmp_path, monke
     assert gr.main() == 0                                                       # self-consistent round-trip
 
 
-def test_build_targets_returns_six_targets(tmp_path, monkeypatch):
-    _wire_fixture(tmp_path, monkeypatch)
+def test_build_targets_returns_seven_targets(tmp_path, monkeypatch):
+    # The fixture carries a queue_driven routine ON PURPOSE (2026-09-04 quality pass). With the default
+    # `extra_routine=""` cadence -- D1 + W1 only -- `queue_ids` was necessarily EMPTY, so the partition
+    # assertions below held for ANY behavior of gen_132_region and this test could not fail: mutating
+    # gen_132_region to return "" (emptying bigquery/132's watch list entirely) left all 33 tests in
+    # this file green. gen_132_region is not exercised anywhere else in this file, and the only backstop
+    # was cross-file -- tests/test_cadence_consistency.py::test_gen_routine_lists_against_real_repo_
+    # write_is_noop, which detects it only by WRITING the emptied region into the real, frozen
+    # bigquery/132 and failing dirty (the clobber mode that file's own _patch_gen_paths comment records
+    # as having bitten three times). One queue_driven id in the fixture makes the partition real here.
+    _wire_fixture(tmp_path, monkeypatch,
+                  extra_routine="  - id: AR_att\n    monitor_class: queue_driven\n")
     targets = gr.build_targets()
-    assert len(targets) == 6
+    assert len(targets) == 7
     assert [os.path.basename(p) for p, _ in targets] == [
-        "12.sql", "15.sql", "24.sql", "105.sql", "114.sql", "132.sql"]
+        "12.sql", "15.sql", "24.sql", "105.sql", "114.sql", "132.sql", "205.sql"]
     # 12 and 132 must PARTITION the roster: every routine is either calendar-class (12) or
     # queue_driven (132), never neither. A routine absent from both would be watched by nothing --
     # exactly the SL2/SL5 hole bigquery/132 closes.
@@ -459,13 +476,36 @@ def test_build_targets_returns_six_targets(tmp_path, monkeypatch):
 
     all_ids = {r["id"] for r in gr.load_cadence_routines() if r.get("monitor_class") is not None}
     calendar_ids, queue_ids = _ids(bodies["12.sql"]), _ids(bodies["132.sql"])
+    assert queue_ids == {"AR_att"}, "gen_132_region dropped the queue_driven routine"
     assert calendar_ids | queue_ids == all_ids, "a routine is in neither watch list"
     assert not (calendar_ids & queue_ids), "a routine is in both watch lists"
-    # 114 (ops.sp_assert_deps' period_class CTE, 2026-07-28) reuses gen_24_region, so its body must be
-    # BYTE-IDENTICAL to 24's -- that identity is the guarantee the FATAL dependency gate and
-    # state.cadence_period_watch can never disagree about which routines are period-cadence.
-    bodies = {os.path.basename(p): body for p, body in targets}
+    # 114 (ops.sp_assert_deps' period_class CTE, 2026-07-28) and 205 (the SUPERSEDING, LIVE copy of
+    # that same procedure, registered as a target 2026-09-04) both reuse gen_24_region, so all three
+    # bodies must be BYTE-IDENTICAL -- that identity is the guarantee the FATAL dependency gate and
+    # state.cadence_period_watch can never disagree about which routines are period-cadence, and
+    # covering 205 here is what keeps the DEPLOYED copy of the gate inside that guarantee.
     assert bodies["114.sql"] == bodies["24.sql"]
+    assert bodies["205.sql"] == bodies["24.sql"]
+
+
+def test_build_targets_drops_205_when_only_the_dep_gate_is_redirected(tmp_path, monkeypatch):
+    """PAIRED-PATH GUARD (see build_targets()). bigquery/114 and bigquery/205 are two copies of ONE
+    procedure, so a fixture that redirects DEP_GATE_SQL at a tmp tree but leaves ALERT_MSG_STABILITY_SQL
+    pointing at the real repo is mis-wired -- and an unguarded 7th target would then let `--write` reach
+    PAST the fixture and overwrite the real, frozen, live-parity-checked bigquery/205 with the fixture's
+    one-row period_class list. tests/test_cadence_consistency.py::_patch_gen_paths was exactly that
+    shape until it was wired for 205 in this same pass (it now takes an `sql205` and patches all
+    seven; its own comment records this cross-test clobber biting three times -- once per generated
+    target added -- and notes the guard is consequently DORMANT for those tests). Pin that the target
+    drops out instead, so the NEXT fixture that forgets is safe."""
+    _wire_fixture(tmp_path, monkeypatch)
+    monkeypatch.setattr(gr, "ALERT_MSG_STABILITY_SQL",
+                        os.path.join(gr.ROOT, "bigquery", "205_alert_message_stability.sql"))
+    names = [os.path.basename(p) for p, _ in gr.build_targets()]
+    assert names == ["12.sql", "15.sql", "24.sql", "105.sql", "114.sql", "132.sql"]
+    # ...and with BOTH patched (the normal _wire_fixture wiring) it comes back.
+    monkeypatch.setattr(gr, "ALERT_MSG_STABILITY_SQL", str(tmp_path / "205.sql"))
+    assert [os.path.basename(p) for p, _ in gr.build_targets()][-1] == "205.sql"
 
 
 # ---- load_cadence_routines / load_headings_by_id edge behavior ------------------------------------

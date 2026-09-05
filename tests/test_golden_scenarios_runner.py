@@ -112,13 +112,37 @@ def test_unrecognized_category_caught():
 
 
 def test_missing_category_not_flagged_as_unrecognized():
-    # A scenario with NO category at all is a separate (pre-existing, out of scope) concern from a
-    # WRONG category — don't conflate "absent" with "typo'd" and start rejecting fixtures that never
-    # opted into the per-category scoping in the first place.
+    # An ABSENT category must not be reported as a TYPO'D one -- the two get different, separately
+    # actionable messages (a typo names the offending string; an absence names the missing field).
+    # REVERSAL RECORDED 2026-09-04: this test's comment used to say a missing category was "a separate
+    # (pre-existing, out of scope) concern" and that validate_offline() should not "start rejecting
+    # fixtures that never opted into the per-category scoping in the first place." That deferral was
+    # re-measured and overturned -- absent and typo'd categories fail open IDENTICALLY downstream
+    # (_allowed_decisions_for() offers all six DECISION_LEAD_TOKENS either way, reopening the 2026-07-26
+    # unscoped-vocabulary flip), and requiring the field costs nothing: 36 of 36 live scenarios declare
+    # one, as has every revision back to 27 scenarios. Absence IS now an error (see the test directly
+    # below); what this test still pins is that it is not reported as the WRONG error.
     sc = copy.deepcopy(VALID)
     del sc["category"]
     errs = rg.validate_offline([sc])
     assert not any("not a recognized key in CATEGORY_TOKENS" in e for e in errs), errs
+
+
+def test_missing_category_is_caught_by_the_offline_hard_gate():
+    # 2026-09-04: the 2026-07-29 fix closed the TYPO'D-category hole but left the ABSENT-category one
+    # open, and both fail open the same way -- _allowed_decisions_for() falls back to ALL SIX
+    # DECISION_LEAD_TOKENS, so the live judge is offered a vocabulary that was never scoped to this
+    # scenario. That is the exact false-flip class CATEGORY_TOKENS was added to close.
+    sc = copy.deepcopy(VALID)
+    del sc["category"]
+    errs = rg.validate_offline([sc])
+    assert any("missing required field 'category'" in e for e in errs), errs
+    # The message must explain the CONSEQUENCE and list the valid categories, so an author fixing the
+    # fixture doesn't have to go read CATEGORY_TOKENS in the source (same discipline as the typo message).
+    assert any("kill_trigger" in e and "regime_router" in e for e in errs if "'category'" in e), errs
+    # The real file must not itself trip the new gate -- 36 of 36 scenarios declare a category today, so
+    # this hard gate costs nothing on the live fixture set.
+    assert rg.validate_offline(rg.load_scenarios()) == []
 
 
 def test_non_mapping_scenario_entry_caught():
@@ -611,6 +635,72 @@ def test_gemini_escalates_output_budget_on_truncation(monkeypatch):
     assert "DECISION: GO" in text
     assert model == "only-model" and state["dead"] == set()     # stayed on the same model, never dead
     assert seen == [rg.GEMINI_MAX_OUTPUT_TOKENS_START, rg.GEMINI_MAX_OUTPUT_TOKENS_START * 2]  # doubled
+
+
+def test_gemini_escalates_output_budget_on_a_PARTIAL_truncation_too(monkeypatch):
+    # 2026-09-04 fix: escalation must key on finishReason=MAX_TOKENS ALONE, not on the reply being EMPTY.
+    # Before this, the success return `if text.strip(): return text, False` sat ABOVE the truncation
+    # branch, so a reply that was CUT but had already emitted some text was returned as a clean success --
+    # and under BATCHING that is the NORMAL truncation shape, because BATCH_EVAL_PROMPT_TEMPLATE puts the
+    # DECISION[<id>] lines LAST, after a RATIONALE per situation. The un-emitted ids were then scored as
+    # per-scenario parse failures with no retry and a class=ok debug line. Every pre-existing truncation
+    # test feeds `"parts": []`, so this partial-text path was entirely unguarded.
+    seen = []
+
+    def fake_urlopen(req, timeout=180):
+        budget = _budget_of(req)
+        seen.append(budget)
+        if budget <= rg.GEMINI_MAX_OUTPUT_TOKENS_START:
+            # A PARTIAL batch reply: 2 of 4 decisions emitted, then cut mid-stream.
+            partial = ("RATIONALE[RR-01]: a\nDECISION[RR-01]: ACTIVATE\n"
+                       "RATIONALE[RR-02]: b\nDECISION[RR-02]: DO-NOT-ACTIVATE\n"
+                       "RATIONALE[RR-03]: the regime inputs here are")
+            return _FakeResp({"candidates": [{"content": {"parts": [{"text": partial}]},
+                                              "finishReason": "MAX_TOKENS"}]})
+        full = "\n".join(f"RATIONALE[RR-{i:02d}]: x\nDECISION[RR-{i:02d}]: ACTIVATE" for i in range(1, 5))
+        return _FakeResp({"candidates": [{"content": {"parts": [{"text": full}]}, "finishReason": "STOP"}]})
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    state = {}
+    text, model = rg._gemini_call("prompt", "k", ["only-model"], state)
+    assert seen == [rg.GEMINI_MAX_OUTPUT_TOKENS_START, rg.GEMINI_MAX_OUTPUT_TOKENS_START * 2]  # doubled
+    assert model == "only-model" and state["dead"] == set()   # same model, not killed
+    assert rg.parse_batch_reply(text, ["RR-01", "RR-02", "RR-03", "RR-04"]) == {
+        "RR-01": "ACTIVATE", "RR-02": "ACTIVATE", "RR-03": "ACTIVATE", "RR-04": "ACTIVATE",
+    }   # the COMPLETE reply is what comes back -- not the prefix whose last two ids parse to None
+
+
+def test_gemini_truncation_at_the_ceiling_still_returns_a_partial_reply(monkeypatch):
+    # The other side of the same branch: once the budget is AT the ceiling there is no headroom left to
+    # escalate into, so a truncated-but-non-empty reply is returned as best effort exactly as before the
+    # fix (killing the model over it would lose the decisions that DID arrive). Only a truncated-and-EMPTY
+    # reply at the ceiling is the hard failure -- that case is pinned by
+    # test_gemini_budget_escalation_is_bounded_then_advances above.
+    def fake_urlopen(req, timeout=180):
+        return _FakeResp({"candidates": [{"content": {"parts": [{"text": "DECISION: GO\nRATIONALE: cut"}]},
+                                          "finishReason": "MAX_TOKENS"}]})
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    state = {"budget": rg.GEMINI_MAX_OUTPUT_TOKENS_CEIL}
+    text, model = rg._gemini_call("prompt", "k", ["m1"], state)
+    assert "DECISION: GO" in text and model == "m1" and state["dead"] == set()
+
+
+def test_gemini_truncated_attempt_is_logged_as_truncated_not_ok(monkeypatch, capsys):
+    # Observability half of the same defect: a cut reply used to print `class=ok`, so the run summary
+    # attributed the lost DECISION lines to nothing at all. Non-truncated replies must still log `ok`.
+    def fake_urlopen(req, timeout=180):
+        if _budget_of(req) <= rg.GEMINI_MAX_OUTPUT_TOKENS_START:
+            return _FakeResp({"candidates": [{"content": {"parts": [{"text": "DECISION: G"}]},
+                                              "finishReason": "MAX_TOKENS"}]})
+        return _FakeResp({"candidates": [{"content": {"parts": [{"text": "DECISION: GO\nRATIONALE: x"}]},
+                                          "finishReason": "STOP"}]})
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    rg._gemini_call("prompt", "k", ["m1"], {})
+    classes = [line.rsplit("class=", 1)[1] for line in capsys.readouterr().err.splitlines()
+               if "golden live attempt" in line]
+    assert classes == ["truncated", "ok"]
 
 
 def test_gemini_budget_escalation_is_bounded_then_advances(monkeypatch):
@@ -1210,20 +1300,87 @@ def test_referenced_scenario_ids_shape_is_inferred_not_hardcoded():
     assert rg.referenced_scenario_ids(sc, {"ABC-001", "ABC-002"}) == ["ABC-002"]
 
 
-def test_referenced_scenario_ids_resolution_is_one_level_only():
-    # 2026-08-17 deliberate bound (see referenced_scenario_ids()'s docstring): a reference chain
-    # (XY-01 -> XY-02 -> XY-03) resolves only ONE level from the judged scenario. Judging XY-01 must show
-    # XY-02's own facts (the direct reference) but must NOT show XY-03's facts (XY-02's OWN reference is
-    # never expanded) -- unbounded recursion would make prompt size depend on chain depth instead of
-    # judged-scenario count, undoing the point of the same-day batching token-reduction work.
-    sc_a = {"id": "XY-01", "category": "kill_trigger", "situation": "See XY-02 for the baseline case."}
-    sc_b = {"id": "XY-02", "category": "kill_trigger",
-            "situation": "XY-02's own body text. See XY-03 for the ORIGINAL baseline."}
-    sc_c = {"id": "XY-03", "category": "kill_trigger", "situation": "XY-03's own body text."}
-    id_to_scenario = {"XY-01": sc_a, "XY-02": sc_b, "XY-03": sc_c}
-    prompt = rg.build_single_prompt(sc_a, "GOV", id_to_scenario)
-    assert "XY-02's own body text" in prompt      # one level: XY-01 -> XY-02 resolved
-    assert "XY-03's own body text" not in prompt  # NOT two levels: XY-02's own reference is not expanded
+def _chain_scenarios(n):
+    """XY-01 -> XY-02 -> ... -> XY-0n, each referencing the next, for the closure/cap tests below."""
+    scs = []
+    for i in range(1, n + 1):
+        sid = f"XY-{i:02d}"
+        tail = f" See XY-{i + 1:02d} for the earlier baseline." if i < n else ""
+        scs.append({"id": sid, "category": "kill_trigger", "situation": f"{sid}'s own body text.{tail}"})
+    return {sc["id"]: sc for sc in scs}
+
+
+def test_referenced_scenario_ids_resolution_is_a_bounded_closure_not_depth_one():
+    # SUPERSEDES test_referenced_scenario_ids_resolution_is_one_level_only (2026-09-04). That test pinned
+    # the 2026-08-17 "ONE LEVEL ONLY" bound, whose stated premise -- "no scenario in the real file
+    # currently references a scenario that itself references a third" -- was ALREADY FALSE when written:
+    # RR-03 -> RR-02 -> RR-01 was in the file in the very commit that introduced the claim, and the
+    # conclusion only held because the pre-section-scoping frozenset key put RR-01..RR-04 in ONE group.
+    # Since section scoping split them, RR-03's and RR-04's prompts each render a REFERENCED CONTEXT
+    # [RR-02] block opening "Same day as RR-01 except..." with RR-01 defined nowhere -- exactly the "an id
+    # whose meaning you were never given" condition REFERENCE_CONTEXT_HEADER exists to eliminate. So the
+    # chain IS resolved now; what bounds prompt growth is the BLOCK CAP, not a depth-1 rule.
+    id_to_scenario = _chain_scenarios(3)
+    prompt = rg.build_single_prompt(id_to_scenario["XY-01"], "GOV", id_to_scenario)
+    assert "XY-02's own body text" in prompt   # one level: XY-01 -> XY-02
+    assert "XY-03's own body text" in prompt   # AND the referent's own reference, transitively
+
+
+def test_reference_context_closure_is_capped_and_terminates_on_a_cycle():
+    # The cap is what keeps prompt size bounded now that depth is not. A chain longer than the cap must
+    # truncate (never recurse without limit), and a CYCLE must terminate rather than hang -- an id is
+    # enqueued only on the pass that first appends it to `seen`, so the dedupe guard cuts the loop.
+    id_to_scenario = _chain_scenarios(6)
+    known = set(id_to_scenario)
+    ref_ids = rg._reference_context_ids_for(
+        [id_to_scenario["XY-01"]], {"XY-01"}, known, id_to_scenario, max_blocks=3)
+    assert ref_ids == ["XY-02", "XY-03", "XY-04"]   # capped at 3, in walk order
+
+    cyclic_a = {"id": "CY-01", "category": "kill_trigger", "situation": "CY-01 body. See CY-02."}
+    cyclic_b = {"id": "CY-02", "category": "kill_trigger", "situation": "CY-02 body. See CY-01."}
+    cyc = {"CY-01": cyclic_a, "CY-02": cyclic_b}
+    assert rg._reference_context_ids_for([cyclic_a], {"CY-01"}, set(cyc), cyc) == ["CY-02"]
+
+
+def test_reference_context_closure_default_cap_is_eight_and_reads_the_env(monkeypatch):
+    # Parsed at CALL time from GOLDEN_MAX_REFERENCE_BLOCKS (like GOLDEN_BATCH_MAX in
+    # group_scenarios_for_batching()), not at import -- a malformed value must not be able to take the
+    # offline hard gate down at module load.
+    assert rg.MAX_REFERENCE_CONTEXT_BLOCKS_DEFAULT == 8
+    id_to_scenario = _chain_scenarios(6)
+    known = set(id_to_scenario)
+    monkeypatch.setenv("GOLDEN_MAX_REFERENCE_BLOCKS", "2")
+    assert rg._reference_context_ids_for(
+        [id_to_scenario["XY-01"]], {"XY-01"}, known, id_to_scenario) == ["XY-02", "XY-03"]
+    monkeypatch.delenv("GOLDEN_MAX_REFERENCE_BLOCKS")
+    assert len(rg._reference_context_ids_for(
+        [id_to_scenario["XY-01"]], {"XY-01"}, known, id_to_scenario)) == 5   # whole chain, under the cap
+
+
+def test_reference_context_closure_omitting_id_to_scenario_stays_one_level():
+    # The one-level behavior is still exactly what a caller WITHOUT the full scenario set gets: with no
+    # id_to_scenario there is nothing to enqueue, so no referent's own references are walked. This is what
+    # keeps build_batch_prompt()/build_single_prompt()'s no-id_to_scenario default byte-identical.
+    id_to_scenario = _chain_scenarios(3)
+    ref_ids = rg._reference_context_ids_for(
+        [id_to_scenario["XY-01"]], {"XY-01"}, set(id_to_scenario))
+    assert ref_ids == ["XY-02"]
+
+
+def test_reference_context_closure_resolves_rr01_into_rr03s_real_prompt():
+    # Ground-truthed against the real scenarios.yaml, which is where this actually bites: RR-03's group
+    # gets a REFERENCED CONTEXT [RR-02] block whose text says "Same day as RR-01 except...", so RR-01's own
+    # facts must be present too -- before the closure, RR-01 was NAMED in the prompt and DEFINED nowhere.
+    scenarios = rg.load_scenarios()
+    id_to_scenario = {sc["id"]: sc for sc in scenarios}
+    groups = rg.group_scenarios_for_batching(scenarios)
+    rr03_group = next(g for g in groups if any(sc["id"] == "RR-03" for sc in g))
+    prompt = rg.build_batch_prompt(rr03_group, "GOV", id_to_scenario)
+    assert "REFERENCED CONTEXT [RR-02]" in prompt
+    assert "Same day as RR-01" in prompt                      # the dangling reference RR-02 itself makes
+    assert "REFERENCED CONTEXT [RR-01]" in prompt             # ...now resolved one level further
+    rr01_situation = id_to_scenario["RR-01"]["situation"].strip()
+    assert rr01_situation.splitlines()[0] in prompt           # RR-01's own facts really are in the prompt
 
 
 def test_build_batch_prompt_kt02_gets_kt01_context_and_kt01_is_not_judged():
@@ -1273,9 +1430,15 @@ def test_build_batch_prompt_kt02_gets_kt01_context_and_kt01_is_not_judged():
 
 
 def test_build_batch_prompt_referent_already_judged_in_group_emits_no_duplicate_context():
-    # KT-06 -> KT-05 is the OTHER kind of case (7 of the 8 measured cross-references): both land in the
-    # SAME real batch group (KT-02/KT-05/KT-06/KT-07), so KT-05's situation is already present as one of
-    # the judged SITUATIONS -- a second, redundant REFERENCED CONTEXT copy of KT-05 must NOT be emitted.
+    # KT-06 -> KT-05 is the OTHER kind of case (7 of the 8 measured cross-references at the time; only 3 of
+    # the 8 are still co-grouped after the 2026-08-17 section-scoping mapping -- see the CROSS-SCENARIO
+    # REFERENCE block in run_golden.py). KT-05/KT-06 are one of the surviving 3: they still land in the
+    # SAME real batch group, so KT-05's situation is already present as one of the judged SITUATIONS -- a
+    # second, redundant REFERENCED CONTEXT copy of KT-05 must NOT be emitted. CORRECTED 2026-09-04: that
+    # group used to be described here as KT-02/KT-05/KT-06/KT-07; the PAIR is still real but that
+    # four-member group is not (KT-02 and KT-07 each scope Experiment_Parameters.md differently and are
+    # now their own groups). The group is constructed explicitly below anyway, so the property under test
+    # never depended on the real grouping.
     scenarios = rg.load_scenarios()
     id_to_scenario = {sc["id"]: sc for sc in scenarios}
     group = [id_to_scenario["KT-05"], id_to_scenario["KT-06"]]
@@ -1286,13 +1449,20 @@ def test_build_batch_prompt_referent_already_judged_in_group_emits_no_duplicate_
 
 
 def test_build_batch_prompt_mixed_group_still_suppresses_the_already_judged_referent():
-    # A group containing BOTH kinds of reference at once (KT-02's real group has KT-02->KT-01 [external]
-    # AND KT-06->KT-05 [internal]) must add exactly ONE context block (KT-01) and zero for KT-05.
+    # A group containing BOTH kinds of reference at once (KT-02->KT-01 [external] AND KT-06->KT-05
+    # [internal]) must add exactly ONE context block (KT-01) and zero for KT-05.
+    #
+    # CONSTRUCTED, NOT DISCOVERED (2026-09-04). This test used to take KT-02's REAL group and describe it
+    # as the mixed one. That group became a SINGLETON under the 2026-08-17 section-scoping mapping (pinned
+    # by test_group_scenarios_for_batching_real_scenarios_yaml_twenty_groups_kt02_alone), and KT-06 groups
+    # with KT-05 instead -- so no real group carries both kinds of reference any more, the KT-05
+    # suppression assertion below could not fail (KT-05 was not a reference of any member and was never a
+    # candidate block), and what survived duplicated the KT-01 test directly above. build_batch_prompt()
+    # accepts any list of scenario dicts, so build the shape the suppression rule must hold for directly.
     scenarios = rg.load_scenarios()
     id_to_scenario = {sc["id"]: sc for sc in scenarios}
-    groups = rg.group_scenarios_for_batching(scenarios)
-    kt02_group = next(g for g in groups if any(sc["id"] == "KT-02" for sc in g))
-    prompt = rg.build_batch_prompt(kt02_group, "GOV", id_to_scenario)
+    group = [id_to_scenario["KT-02"], id_to_scenario["KT-05"], id_to_scenario["KT-06"]]
+    prompt = rg.build_batch_prompt(group, "GOV", id_to_scenario)
     # Exactly one context block for KT-01: its "--- REFERENCED CONTEXT [KT-01] ---" open delimiter and
     # "--- END REFERENCED CONTEXT [KT-01] ---" close delimiter each contain the substring "REFERENCED
     # CONTEXT [KT-01]" once, so ONE rendered block counts as 2 -- a duplicate block would count as 4.
@@ -1340,22 +1510,41 @@ def test_build_single_prompt_reference_context_block_empty_reproduces_prior_text
     assert with_default == explicit_empty
 
 
-def test_run_live_batch_group_ignores_a_decision_line_for_a_referenced_but_unjudged_id(monkeypatch, capsys):
-    # End-to-end proof (through run_live() itself, not just the prompt builders) that a referenced-but-
-    # not-judged id can never be mistaken for a judged one: a reply containing an EXTRA
-    # "DECISION[KT-01]: ..." line (the referenced-context id) must not create a KT-01 result or otherwise
-    # disturb the 4 real judged ids' own scoring -- parse_batch_reply(reply, ids) only ever looks for the
-    # ids it was given.
+def test_run_live_batch_group_ignores_an_extra_decision_line_for_an_unjudged_id(monkeypatch, capsys):
+    # End-to-end proof (through run_live() itself, not just the prompt builders) that an id which is NOT
+    # one of the judged ones can never be mistaken for a judged id: a reply carrying an EXTRA
+    # "DECISION[KT-01]: ..." line must not create a KT-01 result or disturb the real judged ids' own
+    # scoring -- parse_batch_reply(reply, ids) only ever looks for the ids it was given.
+    #
+    # MUST USE A MULTI-MEMBER GROUP (2026-09-04). This test used to pick KT-02's group, which became a
+    # SINGLETON under the 2026-08-17 section-scoping mapping (pinned by test_group_scenarios_for_batching_
+    # real_scenarios_yaml_twenty_groups_kt02_alone). run_live() routes `len(group) == 1` to
+    # _run_one_scenario_live(), whose _SINGLE_DECISION_RE requires ':' immediately after DECISION -- so the
+    # bracketed batch lines matched nothing, parse_batch_reply() was never called at all, and the scenario
+    # scored UNPARSEABLE. Both original assertions were then structurally guaranteed (`results` is built one
+    # entry per member of `target`, so result_ids == judged_ids for ANY parse behaviour, and KT-01 could
+    # never enter it) -- i.e. the named property was not exercised. Take the first genuinely batched group
+    # instead, and assert the decisions actually PARSED, which is what makes the stray line's
+    # non-interference observable. NOTE the weaker premise: the extra id here is an arbitrary unjudged id
+    # rather than a REFERENCED-but-unjudged one (hence the rename) -- with this group KT-06's only
+    # reference, KT-05, is itself judged. The referenced-but-unjudged prompt-side property is covered by
+    # test_build_batch_prompt_kt02_gets_kt01_context_and_kt01_is_not_judged.
     scenarios = rg.load_scenarios()
     groups = rg.group_scenarios_for_batching(scenarios)
-    kt02_group = next(g for g in groups if any(sc["id"] == "KT-02" for sc in g))
-    judged_ids = [sc["id"] for sc in kt02_group]
-    reply = _batch_reply(*[(sid, "CONTINUE") for sid in judged_ids]) + "\nDECISION[KT-01]: TERMINATE"
+    batch_group = next(g for g in groups if len(g) > 1)
+    judged_ids = [sc["id"] for sc in batch_group]
+    # Each scenario answers with its OWN expected token, so the run prints no spurious "::warning:: decision
+    # flip" + queue-INSERT block into captured stdout while still proving the stray line changed nothing.
+    expected = {sc["id"]: rg._leading_token(sc["expected_decision"]) for sc in batch_group}
+    reply = _batch_reply(*[(sid, expected[sid]) for sid in judged_ids]) + "\nDECISION[KT-01]: TERMINATE"
     monkeypatch.setattr(rg, "_select_live_caller", _fake_caller_returning(reply))
     results = rg.run_live(scenarios, scenario_ids=judged_ids)
     result_ids = [r["id"] for r in results]
-    assert result_ids == judged_ids  # exactly the 4 judged scenarios, KT-01 never appears
+    assert result_ids == judged_ids  # exactly the judged scenarios, KT-01 never appears
     assert "KT-01" not in result_ids
+    # The real assertion: every judged decision parsed to its OWN answer -- nothing was hijacked or
+    # overwritten by the stray DECISION[KT-01] line (this is what the size-1 path could not show).
+    assert [r["actual"] for r in results] == [expected[sid] for sid in judged_ids]
 
 
 def test_parse_batch_reply_well_formed():
@@ -1906,7 +2095,8 @@ def test_sql_single_quote_escape_escapes_backslash_first_so_json_escapes_round_t
 # governing file actually changed (measured ~2,251 billable CI min/month — the single largest line item
 # in the repo's Actions bill). This function maps a push's changed files to just the scenario ids they
 # govern, so the workflow's `--live` step can pass a `--scenario` filter (or skip the whole step when the
-# result is empty) instead of always evaluating all 31 (the count at the time; 33 today). FAIL-OPEN ("select every scenario") on an
+# result is empty) instead of always evaluating all 31 (the count at the time; 36 today, re-measured
+# 2026-09-04). FAIL-OPEN ("select every scenario") on an
 # unscoped/unknown input is the entire correctness contract here — a false NARROW selection could hide a
 # real prose regression from the (already advisory-only) live check; see HARD CONSTRAINT 3 in the task
 # that produced this and scripts/resolve_diff_base.sh's identical fail-open posture for the diff-base
@@ -1918,7 +2108,9 @@ def test_scenarios_for_changed_selects_exactly_the_strategy_md_scenarios():
     # regression in the real coverage, not just in the selection logic against toy data.
     scenarios = rg.load_scenarios()
     strategy_scenario_ids = {sc["id"] for sc in scenarios if "Strategy.md" in (sc.get("governing_files") or [])}
-    assert len(strategy_scenario_ids) == 18  # 18 of the 34 scenarios in scenarios.yaml, measured (SE-02 added 2026-08-30)
+    # 18 of the 36 scenarios in scenarios.yaml, re-measured 2026-09-04 (SE-02 2026-08-30, PA-07 2026-09-03,
+    # PA-08 2026-09-04 — the three additions since this comment last read "34").
+    assert len(strategy_scenario_ids) == 18
     assert set(rg.scenarios_for_changed_files(scenarios, ["Strategy.md"])) == strategy_scenario_ids
 
 
@@ -2128,12 +2320,14 @@ _LEVELS_MD = (
     "## Section B\n"
     "content b\n"
 )
-# Line-numbered reference (0-based, text.splitlines()):
-#  0 "# Root"            5 "#### Deep A1a"    9  "### Sub A2"
-#  1 "intro"              6 "deep content"    10 "content a2"
-#  2 "## Section A"       7 "content a1"? ---  11 "## Section B"
-#  3 "### Sub A1"                              12 "content b"
-#  4 "content a1"
+# Line-numbered reference (0-based, text.splitlines()) — RE-DERIVED 2026-09-04 by enumerating the constant
+# above. The previous table was wrong and half-edited: it repeated "content a1" at index 7, shifted every
+# entry from "### Sub A2" onward by +2, and listed indices 11 and 12, which this 11-line document does not
+# have. A maintainer reasoning about _slice_heading()'s [start, end) ranges from it got wrong boundaries.
+#  0 "# Root"          4 "content a1"      8  "content a2"
+#  1 "intro"           5 "#### Deep A1a"   9  "## Section B"
+#  2 "## Section A"    6 "deep content"    10 "content b"
+#  3 "### Sub A1"      7 "### Sub A2"
 # (see test bodies below for the exact slice assertions this backs)
 
 _SPACED_MD = (
@@ -2482,7 +2676,7 @@ def test_validate_offline_real_scenarios_yaml_governing_sections_all_declared_an
     scenarios = rg.load_scenarios()
     declared = [sc for sc in scenarios if sc.get("governing_sections")]
     assert declared, "expected the real scenarios.yaml to declare governing_sections after the mapping pass"
-    assert len(declared) == len(scenarios)  # every one of the 33 scenarios opted in
+    assert len(declared) == len(scenarios)  # every one of the 36 scenarios opted in (re-measured 2026-09-04)
     assert rg.validate_offline(scenarios) == []  # the hard gate: zero errors on the real mapped file
 
     file_text_cache = {}

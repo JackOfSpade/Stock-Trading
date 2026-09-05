@@ -35,7 +35,6 @@ With --use-compiled, a model with no compiled artifact is a FAILURE, not a skip:
 model nobody compiled is exactly the vacuous-green this gate exists to prevent.
 """
 import difflib
-import importlib.util
 import os
 import re
 import shutil
@@ -45,25 +44,17 @@ import tempfile
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+from lib.dynload import load_module_from_path  # noqa: E402
 from lib.sql_files import DBT_DATASETS  # noqa: E402
 
-
-def _load_module_from_path(name, *rel_parts):
-    """Local copy of tests/conftest.py's load_module_from_path (bug fix, 2026-08-31 code-quality
-    pass): this was previously `from conftest import load_module_from_path` after inserting
-    tests/ onto sys.path, making this the only scripts/ file that reaches into tests/ -- and
-    tests/conftest.py does `import pytest` at module scope, so it pulled in a hard pytest
-    dependency purely as a side effect of wanting this ~6-line helper. Every sibling checker
-    (check_live_sql_parity.py, dbt_parity.py, check_dbt_view_coverage.py, check_sql_dryrun.py) is
-    self-contained; this restores that."""
-    path = os.path.join(REPO, *rel_parts)
-    spec = importlib.util.spec_from_file_location(name, path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-P = _load_module_from_path("check_live_sql_parity", "scripts", "check_live_sql_parity.py")
+# The importlib "load a repo .py as a module" recipe this file used to carry as its own private
+# _load_module_from_path() now lives in scripts/lib/dynload.py (cross-cutting dedup, quality pass
+# 2026-09-04 -- it had grown three hand-copies: here, tests/conftest.py and scripts/gen_dbt_port.py).
+# That function's rationale comment moved there VERBATIM and still governs: the helper must NOT come
+# from tests/conftest.py, which does `import pytest` at module scope and would put a hard pytest
+# dependency on this BLOCKING ci.yml step for the sake of a ~6-line helper. lib/dynload.py imports
+# nothing but the stdlib, so nothing about that 2026-08-31 fix is undone here.
+P = load_module_from_path("check_live_sql_parity", os.path.join(REPO, "scripts", "check_live_sql_parity.py"))
 FINAL = P.find_final_definitions()
 
 
@@ -147,6 +138,22 @@ def all_model_names():
 
 
 def main(argv):
+    # FLAG HANDLING (2026-09-04 quality pass). This used to be membership tests alone, so ANY
+    # unrecognized --flag was silently ignored — and with no positional model, silently meant
+    # --all: `verify_dbt_port.py --help` ran a real ~186-model dbt compile instead of printing
+    # the Usage block the docstring advertises. Recognized flags stay membership-tested (no
+    # argparse — CI's `--all --use-compiled` invocation in ci.yml and auto-merge-claude.yml is
+    # unchanged); everything else --prefixed is now a loud exit 2, because a typo like `--al`
+    # falling through to the full-fleet path is exactly the silent fail-open this file's own
+    # --use-compiled note ("a model with no compiled artifact is a FAILURE, not a skip") rejects.
+    usage = __doc__[__doc__.index("Usage:"):__doc__.index("`--use-compiled`")].rstrip()
+    if "-h" in argv or "--help" in argv:
+        print(usage)
+        return 0
+    unknown = [a for a in argv if a.startswith("--") and a not in ("--all", "--use-compiled")]
+    if unknown:
+        print(f"unknown flag(s): {' '.join(unknown)}\n{usage}")
+        return 2
     use_compiled = "--use-compiled" in argv
     models = [a for a in argv if not a.startswith("--")]
     if "--all" in argv or not models:

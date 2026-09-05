@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the routine-list STRUCT rows for bigquery/12/15/24/105/114/132 from ops/cadence.yaml +
+"""Generate the routine-list STRUCT rows for bigquery/12/15/24/105/114/132/205 from ops/cadence.yaml +
 Claude_Task_Plan.md.
 
 WHY THIS EXISTS (ARCH-3 Item 30b, closing the deferred hand-copy hole). bigquery/12
@@ -45,9 +45,16 @@ Regions generated (marker-delimited, one BEGIN/END pair per file):
                                         complement of the bigquery/12 region. Those four sit outside
                                         state.cadence_expected_today and therefore outside BOTH
                                         cadence nets; 132 is the only thing watching them.
+  bigquery/205_alert_message_stability.sql -- ops.sp_assert_deps' `period_class` CTE STRUCT rows
+                                        AGAIN, and this is the LIVE copy: bigquery/205 CREATE-OR-
+                                        REPLACEs the same procedure ("canonical body from bigquery/114,
+                                        message stabilised"), so 205 is the DEPLOYED definition and
+                                        bigquery/114 above is now the DR-record-only one. Byte-identical
+                                        to the 24 and 114 regions (same gen_24_region call), for the
+                                        same reason 114 reuses it.
 
 Usage:
-  python scripts/gen_routine_lists.py --write   # regenerate all 6 marker regions in place
+  python scripts/gen_routine_lists.py --write   # regenerate all 7 marker regions in place
   python scripts/gen_routine_lists.py --check   # exit 1 + diff if any region is stale
 
 Markers (exactly one BEGIN/END pair per file, wrapping ONLY the STRUCT rows -- the surrounding
@@ -86,6 +93,11 @@ ROUTINE_CATALOG_SQL = os.path.join(ROOT, "bigquery", "15_routine_catalog.sql")
 PERIOD_WATCH_SQL = os.path.join(ROOT, "bigquery", "24_cadence_period_watch.sql")
 ROUTINE_CATCHUP_SQL = os.path.join(ROOT, "bigquery", "105_routine_catchup_window.sql")
 DEP_GATE_SQL = os.path.join(ROOT, "bigquery", "114_period_aware_dependency_gate.sql")
+# The SUPERSEDING copy of the same ops.sp_assert_deps procedure DEP_GATE_SQL declares -- bigquery/205
+# CREATE-OR-REPLACEs it ("canonical body from bigquery/114, message stabilised"), so 205 carries the
+# period_class rows that are actually DEPLOYED and 114's copy is DR-record only. Registered as a target
+# 2026-09-04; see build_targets() for the hole that left open while it was not one.
+ALERT_MSG_STABILITY_SQL = os.path.join(ROOT, "bigquery", "205_alert_message_stability.sql")
 
 # The pinned OPERATING timezone. Deliberately hardcoded, not looked up — see CLAUDE.md
 # "Making the OPERATING timezone plane dynamic" (settled: never dynamic).
@@ -135,12 +147,6 @@ def gen_12_region(routines):
 CATALOG_ROW_RE = re.compile(
     r"STRUCT\('([^']+)' AS routine, '((?:[^']|'')*)' AS canonical_instruction, "
     r"DATE '(\d{4}-\d{2}-\d{2})' AS canonical_since\)")
-
-# Fleet-wide seed date for canonical_since: 2026-08-17, commit 29f6547 ("routine-instruction format
-# decoupling"), which dropped every routine's descriptive TITLE from the canonical instruction so the
-# remote trigger references only the stable routine ID. Any routine whose stored date is still this
-# value has not had its instruction text changed since that migration.
-CANONICAL_SINCE_SEED = "2026-08-17"
 
 
 def parse_catalog_since(path=None):
@@ -195,6 +201,14 @@ def gen_15_region(routines, head_by_id, prior=None, today=None):
         heading = head_by_id.get(rid)
         instr = instruction_text(heading) if heading else ""
         prior_instr, prior_since = prior.get(rid, (None, None))
+        # Fleet-wide seed date for canonical_since: 2026-08-17, commit 29f6547 ("routine-instruction
+        # format decoupling"), which dropped every routine's descriptive TITLE from the canonical
+        # instruction so the remote trigger references only the stable routine ID. Any routine whose
+        # stored date is still 2026-08-17 has not had its instruction text changed since that migration.
+        # (This note used to hang on a module-level CANONICAL_SINCE_SEED = "2026-08-17" constant that no
+        # code ever read -- the date semantics it explains live HERE, in the preserve-vs-restamp choice,
+        # so it was reattached and the never-read constant dropped, 2026-09-04. Only "still this value"
+        # became "still 2026-08-17"; the constant it pointed at no longer exists to name.)
         since = prior_since if (prior_since and prior_instr == instr) else today
         comma = "," if i < n - 1 else ""
         # rid is a constrained \w+ id (never quoted), so only the free-text instruction needs escaping
@@ -300,7 +314,7 @@ def gen_132_region(routines):
 def build_targets():
     routines = load_cadence_routines()
     head_by_id = load_headings_by_id()
-    return [
+    targets = [
         (CADENCE_MONITOR_SQL, gen_12_region(routines)),
         (ROUTINE_CATALOG_SQL, gen_15_region(routines, head_by_id)),
         (PERIOD_WATCH_SQL, gen_24_region(routines)),
@@ -319,12 +333,47 @@ def build_targets():
         # precisely the hole bigquery/132 was written to close (SL2/SL5, 2026-08-03).
         (QUEUE_SILENCE_SQL, gen_132_region(routines)),
     ]
+    # bigquery/205 is the THIRD gen_24_region consumer, and the one that matters most at runtime: it
+    # CREATE-OR-REPLACEs the SAME ops.sp_assert_deps procedure bigquery/114 declares (205's own section
+    # header: "(1) ops.sp_assert_deps — canonical body from bigquery/114, message stabilised"), so
+    # 205 -- being the highest-numbered definition in the apply-in-order record -- is the copy that is
+    # LIVE, and 114's is the DR-rebuild copy.
+    #
+    # REGISTERED 2026-09-04 (quality pass). bigquery/205 shipped already carrying the BEGIN/END
+    # GENERATED ROUTINE LIST markers, but the commit that added it never added it here, so --write
+    # regenerated only the DR-only 114 copy and --check never validated 205 at all -- a marker
+    # promising generator maintenance that did not exist. Consequence had a routine been added to or
+    # reclassified in ops/cadence.yaml: 24 and 114 update, --check stays green, and the LIVE gate's
+    # period_class CTE keeps the OLD mapping -- `LEFT JOIN period_class pc ON pc.routine = d` then
+    # leaves period_start NULL for that routine, dropping it into sp_assert_deps' strict daily/queue
+    # branch, where a weekly/monthly dep can only be satisfied by a completion on in_run_date itself.
+    # That FATALLY blocks every dependent routine on most days, i.e. exactly the false-block
+    # bigquery/114 was written to prevent (commit f5bbade). The region was already byte-identical to
+    # gen_24_region's output when this was registered, so adding it changed no SQL file; a FUTURE
+    # cadence change will now edit bigquery/205 too, which is intended -- and, like any canonical SQL
+    # edit, owes a live re-apply before check_live_sql_parity.py's next run.
+    #
+    # PAIRED-PATH GUARD (the `if` below). On a real run ALERT_MSG_STABILITY_SQL and DEP_GATE_SQL are
+    # both ROOT/bigquery, so the condition is ALWAYS true and 205 is ALWAYS a target -- this does not
+    # weaken the gate. It exists for TEST FIXTURES: 114 and 205 are two copies of ONE procedure, so a
+    # fixture that redirects the dependency gate at a tmp tree without redirecting this twin is
+    # mis-wired, and an unguarded append would then let a --write reach PAST the fixture and overwrite
+    # the real, frozen, live-parity-checked bigquery/205 with the fixture's one-row period_class list.
+    # That cross-test clobber is not hypothetical: tests/test_cadence_consistency.py::_patch_gen_paths'
+    # own comment records it biting three times, once per generated target added (105 on 2026-07-25,
+    # 114 on 2026-07-28, 132 on 2026-08-03), each time because a fixture was not updated in lockstep.
+    # Deriving the skip from DEP_GATE_SQL rather than trusting every fixture to be updated makes this
+    # seventh target unable to become the fourth occurrence. A fixture that patches BOTH (see
+    # tests/test_gen_routine_lists.py::_wire_fixture) keeps the target and exercises it normally.
+    if os.path.dirname(ALERT_MSG_STABILITY_SQL) == os.path.dirname(DEP_GATE_SQL):
+        targets.append((ALERT_MSG_STABILITY_SQL, gen_24_region(routines)))
+    return targets
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     g = ap.add_mutually_exclusive_group(required=True)
-    g.add_argument("--write", action="store_true", help="regenerate all 6 marker regions in place")
+    g.add_argument("--write", action="store_true", help="regenerate all 7 marker regions in place")
     g.add_argument("--check", action="store_true", help="exit 1 + diff if any region is stale")
     args = ap.parse_args()
 
@@ -338,7 +387,7 @@ def main():
         if changed:
             print(f"gen_routine_lists --write: regenerated {', '.join(changed)}.")
         else:
-            print("gen_routine_lists --write: all 6 regions already current (no-op).")
+            print("gen_routine_lists --write: all 7 regions already current (no-op).")
         return 0
 
     # --check
@@ -357,8 +406,8 @@ def main():
                   f"Claude_Task_Plan.md -- run `python scripts/gen_routine_lists.py --write`")
     if drift:
         return 1
-    print("gen_routine_lists --check: OK -- bigquery/12, 15, 24, 105, 114, 132 generated regions match "
-          "ops/cadence.yaml + Claude_Task_Plan.md.")
+    print("gen_routine_lists --check: OK -- bigquery/12, 15, 24, 105, 114, 132, 205 generated regions "
+          "match ops/cadence.yaml + Claude_Task_Plan.md.")
     return 0
 
 

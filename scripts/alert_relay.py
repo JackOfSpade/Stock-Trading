@@ -217,11 +217,21 @@ def relay_orders():
     # directly above it. Say only what the registry actually knows: unreconciled.
     lines = [f"☑ Stock-Trading — {len(rows)} staged order(s) not yet reconciled "
              "(registry status 'pending'; may already have filled — IBKR is authoritative):"]
+    # Wording note (market-only cutover 2026-07-21, label corrected here 2026-09-04): the row line
+    # below MUST NOT render limit_price as `@ <price>`. Since the cutover, payload.limit_price is a
+    # REFERENCE price (last, or bid/ask mid) kept for reserved-cash / notional-guard math ONLY —
+    # bigquery/100_market_only_order_guard.sql: "only its meaning changes from 'order limit' to
+    # 'reference price'"; bigquery/101: "no `limit_price` argument transmitted ... no marketable-limit
+    # fallback". Every live order is MARKET, so an `@ <price>` label asserts an order price no live
+    # order carries. This is a label fix, not a proposal about limit orders — the market-only cutover
+    # is settled. This push is the only operator-facing surface that renders the column at all
+    # (scripts/state_snapshot.sh just dumps the bare value), so nothing else repeats the claim.
     for r in rows:
         note = ("tap the [Claude] Confirm order event"
                 if not r["instruction_id"] else
                 "craftable order — confirm surface is IBKR's own order notification, not a calendar event")
-        lines.append(f"{r['side']} {r['qty']} {r['ticker']} ({r['strategy']}) @ {r['limit_price']} — window to {r['window_close']} — {note}")
+        lines.append(f"{r['side']} {r['qty']} {r['ticker']} ({r['strategy']}) ref ~{r['limit_price']} "
+                     f"— window to {r['window_close']} — {note}")
     post("\n".join(lines))
     print(f"orders: posted {len(rows)}")
 

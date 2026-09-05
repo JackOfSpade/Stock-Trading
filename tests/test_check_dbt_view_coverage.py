@@ -1,7 +1,9 @@
-"""Guard scripts/check_dbt_view_coverage.py — the advisory "which live state/analytics/perf VIEWs
-have no dbt model and no declared dbt source" checker (2026-07-14 self-improvement audit). This
-module had NO dedicated test before now, yet its whole value is a trustworthy count: a regex that
-silently stops matching, or set math that quietly under/over-reports, turns the advisory into noise.
+"""Guard scripts/check_dbt_view_coverage.py — the "which live state/analytics/perf VIEWs have no dbt
+model and no declared dbt source" checker (2026-07-14 self-improvement audit). This module had NO
+dedicated test before now, yet its whole value is a trustworthy count: a regex that silently stops
+matching, or set math that quietly under/over-reports, turns the count into noise — and since
+2026-09-01 that count also BLOCKS CI (it was advisory, `|| true`, when this file was written), so a
+wrong answer strands branches rather than just misinforming a reader.
 
 All tests run against tmp_path fixtures (never the real bigquery/ or dbt/ trees).
 """
@@ -214,6 +216,70 @@ def test_dbt_source_names_honors_dataset_override_and_filters_out_of_scope(tmp_p
         ("state", "covered_src"),
         ("perf", "strategy_daily"),
         ("analytics", "fallback_tbl"),
+    }
+
+
+# ---- dbt's CANONICAL `schema:` key, and the two readers that must agree on it (2026-09-04) --------
+#
+# BUG: dbt_source_names() resolved a source's dataset as `dataset or name`, honouring ONLY the legacy
+# alias. dbt declares the field as `schema` (UnparsedSourceDefinition) and dbt-bigquery's credential
+# _ALIASES maps `dataset` -> `schema` before the source parser runs, so BOTH spellings are valid input
+# and `schema:` is the one dbt's own docs use. A block written that way fell back to the BLOCK NAME
+# here, which for the `- name: <x>_external` shape already used in dbt/models/sources.yml is not in
+# DATASETS -- so every table under it dropped out of `covered` and its views reddened this now-BLOCKING
+# gate as falsely uncovered. Zero blocks spell it `schema:` today (checked), so the fix is a strict
+# widening; these pin it before one appears.
+
+def test_dbt_source_names_honors_dbts_canonical_schema_key(tmp_path, monkeypatch):
+    src = tmp_path / "sources.yml"
+    src.write_text(
+        "version: 2\n"
+        "sources:\n"
+        "  - name: state_external\n"    # dbt-canonical spelling, block name != dataset
+        "    schema: state\n"
+        "    tables:\n"
+        "      - name: ml_backed_view\n"
+        "  - name: events_external\n"   # events is NOT in {state,analytics,perf} -> excluded
+        "    schema: events\n"
+        "    tables:\n"
+        "      - name: decision_log\n"
+    )
+    monkeypatch.setattr(cov, "DBT_SOURCES_YML", str(src))
+    assert cov.dbt_source_names() == {("state", "ml_backed_view")}
+
+
+def test_dbt_source_names_agrees_with_gen_dbt_ports_source_index(tmp_path, monkeypatch):
+    """The two readers of dbt/models/sources.yml must resolve a source block to the SAME dataset.
+
+    gen_dbt_port.py's source_index() has always honoured `schema:`; this checker did not, so the
+    generator would substitute `{{ source(...) }}` for a table the coverage gate simultaneously
+    reported as uncovered -- and gen_dbt_port --list builds its `covered` set from THIS function
+    while resolving refs from that one, so the two disagreed inside a single invocation. Pin the
+    agreement rather than each side's precedence separately: a future edit to either reader that
+    re-diverges fails here."""
+    gdp = load_module_from_path("gen_dbt_port", "scripts", "gen_dbt_port.py")
+    src = tmp_path / "sources.yml"
+    src.write_text(
+        "version: 2\n"
+        "sources:\n"
+        "  - name: state_external\n"
+        "    schema: state\n"           # canonical key
+        "    tables:\n"
+        "      - name: via_schema\n"
+        "  - name: perf_external\n"
+        "    dataset: perf\n"           # legacy alias
+        "    tables:\n"
+        "      - name: via_dataset\n"
+        "  - name: analytics\n"         # neither key -> the block name is the dataset
+        "    tables:\n"
+        "      - name: via_block_name\n"
+    )
+    monkeypatch.setattr(cov, "DBT_SOURCES_YML", str(src))
+    monkeypatch.setattr(gdp, "SOURCES_YML", str(src))
+    assert cov.dbt_source_names() == set(gdp.source_index()) == {
+        ("state", "via_schema"),
+        ("perf", "via_dataset"),
+        ("analytics", "via_block_name"),
     }
 
 

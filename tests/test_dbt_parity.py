@@ -22,6 +22,11 @@ from conftest import load_module_from_path
 from lib.sql_files import strip_sql_comments
 
 dp = load_module_from_path("dbt_parity", "scripts", "dbt_parity.py")
+# Captured BEFORE the autouse _no_live_scope_by_default fixture below can replace the attribute, so
+# the one test that must exercise the REAL live_scope() can restore it (2026-09-04 quality pass —
+# without this, that test called the fixture's `lambda: None` and could not fail; see it for the
+# vacuity it closes).
+REAL_LIVE_SCOPE = dp.live_scope
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -35,17 +40,27 @@ def _no_live_scope_by_default(monkeypatch):
     REAL scope file those names are all out of scope, so main() would compare ZERO models — which
     made four tests fail outright and, more dangerously, could make others pass for the WRONG reason
     (several assert main() == 1, which a zero-model run also returns via the partial-compile guard).
-    Defaulting to None keeps each test asserting what it was written to assert. The two scope-specific
-    tests at the end of this file monkeypatch live_scope themselves, and a later setattr wins."""
+    Defaulting to None keeps each test asserting what it was written to assert. The scope-specific
+    tests at the end of this file override this themselves and a later setattr wins — three install
+    their own fake live_scope, and test_live_scope_missing_file_compares_everything restores the REAL
+    one via REAL_LIVE_SCOPE. (Count corrected 2026-09-04: this said "two" and had gone stale, which
+    mattered more than a miscount — a scope test that does NOT re-patch silently reads the lambda
+    instead of the function it means to exercise, which is exactly what that fourth test was doing.)"""
     monkeypatch.setattr(dp, "live_scope", lambda: None)
 
 
-def _normalized_halt_echo_mr_cte(sql, end_pattern=r"al\s+AS"):
+def _normalized_halt_echo_mr_cte(sql, end_pattern):
     """The 176 CTE should mirror byte-for-byte (after comment/whitespace normalization).
-    `end_pattern` is whatever text immediately follows the CTE's closing `),` in `sql` — `al AS`
-    (the next CTE in every model's WITH clause) by default, overridden to match
-    `{%- endmacro %}` when this is pointed at the extracted macro body instead of a model (see
-    below)."""
+    `end_pattern` is whatever text immediately follows the CTE's closing `),` in `sql`.
+
+    REQUIRED, no default (2026-09-04 quality pass). It used to default to a pattern matching `al AS`,
+    justified as "the next CTE in every model's WITH clause" — a premise the 2026-08-31 halt_echo
+    dedup invalidated: that inline CTE text was deleted from all three models, which now carry only
+    `{{ halt_echo() }}` (asserted by half (b) of the test below), so a model can no longer be a valid
+    input to this helper at all and the default was dead — the single call site always passes
+    `{%- endmacro %}` explicitly. The two texts that still DO contain the CTE end differently:
+    dbt/macros/halt_echo.sql's copy is followed by `{%- endmacro %}`, and canonical bigquery/176's by
+    `al AS`, which the test matches with its own re.findall rather than through this helper."""
     code = strip_sql_comments(sql)
     match = re.search(rf"halt_echo_mr\s+AS\s*\((.*?)\n\),\s*\n{end_pattern}", code, re.DOTALL)
     assert match, "halt_echo_mr CTE missing"
@@ -57,10 +72,11 @@ def _normalized_halt_echo_md_cte(sql):
     finding, 2026-08-31 code-quality pass: the original rewrite of this module byte-compared ONLY
     halt_echo_mr, so a corrupted halt_echo_md -- e.g. its day-match flipped from `=` to `!=`, which
     would invert the fail-closed missing_dependency echo-suppression -- left this whole file green).
-    Unlike halt_echo_mr, whose next CTE differs by caller (a model's `al AS`; the macro's
-    `{%- endmacro %}`), halt_echo_md is ALWAYS immediately followed by halt_echo_mr -- in every model
-    (the macro emits both back-to-back) and in the macro body itself -- so no end_pattern parameter
-    is needed here."""
+    Unlike halt_echo_mr, whose next text differs by input (canonical bigquery/176's `al AS`; the
+    macro's `{%- endmacro %}` — the models carry neither since the 2026-08-31 dedup, see that
+    helper's docstring), halt_echo_md is ALWAYS immediately followed by halt_echo_mr -- in canonical
+    176, in the macro body, and in every pre-dedup inline copy (the macro emits both back-to-back) --
+    so no end_pattern parameter is needed here."""
     code = strip_sql_comments(sql)
     match = re.search(r"halt_echo_md\s+AS\s*\((.*?)\n\),\s*\nhalt_echo_mr\s+AS", code, re.DOTALL)
     assert match, "halt_echo_md CTE missing"
@@ -887,8 +903,22 @@ def test_live_scope_bounds_the_live_comparison_without_hiding_models(monkeypatch
 def test_live_scope_missing_file_compares_everything(monkeypatch, tmp_path):
     """A missing or unreadable scope file must fall back to the STRICTER behaviour (compare every
     compiled model), never fail open. A typo in the filename must not silently disable the live gate."""
+    # VACUITY FIX (2026-09-04 quality pass): _no_live_scope_by_default had already replaced
+    # dp.live_scope with `lambda: None`, which satisfies the assertion below no matter what the real
+    # function does — the test passed even with LIVE_SCOPE_YML pointed at the real, parseable scope
+    # file, so inverting live_scope()'s `except` to fail OPEN would have left it green. Restore the
+    # function captured at import (REAL_LIVE_SCOPE) so the REAL one runs; it reads the module-global
+    # LIVE_SCOPE_YML, so the setattr below still steers it.
+    monkeypatch.setattr(dp, "live_scope", REAL_LIVE_SCOPE)
     monkeypatch.setattr(dp, "LIVE_SCOPE_YML", str(tmp_path / "nope.yml"))
     assert dp.live_scope() is None
+    # Non-vacuity control, in the same test so the two can never drift apart: pointed at the REAL
+    # dbt/parity_live_scope.yml the same function must return a non-empty set. Without this, a
+    # live_scope() that returned None unconditionally (the other way to break the gate — every model
+    # compared, the expensive path the file exists to bound) would still pass the assertion above.
+    monkeypatch.setattr(dp, "LIVE_SCOPE_YML", str(ROOT / "dbt" / "parity_live_scope.yml"))
+    names = dp.live_scope()
+    assert names and len(names) > 0
 
 
 # ---- stale-name guard on dbt/parity_live_scope.yml (2026-09-02 audit) -------------------------

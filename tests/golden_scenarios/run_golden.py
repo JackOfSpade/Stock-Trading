@@ -6,8 +6,8 @@ Claude_Task_Plan.md routine bodies) read fresh by an LLM every routine run. Ever
 (scripts/check_cadence_consistency.py, check_roster_consistency.py, check_autonomy_consistency.py,
 split_strategy.py --check) is a STRUCTURAL fact scraper — none of them evaluate what a routine would
 DECIDE when it reads the prose. tests/golden_scenarios/scenarios.yaml pins concrete decision scenarios
-(34 as of 2026-09-02 — see that file's own header for the current count and per-category/per-governing-
-file breakdown; regime-router edge cases, kill-trigger/gate mechanics, per-strategy entry criteria, the
+(36 as of 2026-09-04, 34 on 2026-09-02 — see that file's own header for the current count and per-category/
+per-governing-file breakdown; regime-router edge cases, kill-trigger/gate mechanics, per-strategy entry criteria, the
 AI Park Allocator's daily call, the AI Research-Significance Screen) with an expected GO/NO-GO |
 CONTINUE/TERMINATE | ACTIVATE/DO-NOT-ACTIVATE call and the specific rule that produces it. This script
 is the runner.
@@ -57,8 +57,13 @@ TWO MODES, matching the two-job split in .github/workflows/golden-scenarios.yml:
       budget stopped it — most of that time and nearly all of those tokens were the SAME governing text
       re-sent over and over for scenarios that share a governing_files set. group_scenarios_for_batching()
       groups scenarios by that shared set (33 scenarios -> ~7 groups against the real scenarios.yaml) so
-      the shared text is sent ONCE per group instead of once per scenario. See run_live()'s own doc
-      comment for exactly how a group is dispatched, and the OBSERVABILITY comment above
+      the shared text is sent ONCE per group instead of once per scenario. That "~7" figure is
+      PRE-SECTION-SCOPING and must not be used to size a run: the group key became a hash of the ASSEMBLED
+      (possibly scoped) text later the same day, and re-measured 2026-09-04 the real file's 36 scenarios
+      group into 21 — 8 only under the GOLDEN_SECTION_SCOPE=0 escape hatch. The count moves with the
+      fixture set (20 at 33 scenarios, 21 since SE-02) and is pinned by
+      test_group_scenarios_for_batching_real_scenarios_yaml_twenty_groups_kt02_alone. See run_live()'s own
+      doc comment for exactly how a group is dispatched, and the OBSERVABILITY comment above
       GEMINI_MODEL_LADDER below for the per-attempt/per-group logging added alongside batching so a run
       like 32043614925 is diagnosable instead of just "11 of 33, no idea where the time went."
 
@@ -172,7 +177,10 @@ CATEGORY_TOKENS = {
 # every RPM retry and every ladder rewind — the SAME prompt re-sent, so these dominate total token spend)
 # now prints one `::debug::` line to stderr with: model, a monotonic run-wide attempt number, an approx
 # input-token count (len(prompt)//4), the HTTP status (or ERR for a transport-level failure), elapsed
-# seconds for that one attempt, and a classification of ok / rpm-429 / daily-quota-429 / hard-failure.
+# seconds for that one attempt, and a classification of ok / truncated / rpm-429 / daily-quota-429 /
+# hard-failure. (`truncated` — finishReason=MAX_TOKENS — was added 2026-09-04 with the partial-truncation
+# fix in _try_model; before it, a cut reply that still carried some text logged as a clean `ok`, so the
+# DECISION lines it never emitted were attributed to nothing at all in the run summary.)
 # run_live() prints one more line per GROUP as it finishes (ids, elapsed, attempts used), and one final
 # run-level summary line (wall-clock, total attempts, 429s by kind, total tokens sent INCLUDING every
 # retry, and seconds spent sleeping split by pacing / RPM-retry / rewind-cooldown). All of it stays on
@@ -282,6 +290,13 @@ GEMINI_RUN_BUDGET_S = float(os.environ.get("GEMINI_RUN_BUDGET_S", "3000"))
 # reaches _CEIL (then it advances the model ladder). Free-tier TPM is 250K, so even the ceiling is one
 # request token-wise; the only cost of a retry is one unit of the per-model daily request quota, and
 # truncation is rare at the _START default, so escalation almost never triggers. Both are env-overridable.
+# COST CLAIM CORRECTED (2026-09-04, alongside the partial-truncation fix in _try_model): "the only cost of
+# a retry is one unit of the per-model daily request quota" understates it. A retry RE-SENDS the whole
+# prompt, and the SECTION SCOPING narrative in the module docstring measured TOKENS-per-minute — not
+# requests — as the binding free-tier constraint (480,044 tok/min against ~250K), so an escalation on a
+# large group prompt costs real TPM headroom on top of that one RPD unit. The escalation ladder is also
+# up to THREE doublings deep (8192 -> 16384 -> 32768 -> 65536), not one retry. It stays worth paying:
+# without it a truncated batch reply silently scores its un-emitted ids as parse failures.
 GEMINI_MAX_OUTPUT_TOKENS_START = int(os.environ.get("GEMINI_MAX_OUTPUT_TOKENS_START", "8192"))
 GEMINI_MAX_OUTPUT_TOKENS_CEIL = int(os.environ.get("GEMINI_MAX_OUTPUT_TOKENS_CEIL", "65536"))
 
@@ -555,9 +570,14 @@ def validate_offline(scenarios):
         # -> [heading anchor, ...]. This IS the load-bearing validation the task spec calls for — a
         # mis-declared anchor must fail the BUILD, not silently starve the judge of the rule it actually
         # needed while the offline gate stays green. A scenario with no governing_sections key at all skips
-        # this block entirely (gov_sections is None) and is completely unaffected, which is what keeps
-        # today's real scenarios.yaml (no scenario uses this feature yet) passing with zero new errors and
-        # zero new report lines.
+        # this block entirely (gov_sections is None) and is completely unaffected, so such a scenario adds
+        # zero new errors and zero new report lines. (CORRECTED 2026-09-04: this clause used to claim "no
+        # scenario uses this feature yet" of the real scenarios.yaml. That went stale on 2026-08-18 and the
+        # correction was applied to this function's DOCSTRING but not to this sibling copy eight lines
+        # lower. All 36 scenarios declare governing_sections today — asserted by
+        # test_validate_offline_real_scenarios_yaml_governing_sections_all_declared_and_valid — so the
+        # per-scenario excerpt report below is ROUTINE output, captured by
+        # test_real_scenarios_yaml_has_no_suspiciously_tiny_excerpt, not a dormant path.)
         gov_sections = sc.get("governing_sections")
         if gov_sections is not None:
             if not isinstance(gov_sections, dict):
@@ -692,11 +712,34 @@ def validate_offline(scenarios):
         # missing one. Checked independently of expected_decision's validity so a malformed decision can't
         # mask a bad category or vice versa.
         cat = sc.get("category")
-        if cat is not None and cat not in CATEGORY_TOKENS:
+        if cat is None:
+            # 2026-09-04: the 2026-07-29 fix above closed the TYPO'D-category hole but left the ABSENT-
+            # category one open, and they fail open IDENTICALLY — _allowed_decisions_for() falls back to
+            # ALL SIX DECISION_LEAD_TOKENS either way, reopening the same 2026-07-26 unscoped-vocabulary
+            # flip. Requiring it costs nothing: all 36 live scenarios declare one, and every revision back
+            # to 27 scenarios did too (measured per-commit over the last 12 revisions of scenarios.yaml).
+            # This is the same decision as — not a competitor to — the PROSE pin that task_plan/SL5.md and
+            # Claude_Task_Plan.md's SHADOW-register bullet already carry ("`category` AND
+            # `governing_sections` ARE NOW PINNED TOO ... neither omitted field is in run_golden.py's
+            # REQUIRED_FIELDS ... so an omission is CI-GREEN and SILENT"); that pin governs the SL5
+            # fixture-authoring path only, while scenarios also land via other work (PA-07 2026-09-03 and
+            # PA-08 2026-09-04 came in with the park-v4 pass), and scenarios.yaml's own SCHEMA comment
+            # block still does not list `category` at all — so the gate is the only signal a non-SL5
+            # author gets. Deliberately NOT added to REQUIRED_FIELDS: that loop carries the
+            # governing_files carve-out and its own type rules, and a dedicated message is more actionable.
+            errors.append(
+                f"{label}: missing required field 'category' — without it the live judge is offered all "
+                f"six {DECISION_LEAD_TOKENS} instead of this scenario's own vocabulary "
+                f"(valid categories: {sorted(CATEGORY_TOKENS)})"
+            )
+        elif cat not in CATEGORY_TOKENS:
             errors.append(
                 f"{label}: category '{cat}' is not a recognized key in CATEGORY_TOKENS "
                 f"(valid: {sorted(CATEGORY_TOKENS)}) — likely a typo"
             )
+        # `and cat in CATEGORY_TOKENS` is redundant now that the two branches above reject both absent and
+        # unrecognized categories, but is kept as a belt-and-braces guard on the CATEGORY_TOKENS[cat]
+        # subscript below — this elif must never be reachable with a key that isn't in the map.
         elif isinstance(decision, str) and decision.strip() and cat in CATEGORY_TOKENS:
             tok = _leading_token(decision)
             if tok is not None and tok not in CATEGORY_TOKENS[cat]:
@@ -732,7 +775,13 @@ def _allowed_decisions_for(scenario):
     """The '<one of ...>' token list to offer this scenario's DECISION line: ONLY the tokens valid for
     its `category` (CATEGORY_TOKENS), or all six (DECISION_LEAD_TOKENS order) when the scenario has no
     recognized category. Scoping the choice to the category prevents a correct-sentiment/wrong-vocabulary
-    'flip' (e.g. a strategy-entry scenario answered 'DO-NOT-ACTIVATE' instead of 'NO-GO')."""
+    'flip' (e.g. a strategy-entry scenario answered 'DO-NOT-ACTIVATE' instead of 'NO-GO').
+
+    The all-six fallback is DEFENSE IN DEPTH ONLY as of 2026-09-04: validate_offline()'s hard gate now
+    rejects a scenario whose category is ABSENT as well as one whose category is unrecognized (see its
+    `cat is None` branch), so no scenario reaching a --live run should be able to take this path. It is
+    kept because this function is also called directly by unit tests and by any future caller working on
+    a scenario list that has not passed the offline gate."""
     toks = CATEGORY_TOKENS.get(scenario.get("category"))
     # Keep DECISION_LEAD_TOKENS' longest-first-safe display order for the category subset too.
     ordered = [t for t in DECISION_LEAD_TOKENS if t in toks] if toks else list(DECISION_LEAD_TOKENS)
@@ -848,7 +897,10 @@ def _gemini_call(prompt, api_key, ladder, state):
       * Per model — ADAPTIVE OUTPUT BUDGET. Thinking is ON and draws from maxOutputTokens, so a hard
         scenario can truncate (finishReason=MAX_TOKENS) before emitting the DECISION line. On that, the
         budget DOUBLES (GEMINI_MAX_OUTPUT_TOKENS_START → … → _CEIL) and the SAME model is retried, until
-        it produces an answer or the ceiling is reached.
+        it produces an answer or the ceiling is reached. The trigger is finishReason ALONE, whether the
+        truncated reply came back empty or as a PARTIAL PREFIX (fix 2026-09-04 — see _try_model's own
+        truncation comment for why the partial case is the normal one under batching, and for the
+        re-send cost this accepts).
       * Across models — LADDER, split by WHY a model was abandoned (2026-08-17 fix — see the doctrine
         comment above GEMINI_LADDER_REWINDS for the pathology this closes). A HARD failure (auth/
         not-found/bad-request, a per-DAY 429, a transport error, or persistent empty/truncated output)
@@ -981,15 +1033,44 @@ def _gemini_call(prompt, api_key, ladder, state):
                 errors.append(f"{model}: {exc}")
                 return None, False
             elapsed = time.monotonic() - attempt_t0
-            _log_attempt(model, prompt_tokens_est, status, elapsed, "ok")
-            if text.strip():
-                return text, False
-            # Empty answer. If it was a MAX_TOKENS truncation and we have headroom, DOUBLE the budget and
-            # retry the SAME model — the reasoning ran past the budget before reaching the DECISION line.
+            # A MAX_TOKENS reply is NOT "ok" telemetry even when some text arrived — the observability work
+            # this line came from (2026-08-17) exists so a degraded run says WHY it degraded, and a cut
+            # reply that loses DECISION lines used to be logged as a clean success (see the truncation
+            # comment immediately below). `truncated` covers both the escalate-and-retry case and the
+            # returned-anyway-at-the-ceiling case; every non-truncated reply still logs `ok` exactly as before.
+            _log_attempt(model, prompt_tokens_est, status, elapsed,
+                         "truncated" if finish == "MAX_TOKENS" else "ok")
+            # TRUNCATION IS CHECKED BEFORE "did any text arrive" (fix 2026-09-04). finishReason=MAX_TOKENS
+            # means the reply was CUT, whether what arrived is EMPTY or a PARTIAL PREFIX. If it was a
+            # MAX_TOKENS truncation and we have headroom, DOUBLE the budget and retry the SAME model — the
+            # reasoning ran past the budget before reaching the DECISION line.
+            #   The original wording here opened "Empty answer." and this branch sat BELOW the
+            #   `if text.strip(): return text, False` success return, so finishReason was consulted ONLY
+            #   when the visible text was empty. That contradicted _gemini_call's own docstring contract
+            #   and the GEMINI_MAX_OUTPUT_TOKENS_START comment, both of which promise a doubling on a
+            #   MAX_TOKENS truncation full stop. BATCHING (2026-08-17) made the PARTIAL shape the normal
+            #   one: BATCH_EVAL_PROMPT_TEMPLATE puts the DECISION[<id>] lines LAST ("Your reply MUST end
+            #   with exactly {n} lines") after a RATIONALE per situation, so a cut reply typically carries
+            #   the rationales and only SOME of the decisions. Returning that prefix as a success let
+            #   parse_batch_reply() score every un-emitted id as its own match=None parse failure, with no
+            #   retry and a class=ok debug line attributing the loss to nothing at all.
+            #   COST, stated honestly: a reply that was COMPLETE but still reported MAX_TOKENS now spends up
+            #   to THREE extra full-prompt requests on that model (8192 -> 16384 -> 32768 -> 65536), not
+            #   one. The SECTION SCOPING block in the module docstring records that TOKENS-per-minute, not
+            #   requests, is the binding free-tier constraint (480,044 tok/min measured against a ~250K
+            #   ceiling), and the largest real group's scoped prompt is ~172,769 bytes, so re-sending it is
+            #   a real TPM cost as well as a real hit to the 20-RPD top rungs. Accepted because a silently
+            #   mis-scored group is worse than a re-send. The strictly cheaper variant — return the partial
+            #   plus a `truncated` flag and let _run_batch_group() retry only when parse_batch_reply()
+            #   actually came back incomplete — needs the expected ids, which _try_model cannot see; it must
+            #   escalate blind.
             if finish == "MAX_TOKENS" and budget < GEMINI_MAX_OUTPUT_TOKENS_CEIL:
                 budget = min(budget * 2, GEMINI_MAX_OUTPUT_TOKENS_CEIL)
                 state["budget"] = budget   # high-water mark: later scenarios/models start here, not _START
                 continue
+            if text.strip():
+                # Complete, or truncated but already AT the ceiling — best effort, exactly as before.
+                return text, False
             # Empty for another reason (safety block, unexpected finishReason) or still truncating at the
             # ceiling — hard/permanent, give up on this model for the rest of the run.
             errors.append(f"{model}: empty response (finishReason={finish or '?'}, maxOutputTokens={budget})")
@@ -1104,7 +1185,13 @@ def _select_live_caller():
 # each was re-sending that same multi-hundred-KB-to-megabyte text in its own call. group_scenarios_for_
 # batching() groups scenarios by that shared set; run_live() sends the shared text ONCE per group via
 # build_batch_prompt()/parse_batch_reply() instead of once per scenario — 33 scenarios collapse to ~7
-# calls against the real scenarios.yaml. GOLDEN_BATCH=0 is the escape hatch back to today's exact
+# calls against the real scenarios.yaml. That "~7 calls" is PRE-SECTION-SCOPING and is NOT the number to
+# size a live run against: the group key became a hash of the ASSEMBLED (possibly scoped) governing text
+# later the same day (_governing_text_group_key()), which splits groups that share a file but scope it
+# differently. Re-measured 2026-09-04 against the real file: 36 scenarios -> 21 groups by default, 8 only
+# under GOLDEN_SECTION_SCOPE=0. 21 requests/run matters against the top rungs' 20-RPD free-tier quota —
+# that RPD pressure is exactly what the 2026-08-30 retirement note blames for a run evaluating only 15 of
+# 33 scenarios before the ladder was exhausted. GOLDEN_BATCH=0 is the escape hatch back to today's exact
 # one-call-per-scenario behavior (see run_live()'s own docstring for exactly how a group gets dispatched,
 # including the deliberate size-1 bypass that does NOT go through this batch machinery at all).
 GOLDEN_BATCH_MAX_DEFAULT = 8
@@ -1127,8 +1214,15 @@ def _governing_text_group_key(sc, text_cache):
     own declared order, unaffected by this sort. A scenario with no governing_sections at all (or under the
     GOLDEN_SECTION_SCOPE=0 escape hatch) therefore hashes on exactly the same text the pre-2026-08-17
     frozenset key partitioned on — see test_group_key_order_independent_governing_files_list_still_merges
-    and test_group_scenarios_for_batching_real_scenarios_yaml_still_seven_groups_no_op — which is
-    what keeps today's 7-group result a true no-op when no scenario declares governing_sections.
+    and test_golden_section_scope_escape_hatch_real_scenarios_yaml_on_vs_off — which is what kept the
+    PRE-SCOPING 7-group result a true no-op for a scenario declaring no governing_sections.
+    CORRECTED 2026-09-04, two ways. (a) The citation above used to name
+    test_group_scenarios_for_batching_real_scenarios_yaml_still_seven_groups_no_op, which no longer exists
+    (superseded by ..._twenty_groups_kt02_alone, which pins the real figure); a reader chasing the no-op
+    claim found nothing. (b) The "no scenario declares governing_sections" case is now COUNTERFACTUAL
+    against the real file — all 36 scenarios declare one (measured 36/36) — so the real result today is 21
+    groups, not 7. The no-op property itself is unchanged and still exactly what this key guarantees; it is
+    only the real file that no longer exercises it.
 
     A missing/unreadable governing_file raises inside _read_governing_text() (that function's OWN documented
     contract: the read failure is the CALLER's problem, not its own) — caught here and degraded to a stable,
@@ -1273,12 +1367,17 @@ DECISION[<id>]: <decision>
 # simply never shown to the model judging the one that names it. Measured against the real 33-scenario
 # file: 8 such cross-references exist (RR-02->RR-01, RR-03->RR-02, RR-04->RR-02, RR-04->RR-03,
 # RR-06->RR-05, RR-08->RR-07, KT-02->KT-01, KT-06->KT-05). The batching work above (group_scenarios_for_
-# batching()) accidentally resolves 7 of the 8 as a side effect: whenever both scenarios in a pair land in
+# batching()) accidentally resolved 7 of the 8 as a side effect: whenever both scenarios in a pair land in
 # the same batch group, the referent's situation is already IN the prompt as one of the OTHER situations
 # being judged. Exactly one pair never lands in the same group no matter how batching is tuned: KT-02's
 # governing_files is {Experiment_Parameters.md} but KT-01's is {Experiment_Parameters.md,
-# Claude_Task_Plan.md} — different sets, so group_scenarios_for_batching()'s frozenset-keyed grouping can
-# never put them together. Fixed generally here (NOT by hand-patching KT-02's prose in scenarios.yaml,
+# Claude_Task_Plan.md} — different sets, so the grouping key (frozenset-of-governing_files then; an
+# assembled-text hash since _governing_text_group_key()) can never put them together.
+# RE-MEASURED 2026-09-04: that "7 of the 8" held while grouping was keyed on
+# frozenset(governing_files); section scoping split those groups, and only 3 of the 8 pairs (RR-01/RR-02,
+# RR-07/RR-08, KT-05/KT-06) are co-grouped today. The other 5 rely ENTIRELY on the REFERENCED CONTEXT
+# block below — i.e. this mechanism is now load-bearing for most of the measured pairs, not a backstop for
+# one stubborn one. Fixed generally here (NOT by hand-patching KT-02's prose in scenarios.yaml,
 # which would just paper over the harness gap for this one pair and leave the general defect unfixed for
 # the next scenario that references a sibling with a different governing_files set) via
 # referenced_scenario_ids() below, wired into BOTH prompt builders (build_batch_prompt / build_single_prompt).
@@ -1324,15 +1423,34 @@ def referenced_scenario_ids(scenario, known_ids):
     scenario's own id appearing in its own prose (rare, but not meaningless-to-guard) from being
     "resolved" against itself.
 
-    ONE LEVEL ONLY (2026-08-17, deliberate): this function is applied to a JUDGED scenario's own situation
-    text — the callers below (_reference_context_ids_for) never re-apply it to a REFERENT's situation text,
-    i.e. a chain (A references B, B references C) surfaces B's facts when judging A but NOT C's. Expanding
-    transitively would make one judged scenario's prompt size depend on how deep a reference chain happens
-    to run, undoing the point of the same-day batching work (a measured 77.3% token reduction) for exactly
-    the scenarios that need a reference resolved at all. Bounding at one level keeps prompt growth
-    proportional to the judged-scenario COUNT, not to reference-chain depth — see
-    test_referenced_scenario_ids_resolution_is_one_level_only, and no scenario in the real file currently
-    references a scenario that itself references a third, so this bound costs nothing today."""
+    ONE LEVEL, BY ITSELF: this function scans exactly ONE situation's text and is correct as such — it is
+    the CALLER (_reference_context_ids_for) that decides whether a REFERENT's own references are resolved
+    too. That caller performs a BOUNDED TRANSITIVE CLOSURE as of 2026-09-04; see its docstring.
+
+    HISTORY, kept because it is load-bearing and because its CONCLUSION was wrong (do not delete it, and do
+    not "restore" the bound without re-checking the premise). The original wording here read: "ONE LEVEL
+    ONLY (2026-08-17, deliberate) ... a chain (A references B, B references C) surfaces B's facts when
+    judging A but NOT C's. Expanding transitively would make one judged scenario's prompt size depend on
+    how deep a reference chain happens to run, undoing the point of the same-day batching work (a measured
+    77.3% token reduction) ... and no scenario in the real file currently references a scenario that itself
+    references a third, so this bound costs nothing today."
+      * The PREMISE was already false the day it was written. The CROSS-SCENARIO REFERENCE block above
+        enumerates the measured pairs RR-02->RR-01, RR-03->RR-02, RR-04->RR-02, RR-04->RR-03 in the same
+        comment block — RR-03 references RR-02, which references RR-01. Measured again 2026-09-04 over the
+        real file: three two-level chains exist (RR-03->RR-02->RR-01, RR-04->RR-02->RR-01,
+        RR-04->RR-03->RR-02), and `git show 8102b0b:tests/golden_scenarios/scenarios.yaml` carries both
+        "Same day as RR-01 except" and "Same regime as RR-02" in the very commit that introduced the claim.
+      * Its CONCLUSION was accidentally true then and is not now. Under the pre-section-scoping
+        frozenset(governing_files) grouping key, RR-01..RR-04 were all Strategy.md-only and landed in ONE
+        group, so RR-01 was already present as a judged group-mate. Section scoping (landed the same day,
+        commit 867cdb1) split them: today RR-03's group and RR-04's group each render a REFERENCED CONTEXT
+        [RR-02] block whose first words are "Same day as RR-01 except", with RR-01's own facts nowhere in
+        the prompt — verbatim the "an id whose meaning you were never given" condition
+        REFERENCE_CONTEXT_HEADER exists to eliminate, reproduced one level down.
+      * The COST rationale does not scale as stated: a situation is ~250-450 bytes against ~172,769 scoped
+        governing bytes for the largest real group, and the closure adds exactly ONE extra block (RR-01) to
+        exactly TWO of 21 groups. Prompt growth is bounded by MAX_REFERENCE_CONTEXT_BLOCKS_DEFAULT, a cap
+        on the number of context blocks, rather than by a depth-1 rule."""
     sid = scenario.get("id")
     text = scenario.get("situation") or ""
     known = set(known_ids or ())
@@ -1353,9 +1471,17 @@ def referenced_scenario_ids(scenario, known_ids):
 # DECISION line may be emitted for an id that appears only here — plus the block's own visual separation
 # ("===" header distinct from "=== SITUATIONS ==="/"=== SCENARIO ===", "---" per-id sub-delimiters) so a
 # referenced id can never be mistaken for a judged one.
+# EXTENDED 2026-09-04 ("...or one of the background blocks in this section..."): under the bounded
+# transitive closure in _reference_context_ids_for(), a block can now be present because ANOTHER background
+# block named it, not only because a judged situation did (measured: RR-01 appears for RR-03/RR-04 solely
+# because RR-02's block says "Same day as RR-01 except"). The original sentence claimed only judged
+# situations could be the source, which would have become inaccurate the moment the closure landed. Every
+# other guarantee in this header is unchanged — a block in this section is still never judged, and still
+# never gets a DECISION line, no matter which of the two ways it got here.
 REFERENCE_CONTEXT_HEADER = (
     "=== REFERENCED CONTEXT (background facts only — do NOT judge, do NOT answer) ===\n"
-    "One or more of the situation(s) above/below refers to another scenario BY ID (e.g. \"Same facts as "
+    "One or more of the situation(s) above/below — or one of the background blocks in this section — "
+    "refers to another scenario BY ID (e.g. \"Same facts as "
     "KT-01 except...\"). The block(s) below are that OTHER scenario's own situation text, shown ONLY so "
     "the reference resolves to real facts instead of an id whose meaning you were never given. Each block "
     "below is NOT one of the situations you are being asked to judge in this call: do not reason about it "
@@ -1365,19 +1491,55 @@ REFERENCE_CONTEXT_HEADER = (
 )
 
 
-def _reference_context_ids_for(scenarios_list, judged_ids, known_ids):
-    """Deduped, first-appearance-ordered list of ids referenced (referenced_scenario_ids(), ONE LEVEL ONLY
-    — see that function's docstring) by ANY scenario in `scenarios_list`, excluding any id already in
-    `judged_ids`. A referent that is ITSELF one of the situations already being judged in this same call
-    (e.g. KT-06 -> KT-05 when both are members of the same batch group) needs no separate context block —
-    its situation is already present as one of the judged situations, and emitting a second copy would be
-    a pure duplicate for zero benefit."""
+# Cap on how many REFERENCED-CONTEXT blocks one prompt may carry (2026-09-04, with the bounded closure in
+# _reference_context_ids_for() below). BELT-AND-BRACES, not load-bearing: measured over the real
+# scenarios.yaml the closure adds ONE block to TWO of 21 groups, so this ceiling is nowhere near reached —
+# it exists so a future fixture set with a long or dense reference chain cannot silently grow a prompt
+# without bound, which is the one legitimate half of the 2026-08-17 depth-1 rationale (see
+# referenced_scenario_ids()'s HISTORY note). Read from the env at CALL time, exactly like GOLDEN_BATCH_MAX
+# in group_scenarios_for_batching(), so a malformed value fails the run that sets it rather than raising at
+# import and taking the offline hard gate down with it.
+MAX_REFERENCE_CONTEXT_BLOCKS_DEFAULT = 8
+
+
+def _reference_context_ids_for(scenarios_list, judged_ids, known_ids, id_to_scenario=None, max_blocks=None):
+    """Deduped, first-appearance-ordered list of ids referenced (referenced_scenario_ids()) by ANY scenario
+    in `scenarios_list`, excluding any id already in `judged_ids`. A referent that is ITSELF one of the
+    situations already being judged in this same call (e.g. KT-06 -> KT-05 when both are members of the
+    same batch group) needs no separate context block — its situation is already present as one of the
+    judged situations, and emitting a second copy would be a pure duplicate for zero benefit.
+
+    BOUNDED CLOSURE (2026-09-04, replacing the 2026-08-17 depth-1 bound — see referenced_scenario_ids()'s
+    HISTORY note for the measurement that overturned it): when `id_to_scenario` is supplied, a referent's
+    OWN references are resolved too, breadth-first, so a CHAIN terminates in real facts instead of a
+    dangling id. The live case: RR-03 and RR-04 each reference RR-02, whose situation opens "Same day as
+    RR-01 except..." — before this, RR-01 was named inside a background block and defined nowhere in the
+    prompt. Termination is guaranteed: an id is enqueued only on the same pass that first appends it to
+    `seen`, so a cycle (A -> B -> A) is cut by the `rid in seen` guard, and the whole walk is capped at
+    `max_blocks` (MAX_REFERENCE_CONTEXT_BLOCKS_DEFAULT, or the GOLDEN_MAX_REFERENCE_BLOCKS env var).
+    An id already in `judged_ids` is skipped WITHOUT being enqueued — correctly, since a judged scenario is
+    already one of the sources in `scenarios_list` and its own references were therefore already walked.
+
+    OMITTING `id_to_scenario` reproduces the exact pre-2026-09-04 one-level behavior (no referent dict, so
+    nothing can be enqueued), which is what keeps every caller that doesn't hold the full scenario set —
+    including build_batch_prompt()/build_single_prompt() called without their own optional id_to_scenario —
+    byte-identical to before."""
+    if max_blocks is None:
+        max_blocks = int(os.environ.get("GOLDEN_MAX_REFERENCE_BLOCKS", str(MAX_REFERENCE_CONTEXT_BLOCKS_DEFAULT)))
+    lookup = id_to_scenario or {}
     seen = []
-    for sc in scenarios_list:
+    queue = list(scenarios_list)
+    while queue and len(seen) < max_blocks:
+        sc = queue.pop(0)
         for rid in referenced_scenario_ids(sc, known_ids):
             if rid in judged_ids or rid in seen:
                 continue
             seen.append(rid)
+            ref = lookup.get(rid)
+            if ref is not None:
+                queue.append(ref)   # a referent's OWN reference is resolved too, bounded by max_blocks
+            if len(seen) >= max_blocks:
+                break
     return seen
 
 
@@ -1421,14 +1583,19 @@ def build_batch_prompt(group, gov_text, id_to_scenario=None):
     id_to_scenario (2026-08-17, optional; id -> full scenario dict, typically every id in scenarios.yaml —
     NOT just this group) resolves cross-scenario references (referenced_scenario_ids()): any sibling id a
     situation in `group` names that is NOT itself a member of `group` gets a REFERENCED-CONTEXT block (see
-    _render_reference_context_block()) appended after the governing-files section. Omitting id_to_scenario
+    _render_reference_context_block()) appended after the governing-files section — and, since 2026-09-04,
+    so does any id those background blocks THEMSELVES name (bounded closure, see
+    _reference_context_ids_for(); the real case is RR-03/RR-04 -> RR-02 -> RR-01). Omitting id_to_scenario
     (the default) disables resolution entirely — known_ids is then empty, so referenced_scenario_ids()
     finds nothing to resolve — which reproduces this function's exact pre-2026-08-17 output for any caller
     that doesn't have/need the full scenario set handy (e.g. this file's own pre-existing unit tests)."""
     ids = [sc.get("id") for sc in group]
     judged_ids = set(ids)
     known_ids = set(id_to_scenario) if id_to_scenario else set()
-    ref_ids = _reference_context_ids_for(group, judged_ids, known_ids)
+    # id_to_scenario is passed through so _reference_context_ids_for() can walk a REFERENT's own references
+    # (bounded closure, 2026-09-04 — see its docstring). Omitting it keeps the old one-level behavior, which
+    # is why the no-id_to_scenario default path is still byte-identical to pre-2026-08-17 output.
+    ref_ids = _reference_context_ids_for(group, judged_ids, known_ids, id_to_scenario)
     reference_context_block = _render_reference_context_block(ref_ids, id_to_scenario or {})
     situations = []
     for sc in group:
@@ -1886,7 +2053,8 @@ def build_single_prompt(scenario, gov_text, id_to_scenario=None):
     resolution entirely, reproducing this path's exact pre-2026-08-17 output."""
     sid = scenario.get("id")
     known_ids = set(id_to_scenario) if id_to_scenario else set()
-    ref_ids = _reference_context_ids_for([scenario], {sid}, known_ids)
+    # Same bounded-closure pass-through as build_batch_prompt() — see _reference_context_ids_for().
+    ref_ids = _reference_context_ids_for([scenario], {sid}, known_ids, id_to_scenario)
     reference_context_block = _render_reference_context_block(ref_ids, id_to_scenario or {})
     return EVAL_PROMPT_TEMPLATE.format(
         governing_files_text=gov_text,

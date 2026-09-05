@@ -2,13 +2,17 @@
 
 OPS2 (Claude_Task_Plan.md '## OPS2. Catch-up Executor') inline-EXECUTES any routine flagged
 catchup_safe in ops/cadence.yaml and present in state.catchup_refire_readiness
-(bigquery/59_catchup_autofire.sql / bigquery/90_catchup_inprogress_guard.sql). That is a strictly
-higher-consequence action than OPS0's older "fire the trigger and let a human confirm" recovery: OPS2
-runs the routine's OWN steps end to end with no human in the loop for that specific catch-up. The
-order-crafting/capital-adjacent routines (D2, D2a, M4, Q4, A3, SL4) are deliberately EXCLUDED from
-catchup_safe for exactly this reason (see bigquery/59's and bigquery/90's own comments), so an
-accidental catchup_safe: true flip on any of them — or a stray reappearance in one of the hand-kept
-UNNEST allowlists those two files carry — would make that routine auto-refireable (OPS0) and
+(bigquery/59_catchup_autofire.sql / bigquery/90_catchup_inprogress_guard.sql -- both since SUPERSEDED
+for these objects: state.catchup_available / state.period_catchup_available are now defined by
+bigquery/184_inflight_guard_hosted_runs.sql, and state.catchup_refire_readiness itself by
+bigquery/208_yesterday_tier_ops1_coverage.sql; 59/90 remain the apply-in-order DR-rebuild record and
+are still scanned below, but they are no longer the live bodies -- corrected 2026-09-04). That is a
+strictly higher-consequence action than OPS0's older "fire the trigger and let a human confirm"
+recovery: OPS2 runs the routine's OWN steps end to end with no human in the loop for that specific
+catch-up. The order-crafting/capital-adjacent routines (D2, D2a, M4, Q4, A3, SL4) are deliberately
+EXCLUDED from catchup_safe for exactly this reason (see bigquery/59's and bigquery/90's own comments),
+so an accidental catchup_safe: true flip on any of them — or a stray reappearance in one of the
+hand-kept UNNEST allowlists those files carry — would make that routine auto-refireable (OPS0) and
 auto-executable (OPS2) with no adversarial-review gate. These two tests pin both surfaces so a future
 edit to ops/cadence.yaml or the SQL cannot silently reopen that gap.
 
@@ -20,11 +24,47 @@ import re
 import yaml
 
 from lib.routine_manifest import cadence_routines
+from lib.sql_files import numbered_sql_files, resolve_canonical, strip_sql_comments
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 CADENCE_YAML = REPO_ROOT / "ops" / "cadence.yaml"
+BIGQUERY_DIR = REPO_ROOT / "bigquery"
 CATCHUP_AUTOFIRE_SQL = REPO_ROOT / "bigquery" / "59_catchup_autofire.sql"
 CATCHUP_INPROGRESS_GUARD_SQL = REPO_ROOT / "bigquery" / "90_catchup_inprogress_guard.sql"
+# bigquery/184 SUPERSEDES bigquery/90's (and through it bigquery/31's and bigquery/59's)
+# state.catchup_available / state.period_catchup_available VIEW definitions -- its own 2026-08-19 header
+# says so, and it reproduces BOTH hand-kept catchup_safe UNNEST allowlists verbatim ("NOT CHANGED,
+# deliberately: the hand-maintained catchup_safe_routines / catchup_safe_period_routines UNNEST lists
+# are reproduced verbatim from bigquery/90"). So 184, not 59/90, is the copy whose body
+# check_live_sql_parity.py diffs against the LIVE views OPS0 STEP 1 and OPS2 STEP 1 actually read --
+# and until 2026-09-04 NOTHING in the repo parsed it (`grep -rn "184_inflight" --include=*.py
+# --include=*.yml --include=*.sh --include=*.yaml .` returned ZERO hits; the only mentions were prose).
+# That historical claim is why this constant exists at all, and it is kept — but BOTH halves of what
+# followed it are now out of date, CORRECTED 2026-09-04 (later the same day):
+#   * "NOTHING in the repo parses it" ended with this file, which was the first parser.
+#   * "check_cadence_consistency.py's check K does not cover it either" is no longer true: check K now
+#     reads BOTH of bigquery/184's catchup_safe CTEs (its CATCHUP_INFLIGHT_HOSTED_SQL constant, via a
+#     CTE-NAME-scoped parser, since the first-match-only bracket scraper it used before could reach
+#     only a file's FIRST UNNEST bracket), and its catchup_canonical_coverage_errors() additionally
+#     fails the build if the file currently DEFINING either view is one check K does not read — so the
+#     next superseding file cannot repeat 184's silent gap.
+# The "do NOT canonicalize this to bigquery/184" note still stands on ITS OWN terms, and always meant
+# something narrower than "184 needs no coverage": 31/59/90 remain check K's declared-judgment anchors,
+# and 184 is watched IN ADDITION to them, never instead. So the two tests below are no longer the only
+# thing standing between a stray 184 edit and the live surface. They are kept as an INDEPENDENT second
+# surface: check K reads 184 by hardcoded constant, while this file re-derives the canonical definer
+# from the DDL (see below), so the two fail for different reasons on different mistakes.
+#
+# Scanned here IN ADDITION TO 59/90, never instead of them: those two stay the apply-in-order DR-rebuild
+# record and a stray edit there is still worth catching. Do NOT generalize this into a glob over
+# bigquery/*.sql either -- bigquery/113_never_completed_watch_fix.sql carries an UNRELATED period-routine
+# UNNEST roster whose ids include A3/M4/Q4/SL4, so an all-files scan false-positives immediately and
+# would turn main red. A hardcoded number is what rotted 59 -> 90 -> 184 in the first place, so
+# test_inflight_guard_is_still_the_canonical_catchup_view_definer below re-derives the canonical definer
+# from the DDL on every run and fails loudly the day a bigquery/NNN supersedes this one.
+INFLIGHT_GUARD_SQL = REPO_ROOT / "bigquery" / "184_inflight_guard_hosted_runs.sql"
+# The two VIEWs whose canonical (highest-numbered) definer INFLIGHT_GUARD_SQL is pinned to be.
+CATCHUP_VIEWS = ("catchup_available", "period_catchup_available")
 TASK_PLAN = REPO_ROOT / "Claude_Task_Plan.md"
 D3_SLICE = REPO_ROOT / "task_plan" / "D3.md"
 D1_SLICE = REPO_ROOT / "task_plan" / "D1.md"
@@ -72,7 +112,8 @@ def _all_unnest_ids(path):
     mistaken for a live allowlist entry. Deliberately scans every bracket in the file (via
     re.finditer), not just the first — bigquery/90_catchup_inprogress_guard.sql carries TWO
     catchup-safe UNNEST lists (daily, then period; see its module docstring), and a first-match-only
-    scan would silently miss the second."""
+    scan would silently miss the second. bigquery/184_inflight_guard_hosted_runs.sql, which superseded
+    those VIEWs, reproduces BOTH lists verbatim and so has the same two-bracket shape."""
     txt = _LINE_COMMENT.sub("", path.read_text(encoding="utf-8"))
     ids = set()
     for m in _UNNEST_BRACKET.finditer(txt):
@@ -123,9 +164,12 @@ def test_order_crafting_routines_stay_catchup_excluded():
     1. ops/cadence.yaml's declared `catchup_safe` boolean for each of these 6 ids is False (the
        source of truth scripts/check_cadence_consistency.py's check K reads).
     2. None of the 6 ids appear inside the hand-kept catchup_safe UNNEST([...]) allowlists in
-       bigquery/59_catchup_autofire.sql or bigquery/90_catchup_inprogress_guard.sql (the latter
-       reproduces bigquery/59's — and bigquery/31's — lists inertly for query purposes, per its own
-       module docstring, but a stray edit there would still feed a live BigQuery view OPS2 reads).
+       bigquery/184_inflight_guard_hosted_runs.sql — the copy that DEFINES today's live
+       state.catchup_available / state.period_catchup_available, and therefore the one that actually
+       feeds the views OPS0/OPS2 read — nor in bigquery/59_catchup_autofire.sql or
+       bigquery/90_catchup_inprogress_guard.sql, the superseded (2026-08-19) DR-rebuild copies those
+       lists were reproduced verbatim FROM. Scanning only 59/90 was blind on the live surface from
+       2026-08-19 until 2026-09-04; see INFLIGHT_GUARD_SQL's own comment above.
 
     A flip on either surface is high-consequence and easy to miss in review (one boolean; one id in
     a long comma list) — this test exists so CI catches it instead of a live incident.
@@ -145,7 +189,7 @@ def test_order_crafting_routines_stay_catchup_excluded():
             f"auto-refireable by OPS0 and auto-executable inline by OPS2 with no human gate."
         )
 
-    for path in (CATCHUP_AUTOFIRE_SQL, CATCHUP_INPROGRESS_GUARD_SQL):
+    for path in (CATCHUP_AUTOFIRE_SQL, CATCHUP_INPROGRESS_GUARD_SQL, INFLIGHT_GUARD_SQL):
         ids = _all_unnest_ids(path)
         leaked = [rid for rid in ORDER_CRAFT_ROUTINE_IDS if rid in ids]
         assert not leaked, (
@@ -160,16 +204,82 @@ def test_queue_only_w4_stays_catchup_safe():
     This is the complement to the capital-adjacent exclusion above.  W4's queue-only
     redesign deliberately made it recoverable by OPS0/OPS2; a stale copy of the old
     never-refire list would otherwise turn a harmless missed research handoff into a
-    week-long manual alert.  Pin both the manifest declaration and the two live SQL
-    readiness allowlists.
+    week-long manual alert.  Pin both the manifest declaration and the SQL
+    readiness allowlists — the live one (bigquery/184) and the two superseded DR-record copies it was
+    reproduced from (bigquery/59, bigquery/90).
     """
     doc = yaml.safe_load(CADENCE_YAML.read_text(encoding="utf-8")) or {}
     routines = {r["id"]: r for r in cadence_routines(doc)}
     assert routines["W4"].get("catchup_safe") is True
-    for path in (CATCHUP_AUTOFIRE_SQL, CATCHUP_INPROGRESS_GUARD_SQL):
+    for path in (CATCHUP_AUTOFIRE_SQL, CATCHUP_INPROGRESS_GUARD_SQL, INFLIGHT_GUARD_SQL):
         assert "W4" in _all_unnest_ids(path), (
             f"{path.name}: queue-only W4 is missing from the catchup-safe allowlist; "
-            "keep the manifest and both readiness surfaces aligned."
+            "keep the manifest and all three readiness surfaces aligned."
+        )
+
+
+def _canonical_view_definers():
+    """{view_name: (number, filename)} — for each of CATCHUP_VIEWS, the highest-numbered
+    bigquery/NN_*.sql that CREATE-OR-REPLACEs `state.<view_name>`, i.e. the definition that is actually
+    DEPLOYED, since bigquery/ is apply-in-order (see bigquery/README.md).
+
+    Comments are stripped first so a file merely NAMING a view in prose cannot be read as a definition
+    — bigquery/90's own supersession header names both of these views in exactly that way. Same
+    scripts/lib/sql_files.py machinery (numbered_sql_files / strip_sql_comments / resolve_canonical)
+    that check_cadence_consistency.py's find_canonical_*_file() helpers use for this identical "which
+    file wins" question, including their ambiguous-winner contract: bigquery/'s NN_ prefix is NOT
+    unique (114 and 185 each name two files today), so a tie is reported rather than silently resolved
+    by picking whichever sorted first.
+
+    BOTH views are resolved in ONE walk, for the reason check_cadence_consistency.py's own PERF NOTE
+    above _scan_bigquery_dir() records: reading + comment-stripping all ~460 bigquery/*.sql files costs
+    ~0.35s, and doing it once per view doubled that for no benefit."""
+    ddls = {v: re.compile(rf"CREATE\s+OR\s+REPLACE\s+VIEW\s+`stock-trading-498512\.state\.{v}`", re.I)
+            for v in CATCHUP_VIEWS}
+    occurrences = {v: [] for v in CATCHUP_VIEWS}
+    for number, path in numbered_sql_files(str(BIGQUERY_DIR)):
+        p = pathlib.Path(path)
+        text = strip_sql_comments(p.read_text(encoding="utf-8"))
+        for view, ddl in ddls.items():
+            if ddl.search(text):
+                occurrences[view].append((number, p.name))
+    out = {}
+    for view, found in occurrences.items():
+        assert found, f"no bigquery/*.sql defines state.{view} at all"
+        number, files = resolve_canonical(found)
+        assert len(files) == 1, (
+            f"state.{view}: {files} share the winning bigquery/ number {number}, so the canonical "
+            f"(deployed) definition cannot be resolved by number alone — decide which is live and pin "
+            f"it explicitly rather than letting this test guess."
+        )
+        out[view] = (number, files[0])
+    return out
+
+
+def test_inflight_guard_is_still_the_canonical_catchup_view_definer():
+    """ANTI-ROT for INFLIGHT_GUARD_SQL (2026-09-04).
+
+    The two tests above pin the exclusion set against a HARDCODED filename, and a hardcoded filename
+    is exactly what rotted here before: state.catchup_available / state.period_catchup_available moved
+    31 -> 59 -> 90 -> 184, and the pin was left on 59/90 on 2026-08-19 when 184 took over, so for
+    ~2 weeks both tests scanned only DR-record copies while the live surface was unguarded. The same
+    class had already bitten one object over — see check_cadence_consistency.py's
+    find_canonical_catchup_refire_readiness_file(), whose docstring records a hardcoded '112' rotting
+    "the same way ... for six weeks".
+
+    So re-derive the canonical definer from the DDL every run. The day a bigquery/NNN supersedes
+    bigquery/184 for either view, this fails and names the new file — instead of the two tests above
+    quietly going blind again. (It does NOT re-point the scans automatically: 184 also has to carry the
+    UNNEST allowlists for that to be correct, and a successor might not, so a human decides.)
+    """
+    for view, (number, fn) in sorted(_canonical_view_definers().items()):
+        assert fn == INFLIGHT_GUARD_SQL.name, (
+            f"state.{view} is now defined canonically by bigquery/{fn} (number {number}), not by "
+            f"{INFLIGHT_GUARD_SQL.name}. The catchup_safe UNNEST allowlists this file scans are pinned "
+            f"to the SUPERSEDED copy, so test_order_crafting_routines_stay_catchup_excluded and "
+            f"test_queue_only_w4_stays_catchup_safe are no longer checking the list that feeds the "
+            f"live view OPS0/OPS2 read. Point INFLIGHT_GUARD_SQL at bigquery/{fn} if it reproduces "
+            f"the allowlists (as 184 reproduced 90's), and keep the older copies in the scan tuple."
         )
 
 

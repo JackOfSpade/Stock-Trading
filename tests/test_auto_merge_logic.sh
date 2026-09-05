@@ -338,6 +338,27 @@ assert_true "no-completion: lowercase halted is rejected" \
   marker_subject_declares_no_completion 'D2 2026-08-16: halted on a stale freshness gate'
 assert_true "no-completion: abort vocabulary is rejected" \
   marker_subject_declares_no_completion 'AR_orc 2026-08-16: aborted, dependency gate unsatisfied'
+
+# MEASURED OVER-SUPPRESSION, pinned as assert_TRUE because over-suppressing is the DESIGNED-SAFE
+# direction (2026-09-04 quality pass). Walking this repo's whole history through
+# marker_author_is_routine + marker_routine_from_subject yields 447 candidate commits and 8
+# suppressions; the four below are COMPLETED runs whose subjects merely mention a halt, not halt
+# declarations. They are asserted here — rather than "fixed" — because scripts/auto_merge_decision.sh's
+# BIAS paragraph makes the asymmetry explicit: a missing marker degrades to the loud path (and the
+# suppression is announced via ::notice:: in auto-merge-claude.yml), whereas a FALSE marker silently
+# blinds the cadence dead-man's switch — the failure that cost two W5 cycles. A narrower alternation
+# that would recover two of these was evaluated and rejected in the same pass (it stops matching
+# genuine declarations like "aborting on connector failure"); see that function's CORRECTION note.
+# These four exist so the deliberate behavior cannot drift silently in either direction.
+assert_true "no-completion (accepted over-suppression): 'halting' describing a FIX, not a halt" \
+  marker_subject_declares_no_completion "AR_orc: stop a routine's own decision write from halting its own gate"
+assert_true "no-completion (accepted over-suppression): \\b matches inside the hyphen compound 'trading-halt'" \
+  marker_subject_declares_no_completion 'W4 2026-W30: 6 PENDING_ANALYSIS entries, no exits; trading-halt root cause re-diagnosed'
+assert_true "no-completion (accepted over-suppression): a completed run REPORTING a trading halt" \
+  marker_subject_declares_no_completion 'D2a Broker Reconcile & Snapshot 2026-07-07 — reconciled, engine fresh; trading gate RED (halt)'
+assert_true "no-completion (accepted over-suppression): 'halted' describing a POSITION, not the run" \
+  marker_subject_declares_no_completion 'W4 2026-W32: Weekly Action Conversion — MTZ exit confirmed but halted; 6 theses queued'
+
 # ordinary output subjects must survive — the guard is narrow by design
 assert_false "no-completion: an ordinary daily output subject is unaffected" \
   marker_subject_declares_no_completion 'D1 Market Development Scan 2026-07-28'

@@ -95,6 +95,20 @@ only the span-finding walk itself, as `_string_literal_end(text, i)`. A future f
 triple-quote handling (e.g. a currently-unhandled BigQuery escape edge case) now has exactly one
 place to land instead of two that can silently drift apart on what counts as "inside a string" for
 the same input SQL.
+
+COUNT CORRECTED (2026-09-04 quality pass) — the paragraph above says "two" and named only two former
+copies, but there were THREE: check_live_sql_parity.py's sql_tokens() had independently hand-written
+the same walk and was missed by the 2026-09-02 sweep. That third copy is the one deciding the
+compared body boundary for all 254 live-parity objects, and — because check_superseded_by_discipline.py
+does `from check_live_sql_parity import find_procedure_body_end, sql_tokens` — where a PROCEDURE body
+ends for that second BLOCKING gate too, so the drift surface spanned two gates rather than none.
+sql_tokens() now delegates to _string_literal_end() as well; proved equivalent before switching
+(9,988 real string literals across every numbered bigquery/*.sql file, 0 span disagreements, all 254
+canonical bodies byte-identical). The same pass also aligned sql_tokens()'s BLOCK-COMMENT scan with
+strip_sql_comments()'s `text.find("*/", i + 2)` below: the two had genuinely drifted, sql_tokens
+scanning from `i` and so reading `/*/` as a complete three-character comment rather than an
+unterminated one. That half stays duplicated (each scanner does something different with a comment —
+one blanks it in place, the other drops it from a token stream); only the literal walk is shared.
 """
 import os
 import re
@@ -183,9 +197,28 @@ def resolve_canonical(occurrences):
     then saw nothing, returning an EMPTY winner_filenames: the `len(winner_filenames) > 1`
     ambiguity branch every caller relies on could never fire, and the caller's follow-on
     `winner_filenames[0]` raised IndexError — a crash that pre-empts the fail-clean error
-    collection these gates are built around. Every caller today (check_cadence_consistency.py:803
-    and :858, check_sq_version_registry.py:197, check_superseded_by_discipline.py:362) passes a
-    list, so this was latent; the one-line list() makes the documented contract actually true.
+    collection these gates are built around. Every caller today — check_autonomy_consistency.py
+    (canonical_cadence_sql()), check_cadence_consistency.py (find_canonical_cadence_watch_file(),
+    find_canonical_stalled_runs_file(), find_canonical_catchup_refire_readiness_file(),
+    find_canonical_period_watch_file(), catchup_canonical_coverage_errors()),
+    check_superseded_markers.py (canonical_ambiguities(), violations(),
+    contradiction_violations()), check_superseded_by_discipline.py (main()),
+    check_sq_version_registry.py (resolve_winners()), check_handoff_contracts.py
+    (resolve_allowed_map_source()) — all pass a list, so this was latent; the one-line list() makes
+    the documented contract actually true. Re-enumerate with
+    `grep -rn "resolve_canonical(" scripts/ tests/` rather than trusting this list's completeness.
+    (tests/test_catchup_exclusions.py::_canonical_view_definers is a test-side caller and also
+    passes a list.) NO HAND COUNT ON PURPOSE — this enumeration has now rotted twice in two months,
+    and a number frozen in prose is exactly the failure mode the sibling gate
+    scripts/check_adopt_gate_coverage.py already documents under "Do not restore a hardcoded count
+    here" (its module docstring's "STALE-COMMENT CORRECTION (2026-08-31 ...)" paragraph, which
+    rotted the identical way). (That enumeration used
+    to read "check_cadence_consistency.py:803 and :858, check_sq_version_registry.py:197,
+    check_superseded_by_discipline.py:362" — 4 sites in 3 files by line number. Corrected 2026-09-04:
+    every one of those line numbers had rotted, and two of the five caller files then in existence
+    were omitted entirely — including check_superseded_markers.py, the very gate whose
+    duplicate-number story the paragraph above is about. Now cited by named anchor per
+    Operating_Protocols §20.)
     """
     occurrences = list(occurrences)
     winner_number = max(n for n, _fn, *_ in occurrences)

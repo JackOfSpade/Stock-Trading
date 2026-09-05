@@ -94,11 +94,16 @@ def test_hint_is_skipped_on_the_ok_path_even_if_given(capsys):
     assert capsys.readouterr().out == "WIDGET: OK — clean.\n"
 
 
-def test_empty_string_hint_is_treated_as_no_hint():
+def test_empty_string_hint_is_treated_as_no_hint(capsys):
     # hint="" is falsy, same as hint=None -- a caller building a hint conditionally and landing on
     # "" must not get a stray blank paragraph.
     code = fail_or_ok("WIDGET", ["broken"], "WIDGET: OK", hint="")
     assert code == 1
+    # The return code alone cannot see the documented property: `if hint: print("\n" + hint)` sits
+    # inside the `if errors:` branch and does not influence `return 1`, so without this stdout
+    # assertion the test passed byte-for-byte even if the stray paragraph WAS printed. Exact-output
+    # shape, matching test_no_hint_by_default_prints_nothing_after_the_bullets.
+    assert capsys.readouterr().out == "WIDGET: FAIL\n\n - broken\n"
 
 
 def test_title_is_used_only_for_the_fail_header_not_the_ok_line(capsys):

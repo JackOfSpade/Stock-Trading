@@ -103,6 +103,47 @@ END;
     assert "canonical definition of state.decision_log_current" not in out, out
 
 
+def test_free_standing_statement_after_a_table_function_gets_its_own_violation(tmp_path, monkeypatch, capsys):
+    """The FUNCTION/TABLE FUNCTION twin of the test above (fixed 2026-09-04). A scalar or table
+    FUNCTION body has no BEGIN, so `_procedure_begin()` returns None, `find_procedure_body_end()` is
+    never called, and — before this fix — `_definition_segments()` had no fallback: the segment ran to
+    the NEXT CREATE, folding any free-standing statement in between into the function's own
+    (dataset, name) key, where it silently rode THAT function's ALLOWLIST reason. Exactly the
+    bigquery/143 "rides on someone else's reason by text position" bug one construct over from the
+    PROCEDURE case, and not rare: all 18 FUNCTION/TABLE FUNCTION segments in bigquery/ take that path,
+    and bigquery/104_strip_pretrade_rails.sql's analytics.fn_order_guard_options segment was already
+    swallowing a column-0 `DROP VIEW ... calibration_return_shrunk;` and the ~23 lines after it.
+
+    The UPDATE below is a near-verbatim copy of the real bigquery/143 theater_judge backfill that
+    motivated _definition_segments() in the first place. Pre-fix this fixture returns 0 (silent pass);
+    post-fix the UPDATE earns its own file-level violation while the allowlisted TABLE FUNCTION stays
+    clean. The mirror case one construct back — the same statement after a VIEW — was always caught,
+    and that asymmetry was the defect."""
+    filename = "10_table_function.sql"
+    _tree(tmp_path, {
+        filename: """
+CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_precedents`(p STRING)
+AS (
+  SELECT entry_id FROM `stock-trading-498512.events.decision_log` WHERE title = p
+);
+
+UPDATE `stock-trading-498512.analytics.theater_judge` T
+SET cycle_number = (SELECT 1 FROM `stock-trading-498512.events.decision_log` d LIMIT 1)
+WHERE TRUE;
+""",
+    }, monkeypatch)
+    # Allowlist ONLY the table function's own body -- never the free-standing UPDATE.
+    monkeypatch.setattr(cs, "ALLOWLIST", {
+        (filename, "analytics.fn_precedents"):
+            "test fixture: this TABLE FUNCTION IS the anti-join, so it must read the base table.",
+    })
+    rc = cs.main()
+    out = capsys.readouterr().out
+    assert rc == 1, out
+    assert "a file-level statement (outside any CREATE definition)" in out, out
+    assert "canonical definition of analytics.fn_precedents" not in out, out
+
+
 def test_string_literal_begin_in_procedure_signature_does_not_hide_a_trailing_raw_read(tmp_path, monkeypatch, capsys):
     """Locating a PROCEDURE's own body-opening BEGIN used to be a raw, un-tokenized `\\bBEGIN\\b` regex
     search over the chunk text (mirroring check_live_sql_parity.extract_body()'s OLD, since-fixed

@@ -122,6 +122,130 @@ manual re-enable was actually you. Resolve them by `alert_id` once you have conf
 
 ---
 
+# 2026-09-04 Weekly-report deploy chain — cadence-aware data-trust banner, PARK v4 two-sleeve rendering, AI-era counterfactual anchor (`weekly_report.gs` v9 → v10 + `bigquery/43` MERGE, sequenced)
+
+Owner-authorized code-quality pass (2026-09-04): three display-only fixes to
+`ops/weekly_report/weekly_report.gs`, all already landed in the repo, all requiring the same two-step,
+sequenced, owner-only redeploy cycle every `.gs` change in this file has needed since AE-1/AE-2 —
+Claude cannot reach `script.google.com`. **This weekly email gates nothing and sizes nothing**, so
+nothing is unsafe while this is outstanding; what is wrong until the paste lands is what the operator
+*reads*, not what the system *does*.
+
+## WR-2. Re-paste `weekly_report.gs` (v9 → v10, data-trust predicate + PARK v4 sleeves + AI-era counterfactuals), THEN apply the `bigquery/43` MERGE that seeds `expected_version='v10'` for `weekly_report` — `[OPEN — sequenced; repo v10 vs live v9 is EXPECTED and documented until both steps run, not drift]`
+
+**What changed (all three are rendering-only; every widened `SELECT` keeps an inner fallback to the
+pre-migration column list, so an unapplied `bigquery/220` or `bigquery/212` degrades to the v9
+rendering instead of losing the block).**
+
+1. **The data-trust predicate was a permanently-red advisory.** `gatherData_` derived its green flag
+   from `state.system_health.marks_fresh AND engine_fresh`, which compare against the MARKET
+   `last_trading_day` — Friday, on a Sunday — while D2a (the only writer of `events.daily_marks`) runs
+   `40 22 * * 0,1,2,3,4` and backfills Friday only on its SUNDAY 22:40 UTC run. This email sends at
+   `SEND_WEEKDAY=SUNDAY` / `SEND_HOUR=7` script-tz, roughly nine hours earlier, so that pair was
+   structurally FALSE at every send slot with no exception window: the "check data" subject suffix and
+   the amber "numbers below may be stale" banner printed on EVERY weekly report from 2026-08-08
+   onward, which makes a genuinely stale week indistinguishable from a healthy one. `bigquery/173`
+   had already moved `state.system_health.all_green` and the dashboard banner onto the cadence-aware
+   `marks_current` / `engine_current` pair, but only the dashboard half was actually repointed —
+   this script never read `all_green` and re-derived its own strict predicate. It now reads
+   `marks_current` / `engine_current`, with the strict pair retained as a fallback so a pre-173 live
+   view still renders. The strict pair itself is untouched and keeps the stricter meaning the
+   `bigquery/107` trading gates need.
+2. **The park section is now sleeve-aware.** PARK v4 activated on live idle capital 2026-09-04
+   (`bigquery/220` + `221`): the park book is a graded two-sleeve allocation, and `vehicle` is written
+   by D2 as the MAJORITY sleeve (a tie at f=50 going to the risk sleeve). The section reported
+   `vehicle` as "the current vehicle" and counted switches with a `LAG` over `vehicle`, so the worked
+   f=0 → f=25 → f=50 week in `PARK_ALLOCATOR_V4_DESIGN.md` — every step of which has majority sleeve
+   VOO — would have rendered as "VOO, 0 switches per 30d" while the book actually moved twice, and
+   since each conversion advances `effective_date` the same line would also have read "1 day". The
+   switch count is now keyed on the whole allocation (risk sleeve, `target_f_pct`, defensive sleeve)
+   and the section renders the split (e.g. "75% VOO / 25% SGOV"). Pre-v4 rows keep their meaning
+   through the legacy COALESCE mapping defined in `bigquery/220`.
+3. **The park counterfactuals lead with the AI-era anchor.** `bigquery/212` (2026-09-03) measured the
+   published inception-anchored park scorecard as attribution-wrong: the pre-AI segment contains the
+   2026-07-15 owner-run manual SGOV→VOO transfer, so the published −1.17pp "AI trails SGOV" verdict is
+   inherited entirely from a segment the allocator did not decide, while in its own era the allocator
+   BEATS never-switching SGOV by 67bp — the sign flips. `212`'s reader enumeration omitted this file,
+   so its four corrected columns reached the W5 scorecard and not the operator-facing email. The
+   AI-era quartet now leads whenever `ai_era_start_date` is non-null, the inception quartet is kept
+   and demoted rather than dropped (`212` left the five original columns byte-identical, so no number
+   changed), and each block states the anchor it was measured on.
+
+**Action — two sequenced steps, same shape as AE-3 below:**
+
+(a) **Re-paste `ops/weekly_report/weekly_report.gs` (v9 → v10) into the live "Stock-Trading
+Automation" Apps Script project** (its `Code.gs` file), then run `testReport()` from the editor once so
+a `weekly_report` heartbeat lands with `version='v10'` (`testReport()` and `runWeeklyReport` both call
+`sendWeeklyReport_()`, so either works; `testReport()` is the editor-run name). Use the SHA-pinned
+GitHub URL form — `github.com/JackOfSpade/Stock-Trading/blob/<COMMIT_SHA>/ops/weekly_report/weekly_report.gs`
+and its **"Copy raw file"** button — filling `<COMMIT_SHA>` in from `main`'s tip **after this branch
+lands** (the file is `ops/weekly_report/weekly_report.gs` @ `main` if you would rather just browse to
+it; pin the SHA anyway so the paste is reproducible and this record says exactly what was deployed).
+**Do NOT use `raw.githubusercontent.com`** — it 404s on this private repo, which is the exact pitfall
+AE-1's paste cycle hit and AE-3 documents; the SHA pin is what matters, not that particular host. The
+pin exists because relaying a full `.gs` body through chat has silently corrupted it twice (line
+breaks, then a `/** */` block comment) — see AE-3 and item T for the same convention. **The instant
+that v10 heartbeat lands, `state.script_version_drift` will read `expected='v9'` /
+`last_reported='v10'` / `drift=TRUE`** — expected, not a fault: that view's whole purpose is to flag
+exactly this gap, and it is a WARNING, never a CRITICAL, so it cannot halt order staging.
+
+(b) **Only after (a) has landed AND `weekly_report` has emitted a v10 heartbeat**, apply the `MERGE`
+statement in `bigquery/43_script_version_registry.sql` live (BigQuery MCP `execute_sql` or console).
+**The `MERGE` statement ONLY** — not that file's `CREATE TABLE`, not its `state.script_version_drift`
+view; the same MERGE-only apply AE-3 step (b) performed for `alert_emailer`. The repo seed is already
+`'v10'`, but per that file's own inline `NOTE` on the `weekly_report` MERGE row and its
+"APPLY STATE — weekly_report v10 row REPO-LANDED 2026-09-04, deliberately NOT APPLIED LIVE" header
+block, the MERGE has deliberately NOT been applied yet: live still expects `'v9'`, so
+`state.script_version_drift` currently reads `drift=FALSE` (expected still matches reported) while the
+paste is pending. Applying the MERGE BEFORE (a) lands would flip that to the SAME `drift=TRUE` warning
+prematurely, for the mirror-image reason (expected moved to v10 while the live script still reports
+v9) — `drift` is a SYMMETRIC inequality, so a mismatch in either direction reads TRUE and only the
+direction differs. Do these two steps back to back, in order, and expect a brief `drift=TRUE` window
+between them either way.
+
+**Why the `.gs` bump and the seed bump had to land together in the repo, even though only one of them
+is applied live:** `scripts/check_script_version_consistency.py` requires the `.gs` `SCRIPT_VERSION`
+const and `bigquery/43`'s MERGE seed to move in lockstep, and CI fails on a one-sided bump. So the repo
+necessarily runs ahead of live between the commit and your paste. **Until both steps above have run,
+repo `v10` vs live `v9` is EXPECTED and documented — it is not drift and needs no investigation.**
+
+**Verify:**
+```sql
+-- (a) confirm the v10 heartbeat landed before doing (b):
+SELECT source, version, beat_ts FROM `stock-trading-498512.ops.heartbeat`
+WHERE source='weekly_report' ORDER BY beat_ts DESC LIMIT 3;
+
+-- (b) after applying the MERGE, confirm no drift:
+SELECT script_name, last_reported_version, expected_version, drift
+FROM `stock-trading-498512.state.script_version_drift` WHERE script_name='weekly_report';
+```
+
+**If skipped:** no functional loss and nothing halts — all three fixes are display-only. The weekly
+email keeps printing the amber "may be stale" banner on every single send (so a genuinely stale week
+stays invisible), keeps describing a two-sleeve park book as a single vehicle with an understated
+switch count and an understated "days at current allocation", and keeps leading the park scorecard
+with the inception anchor `bigquery/212` demoted — i.e. the operator keeps reading a verdict whose
+sign flips under the corrected anchor. `state.script_version_drift` will keep showing `weekly_report`
+at `v9` with `drift=FALSE` (expected still matches reported) until step (a) lands, then a brief
+`drift=TRUE` window between (a) and (b) — expected and unavoidable in EITHER order.
+
+**Supersedes AE-3's end-state sentence.** AE-3 below records, correctly for 2026-08-31, that
+"`weekly_report` unchanged at v9/v9/drift=FALSE" and that its `git_note` literal was LENGTH 940. That
+sentence is a **record of what was live that night, not a standing invariant**, and this item is what
+moves it: the `weekly_report` row's repo-side literal was rewritten on 2026-09-04 (expected version
+`v9` → `v10`, and the `git_note` grew a v10 paragraph, so the 940-byte length no longer holds either).
+AE-3 itself is unchanged and stays `[DONE 2026-08-31]` — it closed the `alert_emailer` half, which is
+still correct at v10/v10. Read AE-3's `weekly_report` clause as history and this item as current.
+
+```verify
+id: WR-2
+type: gs
+probe: SELECT script_name, last_reported_version, expected_version, drift FROM `stock-trading-498512.state.script_version_drift` WHERE script_name='weekly_report'
+done_when: last_reported_version='v10' AND expected_version='v10' AND drift=FALSE
+```
+
+---
+
 # 2026-08-31 Alert-emailer chain fixes — timestamp year + inbox-probe token collision (`alert_emailer.gs` v9 → v10 + `bigquery/43` MERGE, sequenced)
 
 Owner-authorized bug-fix pass (2026-08-31, `alert-emailer-chain`): two independent fixes to

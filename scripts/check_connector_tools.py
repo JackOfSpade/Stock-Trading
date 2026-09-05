@@ -77,7 +77,9 @@ Lines between
 
 are skipped entirely by CHECKS 3 and 4 (mirrors the exempt_line_regex idea in
 scripts/check_prose_invariants.py, but as an explicit paired fence rather than a per-line regex, since
-the passages needing exemption here are prose paragraphs, not single lines). Wrap a documentary mention
+the passages needing exemption here are prose paragraphs, not single lines). Both markers may also sit
+on ONE line (`<!-- ...ignore-start --> ... <!-- ...ignore-end -->`), which fences exactly that line and
+nothing after it -- see ignored_line_mask()'s ONE-LINE FENCE note. Wrap a documentary mention
 in the fence when it is genuinely not an instruction to call the tool; do NOT wrap an active call site --
 CHECK 4 existing to catch exactly those is the point.
 
@@ -288,15 +290,35 @@ def ignored_line_mask(lines):
     """True for each line index inside an `ignore-start`/`ignore-end` fence (inclusive of the marker
     lines themselves). An unterminated ignore-start (no matching ignore-end before EOF) leaves every
     subsequent line ignored -- a missing END is a documentation bug, not a reason to silently un-skip
-    and start reporting mid-fence content as if it were live routine text."""
+    and start reporting mid-fence content as if it were live routine text.
+
+    ONE-LINE FENCE (quality pass 2026-09-04). A line carrying BOTH markers is resolved by which one
+    comes LAST: a self-contained `<start> ... <end>` line CLOSES on its own line, an `<end> ... <start>`
+    line OPENS. Before this, the START branch was tested first and `continue`d, so the END branch was
+    never reached and `ignored` stayed True to EOF -- a SINGLE inline fence silently disarmed CHECK 3
+    and CHECK 4 (the retired-tool gate) for the whole rest of Claude_Task_Plan.md, and nothing looked
+    different because main()'s summary line counts MANIFEST entries, not scanned references. Wrapping
+    one documentary sentence inline is the natural authoring shortcut here, since the markers are HTML
+    comments and the fence is advertised in this module's docstring as the way to record a mention
+    that is not a call. Inert when written: all 8 fence pairs in Claude_Task_Plan.md are two-line, so
+    no line carries both markers today."""
     mask = []
     ignored = False
     for line in lines:
-        if IGNORE_START in line:
+        has_start = IGNORE_START in line
+        has_end = IGNORE_END in line
+        if has_start and has_end:
+            mask.append(True)
+            # rindex, not index: the LAST marker on the line decides the state the NEXT line inherits.
+            # IGNORE_START/IGNORE_END are distinct, non-overlapping strings, so neither can match
+            # inside the other.
+            ignored = line.rindex(IGNORE_START) > line.rindex(IGNORE_END)
+            continue
+        if has_start:
             ignored = True
             mask.append(True)
             continue
-        if IGNORE_END in line:
+        if has_end:
             mask.append(True)
             ignored = False
             continue

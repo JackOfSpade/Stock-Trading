@@ -19,6 +19,7 @@ The substitution table is derived, never hand-kept:
 
 Usage:
   python scripts/gen_dbt_port.py --list                 # what is uncovered, and how each would resolve
+  python scripts/gen_dbt_port.py --list state.foo       # dry-run THOSE views: same checks, no write
   python scripts/gen_dbt_port.py --all                  # write every resolvable uncovered view
   python scripts/gen_dbt_port.py state.foo analytics.bar
 """
@@ -29,6 +30,7 @@ import re
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 import yaml  # noqa: E402
+from lib.dynload import load_module_from_path  # noqa: E402
 from lib.sql_files import DBT_DATASETS  # noqa: E402
 
 PROJECT = "stock-trading-498512"
@@ -48,11 +50,16 @@ NOT_PORTED = {("analytics", "theater_independence")}
 
 
 def _load(name, *rel):
-    import importlib.util
-    spec = importlib.util.spec_from_file_location(name, os.path.join(REPO, *rel))
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+    """Load REPO/<rel...> as a module named `name` (used for check_live_sql_parity.py and
+    check_dbt_view_coverage.py, neither of which is an importable package).
+
+    A thin wrapper over scripts/lib/dynload.py's shared loader since the 2026-09-04 quality pass --
+    the importlib recipe it used to inline here (with `import importlib.util` buried in the body) was
+    the third of three hand-copies, alongside tests/conftest.py's and scripts/verify_dbt_port.py's.
+    The NAME and the `(name, *rel)` signature are deliberately kept: tests/test_gen_dbt_port.py
+    monkeypatches `gdp._load` with a `fake_load(name, *rel)` stand-in to keep main() off the real
+    checkers, so this is a call-site contract, not a private detail free to be renamed away."""
+    return load_module_from_path(name, os.path.join(REPO, *rel))
 
 
 def model_names():
@@ -66,10 +73,28 @@ def model_names():
 
 
 def source_index():
-    """{(dataset, table): source_name} from sources.yml."""
-    doc = yaml.safe_load(open(SOURCES_YML, encoding="utf-8"))
+    """{(dataset, table): source_name} from sources.yml.
+
+    KEY PRECEDENCE, and its PAIR (2026-09-04 quality pass). `schema:` is dbt's canonical spelling for
+    a source's dataset (UnparsedSourceDefinition declares `schema`, and dbt-bigquery's credential
+    _ALIASES maps the legacy `dataset:` onto it before the source parser sees it), so both spellings
+    are valid input and `schema` wins. scripts/check_dbt_view_coverage.py's dbt_source_names() is the
+    OTHER reader of this same file and used to honour only `dataset:`, so a source block written the
+    documented dbt way resolved here and was dropped there — it now uses the identical precedence.
+    Change one and change the other: gen_dbt_port --list computes its `covered` set from that
+    function while substituting refs from THIS one, so a divergence makes the two disagree about the
+    same source block.
+
+    Deliberately NOT routed through lib.textio.load_yaml() like its sibling: an ABSENT sources.yml
+    must be a loud FileNotFoundError in a GENERATOR (a silently empty index would report every
+    qualified name in every body as an unresolved ref), where in the coverage checker it correctly
+    reports zero dbt-covered views. The `or {}` / `or []` guards below cover the other half of what
+    load_yaml() provides — an empty document, or a bare `sources:` key, both of which yaml parses to
+    None and neither of which used to survive the `.get()` below."""
+    with open(SOURCES_YML, encoding="utf-8") as fh:
+        doc = yaml.safe_load(fh) or {}
     idx = {}
-    for src in doc.get("sources", []):
+    for src in doc.get("sources", []) or []:
         ds = src.get("schema") or src.get("dataset") or src["name"]
         for tbl in src.get("tables", []) or []:
             idx[(ds, tbl["name"])] = src["name"]
@@ -156,7 +181,16 @@ def main():
     sources = source_index()
 
     targets = args.views
-    if args.all or args.list:
+    # `--list` DISCOVERS only when no views were named. BUG FIX (2026-09-04 quality pass): this was
+    # `if args.all or args.list:`, so `--list state.foo` silently threw the named view away and
+    # re-scanned for uncovered ones instead — reporting "would write 0, skipped 0" identically to a
+    # bare `--list`. Since the coverage backlog reached zero (2026-09-01) `live_views() - covered` is
+    # empty, so BOTH discovery flags now produce nothing and naming a view explicitly is the only
+    # remaining use of this tool — with `--list` its only non-destructive one, the per-target loop's
+    # `if args.list: ... continue` dry run below. `--all` still overrides named views unconditionally:
+    # "write every resolvable uncovered view" is its documented meaning (see the module docstring's
+    # Usage block), not a dry-run modifier.
+    if args.all or (args.list and not targets):
         covered = cov.dbt_model_names() | cov.dbt_source_names()
         targets = [f"{ds}.{n}" for (ds, n) in sorted(cov.live_views() - covered)]
 

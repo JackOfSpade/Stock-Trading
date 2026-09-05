@@ -331,10 +331,29 @@ def test_d_beta_adjusted_alpha_ci_gate_blocks_a_noisy_point_estimate():
 
 def test_d_beta_adjusted_alpha_upper_ci_uses_z_multiplier():
     # Pin the CI construction so a change to ALPHA_TEST_Z_95 (or the alpha/alpha_se wiring) is caught.
-    spy = [0.02 + 0.001 * (i % 3) for i in range(24)]
-    d = [(-0.03) + 1.0 * s for s in spy]
+    # FIXTURE CORRECTION (tests-group bug, 2026-09-04): this used the zero-residual series the tests
+    # above share (`spy = [0.02 + 0.001*(i%3) ...]`, `d = -0.03 + 1.0*s` — an exact linear relation), so
+    # alpha_se came out at 1.9e-17 and the z term vanished into float noise. Measured against the real
+    # strategy_d: `upper_ci_95 == approx(alpha + Z*alpha_se)` was True for Z=1.645, for Z=1.96, for
+    # Z=99, for a sign flip, AND for the term dropped entirely — the assertion pinned nothing beyond
+    # `upper_ci ~= alpha`. It is the same near-zero-noise trap
+    # test_d_beta_adjusted_alpha_ci_gate_blocks_a_noisy_point_estimate's own comment calls out above.
+    # The file's own noisy helper was built for exactly this ("keeps alpha_se genuinely nonzero (so the
+    # CI gate is really evaluated)") and gives alpha_se ~ 8.6e-05, where all four mutations above come
+    # back NOT approx-equal. No coverage is lost: the zero-residual series is still exercised by
+    # test_d_beta_adjusted_alpha_well_posed_case. (_alpha_series_near_cumulative is defined below this
+    # test but resolved at call time, so no reordering is needed.)
+    d, spy = _alpha_series_near_cumulative(-0.03)
     result = strategy_d.beta_adjusted_alpha_test(d, spy)
     expected = result.regression.alpha + strategy_d.ALPHA_TEST_Z_95 * result.regression.alpha_se
+    assert result.regression.alpha_se > 1e-6, (
+        "test fixture assumption broken: alpha_se must be materially nonzero or the z term is invisible "
+        "to pytest.approx and this assertion pins nothing"
+    )
+    # BOTH assertions are load-bearing and neither replaces the other: `expected` is derived FROM
+    # ALPHA_TEST_Z_95, so it catches a DECOUPLED hardcoded literal in strategy_d (e.g. `+ 1.96 *
+    # alpha_se` while the constant still says 1.645 — invisible to every other test in this file), while
+    # the literal pin below catches drift in the constant itself. Dropping either reopens half the gap.
     assert result.upper_ci_95 == pytest.approx(expected)
     assert strategy_d.ALPHA_TEST_Z_95 == pytest.approx(1.645)
 

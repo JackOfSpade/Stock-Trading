@@ -5,9 +5,15 @@ The Claude-Code-on-Web triggers (schedule + instruction) live ONLY in the web UI
 readable from a session (see ops/cadence.yaml header). But they are deterministic: each trigger's
 instruction is exactly
 
-    Read Claude_Task_Plan.md. Perform <routine heading>.
+    Read Claude_Task_Plan.md. Perform <id> — <deep research|regular routine>.
 
-and the cadence is mirrored in ops/cadence.yaml. This script reconstructs the canonical list from
+(The heading's DESCRIPTION clause is deliberately dropped — the GENERIC FORM of 2026-08-17; see
+scripts/lib/routine_manifest.py's instruction_text() for why a rename must not require a live-trigger
+push. AR_att/AR_orc keep their full heading verbatim, having no coded id prefix to match on. This
+docstring and main()'s banner both still advertised the older `Perform <routine heading>.` template
+until 2026-09-04, contradicting the instruction lines this very script prints underneath.)
+
+The cadence is mirrored in ops/cadence.yaml. This script reconstructs the canonical list from
 those two repo files, so you get one printout to review, to diff against the web UI, or to use when
 (re)creating triggers — instead of opening each routine and screenshotting it.
 
@@ -88,7 +94,10 @@ def main():
     tz, cad = load_cadence()
     seen_ids = []
 
-    print("Routine triggers — instruction is `Read Claude_Task_Plan.md. Perform <heading>.`")
+    # Banner template must match routine_manifest.instruction_text()'s GENERIC FORM (2026-08-17) —
+    # it labels the very lines printed below it, so a stale template here reads as a drift report.
+    print("Routine triggers — instruction is "
+          "`Read Claude_Task_Plan.md. Perform <id> — <deep research|regular routine>.`")
     print(f"Cadence timezone: {tz}  (exact clock times are in the web UI only)\n")
     print("=" * 100)
     for h in headings:

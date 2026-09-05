@@ -340,19 +340,39 @@ def _tooling_prefix_hides_version(token, prefix):
 
     The letter-continuation itself must stay subtracted -- 'claude-codebase' is a real tooling
     extension and is pinned as such by _GLUED_DIGIT_GENUINE_TOOLING_EXTENSION_TOKENS -- so the
-    signal is not "does it continue with a letter" but "does the WHOLE token end in a version".
-    Anything ending '-<digits>' or '.<digits>' is version-shaped and stays FLAGGED; every existing
-    subtracted case ('claude-code', 'claude-codebase', 'claude-code-action',
-    'claude-code-settings.json', 'claude-agent-sdk-python', 'claude-desktop.app') ends in a letter
-    and is unaffected."""
+    signal is not "does it continue with a letter" but "does the remainder carry a version-shaped
+    segment ANYWHERE". Anything whose remainder contains a '-'- or '.'-led digit is version-shaped
+    and stays FLAGGED; every existing subtracted case ('claude-code', 'claude-codebase',
+    'claude-code-action', 'claude-code-settings.json', 'claude-agent-sdk-python',
+    'claude-desktop.app') carries no separator-led digit at all and is unaffected.
+
+    DEFECT B, FOURTH CASE (quality pass 2026-09-04): the third case's rule was written END-ANCHORED
+    -- "does the WHOLE token END in a version", i.e. a '-'/'.'-led digit run followed immediately by
+    end-of-token. That missed the alias convention the ROUND 1 block above MODEL_ID_CORE names as the
+    REAL one ('claude-opus-4-latest'), and the '-preview'/'-latest'/'-beta'/'-exp' shapes DEFECT A's
+    own repro list enumerates: a version FOLLOWED BY an alias suffix does not end the token. So the
+    2026-08-22 fix closed 'claude-codex-5' but left 'claude-codex-5-latest', 'claude-codex-5-preview'
+    and 'claude-desktopia-1-beta' silently subtracted -- the same false-clean, one alias suffix away.
+    Reproduced end to end pre-fix: routine_model 'claude-opus-5' plus an OWNER_ACTIONS.md line "All
+    remote routines now run claude-codex-5-latest for grunt work" returned ZERO errors. The end
+    anchor is therefore dropped: a separator-led digit ANYWHERE in the remainder is the signal. The
+    change is strictly LOUDER, never narrower -- the direction THE DESIGN above requires (a false
+    positive here is cheap and self-correcting; a false negative is the exact failure this check
+    exists to eliminate) -- and it is NOT a re-introduction of the routine_model-dependent
+    subtraction DEFECT A deleted. Measured 2026-09-04 over every claude-code*/claude-cli*/
+    claude-agent-sdk*/claude-desktop*-prefixed token in the repo (25 distinct) plus all three pinned
+    tables in tests/test_cadence_consistency.py: zero tokens change classification.
+
+    Note the ordering below: the DEFECT B original branch ("a '-'/'.' separator IMMEDIATELY after the
+    prefix, then a digit") no longer needs a line of its own -- it is a strict subset of the
+    anywhere-search, which would otherwise leave it unreachable. Only the GLUED-digit case
+    ('claude-code5', rest '5', no separator at all) is still a genuinely separate test."""
     rest = token[len(prefix):]
     if not rest:
         return False
     if rest[0].isdigit():
         return True
-    if re.search(r"[-.]\d+$", rest):
-        return True
-    return rest[0] in "-." and len(rest) >= 2 and rest[1].isdigit()
+    return bool(re.search(r"[-.]\d", rest))
 
 
 def _is_subtracted_non_assertion(token):

@@ -14,7 +14,7 @@ import sys
 import pytest
 
 from conftest import load_module_from_path
-from lib.sql_files import strip_sql_comments
+from lib.sql_files import _string_literal_end, strip_sql_comments
 
 clsp = load_module_from_path("check_live_sql_parity", "scripts", "check_live_sql_parity.py")
 
@@ -211,9 +211,45 @@ def test_drop_word_inside_comment_or_string_literal_does_not_remove_object(tmp_p
 def test_embedded_format_string_create_statement_is_not_a_false_positive():
     # bigquery/17_restore_drill.sql contains an indented "CREATE OR REPLACE TABLE ..." inside a
     # FORMAT() string literal passed to EXECUTE IMMEDIATE — the column-0-anchored regex must skip it.
+    #
+    # HONEST LIMIT (2026-09-04): this real-repo test cannot actually DISCRIMINATE the `^` anchor.
+    # bigquery/17's embedded statement is a CREATE OR REPLACE **TABLE**, a kind absent from
+    # CREATE_STMT's alternation (VIEW|PROCEDURE|TABLE\s+FUNCTION|FUNCTION), and its `%s__typed` name
+    # cannot match the `(\w+)` group either — so it never matches, anchored or not (measured: removing
+    # the `^` leaves find_final_definitions() at 254 objects with ZERO keys added, and all 81 tests in
+    # this file still passed). Kept because it pins the real file's real behavior; the anchor itself is
+    # pinned by the synthetic twin below, which was added for exactly that reason.
     final = clsp.find_final_definitions()
     assert ("events_restore_drill", "%s__typed") not in final
-    assert not any("events_restore_drill" in name for (_, name) in final)
+    # Scan BOTH halves of the key: the second assertion used to unpack `(_, name)` and discard the
+    # DATASET half, while `events_restore_drill` IS a dataset (bigquery/17 creates it with CREATE
+    # SCHEMA), so that generator could never see the thing it was named after.
+    assert not any("events_restore_drill" in part for key in final for part in key)
+
+
+def test_embedded_format_string_create_of_a_COMPARED_kind_is_not_a_top_level_statement(tmp_path, monkeypatch):
+    # The CREATE-side twin of test_drop_word_inside_comment_or_string_literal_does_not_remove_object,
+    # and the only test anywhere that actually discriminates CREATE_STMT's column-0 `^` anchor — the
+    # property this module's own docstring names as (2) of the two it exists to lock in. The real-repo
+    # test above cannot (see its comment); this one can, because the embedded statement is a kind
+    # CREATE_STMT DOES match, with a name the `(\w+)` group DOES accept.
+    #
+    # A false CREATE match here would mint a phantom expected object, which finds nothing live and is
+    # reported as MISSING — the category D3 branch (d) consumes as an autonomous CREATE against
+    # production. CREATE_STMT is live surface: the scalar FUNCTION alternative landed 2026-09-01 and
+    # the same column-0 anchor was propagated into check_dbt_view_coverage.py on 2026-09-02.
+    d = tmp_path / "bigquery"
+    d.mkdir()
+    (d / "01_embedded.sql").write_text(
+        "CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_x`()\n"
+        "BEGIN\n"
+        "  EXECUTE IMMEDIATE FORMAT(\n"
+        "      \"CREATE OR REPLACE VIEW `stock-trading-498512.scratch_ds.embedded_view` AS SELECT 1\");\n"
+        "END;\n")
+    monkeypatch.setattr(clsp, "BIGQUERY_DIR", str(d))
+    final = clsp.find_final_definitions()
+    assert ("scratch_ds", "embedded_view") not in final, "an indented CREATE inside a string literal is not a statement"
+    assert ("ops", "sp_x") in final, "the real, column-0 CREATE must still be found"
 
 
 def test_extract_body_strips_view_preamble_and_trailing_semicolon():
@@ -618,6 +654,53 @@ def test_find_procedure_body_end_end_while_and_end_loop_do_not_affect_nesting():
     assert body.startswith("BEGIN\n  DECLARE i INT64 DEFAULT 0;\n  WHILE i < 3 DO")
 
 
+def test_extract_body_procedure_repeat_loop_end_repeat_does_not_end_the_body_early():
+    # REPEAT ... UNTIL <cond> END REPEAT is the SIXTH of BigQuery scripting's two-word `END <kw>`
+    # closers (END IF / END WHILE / END LOOP / END FOR / END REPEAT / END CASE) and the one missing
+    # from NON_BEGIN_END_SUFFIX until 2026-09-04: `END REPEAT` fell through find_procedure_body_end()'s
+    # bare-END path, so depth hit 0 at the LOOP's own closer and the scan RETURNED there -- the
+    # trailing INSERT and the procedure's real END were dropped from the compared body, which can
+    # then never equal the live routine_definition (permanent false DRIFT feeding D3's autonomous
+    # re-apply loop with nothing that could converge). Latent when fixed -- zero REPEAT loops exist in
+    # bigquery/*.sql -- exactly like the END CASE sibling above; take "REPEAT" back out of
+    # NON_BEGIN_END_SUFFIX and this test fails.
+    #
+    # The trailing free-standing BEGIN...END block is load-bearing: its statements are INDENTED, so
+    # NEXT_TOP_LEVEL's column-0 boundary cannot end the statement for us and only the nesting scan
+    # can put the boundary in the right place.
+    txt = (
+        "CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_repeat`()\n"
+        "BEGIN\n"
+        "  DECLARE i INT64 DEFAULT 0;\n"
+        "  REPEAT\n"
+        "    SET i = i + 1;\n"
+        "  UNTIL i >= 3\n"
+        "  END REPEAT;\n"
+        "  INSERT INTO `stock-trading-498512.ops.t` (a) VALUES (i);\n"
+        "END;\n"
+        "\n"
+        "BEGIN\n"
+        "  UPDATE `stock-trading-498512.ops.t` SET a = 0 WHERE TRUE;\n"
+        "END;\n"
+    )
+    m = clsp.CREATE_STMT.search(txt)
+    body = clsp.extract_body(txt, m.start(), "PROCEDURE")
+    assert body == (
+        "BEGIN\n"
+        "  DECLARE i INT64 DEFAULT 0;\n"
+        "  REPEAT\n"
+        "    SET i = i + 1;\n"
+        "  UNTIL i >= 3\n"
+        "  END REPEAT;\n"
+        "  INSERT INTO `stock-trading-498512.ops.t` (a) VALUES (i);\n"
+        "END"
+    )
+    # Both halves of the bug in one assertion pair: nothing was truncated at the loop...
+    assert "INSERT INTO" in body
+    # ...and the later, unrelated free-standing block did not bleed in either.
+    assert "UPDATE" not in body
+
+
 def test_real_repo_sp_write_adversarial_review_excludes_leaked_repair_block_identifiers():
     # Direct lock on the real object behind the HIGH finding (2026-08-08): bigquery/146's procedure
     # body must never contain identifiers that exist ONLY in the separate, later, free-standing
@@ -649,6 +732,46 @@ def test_normalize_tail_matches_repo_extraction_despite_live_trailing_comments()
 
     live_style_body = "SELECT 1 AS x\nFROM bar;\n-- trailing live comment\n\n"
     assert clsp.normalize_tail(live_style_body) == repo_body
+
+
+def test_normalize_tail_strips_a_trailing_block_comment_so_the_semicolon_still_goes():
+    """REGRESSION (2026-09-04). normalize_tail()'s pop loop recognized only `--` lines, so a file
+    ending in a `/* verification harness */` block after its last CREATE left the statement's `;`
+    unstripped: canonicalize() removes the comment TEXT but not the orphaned semicolon, and live
+    definitions carry no trailing `;`, so the object reported permanent, un-healable false DRIFT.
+
+    Not hypothetical -- it fired 2026-07-30 on bigquery/116, /117 and /118 (the only 3 of the
+    then-117 files using a trailing block harness) and made state.add_candidate_reviews and
+    analytics.find_precedents drift forever; it was closed by rewriting those three harnesses as
+    `--` lines, leaving the checker itself unfixed and only a file convention guarding recurrence
+    (feedback_bigquery_file_conventions.md trap #2). This test is that missing mechanical backstop."""
+    repo_txt = (
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.foo` AS\n"
+        "SELECT 1 AS a;\n"
+        "\n"
+        "/* verification harness -- run after applying:\n"
+        "   SELECT * FROM `stock-trading-498512.state.foo`;\n"
+        "*/\n"
+    )
+    m = clsp.CREATE_STMT.search(repo_txt)
+    repo_body = clsp.extract_body(repo_txt, m.start(), "VIEW")
+    assert repo_body == "SELECT 1 AS a"
+    # The live side (INFORMATION_SCHEMA has no trailing ';' and no harness) must now MATCH it --
+    # pre-fix the repo side kept the ';' and the two could never converge.
+    assert clsp.canonicalize(repo_body) == clsp.canonicalize(clsp.normalize_tail("SELECT 1 AS a"))
+    # A block comment sandwiched between `--` lines is stripped too (the pop loop runs on both sides
+    # of the block cut -- see _pop_trailing_comment_lines()).
+    assert clsp.normalize_tail("SELECT 1 AS a;\n/* block */\n-- trailing note\n") == "SELECT 1 AS a"
+
+
+def test_normalize_tail_does_not_cut_at_a_block_comment_marker_inside_a_string_literal():
+    # The cut above is located through sql_tokens(), NOT a backward rfind("/*") over raw text, and
+    # this is why: three real bodies (ops.sp_restore_drill, ops.sp_sq_backup_events_export,
+    # ops.sp_sq_ops_export) carry `dt=%s/*.parquet` GCS globs INSIDE a string literal. A naive
+    # backward scan would cut real SQL out of a compared body -- a fail-DANGEROUS change to the gate
+    # whose findings D3 re-applies autonomously.
+    body = "SELECT 'gs://stock-trading-backups/events/dt=%s/*.parquet' AS uri;"
+    assert clsp.normalize_tail(body) == "SELECT 'gs://stock-trading-backups/events/dt=%s/*.parquet' AS uri"
 
 
 def test_view_body_stops_at_a_following_non_compared_create(monkeypatch):
@@ -998,27 +1121,35 @@ def test_fetch_live_definitions_requests_more_than_the_bq_cli_default_row_cap(mo
         assert clsp.resolve_live_definition(views, routines, "state", f"v{i}", "VIEW") == f"SELECT {i}"
 
 
-def test_fetch_live_definitions_covers_all_three_real_object_kinds_across_datasets(monkeypatch):
-    # Enumerates all THREE kinds CREATE_STMT ever produces (VIEW, PROCEDURE, TABLE FUNCTION) spread
-    # across separate datasets, and asserts each lands in the correct batch bucket with none lost —
-    # a coverage regression here would silently drop objects from the check entirely.
+def test_fetch_live_definitions_covers_all_four_real_object_kinds_across_datasets(monkeypatch):
+    # Enumerates all FOUR kinds CREATE_STMT ever produces (VIEW, PROCEDURE, TABLE FUNCTION, scalar
+    # FUNCTION) spread across separate datasets, and asserts each lands in the correct batch bucket
+    # with none lost — a coverage regression here would silently drop objects from the check entirely.
+    #
+    # Was named "..._all_three_real_object_kinds..." with no FUNCTION entry in its fixture until
+    # 2026-09-04: scalar FUNCTION joined CREATE_STMT/ROUTINE_KINDS/the routine_type filter on
+    # 2026-09-01 (analytics.fn_is_occ_option_symbol), so the "all kinds" guarantee the name asserts had
+    # stopped being what the fixture enforced.
     def fake_bq(sql, project, max_rows=None):
         if "INFORMATION_SCHEMA.VIEWS" in sql:
             return [{"table_name": "v1", "view_definition": "SELECT 1"}]
         return [
             {"routine_name": "sp1", "routine_type": "PROCEDURE", "routine_definition": "BEGIN SELECT 1; END"},
             {"routine_name": "tf1", "routine_type": "TABLE FUNCTION", "routine_definition": "SELECT 1"},
+            {"routine_name": "fn1", "routine_type": "FUNCTION", "routine_definition": "x IS NOT NULL"},
         ]
     monkeypatch.setattr(clsp, "bq", fake_bq)
     final = {
         ("state", "v1"): ("VIEW", "proj", "01.sql", "x"),
         ("ops", "sp1"): ("PROCEDURE", "proj", "01.sql", "x"),
         ("analytics", "tf1"): ("TABLE FUNCTION", "proj", "01.sql", "x"),
+        ("analytics", "fn1"): ("FUNCTION", "proj", "01.sql", "x"),
     }
     views, routines = clsp.fetch_live_definitions("proj", final)
     assert clsp.resolve_live_definition(views, routines, "state", "v1", "VIEW") == "SELECT 1"
     assert clsp.resolve_live_definition(views, routines, "ops", "sp1", "PROCEDURE") == "BEGIN SELECT 1; END"
     assert clsp.resolve_live_definition(views, routines, "analytics", "tf1", "TABLE FUNCTION") == "SELECT 1"
+    assert clsp.resolve_live_definition(views, routines, "analytics", "fn1", "FUNCTION") == "x IS NOT NULL"
 
 
 def test_resolve_live_definition_returns_definition_on_a_match():
@@ -1434,6 +1565,52 @@ def test_canonicalize_treats_string_CONTENT_as_significant():
 def test_canonicalize_handles_empty_and_none():
     assert clsp.canonicalize("") == ""
     assert clsp.canonicalize(None) is None
+
+
+# ---- sql_tokens(): the string-literal / block-comment walk shared with lib/sql_files.py ----------
+# sql_tokens() decides what counts as "inside a string literal or comment" for BOTH gates that use it:
+# this script's canonicalize()/find_procedure_body_end() (the live-parity DRIFT oracle D3 re-applies
+# autonomously) and check_superseded_by_discipline.py, which imports it. It had hand-written a THIRD
+# copy of lib/sql_files.py's literal walk and its block-comment scan had already drifted from
+# strip_sql_comments()'s (2026-09-04 quality pass; see sql_tokens()'s docstring and lib/sql_files.py's
+# "COUNT CORRECTED" paragraph).
+def test_sql_tokens_slash_star_slash_does_not_self_close_the_comment():
+    # `j = sql.find("*/", i)` let the OPENER's own `*` pair with the following `/`, so `/*/` read as a
+    # COMPLETE three-character comment and everything after it leaked back out as live T/P tokens --
+    # into the compared body and into the BEGIN/END depth count. GoogleSQL closes at the first `*/`
+    # AFTER the opener, which is what `find("*/", i + 2)` now does.
+    def words(sql):
+        return [val for kind, val, _s, _e in clsp.sql_tokens(sql) if kind in ("T", "P")]
+
+    assert words("SELECT 1 /*/ x */ , 2") == ["SELECT", "1", ",", "2"]   # pre-fix: ["SELECT","1","x","*","/",",","2"]
+    # With no real closer anywhere, `/*/` is an UNTERMINATED comment that runs to end of text.
+    assert words("SELECT 1 /*/ x") == ["SELECT", "1"]
+    # The empty comment `/**/` was never affected (its closer already starts at i + 2).
+    assert words("SELECT /**/ 2") == ["SELECT", "2"]
+
+
+def test_sql_tokens_agrees_with_strip_sql_comments_on_what_is_a_comment():
+    # The cross-gate property the `/*/` divergence broke: tokenizing text that lib/sql_files.py's
+    # strip_sql_comments() has already blanked must yield the same non-whitespace token stream as
+    # tokenizing the raw text -- i.e. the two scanners agree about where every comment ends.
+    for sql in ("SELECT 1 /*/ x */ , 2",
+                "SELECT /*/*/ 3",
+                "SELECT a /* plain */ , b -- line comment\n, c",
+                "SELECT 'literal with /* inside' AS s"):
+        raw = [(k, v) for k, v, _s, _e in clsp.sql_tokens(sql) if k != "W"]
+        stripped = [(k, v) for k, v, _s, _e in clsp.sql_tokens(strip_sql_comments(sql)) if k != "W"]
+        assert raw == stripped, sql
+
+
+def test_sql_tokens_uses_the_shared_string_literal_walker():
+    """Mirror of tests/test_sql_files.py's identity assertion for check_sql_dryrun.py's
+    _blank_string_literals(). sql_tokens() had independently hand-written the same quote/triple-quote/
+    backslash-escape/unterminated-at-a-newline span walk that lib/sql_files.py's "FIFTH consolidation"
+    (2026-09-02) already owned -- a third copy that consolidation's docstring did not know about, so
+    its "exactly one place to land instead of two" was false. Measured identical over 9,988 real
+    string literals across every numbered bigquery/*.sql file before delegating; this assertion is
+    what stops a fourth copy from growing back."""
+    assert clsp._string_literal_end is _string_literal_end
 
 
 def test_scalar_function_is_in_the_compared_set():

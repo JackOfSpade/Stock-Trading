@@ -239,11 +239,16 @@ def without_strikethrough(lines):
     and the scan resumes looking for the next real candidate, exactly as if that line were absent.
 
     fence_mask()/get_fence_mask() are deliberately NOT reused for this (unlike nearest_heading()):
-    their True/False encodes "is this line's CONTENT inside a fence" -- by fence_mask()'s own test,
-    an opening ``` line reads False/outside under that predicate, an intentional asymmetry for
-    nearest_heading's purposes -- which is the wrong question for "is this line ITSELF a delimiter
-    marker". FENCE_LINE, the shared source of truth for that marker shape, answers the right one
-    directly and needs no per-file stack-depth bookkeeping to do it.
+    their True/False encodes "is this line's CONTENT inside a fence" -- fence_mask() evaluates
+    mask[i] = bool(stack) AFTER the push/pop, so a fence's OPENING ``` line reads True/inside while
+    it is the CLOSING line that reads False/outside, an intentional asymmetry for nearest_heading's
+    purposes (pinned by fence_mask()'s own tests, e.g.
+    test_fence_mask_short_bare_marker_cannot_close_a_longer_fence) -- which is the wrong question
+    for "is this line ITSELF a delimiter marker": reusing the mask as a skip-list here would skip
+    openers correctly but leave every CLOSING fence line still eligible to open or close a "~~"
+    pairing, i.e. exactly half of the confirmed-live bug described above would survive. FENCE_LINE,
+    the shared source of truth for that marker shape, answers the right one directly and needs no
+    per-file stack-depth bookkeeping to do it.
     """
     text = "\n".join(lines)
     visible = list(text)

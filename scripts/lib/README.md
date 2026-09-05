@@ -1,7 +1,8 @@
 # scripts/lib/
 
 Shared helpers for the top-level `scripts/*.py` CLI tools (YAML/text IO, BigQuery query
-plumbing, the shared SQL-file/routine-manifest parsers the CI gates build on, etc.). It is a
+plumbing, the shared SQL-file/routine-manifest parsers the CI gates build on, the by-path module
+loader `dynload.py` those tools use to reach into each other, etc.). It is a
 namespace package — no `__init__.py`, and none should be added; that would change how `lib`
 resolves for no benefit today.
 
@@ -28,6 +29,13 @@ pytest does not run these files as `python scripts/foo.py` — it loads them via
 `importlib.util.spec_from_file_location`, which does not touch `sys.path` at all. `tests/conftest.py`
 covers that gap with its own single, central `sys.path.insert(0, ...)` for `scripts/`, done once, before
 any test module imports. That insert is genuinely load-bearing — leave it alone.
+
+That by-path loading recipe is itself `lib/dynload.py` as of 2026-09-04: it had three independent
+hand-copies (`tests/conftest.py`, `scripts/verify_dbt_port.py`, `scripts/gen_dbt_port.py`) and now has
+one owner. It lives here rather than in `tests/conftest.py` because two of the three callers are
+production checkers and `tests/conftest.py` does `import pytest` at module scope — see that module's
+header for the full rationale, and note it is the one `lib` module `tests/conftest.py` imports
+(necessarily *after* the `sys.path` insert above, hence its `# noqa: E402`).
 
 ## History
 

@@ -51,11 +51,13 @@ prerequisite env/binary is unavailable, per fail-open above):
 
 Stdlib only.
 """
+import bisect
 import json
 import os
 import re
 import subprocess
 from datetime import datetime, timezone
+from itertools import accumulate
 
 from lib.bq_json import run_bq_query
 
@@ -492,6 +494,20 @@ def main():
         return 0
 
     lines = text.splitlines(keepends=True)
+    # Offsets into `text` of each entry of `lines`, so a regex match offset maps to a line index via
+    # the SAME split `lines` was built from. text.count("\n", 0, offset) does NOT: splitlines() also
+    # breaks on \x0b \x0c \x85 U+2028 U+2029, so a single one of those anywhere above a fence shifted
+    # every later index and the anchor walk below started ABOVE the real anchor -- resolving (and
+    # flipping) an item's PARENT HEADING instead of its own bullet, and making already_done() read the
+    # wrong line. This is the same alignment hazard scripts/lib/routine_manifest.py::
+    # parse_routine_headings documents for its own split. Behaviour is identical on \n-only text.
+    # NOTE: _line_starts has len(lines)+1 entries (the last is len(text)), so line_index() must only
+    # be fed a match START offset (always < len(text)), never an end offset, without a clamp.
+    _line_starts = list(accumulate((len(ln) for ln in lines), initial=0))
+
+    def line_index(offset):
+        return bisect.bisect_right(_line_starts, offset) - 1
+
     # Map each fence to the (start, end) line-index span and its parsed fields, plus its anchor.
     results = []
     changed = False
@@ -511,7 +527,7 @@ def main():
     # evaluated or how they're anchored.
     ids_by_line = {}
     for m in matches:
-        line_no = text.count("\n", 0, m.start()) + 1
+        line_no = line_index(m.start()) + 1
         ids_by_line.setdefault(m.group("id").strip(), []).append(line_no)
     for fence_id, line_numbers in sorted(ids_by_line.items()):
         if len(line_numbers) > 1:
@@ -531,7 +547,7 @@ def main():
     matched_open_offsets = {m.start() for m in matches}
     for open_m in FENCE_OPEN_RE.finditer(text):
         if open_m.start() not in matched_open_offsets:
-            line_no = text.count("\n", 0, open_m.start()) + 1
+            line_no = line_index(open_m.start()) + 1
             print(
                 f"verify_owner_actions: WARNING — malformed ```verify fence at line {line_no}: "
                 "did not match the expected id/type/probe/done_when shape (4 lines, in that order, "
@@ -544,8 +560,8 @@ def main():
     for m in reversed(matches):
         fence_id = m.group("id").strip()
         fence_start_char = m.start()
-        # Convert char offset to line index.
-        fence_start_line = text.count("\n", 0, fence_start_char)
+        # Convert char offset to line index (via the `lines` split itself — see line_index above).
+        fence_start_line = line_index(fence_start_char)
 
         anchor_idx = find_anchor_line_index(lines, fence_start_line, fence_id)
         if anchor_idx is None:
@@ -588,7 +604,9 @@ def main():
             with open(OWNER_ACTIONS_PATH, "w", encoding="utf-8") as f:
                 f.writelines(lines)
         except (OSError, ValueError) as e:
-            # Fail-open, mirroring the read path (269-276) and the module's "never raise / always
+            # Fail-open, mirroring main()'s own OWNER_ACTIONS_PATH read guard above (the bare line
+            # pin that used to stand here drifted onto unrelated probe bodies as this file grew —
+            # cite the anchor, not the number), and the module's "never raise / always
             # exit 0" contract: a write failure (read-only FS / disk full) must not crash this
             # always-green CI verifier. The auto-close is idempotent — the next run recomputes the
             # same flip and re-attempts the write — so a transient failure is retried, not lost.

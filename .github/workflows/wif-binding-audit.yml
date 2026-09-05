@@ -75,6 +75,13 @@ jobs:
           # the "no condition" branch — a FALSE POSITIVE (it fired on the very first run, seconds after the
           # grants, before they propagated). Now a read failure → verify_error (exit 2, "could not verify"),
           # and only a SUCCESSFUL read showing an empty/non-scoped binding → a real finding (exit 1).
+          #
+          # ORDERING RULE (2026-09-04 — ported from keyless-sa-audit.yml, which fixed this exact masking on
+          # 2026-07-09 while this file kept the unsafe order): a successful read that found a REAL problem
+          # must be reported as a FINDING even when the OTHER, differently-permissioned read failed. So
+          # `problems` is dispatched FIRST, always, with any read failure folded into the same message;
+          # only a run with NO problems AND a read failure is INCONCLUSIVE. See the comment above the
+          # `problems` dispatch below for why the mixed state is reachable here.
 
           # 1. Provider attribute_condition must pin assertion.repository to THIS repo.
           if cond="$(gcloud iam workload-identity-pools providers describe "$PROVIDER_ID" \
@@ -113,18 +120,21 @@ jobs:
             verify_error="$verify_error [get-iam-policy failed: $(tr '\n' ' ' < mem_err)]"
           fi
 
-          # INCONCLUSIVE (read failure) — NOT a security finding. Exit 2 with a distinct message so a
-          # perms/propagation issue can't masquerade as "fork-permissive". Re-run after grants propagate.
-          if [ -n "$verify_error" ]; then
-            msg="WIF binding audit COULD NOT VERIFY (this is NOT a fork-permissive finding):$verify_error  Likely the WIF SA lacks roles/iam.workloadIdentityPoolViewer + iam.serviceAccounts.getIamPolicy on $CI_SA, or the grant has not propagated yet — wait a few minutes and re-run. RUNBOOK §25 E1."
-            echo "::error::$msg"
-            printf '%s\n' "$msg" > /tmp/audit_finding.txt
-            echo "result=inconclusive" >> "$GITHUB_OUTPUT"
-            exit 2
-          fi
-
+          # A genuine problem found by a check that DID read successfully must never be masked by an
+          # unrelated read failure in the OTHER check (2026-07-09 fix in keyless-sa-audit.yml, code-review
+          # catch; ported here 2026-09-04) — check problems FIRST, always. The two reads above hit different
+          # APIs under DIFFERENT grants (roles/iam.workloadIdentityPoolViewer on the project vs
+          # iam.serviceAccounts.getIamPolicy on $CI_SA — see this file's header), so they fail
+          # independently: check 1 can positively evidence an unscoped attribute_condition in the very run
+          # where check 2's get-iam-policy read fails. Taking the verify_error branch first would report
+          # "COULD NOT VERIFY (not a finding)" and skip the webhook even though the trust boundary is
+          # demonstrably open — and if the getIamPolicy grant is revoked or lags, that would suppress
+          # check 1's findings on EVERY monthly run.
           if [ -n "$problems" ]; then
             msg="🔐 Stock-Trading WIF binding audit FAILED:$problems. The keyless-CI trust boundary may be fork-permissive — see infra/terraform/wif.tf + RUNBOOK §25 E1. Tighten in the Console immediately."
+            if [ -n "$verify_error" ]; then
+              msg="$msg  (Also could not verify:$verify_error — re-run once resolved for a complete picture.)"
+            fi
             echo "::error::$msg"
             scripts/notify_webhook.sh "$msg"
             # 2026-07-15 fix (RUNBOOK §43): the webhook above is best-effort/optional (silent no-op if
@@ -136,6 +146,18 @@ jobs:
             echo "result=finding" >> "$GITHUB_OUTPUT"
             exit 1
           fi
+
+          # INCONCLUSIVE (read failure, and no problems found by the check that DID read) — NOT a security
+          # finding. Exit 2 with a distinct message so a perms/propagation issue can't masquerade as
+          # "fork-permissive". Re-run after grants propagate.
+          if [ -n "$verify_error" ]; then
+            msg="WIF binding audit COULD NOT VERIFY (this is NOT a fork-permissive finding):$verify_error  Likely the WIF SA lacks roles/iam.workloadIdentityPoolViewer + iam.serviceAccounts.getIamPolicy on $CI_SA, or the grant has not propagated yet — wait a few minutes and re-run. RUNBOOK §25 E1."
+            echo "::error::$msg"
+            printf '%s\n' "$msg" > /tmp/audit_finding.txt
+            echo "result=inconclusive" >> "$GITHUB_OUTPUT"
+            exit 2
+          fi
+
           echo "OK: WIF binding is scoped to $EXPECTED_REPO (provider condition + repo-scoped principalSet)."
           echo "result=ok" >> "$GITHUB_OUTPUT"
 

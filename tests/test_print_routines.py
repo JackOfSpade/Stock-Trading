@@ -8,6 +8,7 @@ run entirely against tmp_path fixtures (never the real Claude_Task_Plan.md / ops
 ops/triggers.json), so a --write test can never touch the real committed ops/triggers.json.
 """
 import json
+import re
 import sys
 
 from conftest import load_module_from_path
@@ -119,6 +120,30 @@ def test_main_reports_ok_when_headings_and_cadence_match(tmp_path, monkeypatch, 
     out = capsys.readouterr().out
     assert "OK: every routine heading maps 1:1" in out
     assert not triggers.exists()  # no --write -> ops/triggers.json (tmp copy) untouched
+
+
+def test_main_banner_template_matches_the_instructions_it_labels(tmp_path, monkeypatch, capsys):
+    """REGRESSION (2026-09-04). The banner LABELS the instruction lines printed directly beneath it,
+    and it is the first thing a recovery-time reader sees. It kept advertising the pre-2026-08-17
+    `Perform <heading>.` template long after lib/routine_manifest.py's instruction_text() switched to
+    the GENERIC FORM, so the banner contradicted the very next line of its own output -- and nothing
+    checked it. Pinned structurally rather than as a string literal: the retired placeholder must be
+    gone from the banner, and every printed instruction must be in the generic `<id> — <type>` form."""
+    plan, cadence = _write_fixture(tmp_path)
+    monkeypatch.setattr(pr, "PLAN", str(plan))
+    monkeypatch.setattr(pr, "CADENCE", str(cadence))
+    monkeypatch.setattr(pr, "TRIGGERS_JSON", str(tmp_path / "triggers.json"))
+    monkeypatch.setattr(sys, "argv", ["print_routines.py"])
+    assert pr.main() == 0
+    lines = capsys.readouterr().out.splitlines()
+    banner = lines[0]
+    assert "<heading>" not in banner and "<routine heading>" not in banner
+    assert "Perform <id> — <deep research|regular routine>." in banner
+    printed = [ln.strip() for ln in lines if ln.strip().startswith("instruction: ")]
+    assert printed, "the fixture must print at least one instruction line for this to mean anything"
+    pattern = re.compile(
+        r"instruction: Read Claude_Task_Plan\.md\. Perform \w+ — (deep research|regular routine)\.")
+    assert all(pattern.fullmatch(p) for p in printed), printed
 
 
 def test_main_warns_on_cadence_id_with_no_heading(tmp_path, monkeypatch, capsys):

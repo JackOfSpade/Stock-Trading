@@ -432,6 +432,54 @@ def test_main_handles_bullet_anchor(tmp_path, monkeypatch):
     assert "`ALERT_WEBHOOK_URL`" in out
 
 
+# storage-1 (2026-09-04): same shape as SAMPLE_DOC_BULLET, but an earlier, unrelated item's prose
+# carries three U+2028 LINE SEPARATORs — ordinary web-copy/connector-payload residue in a 180KB
+# hand-pasted document. Written as \u escapes, never literal characters, so the fixture stays legible
+# in a diff and ruff has no ambiguous-unicode character to flag.
+SAMPLE_DOC_UNICODE_LINE_SEP_ABOVE_FENCE = (
+    "# Owner actions\n"
+    "\n"
+    "## D. An earlier, unrelated item\n"
+    "\n"
+    "Prose pasted from the web:\u2028soft break one\u2028soft break two\u2028end.\n"
+    "\n"
+    "## E. Add 3 missing secrets\n"
+    "\n"
+    "- `ALERT_WEBHOOK_URL` — some description.\n"
+    "\n"
+    "```verify\n"
+    "id: E-webhook\n"
+    "type: env\n"
+    "probe: read HAS_ALERT_WEBHOOK_URL\n"
+    "done_when: == 'true'\n"
+    "```\n"
+)
+
+
+def test_main_anchors_correctly_when_a_unicode_line_separator_sits_above_the_fence(tmp_path, monkeypatch):
+    # storage-1 (2026-09-04): main() splits with splitlines(keepends=True) but used to derive every
+    # index from text.count("\n", ...). splitlines() also breaks on \x0b \x0c \x85 U+2028 U+2029, so
+    # the three U+2028 soft breaks in item D's prose shifted the fence's computed line index 3 lines
+    # ABOVE its real position and the anchor walk started above the real anchor — flipping item E's
+    # PARENT HEADING (marking ALL THREE secrets done off the one webhook probe) instead of the
+    # `ALERT_WEBHOOK_URL` bullet, and reading already_done() off the wrong line. The sibling-mis-anchor
+    # guard cannot catch this: _heading_label("## E. …") == "e", which IS in _id_labels("E-webhook").
+    doc = tmp_path / "OWNER_ACTIONS.md"
+    doc.write_text(SAMPLE_DOC_UNICODE_LINE_SEP_ABOVE_FENCE, encoding="utf-8")
+    monkeypatch.setattr(voa, "OWNER_ACTIONS_PATH", str(doc))
+    monkeypatch.setitem(voa.PROBES, "E-webhook", lambda: (True, "HAS_ALERT_WEBHOOK_URL=true"))
+
+    rc = voa.main()
+    assert rc == 0
+    out = doc.read_text(encoding="utf-8")
+    # The BULLET is the flipped line...
+    assert "- **[DONE" in out and "`ALERT_WEBHOOK_URL`" in out
+    # ...and the parent heading is untouched, so the other two secrets stay open.
+    assert "## E. Add 3 missing secrets\n" in out
+    # The unrelated prose (U+2028 separators included) survives the read/flip/write round-trip.
+    assert "Prose pasted from the web:\u2028soft break one" in out
+
+
 def test_main_unknown_id_reports_open_without_crashing(tmp_path, monkeypatch, capsys):
     doc = tmp_path / "OWNER_ACTIONS.md"
     doc.write_text("""## Z. Unknown
@@ -722,10 +770,15 @@ def test_main_does_not_warn_for_a_well_formed_fence(tmp_path, monkeypatch, capsy
 def test_main_warning_does_not_change_flip_behavior_of_other_items(tmp_path, monkeypatch, capsys):
     # A malformed fence for one item must not affect a well-formed sibling fence's normal
     # OPEN/DONE/PASS flip behavior elsewhere in the same document.
-    # Well-formed fence FIRST, malformed one SECOND: FENCE_RE's non-greedy DOTALL probe/done_when
-    # groups can otherwise "leak" past an unterminated malformed fence into a LATER well-formed
-    # fence's own done_when line (a separate, pre-existing quirk of this regex, not something this
-    # unit changes) — ordering avoids that so this test isolates the warning-vs-flip interaction.
+    # Well-formed fence FIRST, malformed one SECOND. Historically this ordering was REQUIRED: this
+    # comment was written 2026-07-26, when FENCE_RE's probe/done_when were non-greedy `.*?` under
+    # re.DOTALL, so a malformed fence could "leak" past its own closing ``` into a LATER well-formed
+    # fence's done_when line. FIX 1 (2026-07-29) confined both fields to a single line, and FIX 2
+    # (2026-07-29/30) refined that to `[^\r\n]*` plus indented continuation lines — the shape live
+    # today, with DOTALL no longer set at all. Either order now yields the same single match (see
+    # test_fence_re_malformed_donewhen_typo_does_not_leak_into_next_fence below, and the FIX 1 header
+    # above it, which this comment contradicted until 2026-09-04); the ordering is kept only so this
+    # test's assertions read in document order.
     doc_text = SAMPLE_DOC_BULLET + "\n" + SAMPLE_DOC_CASE_TYPO_FIELD
     doc = tmp_path / "OWNER_ACTIONS.md"
     doc.write_text(doc_text)

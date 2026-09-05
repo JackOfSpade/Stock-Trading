@@ -72,11 +72,19 @@ def test_window_min_covers_cron_interval_with_margin():
     cron_interval = _alerts_cron_interval_minutes()
     assert cron_interval == 120, "documented/assumed alerts cron interval changed — re-check the margin"
     # >= is the bare minimum (no coverage gap on an on-time run); WINDOW_MIN=130 keeps a 10-minute
-    # margin on top of that, mirroring the workflow's own `gap + 10` sizing. Real scheduler lateness is much larger than 5 minutes, which is why the
-    # workflow overrides RELAY_WINDOW_MIN per run from the actual gap since its last successful run —
-    # this module default is the floor for an override-less (local/manual) invocation. Either
-    # regressing WINDOW_MIN below the cron interval, or widening the cron interval past WINDOW_MIN,
-    # reopens the missed-alert hole this test guards.
+    # margin on top of that. That is the module-level FLOOR only — the workflow's own per-run sizing
+    # is `gap + 130`: a full alerts interval (120 min) plus 10 min slack, NOT a flat `gap + 10`
+    # (2026-08-30 revision — see scripts/alert_relay.py's DE-DUP paragraph and alert-relay.yml's
+    # "Size the alerts lookback window" step; brute-forced over independent per-run delays, margin=10
+    # left an 80-min PERMANENT hole and margin=130 leaves zero). Real scheduler lateness far exceeds
+    # the 10-minute margin, which is why the workflow overrides RELAY_WINDOW_MIN per run from the
+    # actual gap since its last successful run — this module default is the floor for an
+    # override-less (local/manual) invocation. Either regressing WINDOW_MIN below the cron interval,
+    # or widening the cron interval past WINDOW_MIN, reopens the missed-alert hole this test guards.
+    # (Corrected 2026-09-04: this comment claimed the workflow mirrored a `gap + 10` sizing and cited
+    # a "5 minute" lateness figure — both left over from the pre-retune `*/30` cron + WINDOW_MIN=35
+    # era, and `gap + 10` is exactly the margin the 2026-08-30 retune REVERTED. Commit 23307d4 moved
+    # the values and the cron regex in this file but not this prose.)
     assert ar.WINDOW_MIN >= cron_interval
 
 
@@ -146,6 +154,24 @@ def test_relay_orders_posts_and_formats(monkeypatch):
     ar.relay_orders()
     assert len(posted) == 1
     assert "KMX" in posted[0] and "BUY" in posted[0]
+
+
+def test_relay_orders_never_renders_limit_price_as_an_order_price(monkeypatch):
+    """REGRESSION (2026-09-04). Every live order is MARKET since the 2026-07-21 cutover and no
+    limit_price is transmitted (bigquery/100, /101) — the column survives only as a REFERENCE price
+    for reserved-cash / notional math. This push is the one operator-facing surface that renders it,
+    and it rendered `@ <price>`, asserting an order price no live order carries. The `@` label
+    outlived two earlier wording corrections to this same function (2026-07-20 craftability,
+    2026-08-03 'unreconciled'), both of which landed AFTER the cutover, so pin it."""
+    monkeypatch.setattr(ar, "bq", lambda sql: [
+        {"item_key": "k1", "strategy": "B", "ticker": "KMX", "side": "BUY",
+         "qty": "10", "limit_price": "70.00", "window_close": "2026-06-30", "instruction_id": None},
+    ])
+    posted = []
+    monkeypatch.setattr(ar, "post", lambda text: posted.append(text))
+    ar.relay_orders()
+    assert "@ 70.00" not in posted[0], "a reference price must never be rendered as an order price"
+    assert "ref ~70.00" in posted[0]
 
 
 def test_relay_orders_missing_column_raises_not_silent(monkeypatch):

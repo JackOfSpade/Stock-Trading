@@ -385,10 +385,10 @@ def check_a(spec, bodies, errors):
 # NOT NULL columns could never be flagged as unpinned in Claude_Task_Plan.md, exactly the defect
 # class this script exists to catch. Widened to every dataset that actually holds a routine-writable
 # table with a parenthesized column list; CREATE...AS (analytics.review_embeddings,
-# analytics.decision_embeddings) and the FORMAT-string dynamic `CREATE ... LIKE` in
-# events_restore_drill (bigquery/17_restore_drill.sql) still don't match -- neither has an immediate
-# `(` after the table name, so widening the alternation further to include events_restore_drill would
-# be a no-op for that specific statement.
+# analytics.decision_embeddings, ops.routine_catalog -- bigquery/15_routine_catalog.sql) and the
+# FORMAT-string dynamic `CREATE ... LIKE` in events_restore_drill (bigquery/17_restore_drill.sql)
+# still don't match -- none of them has an immediate `(` after the table name, so widening the
+# alternation further to include events_restore_drill would be a no-op for that specific statement.
 CREATE_TABLE_RE = re.compile(
     r"CREATE\s+(?:OR\s+REPLACE\s+)?TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?"
     rf"`{re.escape(PROJECT)}\.(events|ops|state|analytics|perf)\.(\w+)`\s*\(",
@@ -496,8 +496,8 @@ def parse_create_table_bodies(bigquery_dir):
     definition (numeric apply order via lib.sql_files.numbered_sql_files -- NOT lexical directory
     order, which misorders any 3-digit file against a 2-digit one, per that module's own docstring).
 
-    "Last wins" matches live BigQuery semantics for CREATE OR REPLACE TABLE (ops.ticker_backfill,
-    ops.routine_catalog) directly. It does NOT literally match CREATE TABLE IF NOT EXISTS semantics
+    "Last wins" matches live BigQuery semantics for CREATE OR REPLACE TABLE directly. It does NOT
+    literally match CREATE TABLE IF NOT EXISTS semantics
     (there, the FIRST applied definition is the one that actually creates the table; a later
     IF-NOT-EXISTS re-declaration is a no-op against a live table). The one IF-NOT-EXISTS table
     defined twice in this tree today, ops.loop_promotion_log (bigquery/71 + bigquery/84), is a
@@ -507,6 +507,16 @@ def parse_create_table_bodies(bigquery_dir):
     than branching on the CREATE variant, which would add complexity with no behavioral difference on
     the current tree. A future genuinely-conflicting IF-NOT-EXISTS duplicate would need this function
     revisited.
+
+    The OR-REPLACE half of that rationale is currently UNEXERCISED, and the two tables this paragraph
+    used to cite as its concrete cases (ops.ticker_backfill, ops.routine_catalog) were never in this
+    function's output: measured 2026-09-04, no CREATE OR REPLACE TABLE anywhere in bigquery/*.sql is
+    visible to CREATE_TABLE_RE at all. ops.routine_catalog is a CTAS (bigquery/15_routine_catalog.sql,
+    `CREATE OR REPLACE TABLE ... AS SELECT`, no parenthesized column list) and ops.ticker_backfill
+    occurs only inside a `--`-commented reproduce recipe (bigquery/02_ai_layer.sql, blanked by
+    strip_sql_comments before the regex runs), so both fail CREATE_TABLE_RE's requirement of an
+    immediate `(` after the table name (see its own comment). Today the ordering rule is therefore
+    exercised solely by the ops.loop_promotion_log IF-NOT-EXISTS pair above.
     """
     bodies = {}
     for _num, path in numbered_sql_files(bigquery_dir):

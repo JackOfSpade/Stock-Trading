@@ -11,6 +11,7 @@ unit test that would make the suite depend on a dbt invocation. resolve_profiles
 filesystem/env logic (no subprocess), so it is unit-testable without that dependency.
 """
 import os
+import shutil
 
 from conftest import load_module_from_path
 
@@ -118,14 +119,25 @@ def test_resolve_profiles_dir_respects_an_already_set_env_var(monkeypatch):
 def test_resolve_profiles_dir_materializes_profiles_ci_yml_when_unset(monkeypatch):
     monkeypatch.delenv("DBT_PROFILES_DIR", raising=False)
     profiles_dir, owned = vp.resolve_profiles_dir()
-    assert owned is True  # freshly created by this call -- main() should clean this one up
-    written = os.path.join(profiles_dir, "profiles.yml")
-    assert os.path.isfile(written)
-    with open(written, encoding="utf-8") as f:
-        got = f.read()
-    with open(os.path.join(REPO, "dbt", "profiles.ci.yml"), encoding="utf-8") as f:
-        want = f.read()
-    assert got == want  # dbt/profiles.ci.yml is the single checked-in source -- byte-identical, not re-derived
+    try:
+        assert owned is True  # freshly created by this call -- main() should clean this one up
+        written = os.path.join(profiles_dir, "profiles.yml")
+        assert os.path.isfile(written)
+        with open(written, encoding="utf-8") as f:
+            got = f.read()
+        with open(os.path.join(REPO, "dbt", "profiles.ci.yml"), encoding="utf-8") as f:
+            want = f.read()
+        assert got == want  # dbt/profiles.ci.yml is the single checked-in source -- byte-identical, not re-derived
+    finally:
+        # owned=True hands ownership to the CALLER (main() does exactly this in its own `finally`).
+        # Calling the function DIRECTLY means taking on the same duty, or this test leaks one
+        # /tmp/dbtprof-XXXXXXXX per pytest run, unbounded -- the very leak the sibling test below,
+        # test_resolve_profiles_dir_tempdir_is_cleaned_up_by_main_when_owned, exists to pin
+        # (measured 2026-09-04: 124 orphaned dirs had piled up on this machine, +1 per run of this
+        # test; after the fix, before==after across a targeted run).
+        # Guarded on `owned` so a caller-supplied DBT_PROFILES_DIR could never be removed here.
+        if owned:
+            shutil.rmtree(profiles_dir, ignore_errors=True)
 
 
 def test_resolve_profiles_dir_tempdir_is_cleaned_up_by_main_when_owned(monkeypatch):
@@ -159,3 +171,29 @@ def test_resolve_profiles_dir_tempdir_is_cleaned_up_by_main_when_owned(monkeypat
     vp.main(["some_model"])  # --use-compiled NOT passed -> takes the resolve_profiles_dir() branch
     assert "dir" in created, "tempfile.mkdtemp was never called -- test setup didn't exercise the branch"
     assert not os.path.isdir(created["dir"]), "owned profiles tempdir was not cleaned up by main()"
+
+
+def test_help_flag_prints_usage_without_touching_dbt(monkeypatch, capsys):
+    """FLAG HANDLING (2026-09-04 quality pass): `--help` used to fall through the membership tests
+    with no positional model and therefore silently mean --all — a real ~186-model `dbt compile`
+    instead of the Usage block the docstring advertises. Pin the fixed behavior: usage on stdout,
+    exit 0, and NO subprocess/compile work of any kind."""
+    def exploding_run(*a, **k):  # any dbt invocation is a test failure
+        raise AssertionError("main(--help) must not shell out")
+    monkeypatch.setattr(vp.subprocess, "run", exploding_run)
+    monkeypatch.setattr(vp, "all_model_names", lambda: (_ for _ in ()).throw(AssertionError("must not enumerate models")))
+    assert vp.main(["--help"]) == 0
+    assert "Usage:" in capsys.readouterr().out
+
+
+def test_unknown_flag_is_a_loud_exit_2_not_a_silent_full_fleet_run(monkeypatch, capsys):
+    """A typo like `--al` used to be ignored and, with no positional model, silently widened the run
+    to every model — the same fail-open shape the module's own --use-compiled note rejects. Now it
+    must name the bad flag, print usage, and exit 2 without enumerating or compiling anything."""
+    def exploding_run(*a, **k):
+        raise AssertionError("main(unknown flag) must not shell out")
+    monkeypatch.setattr(vp.subprocess, "run", exploding_run)
+    monkeypatch.setattr(vp, "all_model_names", lambda: (_ for _ in ()).throw(AssertionError("must not enumerate models")))
+    assert vp.main(["--al"]) == 2
+    out = capsys.readouterr().out
+    assert "--al" in out and "Usage:" in out

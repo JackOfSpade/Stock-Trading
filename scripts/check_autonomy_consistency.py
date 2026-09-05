@@ -44,6 +44,7 @@ except ImportError:
     raise SystemExit(2) from None
 
 from lib.report import fail_or_ok
+from lib.sql_files import OBJECT_DDL, normalize_kind, numbered_sql_files, resolve_canonical, strip_sql_comments
 from lib.textio import read_text, load_yaml
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -52,7 +53,23 @@ AUTONOMY = os.path.join(ROOT, "ops", "autonomy_levels.yaml")
 # one-line CALL wrapper (bigquery/scheduled_queries/README.md) — the actual
 # constant_tuning_loop_heartbeat_missing check body (the 'loop:<id>' UNNEST literals this script scans
 # for) lives in the ops.sp_sq_cadence_check procedure defined in bigquery/75_scheduled_query_wrappers.sql.
+#
+# APPLY-IN-ORDER CORRECTION (roster-group bug, 2026-09-04): the sentence above was written when
+# bigquery/75 was the ONLY definition, and it is no longer where the deployed body lives — 15 files now
+# carry a `CREATE OR REPLACE PROCEDURE ops.sp_sq_cadence_check` (75, 111, 120, 128, 132, 142, 147, 149,
+# 150, 153, 157, 159, 172, 186, 205), and bigquery/*.sql is apply-in-order, so the HIGHEST-numbered
+# definition is the live one. Hard-pinning bigquery/75 meant this dead-man's-switch coverage gate was
+# validating a body 14 supersessions stale: a future supersession that dropped a loop from the detection
+# literal would pass clean (fail-OPEN), and — more likely near-term — a NEWLY promoted active_auto loop
+# whose heartbeat literal lands in a new superseding file (the standing rule from bigquery/111's header)
+# would be reported missing and block every merge (false FAIL). CADENCE_SQL stays as the module-level
+# path constant tests monkeypatch and as the fallback anchor (it also names the directory to scan);
+# canonical_cadence_sql() below resolves the actual winner at CALL time, exactly as
+# check_sq_version_registry.py's resolve_winners() does for the same procedure family. The repo already
+# treats this stale-pin class as a defect: Claude_Task_Plan.md carries a 2026-08-20 D3 correction for a
+# bullet that named bigquery/75 as an edit target "which has been wrong since bigquery/111 superseded it".
 CADENCE_SQL = os.path.join(ROOT, "bigquery", "75_scheduled_query_wrappers.sql")
+CADENCE_PROC = "sp_sq_cadence_check"
 
 # Loops intentionally NOT in cadence_check.sql's constant_tuning_loop_heartbeat_missing UNNEST list —
 # each for its own declared reason, not a silent gap:
@@ -117,6 +134,33 @@ CITATION_RE = re.compile(
     r"[^\n]{0,40}?loop(?:\s+id)?\s+`(?P<id>[a-z0-9_]+)`"
 )
 
+# A THIRD citation style, in the reverse word order — loop id first, stage second:
+#   "-- WHY (W5 2026-08-03, self-improvement loop `process_reliability`, active_auto per
+#    ops/autonomy_levels.yaml):"                                            (bigquery/129_*.sql)
+# CITATION_RE above can never match this: its `...yaml`[^\n]{0,40}?loop` tail requires the loop id to
+# come AFTER the filename. Added 2026-09-04 after measuring the gap — 9 citations in the scanned corpus
+# are written as "<stage> per ops/autonomy_levels.yaml" (across 6 files) and CITATION_RE validated only
+# 8 of them, leaving bigquery/129's
+# citation entirely unchecked inside a glob (`bigquery/*.sql`) that exists precisely so "a NEW citation
+# added elsewhere later is still validated". That citation happens to be CORRECT today, so this closes a
+# coverage hole rather than fixing a wrong answer — the same class as the 2026-07-17 `bigquery/*.md`
+# glob addition, which was made for a citation that had gone live-stale while unscanned.
+# TWO deliberate narrowings, both load-bearing:
+#   - the STAGE half is restricted to the STAGE_ORDER vocabulary, not [A-Za-z_]+ as in CITATION_RE.
+#     Reading right-to-left, an unrestricted stage word would capture any ordinary sentence noun
+#     preceding "per ops/autonomy_levels.yaml" (e.g. "... loop `x` is documented per
+#     ops/autonomy_levels.yaml") and report a false DRIFT. CITATION_RE can afford the loose class
+#     because its stage is anchored by what FOLLOWS; this one is not.
+#   - re.IGNORECASE on the stage alternation only. Every FORWARD citation in the repo spells the stage
+#     in UPPERCASE ("DORMANT per ..."); bigquery/129 happens to use lowercase. Matching only lowercase
+#     here would close exactly today's instance and leave "loop `x`, ACTIVE_AUTO per ..." invisible —
+#     a half-closed hole, which is worse than a visible one. _check_citations() already lowercases the
+#     cited stage before comparing, so nothing downstream changes.
+CITATION_RE_REVERSED = re.compile(
+    r"loop(?:\s+id)?\s+`(?P<id>[a-z0-9_]+)`"
+    r"[^\n]{0,60}?(?P<stage>(?i:" + "|".join(STAGE_ORDER) + r"))\s+per\s+`?ops/autonomy_levels\.yaml`?"
+)
+
 
 def load_stages():
     """{loop id: current stage} from ops/autonomy_levels.yaml."""
@@ -125,11 +169,21 @@ def load_stages():
 
 
 def find_citations(path):
-    """[(cited_stage, loop_id), ...] in one file. [] if the file doesn't exist or has no citations."""
+    """[(cited_stage, loop_id), ...] in one file, in document order. [] if the file doesn't exist or has
+    no citations.
+
+    Unions BOTH word orders — CITATION_RE (stage first) and CITATION_RE_REVERSED (loop id first) — rather
+    than loosening CITATION_RE itself, so its forward-order rationale above stays intact and each pattern
+    keeps the anchoring that makes its own stage capture safe. De-duplicated by (start offset, stage, id)
+    so a citation both patterns happen to match at the same position is counted once."""
     if not os.path.exists(path):
         return []
     txt = read_text(path)
-    return [(m.group("stage"), m.group("id")) for m in CITATION_RE.finditer(txt)]
+    seen = set()
+    for pattern in (CITATION_RE, CITATION_RE_REVERSED):
+        for m in pattern.finditer(txt):
+            seen.add((m.start(), m.group("stage"), m.group("id")))
+    return [(stage, loop_id) for _pos, stage, loop_id in sorted(seen)]
 
 
 def _check_citations(path, stages, errors):
@@ -156,14 +210,79 @@ def active_auto_loops():
     return {lid for lid, st in load_stages().items() if (st or "").lower() == "active_auto"}
 
 
+def canonical_cadence_sql():
+    """(path, errors) — the bigquery/*.sql file whose `ops.sp_sq_cadence_check` body is the one actually
+    DEPLOYED, resolved apply-in-order (highest leading NN wins) rather than hard-pinned to CADENCE_SQL.
+    See CADENCE_SQL's own comment for the stale-pin bug this closes; the resolution itself mirrors
+    check_sq_version_registry.py's resolve_winners(), which solves the identical problem for the same
+    procedure family, and reuses lib/sql_files.py's shared OBJECT_DDL/numbered_sql_files() parsers so
+    there is one spelling of "find an object's definitions in apply order", not a third hand-rolled copy.
+
+    Resolved at CALL time, never at import: tests/test_autonomy_consistency.py monkeypatches CADENCE_SQL
+    to a tmp file, and an import-time resolution would silently ignore that. Those tmp files carry no
+    `NN_` prefix, so numbered_sql_files() finds nothing in the tmp directory and the FALLBACK below
+    returns the monkeypatched path unchanged — which is also the right answer for a checkout where
+    bigquery/ is absent entirely.
+
+    Returns (None, [error]) — not a silently-chosen path — when two DIFFERENT files share the winning
+    leading number and both define this procedure. resolve_canonical()'s contract is explicit that a
+    caller must never index [0] on the tied set (duplicate NN prefixes exist in this repo today: 114 x2,
+    185 x2), because picking one at random would validate the WRONG body with no signal at all. A None
+    path makes cadence_heartbeat_loops() report "nothing to compare" while the error itself fails the
+    gate — fail-closed, not fail-silent."""
+    bigquery_dir = os.path.dirname(CADENCE_SQL)
+    if not os.path.isdir(bigquery_dir):
+        return CADENCE_SQL, []
+    occurrences = []
+    for number, path in numbered_sql_files(bigquery_dir):
+        if os.path.isdir(path):
+            continue
+        raw = read_text(path)
+        if CADENCE_PROC not in raw:      # cheap pre-filter; the OBJECT_DDL scan below is authoritative
+            continue
+        # strip_sql_comments() first: a `-- CREATE OR REPLACE PROCEDURE ops.sp_sq_cadence_check` line
+        # inside a doc comment is not a definition (the exact class lib/sql_files.py's helper exists for
+        # — confirmed live at bigquery/02_ai_layer.sql:23 for a sibling checker).
+        for m in OBJECT_DDL.finditer(strip_sql_comments(raw)):
+            if (normalize_kind(m.group(1)), m.group(2), m.group(3)) == ("PROCEDURE", "ops", CADENCE_PROC):
+                occurrences.append((number, path))
+                break
+    if not occurrences:
+        # No definition found anywhere (a pre-bigquery/75 checkout, a tmp fixture dir, or a DDL-shape
+        # change): fall back to the pinned path, whose own existence check downstream still applies.
+        return CADENCE_SQL, []
+    winner_number, winner_paths = resolve_canonical(occurrences)
+    if len(winner_paths) > 1:
+        return None, [
+            f"ops.{CADENCE_PROC}: AMBIGUOUS canonical definition — bigquery/{winner_number} is the "
+            f"winning (highest) leading number, but {len(winner_paths)} DIFFERENT files share it and "
+            f"each defines `CREATE OR REPLACE PROCEDURE ops.{CADENCE_PROC}`: "
+            f"{', '.join('bigquery/' + os.path.basename(p) for p in winner_paths)}. This gate cannot "
+            f"silently choose between them (it would validate the wrong body's dead-man's-switch list) "
+            f"— renumber one file, or delete the definition that is not actually deployed."]
+    return winner_paths[0], []
+
+
 def cadence_heartbeat_loops():
     """Loop ids monitored by cadence_check.sql's constant_tuning_loop_heartbeat_missing switch
     (its 'loop:<id>' UNNEST literals). None if the file is missing. This is the UNION across every
     'loop:<id>' literal in the file — used for the rot / file-missing signals; the actual coverage
-    requirement uses cadence_detection_loops() (the DETECTION-list-only view, see below)."""
-    if not os.path.exists(CADENCE_SQL):
+    requirement uses cadence_detection_loops() (the DETECTION-list-only view, see below).
+
+    KNOWN LIMIT (worth recording, unchanged by the 2026-09-04 canonical-resolution fix): this scans the
+    WHOLE canonical file, not just the sp_sq_cadence_check procedure body. That was harmless while the
+    pin was bigquery/75 and stays harmless today (bigquery/205 is a multi-object file yet still yields
+    exactly the same 2 loop-bearing UNNEST blocks and the same 7-loop set as all 14 earlier definitions,
+    measured), but a future canonical file carrying an UNRELATED `'loop:<id>'` UNNEST literal would join
+    cadence_detection_loops()'s intersection and could narrow it into a false FAIL."""
+    path, _errors = canonical_cadence_sql()
+    if path is None or not os.path.exists(path):
         return None
-    txt = read_text(CADENCE_SQL)
+    # strip_sql_comments() before the literal scan, same reasoning as canonical_cadence_sql() above: a
+    # commented-out `'loop:<id>'` literal is not a live dead-man's switch. Not hypothetical — bigquery/
+    # 71_research_quality_promotion.sql already carries one inside a `--` comment today (it is not a
+    # cadence_check definition file, so it never reaches here, but the idiom is established).
+    txt = strip_sql_comments(read_text(path))
     # [a-z0-9_]+ (not [a-z_]+): match a digit-bearing loop id too — see CITATION_RE's comment.
     return set(re.findall(r"'loop:([a-z0-9_]+)'", txt))
 
@@ -172,7 +291,9 @@ def cadence_detection_loops():
     """Loop ids that appear in EVERY 'loop:<id>' UNNEST literal in the cadence SQL — i.e. their
     intersection. None if the file is missing.
 
-    bigquery/75's ops.sp_sq_cadence_check carries the loop list TWICE: the IF EXISTS DETECTION literal
+    The canonical ops.sp_sq_cadence_check body (bigquery/75 when this was written; resolved
+    apply-in-order since 2026-09-04 — see canonical_cadence_sql()) carries the loop list TWICE:
+    the IF EXISTS DETECTION literal
     that actually fires the constant_tuning_loop_heartbeat_missing alarm, and a STRING_AGG MESSAGE
     literal that only builds the alert text. A loop present in the message list but MISSING from the
     detection list has NO working dead-man's switch, yet cadence_heartbeat_loops()'s whole-file UNION
@@ -181,9 +302,13 @@ def cadence_detection_loops():
     intersection of all loop-bearing UNNEST literals enforces detection-list membership without
     hardcoding which literal is which. Returns set() if no loop-bearing UNNEST literal is found (the
     caller already handles the rot/empty case via cadence_heartbeat_loops())."""
-    if not os.path.exists(CADENCE_SQL):
+    path, _errors = canonical_cadence_sql()
+    if path is None or not os.path.exists(path):
         return None
-    txt = read_text(CADENCE_SQL)
+    # Comments stripped for the same reason as in cadence_heartbeat_loops() — and it matters MORE here:
+    # a commented-out UNNEST block bearing loop literals would add a whole extra set to the intersection
+    # below and could narrow it, i.e. false-FAIL this gate off a documentation aside.
+    txt = strip_sql_comments(read_text(path))
     blocks = re.findall(r"UNNEST\(\s*\[([^\]]*'loop:[^\]]*)\]\s*\)", txt)
     loop_sets = [set(re.findall(r"'loop:([a-z0-9_]+)'", b)) for b in blocks]
     loop_sets = [s for s in loop_sets if s]
@@ -194,13 +319,23 @@ def _check_cadence_heartbeat_coverage(errors):
     """Every active_auto loop (except the self-monitoring ones) MUST appear in cadence_check.sql's
     dead-man's-switch list — an active_auto loop with no heartbeat alarm is the exact gap
     meta_monitoring_heartbeat (ops/autonomy_levels.yaml) forbids. Only the fail-OPEN direction (a
-    promoted loop missing from the SQL) is an error; a stale literal for a demoted loop is fail-safe."""
+    promoted loop missing from the SQL) is an error; a stale literal for a demoted loop is fail-safe.
+
+    The file NAMED in both error strings below is the apply-in-order-resolved canonical definition, not
+    the hardcoded bigquery/75 the messages used to spell (2026-09-04) — pointing an operator at a
+    superseded file is how a fix lands in a body that is never applied. Nothing in the repo or the tests
+    asserts on the old literal filename (checked before changing it)."""
+    cadence_path, resolve_errors = canonical_cadence_sql()
+    errors.extend(resolve_errors)
     monitored = cadence_heartbeat_loops()
     if monitored is None:
-        return  # bigquery/75_scheduled_query_wrappers.sql not present in this checkout; nothing to compare
+        # The canonical cadence-check SQL is not present in this checkout (or its definition is
+        # AMBIGUOUS, already reported above); nothing to compare.
+        return
+    rel = os.path.relpath(cadence_path, ROOT)
     expected = active_auto_loops() - HEARTBEAT_SELF_MONITORED_LOOPS
     if expected and not monitored:
-        errors.append("bigquery/75_scheduled_query_wrappers.sql (ops.sp_sq_cadence_check): found no "
+        errors.append(f"{rel} (ops.{CADENCE_PROC}): found no "
                       "'loop:<id>' heartbeat literals — the constant_tuning_loop_heartbeat_missing UNNEST "
                       "list was reformatted (regex rotted) or removed; fix the regex here or restore the list")
         return
@@ -209,10 +344,11 @@ def _check_cadence_heartbeat_coverage(errors):
     missing = expected - cadence_detection_loops()
     if missing:
         errors.append(
-            "bigquery/75_scheduled_query_wrappers.sql (ops.sp_sq_cadence_check): "
+            f"{rel} (ops.{CADENCE_PROC}): "
             f"constant_tuning_loop_heartbeat_missing does NOT monitor active_auto loop(s) {sorted(missing)} "
             "— an active_auto loop with no dead-man's switch is the gap meta_monitoring_heartbeat "
-            "forbids; add 'loop:<id>' to BOTH UNNEST literals in that procedure body, or if it "
+            "forbids; add 'loop:<id>' to BOTH UNNEST literals in that procedure body (in a NEW "
+            "higher-numbered bigquery/*.sql supersession, per bigquery/111's header rule), or if it "
             "self-monitors (like strategy_arsenal) add it to HEARTBEAT_SELF_MONITORED_LOOPS in "
             "scripts/check_autonomy_consistency.py")
 

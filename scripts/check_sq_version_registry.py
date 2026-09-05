@@ -11,10 +11,26 @@ bigquery/63_scheduled_query_version_registry.sql's MERGE seed row for the same `
 pairing check_script_version_consistency.py already enforces for the .gs/bigquery-43 pair, ported to
 scheduled queries. The drift class it feeds, `scheduled_query_version_drift`, has NO row in
 ops.alert_policy, so a WARNING it raises can never auto-resolve: it recurs nightly until someone hand-
-fixes the registry. That happened twice with zero CI signal before this script existed: commit 0b9fd49
-bumped daily_staging_cap_check's heartbeat literal v4 -> v5 in bigquery/75 without bumping bigquery/63's
-seed, and commit 9a67c22 added cadence_check logic in a superseding file without bumping the heartbeat
-literal at all.
+fixes the registry. Two incidents with zero CI signal motivated this script — but only ONE of them is a
+class it can detect, and this paragraph used to blur that (corrected 2026-09-04):
+  - commit 0b9fd49 bumped daily_staging_cap_check's heartbeat literal v4 -> v5 in bigquery/75 without
+    bumping bigquery/63's seed. DETECTED HERE: the body literal no longer equals the registry seed.
+  - commit 9a67c22 added cadence_check logic in a superseding file without bumping the heartbeat literal
+    at all. NOT DETECTABLE HERE, structurally. main()'s only version comparison is `body_version !=
+    reg_version`, and a literal nobody touched still trivially equals the seed — so the loop is satisfied
+    and this script exits 0. state.scheduled_query_version_drift is blind for the same reason: it compares
+    that same unchanged literal against that same seed. Catching this class needs a BODY-vs-BODY diff
+    between a procedure's canonical file and its previous canonical file, not a literal-vs-registry one;
+    today it is covered only by the supersede-only comment discipline (check_superseded_markers.py) and
+    reviewer diligence.
+    Repo-side example as of 2026-09-04, dated deliberately because a named instance is exactly the kind of
+    frozen fact this repo has been bitten by (re-measure before citing it): bigquery/186 and bigquery/205
+    both emit `CALL ops.sp_beat_heartbeat('sq:cadence_check', 'v21', ...)` while their sp_sq_cadence_check
+    bodies differ — bigquery/205 rewrites three alert-message expressions and documents the change as
+    message-text-only. This script reports OK on that pair, as designed. It is a REPO-side example, not a
+    live-drift claim: bigquery/205's cadence_check body was not applied live when it landed (OAuth token
+    expiry, recorded in that commit), so live still runs bigquery/186's body — the detector for THAT gap
+    is check_live_sql_parity.py, not this script.
 
 APPLY-IN-ORDER SUPERSESSION. bigquery/*.sql is apply-in-order (see check_superseded_markers.py's
 header): several `ops.sp_sq_<name>` procedures are redefined via `CREATE OR REPLACE PROCEDURE` in more

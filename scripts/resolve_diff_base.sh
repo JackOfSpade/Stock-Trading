@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
-# Sourceable diff-base resolution for ci.yml's `dbt-parity` and `sql-validate` path gates
+# Sourceable diff-base resolution for the THREE steps in ci.yml that source this file: the
+# `warehouse-validation` job's `dbt-parity` and `sql-validate` path gates (the original two, which
+# motivated the extraction below) and — since 2026-08-21 (95f5e19) — the `checks` job's "Change scope
+# (which optional step groups this push needs)" step, which decides whether the shellcheck/actionlint,
+# ruff and dbt step GROUPS run at all. That third caller is why this header was updated on 2026-09-04:
+# it still said "both call sites", understating the blast radius of any change to this function.
+# (golden-scenarios.yml does NOT source this file — ci.yml's own "shared with golden-scenarios.yml"
+# comment near its sql-validate gate is a looser claim about the pull_request-argument convention, not
+# a fourth sourcing site.)
 # (extracted 2026-07-26, codebase audit — de-duplication). Mirrors the precedent set by
 # scripts/auto_merge_decision.sh: production and tests source the SAME implementation (no
 # shadow copy to drift), and tests/test_resolve_diff_base.sh exercises it against a scratch
@@ -10,9 +18,10 @@
 # guard step above verbatim in structure"). Nothing checked the two copies stayed in sync, and
 # the chain had ALREADY needed two follow-on correctness fixes (2026-07-20, 2026-07-20b) that
 # each had to be hand-applied twice in the same file — exactly the drift risk a single source of
-# truth removes. This is a straight lift with NO behavior change; both call sites' own downstream
-# path filter (bigquery/**|dbt/** vs bigquery/*.sql|bigquery/scheduled_queries/*.sql) stays in the
-# job, only the base-SHA resolution itself moved.
+# truth removes. This is a straight lift with NO behavior change; each call site's own downstream
+# path filter (bigquery/**|dbt/** vs bigquery/*.sql|bigquery/scheduled_queries/*.sql vs the
+# change-scope step's three per-group patterns) stays in the job, only the base-SHA resolution itself
+# moved.
 #
 # HISTORY (condensed from the two call sites' now-superseded inline comments — both revisions
 # applied identically here, once):
@@ -70,8 +79,9 @@
 #   caller) precisely so it cannot be accidentally dropped from one call site the way the rest of
 #   this chain was duplicated in the first place.
 #
-# Requires the caller's checkout to have used fetch-depth: 0 (both dbt-parity and sql-validate
-# already set this) so origin/main and the merge-base are resolvable at all.
+# Requires the caller's checkout to have used fetch-depth: 0 (all three sourcing steps in ci.yml
+# already set this — the `checks` job's checkout comment already points back here for that reason) so
+# origin/main and the merge-base are resolvable at all.
 
 # A fetch is only a best-effort refresh before the callers' documented fail-open behavior. Keep
 # it non-interactive and bounded: an unreachable remote must not hang the entire CI job (or the
@@ -103,8 +113,10 @@ _fetch_origin_main() {
 # resolve_diff_base <EVENT_NAME> <PR_BASE> <PUSH_BEFORE> <HEAD_SHA> <REF_NAME> — prints the
 # resolved base SHA to stdout if (and only if) it resolves to a real commit object; prints
 # NOTHING (empty stdout) otherwise. This function makes NO fail-open/fail-closed policy decision
-# itself — dbt-parity's "nothing resolvable" response (run the full check) and sql-validate's
-# (validate every bigquery/*.sql file) are each its own caller's business, not this function's.
+# itself — dbt-parity's "nothing resolvable" response (run the full check), sql-validate's (validate
+# every bigquery/*.sql file) and the `checks` job's change-scope step's (leave dbt_needed, lint_needed
+# and py_needed all 'true', i.e. run every optional step group) are each its own caller's business,
+# not this function's.
 # Folding the final "$base" validity check in here (previously duplicated a THIRD time at each
 # call site, after the precedence chain itself) means a caller only ever needs `[ -n "$base" ]`.
 resolve_diff_base() {

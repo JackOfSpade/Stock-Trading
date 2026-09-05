@@ -137,8 +137,13 @@ assert_eq "discrimination check: the OLD stop-at-first-hit loop DOES get this wr
   "$old_out" "2026-08-20"
 
 echo
+# Banner names THIS file (2026-09-04 quality pass). It previously self-identified as
+# "test_restore_drill_date_resolution", a filename that has never existed here -- ci.yml and
+# auto-merge-claude.yml both invoke `bash tests/test_restore_drill.sh`, so the banner sent a reader
+# chasing a non-existent file. Cosmetic only: both callers check the exit status, nothing greps this
+# text (verified across .github/ and scripts/).
 if [ "$fail" -ne 0 ]; then
-  echo "test_restore_drill_date_resolution: FAILED"
+  echo "test_restore_drill: FAILED"
   exit 1
 fi
-echo "test_restore_drill_date_resolution: all $pass_count assertions passed"
+echo "test_restore_drill: all $pass_count assertions passed"

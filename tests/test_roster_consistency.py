@@ -419,9 +419,21 @@ def test_fixed_divisor_split_across_lines_in_dbt_reconcile_is_caught(repo_copy):
 
 # ---- (b6b) R-C: the adjacency guard must not false-fail on unrelated slash-digit prose ----
 def test_unrelated_slash_digit_comment_does_not_false_fail_r_c(repo_copy):
+    # FIXTURE CORRECTION (tests-group bug, 2026-09-04): this fixture used to be a `--` comment
+    # ("-- see RUNBOOK section 5/6 for the tolerance rationale"), which the 2026-09-02 change silently
+    # neutered — R-C now runs strip_sql_comments() BEFORE its FIXED_DIVISOR scan, so the comment was
+    # blanked to spaces and _money_nearby() (the guard this test names in its own heading) was never
+    # called at all. Measured: FIXED_DIVISOR matched the comment once raw, zero times stripped, and the
+    # test still PASSED with _money_nearby() forced to always-True, i.e. it could not fail in the
+    # SUPPRESSION direction it exists to pin — and it was R-C's ONLY false-positive-direction test.
+    # The fixture is now REAL (uncommented) SQL so the adjacency guard is genuinely exercised. Keep it
+    # out of a `--` comment, and keep the table name free of R-C's money markers ("amount", "cash_flow",
+    # "deposit"), which _money_nearby() matches by SUBSTRING — `FROM cash_flows` would trip the guard
+    # and turn this into a FAIL. The comment-stripping half is owned separately by
+    # test_amount_flavored_divisor_comment_does_not_false_fail_r_b/_r_c below.
     p = rc.DBT_RECONCILE
     txt = _read(p)
-    _write(p, txt + "\n-- see RUNBOOK section 5/6 for the tolerance rationale\n")
+    _write(p, txt + "\nSELECT win_count / 5 AS win_rate FROM t\n")
     assert rc.main() == 0
 
 
@@ -436,13 +448,22 @@ def test_missing_slicemap_row_is_caught(repo_copy):
 
 
 # ---- (b11) R-A: a strategy/ slice's own heading drifts to [CANDIDATE], desyncing from roster.yaml ----
-def test_slice_heading_marked_candidate_desyncs_from_roster_is_caught(repo_copy):
+def test_slice_heading_marked_candidate_desyncs_from_roster_is_caught(repo_copy, capsys):
+    # ASSERTION HARDENED (tests-group bug, 2026-09-04): this test used to assert only `rc.main() == 1`,
+    # which R-F satisfies on its own — editing a spec-locked slice's bytes trips the spec_hash check
+    # independently of R-A, so the exit code says nothing about the [CANDIDATE] exclusion this test is
+    # named for. Measured: with headings_in()'s `[CANDIDATE]` filter deleted entirely the perturbation
+    # still exited 1 (R-F only) and the whole file's 115 tests still passed. Assert the R-A message
+    # specifically — under the mutant only R-F's message survives, and `"R-A" in out` goes False.
+    # (diff_msg() emits `R-A roster set mismatch -` with NO colon, so match on "R-A", not "R-A:".)
     slice_path = os.path.join(rc.STRATEGY_DIR, "07_strategy_e.md")
     txt = _read(slice_path)
     old = "## Strategy E: Market-neutral narrative-divergence pairs"
     assert old in txt
     _write(slice_path, txt.replace(old, "## Strategy E [CANDIDATE]: Market-neutral narrative-divergence pairs"))
     assert rc.main() == 1
+    out = capsys.readouterr().out
+    assert "R-A" in out and "'E'" in out
 
 
 # ---- (b12) R-F: a spec-locked strategy's declared spec_hash no longer matches its .md + module (ITEM
@@ -776,9 +797,14 @@ def test_leading_operator_divisor_in_dbt_reconcile_is_caught(repo_copy):
 # ---- R-B: the "amount"-adjacency SUPPRESSION direction (a `/N` on a line with no money token is
 #      ignored) — R-C had this test but R-B's identical guard did not (2026-07-17 audit) ----
 def test_unrelated_slash_digit_in_derived_sql_without_amount_does_not_fail(repo_copy):
+    # FIXTURE CORRECTION (tests-group bug, 2026-09-04): same neutering as the R-C twin above — this
+    # fixture was a `--` comment, and R-B has run strip_sql_comments() before its FIXED_DIVISOR scan
+    # since 2026-09-02, so the divisor never survived to reach _money_nearby(). Verified vacuous: the
+    # test passed unchanged with _money_nearby() forced always-True. Real SQL now; do not put it back
+    # inside a comment. See test_unrelated_slash_digit_comment_does_not_false_fail_r_c for the full note.
     target = next(p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql"))
     txt = _read(target)
-    _write(target, txt + "\n-- see RUNBOOK section 5/6 for the split rationale\n")
+    _write(target, txt + "\nSELECT win_count / 5 AS win_rate FROM t;\n")
     assert rc.main() == 0
 
 
@@ -1131,6 +1157,49 @@ def test_amount_flavored_divisor_comment_does_not_false_fail_r_c(repo_copy):
     assert rc.main() == 0
 
 
+# ---- R-J/R-A: the 2026-09-02 comment-stripping fix above reached only THREE of the five readers of
+#      bigquery/*.sql in this checker (R-B's and R-C's derived-SQL loops and R-E's rail scan). The two
+#      readers of bigquery/35_strategy_arsenal.sql — arsenal_coverage_cell_tokens() (R-J) and
+#      seed_active_codes() (R-A) — still scanned RAW text until 2026-09-04, so an ordinary `--`
+#      documentation comment in the one arsenal file autonomous SL1/SL3/SL5 landings edit could flip
+#      either CI-BLOCKING check with zero live SQL change. Both fixtures below were reproduced against
+#      the pre-fix code (R-J returned the RETIRED token sets; R-A dropped 'E' and main() returned 1). ----
+def test_retired_cell_tokens_inside_sql_comment_do_not_false_fail_r_j(repo_copy):
+    # bigquery/35's own H7 FIX header already narrates the retired cell vocabulary in prose one line
+    # above the live literals; this fixture writes that same narration back out in UNNEST form, the
+    # repo's habitual "prior form, kept for the DR record" idiom. toks() uses re.search, so on RAW text
+    # the commented literal (which sits ABOVE the live one) WINS and R-J compares strategy/01's shared
+    # vocabulary against {UPTREND,RANGE,DOWNTREND} x {LOW_VIX,ELEVATED_VIX,HIGH_VIX}.
+    arsenal = rc.ARSENAL_SQL
+    txt = _read(arsenal)
+    old = "-- H7 FIX (2026-07-17)"
+    assert old in txt, "fixture assumption about bigquery/35's H7 header shape drifted"
+    _write(arsenal, txt.replace(old, (
+        "-- PRIOR cells CTE (kept for the DR record, superseded by the H7 fix below):\n"
+        "--   FROM UNNEST(['UPTREND','RANGE','DOWNTREND']) AS spy_trend\n"
+        "--   CROSS JOIN UNNEST(['LOW_VIX','ELEVATED_VIX','HIGH_VIX']) AS vix_regime\n"
+        + old), 1))
+    assert rc.arsenal_coverage_cell_tokens() == ({"UP", "NEUTRAL", "DOWN"}, {"LOW", "NORMAL", "HIGH"})
+    assert rc.main() == 0
+
+
+def test_retired_seed_row_inside_sql_comment_does_not_false_fail_r_a(repo_copy):
+    # seed_active_codes() applies events in TEXTUAL order and lets the last one win, so a commented-out
+    # prior lifecycle row placed textually AFTER the live seed used to override it. This fixture is an
+    # SL5-shaped retirement of 'E' written as a DR-record aside; on RAW text it dropped E from the seed
+    # set and R-A reported "in strategy/roster.yaml (roster-active) but not state.strategy_roster seed".
+    arsenal = rc.ARSENAL_SQL
+    txt = _read(arsenal)
+    old = "-- state.strategy_retirement_candidacy"
+    assert old in txt, "fixture assumption about bigquery/35's retirement-candidacy header shape drifted"
+    _write(arsenal, txt.replace(old, (
+        "-- PRIOR (an SL5 deregistration, kept for the DR record — NOT a live row):\n"
+        "--   (CURRENT_TIMESTAMP(), 'E', 'ADOPTED', 'TERMINATED', 'SL5', 'deregistered'),\n"
+        + old), 1))
+    assert rc.seed_active_codes() == ({"A", "B", "C", "D", "E"}, 5)
+    assert rc.main() == 0
+
+
 # ---- R-E: the cooldown_days sub-block (a SEPARATE comparison loop from the top-level rails) —
 #      both the mismatch and the missing-key vacuous-pass directions (2026-07-17 audit) ----
 def test_cooldown_rail_disagreement_is_caught(repo_copy):
@@ -1395,6 +1464,21 @@ def test_shared_regime_tokens_are_section_scoped():
     assert spy == {"UP", "NEUTRAL", "DOWN"}
     assert vix == {"LOW", "NORMAL", "HIGH"}
     assert "INVERTED" not in vix and "HEALTHY" not in vix
+
+
+def test_headings_in_excludes_a_candidate_marked_heading():
+    # Unit-level lock on headings_in()'s `[CANDIDATE]` exclusion (tests-group bug, 2026-09-04). That
+    # namespace is what keeps a SISA-incubating slice (task_plan/SL2.md instructs SL2 to author
+    # `## Strategy <code> [CANDIDATE]` sections) out of R-A's roster-active comparison; without it R-A
+    # false-FAILS this CI-BLOCKING gate the first time SL2 lands one. The end-to-end test above cannot
+    # discriminate the rule on its own — the same .md byte edit trips R-F's spec_hash check too — and
+    # no [CANDIDATE] heading exists in the repo today, so nothing else exercised it.
+    # split_strategy.py's twin CANDIDATE filter IS pinned (tests/test_split_strategy.py, whose
+    # case-insensitivity test says "headings_in() compares on .upper(); this filter must agree, or the
+    # pair drifts again") — this is the other half of that pair, including the lowercase spelling.
+    assert rc.headings_in("## Strategy F: shadow test strategy\n") == {"F"}
+    assert rc.headings_in("## Strategy F [CANDIDATE]: shadow test strategy\n") == set()
+    assert rc.headings_in("## Strategy F [candidate]: shadow test strategy\n") == set()
 
 
 # ---- R-K: golden-scenario prose-regression coverage — the check had ZERO tests, and repo_copy never

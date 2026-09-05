@@ -405,9 +405,29 @@ def check() -> int:
             # invisible and this script exiting 0 -- exactly the shape of the 2026-07-27 OPS2 defect
             # this checker exists to catch, just on the second firing instead of the first
             # (2026-08-08 audit finding).
+            #
+            # ...but report each DISTINCT local wall-clock time only ONCE per season (fan-out fix,
+            # 2026-09-04 quality pass). `locals_` is every firing INSTANT, while both messages below
+            # interpolate only {probe:%H:%M} and {season} -- so a fixed-UTC cron, which renders one
+            # constant local time per season, appended one BYTE-IDENTICAL error per firing. Measured on
+            # a real daily shape: `0 22 * * 0,1,2,3,4` has 260 instants in REF_YEAR, collapsing to two
+            # distinct (season, local-time) pairs, so a single mis-timed routine printed 260 copies of
+            # the same line under a wrong "FAIL — 260 DST-safety violation(s)" header and buried any
+            # OTHER routine's genuine violation in the same run. Check 1 above avoids this by `break`ing
+            # after the first violating firing; de-duplicating is the lossless equivalent here, because
+            # it still tests EVERY distinct firing time (the property the 2026-08-08 fix added -- a
+            # comma-hour cron's second daily firing is a DIFFERENT wall-clock time and still reported).
+            # `seen` is reset per SEASON on purpose: hoisting it above the season loop would suppress
+            # the MST report whenever MDT had already reported the same wall-clock time, silently
+            # losing a season. render() one function up already uses this same distinct-%H:%M idiom for
+            # the printed table.
             if rid in EVENING_WINDOW_ROUTINE_IDS:
+                seen: set[tuple[int, int]] = set()
                 for probe in locals_:
                     hm = (probe.hour, probe.minute)
+                    if hm in seen:
+                        continue
+                    seen.add(hm)
                     if hm <= MARKET_CLOSE_LOCAL:
                         errors.append(
                             f"{rid}: cron_utc {cron!r} renders {probe:%H:%M} MT in {season}, at or "

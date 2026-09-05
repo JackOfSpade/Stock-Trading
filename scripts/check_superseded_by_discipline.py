@@ -346,6 +346,27 @@ def _definition_segments(text):
     body with no BEGIN at all (a scalar/table FUNCTION, e.g. bigquery/122's analytics.find_precedents)
     keeps the untruncated segment, so this can never lose coverage.
 
+    THAT LAST SENTENCE WAS TRUE BUT INCOMPLETE (fixed 2026-09-04). It answers COVERAGE and says
+    nothing about ATTRIBUTION: an untruncated FUNCTION/TABLE FUNCTION segment runs all the way to the
+    next CREATE, so any free-standing statement in between was folded into that function's body and
+    rode ITS allowlist reason — the bigquery/143 bug one construct further over again, i.e. precisely
+    what the paragraph above exists to prevent. Measured when found: ALL 18 FUNCTION/TABLE FUNCTION
+    segments in the tree take this path (`_procedure_begin()` returns None for every one of them,
+    because such a body has no BEGIN), and bigquery/104_strip_pretrade_rails.sql's
+    analytics.fn_order_guard_options segment was already swallowing a column-0 `DROP VIEW IF EXISTS
+    ...analytics.calibration_return_shrunk;` plus the ~23 lines after it. The payload there is
+    harmless, but the mechanism was live: a theater_judge-style `UPDATE ... FROM events.decision_log`
+    inserted right after the allowlisted analytics.find_precedents TABLE FUNCTION passed with exit 0,
+    while the identical statement placed after a VIEW in the same file was correctly caught.
+
+    So a segment the PROCEDURE/FUNCTION branch did NOT truncate now falls through to the same column-0
+    STANDALONE_STMT cut a VIEW/TABLE gets. That rule is exactly as safe for a FUNCTION/TABLE FUNCTION
+    as for a VIEW: such a body is a single `AS ( <query> )` expression, which cannot contain top-level
+    DML at all, so a column-0 ALTER/UPDATE/INSERT/... after it is never part of the function. PROCEDURE
+    is excluded from the fallback, deliberately and verbatim — its body's indented DML is legitimate,
+    and a PROCEDURE whose own BEGIN cannot be located stays untruncated exactly as before (see
+    _procedure_begin()'s comment above for the string-literal-BEGIN vector that produces that case).
+
     Text before the first CREATE is unowned too (file header, preamble ALTERs) — previously skipped
     entirely, now scanned.
     """
@@ -360,13 +381,22 @@ def _definition_segments(text):
         end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
         kind = normalize_kind(m.group(1))
         chunk = text[m.start():end]
+        truncated = False
         if kind in ("PROCEDURE", "FUNCTION", "TABLE FUNCTION"):
             begin_at = _procedure_begin(chunk)
             body_end = find_procedure_body_end(chunk, begin_at) if begin_at is not None else None
             if body_end is not None:
                 unowned.append(chunk[body_end:])
                 chunk = chunk[:body_end]
-        else:
+                truncated = True
+        # FALL THROUGH to the VIEW/TABLE rule when the branch above did not actually truncate —
+        # which is EVERY scalar/table FUNCTION (no BEGIN to find), not a rare case: without this,
+        # such a segment ran to the next CREATE and swallowed any free-standing statement in
+        # between, handing it the function's ALLOWLIST reason by text position (2026-09-04; see this
+        # function's docstring for the measurement and the bigquery/104 instance). PROCEDURE is
+        # excluded: its body's indented DML is legitimate, so an un-truncatable procedure must stay
+        # untruncated, exactly as before.
+        if not truncated and kind != "PROCEDURE":
             # Look for a column-0 standalone statement AFTER this CREATE's own first line.
             after_create = chunk[m.end() - m.start():]
             cut = STANDALONE_STMT.search(after_create)

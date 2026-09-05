@@ -5,8 +5,14 @@ importable packages (no __init__.py), so every test file that exercises one dyna
 importlib.util.spec_from_file_location. That loader — and the subprocess.run mock factory reused by
 several of those files — used to be copy-pasted near-identically ~21 times across tests/test_*.py.
 This collects both in one place instead.
+
+The loader's importlib body moved once more in the 2026-09-04 quality pass, to scripts/lib/dynload.py:
+it had acquired two further hand-copies OUTSIDE tests/ (scripts/verify_dbt_port.py,
+scripts/gen_dbt_port.py), and neither could import this module for it without taking on a hard pytest
+dependency (see that file's own header). load_module_from_path() below stays exactly where and what
+the 35 test modules importing it expect — same name, same (name, *rel_parts) signature, same
+ROOT-relative resolution — and only delegates its four statements.
 """
-import importlib.util
 import inspect
 import os
 import re
@@ -36,14 +42,23 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if os.path.join(ROOT, "scripts") not in sys.path:
     sys.path.insert(0, os.path.join(ROOT, "scripts"))
 
+# MUST stay below that insert (hence the E402 suppression, the same shape
+# ops/dashboard/generate_dashboard.py uses for its own post-sys.path lib imports): `lib` only resolves
+# once scripts/ is on sys.path, and this file is the thing that puts it there.
+from lib.dynload import load_module_from_path as _load_from_abs_path  # noqa: E402
+
 
 def load_module_from_path(name, *rel_parts):
-    """Dynamically load ROOT/<rel_parts...> as a module registered under `name`."""
-    path = os.path.join(ROOT, *rel_parts)
-    spec = importlib.util.spec_from_file_location(name, path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+    """Dynamically load ROOT/<rel_parts...> as a module registered under `name`.
+
+    The importlib recipe itself lives in scripts/lib/dynload.py since the 2026-09-04 quality pass —
+    it had three independent hand-copies (here, scripts/verify_dbt_port.py, scripts/gen_dbt_port.py).
+    This remains the TEST suite's front door and keeps the ROOT-relative `(name, *rel_parts)` shape
+    that 35 test modules call with (`load_module_from_path("check_x", "scripts", "check_x.py")`), so
+    the extraction is invisible to every one of them; only the four statements moved. Like the copy it
+    replaces, the loaded module is NOT registered in sys.modules — see lib/dynload.py's header for
+    what that guarantees."""
+    return _load_from_abs_path(name, os.path.join(ROOT, *rel_parts))
 
 
 def fake_subprocess_run(returncode, stdout, stderr=""):
@@ -99,8 +114,11 @@ def fake_subprocess_run(returncode, stdout, stderr=""):
 #     purely so the common case reports the friendlier "subprocess.run(...)" wording; either layer
 #     alone would catch the call. `os.popen` and `asyncio.create_subprocess_exec` are ALREADY caught
 #     by that same Popen.__init__ patch with no extra code needed: CPython implements both by
-#     constructing a `subprocess.Popen(...)` internally — verified against this repo's Python 3.14
-#     stdlib source, not just assumed: `os.popen()` calls `subprocess.Popen(cmd, shell=True, ...)`,
+#     constructing a `subprocess.Popen(...)` internally — verified against the CPython stdlib source
+#     for the interpreter that actually runs this suite, not just assumed (re-verified 2026-09-04 on
+#     the 3.13 repo venv; the earlier "this repo's Python 3.14" label named an interpreter neither the
+#     venv nor CI ever runs — every workflow pins python-version 3.11): `os.popen()` calls
+#     `subprocess.Popen(cmd, shell=True, ...)`,
 #     and `asyncio.unix_events._UnixSubprocessTransport._start` calls
 #     `subprocess.Popen(args, shell=shell, ...)` — both reference the very `subprocess` module object
 #     this fixture patches, so both see the patched `__init__`.
@@ -109,11 +127,24 @@ def fake_subprocess_run(returncode, stdout, stderr=""):
 #     `subprocess.run("bq ... query ...", shell=True)` sailed straight through the first version of
 #     this guard. Program-name extraction now shell-tokenizes (shlex) a shell-mode string instead of
 #     naively whitespace-splitting it.
+#   - shell=True SEQUENCE COMMANDS (2026-09-04). The other half of the bullet directly above, left
+#     open when it was written: `_blocked_program_in` branched on TYPE first and dropped the `shell`
+#     flag entirely for a list/tuple, so `subprocess.run(["bq query 'SELECT 1'"], shell=True)`
+#     returned None and really did execute the command line (POSIX Popen prepends ['/bin/sh','-c'],
+#     making element 0 the whole command line and the rest $0/$1/...). `shell` is now honoured for
+#     sequences too: element 0 is tokenized exactly like the bare-string shell=True case.
+#   - BYTES ARGV (2026-09-04). subprocess accepts str, bytes and os.PathLike argv elements, but the
+#     normalization here was `str(a)`, whose result for bytes is the REPR `"b'bq'"` — matching no
+#     program name — so `subprocess.run([b"bq", b"--version"])` and `subprocess.run(b"bq --version",
+#     shell=True)` both sailed through. Normalization is now `os.fsdecode` (see `_as_text`), which
+#     round-trips all three forms to the real name.
 #   - THE OFF-BY-ONE (2026-07-30). `guarded_popen_init` used to read `shell` out of Popen's positional
 #     args by hand (`rest[6]`, where `rest` starts at `bufsize`) against a signature whose real
 #     `shell` parameter is `rest[7]` — confirmed via `inspect.signature(subprocess.Popen.__init__)`
-#     on this repo's Python 3.14 (self, args, bufsize, executable, stdin, stdout, stderr, preexec_fn,
-#     close_fds, shell, ...) — so a POSITIONAL `shell=True` call read `close_fds` instead and was
+#     on the interpreter running this suite (self, args, bufsize, executable, stdin, stdout, stderr,
+#     preexec_fn, close_fds, shell, ...; re-confirmed unchanged on the 3.13 repo venv 2026-09-04, and
+#     the binding below is re-derived at import time so it tracks whatever version is live) — so a
+#     POSITIONAL `shell=True` call read `close_fds` instead and was
 #     silently treated as shell=False. Fixed by binding the actual call against
 #     `inspect.signature(_REAL_POPEN_INIT)` — captured ONCE at import time, from the real bound
 #     method, not hardcoded — via `Signature.bind_partial()` instead of hand-indexing a tuple, so a
@@ -139,11 +170,22 @@ def fake_subprocess_run(returncode, stdout, stderr=""):
 #     implemented in terms of via a plain module-global name lookup on every call, so patching
 #     os.spawnv/os.spawnve transparently covers those two as well. All four are now patched the same
 #     way as subprocess: check, then delegate to the real function captured at import time. This is
-#     not purely redundant with the Popen patch either: subprocess.Popen's own POSIX fast path calls
-#     `os.posix_spawn(...)` internally for EVERY subprocess call routed that way, bq/gcloud or not —
-#     so an ordinary, allowed `subprocess.run(["echo", ...])` in this suite already passes back
-#     through this same patched `os.posix_spawn` today; confirmed this does not break ordinary calls
-#     (see test_unrelated_command_still_runs and friends, and the new
+#     not purely redundant with the Popen patch either: subprocess.Popen has a POSIX fast path that
+#     calls `os.posix_spawn(...)` internally, so any call routed that way passes back through this
+#     patched function, bq/gcloud or not.
+#     CORRECTED 2026-09-04 (this bullet previously claimed an ordinary, allowed
+#     `subprocess.run(["echo", ...])` in this suite "already passes back through" that patch today —
+#     measured FALSE on the repo venv, and a reviewer disproves it in one command). Instrumenting
+#     `os.posix_spawn` recorded ZERO calls for `subprocess.run(["echo","hi"])`,
+#     `subprocess.run(["/bin/echo","hi"])` and `subprocess.run(["echo hi"], shell=True)`. CPython
+#     takes that fast path only when `os.path.dirname(executable)` is non-empty AND
+#     `(not close_fds or subprocess._HAVE_POSIX_SPAWN_CLOSEFROM)`; `_HAVE_POSIX_SPAWN_CLOSEFROM` is
+#     False on this macOS build, so the default `close_fds=True` skips it — only an absolute path
+#     WITH `close_fds=False` actually routes through (verified: that one case does hit the patch).
+#     So the patch guards a path this suite does not currently reach VIA subprocess, plus any DIRECT
+#     `os.posix_spawn` caller — still worth having, but it is not the always-on backstop the old
+#     wording implied. Confirmed it does not break ordinary calls either way (see
+#     test_unrelated_command_still_runs and friends, and
 #     test_unrelated_program_still_works_through_every_entry_point).
 #     DELIBERATELY NOT PATCHED: os.execv/os.execve/os.execvp/os.execvpe, os.spawnvp/os.spawnlp (the
 #     PATH-searching spawn* variants, which call execvp/execvpe directly rather than going through
@@ -199,6 +241,17 @@ def _shell_tokenize_or_none(command_str):
         return None
 
 
+def _as_text(value):
+    """argv elements may be str, bytes, or os.PathLike — subprocess accepts all three. `str()` on a
+    bytes element yields its REPR ("b'bq'"), which matches no program name, so a bytes argv sailed
+    straight through every name check here (BYTES ARGV hole, 2026-09-04). os.fsdecode round-trips all
+    three to the real name (bytes via surrogateescape, which is what a name-based check wants)."""
+    try:
+        return os.fsdecode(value)
+    except TypeError:
+        return str(value)
+
+
 def _scan_wrapper_body(tokens):
     """Scan a wrapper's own argv (everything after its own name) for the blocked program it actually
     invokes. Unlike `_find_blocked_program`, every token is checked directly, not just position 0:
@@ -209,7 +262,7 @@ def _scan_wrapper_body(tokens):
     command string in the token right after it, which is shell-tokenized and recursed into — so
     nested wrapping (`env sh -c 'bq ...'`) is still caught. An unparseable command string fails
     CLOSED (a raw substring scan), never open."""
-    tokens = [str(t) for t in tokens]
+    tokens = [_as_text(t) for t in tokens]
     for i, tok in enumerate(tokens):
         head = os.path.basename(tok)
         if head in _BLOCKED_PROGRAMS:
@@ -237,7 +290,7 @@ def _find_blocked_program(argv):
 
     ACCEPTED RESIDUAL: a symlink to the real `bq`/`gcloud` binary filed under another name is
     invisible to this (or any) name-based check — see the fixture docstring above."""
-    argv = [str(a) for a in argv]
+    argv = [_as_text(a) for a in argv]
     if not argv:
         return None
     head = os.path.basename(argv[0])
@@ -251,10 +304,29 @@ def _find_blocked_program(argv):
 def _blocked_program_in(cmd, shell):
     """Blocked-program check for either argv form subprocess/os accept: a list/tuple argv, or a bare
     string (the program itself when shell=False, a whole shell command line — to be tokenized — when
-    shell=True). Fails CLOSED when a shell=True string can't be shlex-tokenized."""
+    shell=True). Fails CLOSED when a shell=True string can't be shlex-tokenized.
+
+    SHELL-FLAG-AWARE FOR SEQUENCES (2026-09-04). This used to branch on TYPE alone and drop `shell`
+    entirely for a list/tuple, handing it to `_find_blocked_program`, which reads element 0 as a
+    program NAME. That is wrong precisely when shell=True: on POSIX, Popen prepends
+    ['/bin/sh', '-c'], so element 0 is the whole shell COMMAND LINE (the remaining elements become
+    $0/$1/... for that shell), not a program name — the same structural case the bare-string
+    shell=True branch below already tokenizes. Verified pre-fix:
+    `subprocess.run(["bq query 'SELECT 1'"], shell=True)` returned None here and really did execute.
+    It is the sequence half of the "shell=True STRING COMMANDS" hole the fixture docstring above
+    already claims to have closed."""
     if isinstance(cmd, (list, tuple)):
+        if shell:
+            # Only element 0 is inspected: under shell=True the rest are $0/$1/... positional
+            # parameters for the shell, not part of the command line it executes. An EMPTY sequence
+            # must NOT IndexError here — it has to pass through to subprocess, which owns that case
+            # and does two different things with it (shell=True runs `/bin/sh -c` with no argument
+            # and returns 2; shell=False raises IndexError). This guard must never substitute an
+            # error of its own for either. Pinned by
+            # test_shell_true_sequence_and_bytes_argv_do_not_over_block.
+            return _blocked_program_in(cmd[0], True) if cmd else None
         return _find_blocked_program(cmd)
-    cmd_str = str(cmd)
+    cmd_str = _as_text(cmd)
     if not shell:
         # Not shell=True: the ENTIRE string is the literal program name/path (no shell parsing) —
         # mirrors what subprocess itself does when given a bare string with shell=False.
@@ -343,6 +415,9 @@ def _block_real_bq_gcloud_calls(monkeypatch):
     monkeypatch.setattr(os, "posix_spawn", guarded_posix_spawn)
     # os.spawnl/os.spawnle are implemented (in the stdlib) purely in terms of os.spawnv/os.spawnve via
     # a plain module-global name lookup on every call, so patching these two transparently covers all
-    # four spawn*-without-a-'p' variants — verified against this repo's Python 3.14 stdlib source.
+    # four spawn*-without-a-'p' variants — verified against the CPython stdlib source for the
+    # interpreter running this suite (re-verified 2026-09-04 on the 3.13 repo venv; the earlier
+    # "this repo's Python 3.14" label named an interpreter neither the venv nor CI, pinned at 3.11,
+    # ever runs).
     monkeypatch.setattr(os, "spawnv", guarded_spawnv)
     monkeypatch.setattr(os, "spawnve", guarded_spawnve)

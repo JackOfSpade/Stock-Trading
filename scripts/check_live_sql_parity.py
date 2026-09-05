@@ -75,7 +75,9 @@ parity step (~76% of a month's total via the shared cost-audit finding in CLAUDE
 note). Replaced with fetch_live_definitions() / resolve_live_definition(): ONE
 INFORMATION_SCHEMA.VIEWS query per dataset that has at least one expected VIEW, and ONE
 INFORMATION_SCHEMA.ROUTINES query (WHERE routine_type IN ('PROCEDURE','TABLE FUNCTION','FUNCTION')) per
-dataset that has at least one expected PROCEDURE/TABLE FUNCTION — 5 queries total against the real
+dataset that has at least one expected PROCEDURE / TABLE FUNCTION / scalar FUNCTION (that third kind
+joined 2026-09-01; this sentence said "PROCEDURE/TABLE FUNCTION" until the 2026-09-04 doc sweep, two
+lines below an IN-list that already named three) — 5 queries total against the real
 repo's 4 datasets, not 199. See fetch_live_definitions()'s docstring for the safety property this
 batching had to preserve without weakening: a FAILED batch query must mark every object in that
 dataset SKIPPED (inconclusive), never MISSING (positive evidence of absence) — collapsing a broken
@@ -98,6 +100,8 @@ block — producing a permanent false DRIFT against the true, live 147-line (BEG
 definition. Fixed with a real nesting-aware scan, find_procedure_body_end(), that finds the END
 actually matching the procedure's own opening BEGIN — tracking BigQuery scripting's real nesting
 (BEGIN...END, IF...END IF, CASE...END/END CASE, WHILE...END WHILE, LOOP...END LOOP, FOR...END FOR,
+REPEAT...END REPEAT — that last one missing from this list and from the scan itself until 2026-09-04,
+see the REPEAT section below —
 and BEGIN TRANSACTION/COMMIT TRANSACTION, which do NOT nest) rather than naive BEGIN/END word
 counting, which gets at least three of those constructs wrong (see that function's docstring).
 Verified against the real repo tree: of all 212 objects find_final_definitions() extracts, this
@@ -119,6 +123,20 @@ parity.py's "CASE *statement* END CASE mishandled" section, for the fix and its 
 coverage (CASE statement alone, both CASE forms in one procedure, CASE statement nested inside an
 IF, and END CASE immediately preceding a trailing free-standing block).
 
+REPEAT LOOP (END REPEAT) NESTING FIX (2026-09-04 quality pass). The same 2026-08-08 enumeration was
+short by one: BigQuery scripting has SIX two-word `END <kw>` closers — END IF / END WHILE / END LOOP /
+END FOR / END REPEAT / END CASE — and END REPEAT was in neither NON_BEGIN_END_SUFFIX nor the END CASE
+branch, so it fell through to the bare-END path and RETURNED at the loop's own closer. A procedure
+containing `REPEAT ... UNTIL <cond> END REPEAT;` therefore had its body truncated at the loop, losing
+every statement after it plus the procedure's real END — a body that can never equal the live
+routine_definition, i.e. permanent false DRIFT feeding D3's autonomous re-apply loop with nothing that
+could converge (the same never-converging class the PROCEDURE-wrapper and normalize_tail sections
+above record). Latent, not live, when fixed: zero REPEAT loops exist in bigquery/*.sql today (the 9
+`grep` hits are the English word inside `--` prose), all 254 objects still parse and every canonical
+body's sha256 is unchanged — the same posture the END CASE follow-up above was fixed in. See
+NON_BEGIN_END_SUFFIX's comment (including the accepted, symmetric unreserved-keyword hazard REPEAT
+shares with the WHILE and LOOP members) and tests/test_check_live_sql_parity.py's REPEAT regression.
+
 Usage:  python scripts/check_live_sql_parity.py --project stock-trading-498512
         python scripts/check_live_sql_parity.py --offline   # parser self-check only, no bq calls
         python scripts/check_live_sql_parity.py --project stock-trading-498512 --json-out /tmp/findings.json
@@ -129,7 +147,10 @@ import re
 import subprocess  # noqa: F401 — kept so tests can monkeypatch subprocess.run/TimeoutExpired at the module level
 
 from lib.bq_json import run_bq_query
-from lib.sql_files import normalize_kind, sql_file_paths
+# _string_literal_end is private-by-name but shared on purpose — same cross-module precedent
+# scripts/check_sql_dryrun.py already sets (`from lib.sql_files import _string_literal_end,
+# strip_sql_comments`); see sql_tokens()'s docstring for why this file stopped carrying its own copy.
+from lib.sql_files import _string_literal_end, normalize_kind, sql_file_paths
 from lib.textio import read_text
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -257,8 +278,21 @@ def numbered_sql_files():
     return sql_file_paths(BIGQUERY_DIR)
 
 
+def _pop_trailing_comment_lines(body):
+    """Drop trailing blank and `--`-comment-only LINES from `body` (no other normalization).
+
+    Extracted from normalize_tail() 2026-09-04 because that function now runs this pass TWICE — once
+    before cutting a trailing `/* ... */` block and once after, since a block comment can legitimately
+    sit between two `--` lines at the tail of a file."""
+    lines = body.splitlines()
+    while lines and (not lines[-1].strip() or lines[-1].strip().startswith("--")):
+        lines.pop()
+    return "\n".join(lines)
+
+
 def normalize_tail(body):
-    """Strip trailing comment-only / blank lines, then exactly one trailing ';'.
+    """Strip trailing comment-only / blank lines (both `--` lines and a `/* ... */` block), then
+    exactly one trailing ';'.
 
     Applied to BOTH the repo-extracted body (extract_body, below) AND the live
     INFORMATION_SCHEMA body (main(), before comparison) -- fixed 2026-07-16 (live-sql-parity
@@ -268,11 +302,40 @@ def normalize_tail(body):
     report DRIFT forever regardless of any re-apply -- a second, orthogonal false-positive class
     from the PROCEDURE-wrapper bug fixed in the same step (see extract_body's obj_type == "PROCEDURE"
     branch).
+
+    BLOCK-COMMENT TAIL (2026-09-04 quality pass). Until this pass the docstring's first line promised
+    "trailing comment-only lines" but the loop recognized ONLY `--` lines: a `*/`, or a line inside a
+    block comment, satisfies neither predicate, so the walk stopped, the body no longer ended with the
+    statement's `;`, and the single-';' strip below never ran. canonicalize() then removed the comment
+    TEXT (sql_tokens consumes `/* */`) but the orphaned `;` survived, while live definitions carry no
+    trailing `;` -- so the object reported permanent, un-healable false DRIFT into D3's re-apply loop.
+    That is not hypothetical: it fired on 2026-07-30 for bigquery/116, /117 and /118, the only 3 of the
+    then-117 files ending in a `/* verification harness */` block, and made state.add_candidate_reviews
+    and analytics.find_precedents drift forever until those three harnesses were rewritten as `--`
+    lines (feedback_bigquery_file_conventions.md trap #2 — "check the file's tail FIRST when a
+    freshly-applied object reports drift"). The file convention is still the primary defense and this
+    is the mechanical backstop it never had; nothing else in CI flags a trailing block comment.
+    Note this direction is fail-DANGEROUS (a false DRIFT feeding an autonomous re-apply), unlike
+    check_superseded_markers.py's deliberately-unfixed `/* */` blind spot, which fail-SAFE flags a
+    compliant file -- see that module's own KNOWN BLIND SPOT comment before assuming the two should
+    be treated alike.
+
+    The cut is located through sql_tokens(), never a backward `rfind("/*")` over raw text: three
+    live bodies (ops.sp_restore_drill, ops.sp_sq_backup_events_export, ops.sp_sq_ops_export) contain
+    `/*` inside a STRING LITERAL (the `gs://.../dt=%s/*.parquet` export globs), and a naive backward
+    scan could cut real SQL out of a compared body. Everything after the last non-whitespace token
+    sql_tokens() yields is by construction comment text, backticks or whitespace -- never literal
+    content -- so searching for `/*` from there can only find a genuine trailing comment. Provably
+    inert on today's tree when landed: 0 of 254 canonical bodies end in ';' and none is changed.
     """
-    lines = body.splitlines()
-    while lines and (not lines[-1].strip() or lines[-1].strip().startswith("--")):
-        lines.pop()
-    body = "\n".join(lines)
+    body = _pop_trailing_comment_lines(body)
+    last_token_end = 0
+    for kind, _val, _tstart, tend in sql_tokens(body):
+        if kind != "W":                                      # W runs are the trailing whitespace itself
+            last_token_end = tend
+    block_at = body.find("/*", last_token_end)
+    if block_at >= 0:
+        body = _pop_trailing_comment_lines(body[:block_at])
     body = body.rstrip()
     if body.endswith(";"):
         body = body[:-1]
@@ -294,29 +357,26 @@ def sql_tokens(sql):
     bitten by once. canonicalize() below now calls this too; its own extensive test suite
     (tests/test_check_live_sql_parity.py) is what pins that the refactor changed nothing about its
     output.
+
+    THE LITERAL-SPAN WALK ITSELF now lives in lib/sql_files.py's _string_literal_end() (2026-09-04
+    quality pass). This function had hand-written a THIRD copy of the same quote/triple-quote/
+    backslash-escape/unterminated-at-a-newline walk that the 2026-09-02 "FIFTH consolidation" had
+    already unified for strip_sql_comments() and check_sql_dryrun.py's _blank_string_literals() —
+    so that module docstring's "exactly one place to land instead of two" was quietly false, and
+    two BLOCKING gates (this one and check_superseded_by_discipline.py, which imports sql_tokens)
+    were each deciding "what is inside a string literal" for the same bigquery/*.sql text from
+    their own copy. Measured equivalent before delegating: 9,988 real string literals across every
+    numbered bigquery/*.sql file, 0 span disagreements, and all 254 canonical bodies byte-identical.
+    This file now only decides what to DO with the span (yield it verbatim as an "S" token), never
+    where it ends — the unterminated-single-line-literal and triple-quote rules are documented in
+    _string_literal_end()'s own docstring.
     """
     i, n = 0, len(sql)
     while i < n:
         c = sql[i]
         if c in ("'", '"'):
             start = i
-            quote = c
-            triple = sql[i:i + 3] == quote * 3
-            if triple:
-                j = sql.find(quote * 3, i + 3)
-                j = n if j < 0 else j + 3
-            else:
-                j = i + 1
-                while j < n:
-                    if sql[j] == "\\":
-                        j += 2
-                        continue
-                    if sql[j] == quote:
-                        j += 1
-                        break
-                    if sql[j] == "\n":                       # unterminated — stop at the newline
-                        break
-                    j += 1
+            j = _string_literal_end(sql, i)
             yield ("S", sql[start:j], start, j)
             i = j
             continue
@@ -325,7 +385,20 @@ def sql_tokens(sql):
             i = n if j < 0 else j
             continue
         if sql.startswith("/*", i):
-            j = sql.find("*/", i)
+            # Scan for the closer from i + 2, NOT from i (fixed 2026-09-04). Starting at i lets the
+            # OPENER's own `*` pair with a following `/`, so `/*/` read as a COMPLETE 3-character
+            # comment and the remainder of a real comment leaked back out as live T/P tokens —
+            # feeding canonicalize()'s compared body and find_procedure_body_end()'s BEGIN/END depth
+            # count, the exact statement-boundary class this file has been bitten by before.
+            # GoogleSQL closes a block comment at the first `*/` AFTER the opener, so `/*/` does not
+            # close anything: the scan continues to the next real `*/`, or to EOF if the text has
+            # none (an unterminated comment). That is what this now produces, agreeing with
+            # lib/sql_files.py's strip_sql_comments() (`text.find("*/", i + 2)`), from which this
+            # scanner had silently drifted. Not grep-provable as unreachable: no `/*/` exists in
+            # bigquery/ or dbt/ today, but sql_tokens also runs over LIVE BigQuery definitions via
+            # canonicalize(normalize_tail(live_body)), so the input set is not enumerable from the
+            # repo alone — consistency with the shared scanner is the safe direction either way.
+            j = sql.find("*/", i + 2)
             i = n if j < 0 else j + 2
             continue
         if c == "`":                                         # identifier quoting is not semantic
@@ -350,10 +423,30 @@ def sql_tokens(sql):
 
 
 # BigQuery scripting keywords that close a construct OTHER than BEGIN...END with their OWN two-word
-# suffix (END IF / END WHILE / END LOOP / END FOR) -- see find_procedure_body_end()'s docstring for
-# why these never need to be tracked as openers at all, only recognized (and ignored, i.e. a no-op
-# that does NOT touch depth) as closers: their openers (IF/WHILE/LOOP/FOR) never increment depth in
-# the first place, so there is nothing for their two-word closer to decrement.
+# suffix (END IF / END WHILE / END LOOP / END FOR / END REPEAT) -- see find_procedure_body_end()'s
+# docstring for why these never need to be tracked as openers at all, only recognized (and ignored,
+# i.e. a no-op that does NOT touch depth) as closers: their openers (IF/WHILE/LOOP/FOR/REPEAT) never
+# increment depth in the first place, so there is nothing for their two-word closer to decrement.
+#
+# REPEAT was MISSING from this frozenset until 2026-09-04 (the 2026-08-08 enumeration above listed
+# only four of BigQuery's six two-word `END <kw>` closers -- END IF / END WHILE / END LOOP / END FOR
+# / END REPEAT / END CASE -- and CASE is handled separately below). A `REPEAT ... UNTIL <cond> END
+# REPEAT;` loop inside a procedure therefore hit find_procedure_body_end()'s bare-END path, decremented
+# depth to zero at the loop's closer, and returned it as if it were the PROCEDURE's own END: the body
+# was truncated at the loop and everything after it dropped, which can never equal the live
+# routine_definition -> permanent false DRIFT feeding D3's re-apply loop with nothing that could ever
+# converge. Latent, not live, when fixed (`grep -rniE "\bREPEAT\b" bigquery/*.sql` finds 9 hits, all
+# the English word inside `--` comment prose in 06/140/141/161/174/203; zero REPEAT loops), and
+# provably inert: all 254 objects still parse and every canonical body's sha256 is unchanged. Exactly
+# the posture the END CASE sibling above was fixed in -- "it closes a latent trap, not a live false
+# positive".
+#
+# ACCEPTED, SYMMETRIC HAZARD (state it rather than claiming the addition is free): REPEAT is not a
+# GoogleSQL reserved keyword, so an implicit column alias literally named `repeat` directly after a
+# CASE-expression's bare END (`SELECT CASE WHEN x THEN 1 END repeat FROM t`) would now be read as a
+# two-word closer and leave depth one level too high. That is the same bleed WHILE and LOOP already
+# carry -- neither of those is reserved either (only IF and FOR are) -- with zero occurrences in the
+# tree, so REPEAT joins an existing accepted limit rather than introducing a new one.
 #
 # CASE is deliberately NOT a member of this set (bug fixed 2026-08-08 -- see find_procedure_body_
 # end()'s docstring and its own "if word == CASE" branch). CASE is tracked as an opener (unlike
@@ -368,7 +461,7 @@ def sql_tokens(sql):
 # fix) -- confirmed live: no bigquery/*.sql procedure uses the CASE-statement form today (`grep -r
 # "END CASE" bigquery/` is empty), so this was latent, not yet tripped, but would have reintroduced
 # the bleed the moment one was written.
-NON_BEGIN_END_SUFFIX = frozenset({"IF", "WHILE", "LOOP", "FOR"})
+NON_BEGIN_END_SUFFIX = frozenset({"IF", "WHILE", "LOOP", "FOR", "REPEAT"})
 
 
 def find_procedure_body_end(text, begin_start):
@@ -390,12 +483,15 @@ def find_procedure_body_end(text, begin_start):
 
     Naive BEGIN/END word-counting is NOT a fix -- BigQuery scripting nests via BEGIN...END, IF...END
     IF, WHILE...END WHILE, LOOP...END LOOP, FOR...END FOR (bigquery/17_restore_drill.sql, bigquery/
-    75_scheduled_query_wrappers.sql), CASE...END (a CASE *expression*, used inside a SELECT -- this
+    75_scheduled_query_wrappers.sql), REPEAT...END REPEAT (the sixth two-word closer -- missing from
+    this enumeration and from NON_BEGIN_END_SUFFIX until 2026-09-04, which truncated a REPEAT-using
+    procedure's body at the loop; see that constant's comment), CASE...END (a CASE *expression*,
+    used inside a SELECT -- this
     repo's only CASE form today) / CASE...END CASE (a CASE *statement*, BigQuery's imperative form --
     unused in this repo today but must still be handled correctly), and BEGIN TRANSACTION/COMMIT
     TRANSACTION, which do NOT nest (they bracket a transaction, not a block -- 146's own procedure
     uses BEGIN TRANSACTION inside its body; counting it as an opener would count one extra level
-    nothing legitimately closes). IF/WHILE/LOOP/FOR never need tracking as openers at all: their
+    nothing legitimately closes). IF/WHILE/LOOP/FOR/REPEAT never need tracking as openers at all: their
     closer is always the two-word form, self-identifying and never a bare END, so it is simply
     recognized and ignored (NON_BEGIN_END_SUFFIX) rather than affecting depth. CASE IS tracked as an
     opener -- see the module-level constant's comment -- and BOTH of its closers (bare END for the
@@ -671,7 +767,7 @@ def find_final_definitions():
                 # CREATE_STMT matches case-insensitively and allows a line-wrapped
                 # "TABLE\n  FUNCTION", so group 1 is not directly comparable to the literal kinds
                 # extract_body() and ROUTINE_KINDS test against — collapse it to the canonical
-                # "TABLE FUNCTION"/"PROCEDURE"/"VIEW" spelling first, or a lowercase `procedure`
+                # "TABLE FUNCTION"/"PROCEDURE"/"VIEW"/"FUNCTION" spelling first, or a lowercase `procedure`
                 # would be silently routed down the VIEW path and looked up in
                 # INFORMATION_SCHEMA.VIEWS instead of .ROUTINES.
                 obj_type = normalize_kind(obj_type)
@@ -696,8 +792,10 @@ def bq(sql, project, max_rows=None):
 
 
 # Object kinds that live in INFORMATION_SCHEMA.ROUTINES rather than .VIEWS. CREATE_STMT only ever
-# produces obj_type in {"VIEW", "PROCEDURE", "TABLE FUNCTION"} — the three kinds this script
-# compares (see CREATE_STMT's comment) — so "not a routine kind" always means VIEW here.
+# produces obj_type in {"VIEW", "PROCEDURE", "TABLE FUNCTION", "FUNCTION"} — the four kinds this
+# script compares (see CREATE_STMT's comment) — so "not a routine kind" always means VIEW here.
+# (This sentence said "three kinds" and omitted FUNCTION until the 2026-09-04 doc sweep, contradicting
+# both the "Scalar FUNCTION joined 2026-09-01" note two lines below it and the frozenset itself.)
 # Scalar "FUNCTION" joined 2026-09-01: analytics.fn_is_occ_option_symbol (bigquery/40) was the repo's
 # only code-bodied live object outside every repo<->live parity gate — state.ddl_drift covers table
 # COLUMNS only, dbt declares the UDF as a source but never builds it, and the DML watch has no DDL lane.
@@ -714,7 +812,9 @@ ROUTINE_KINDS = frozenset({"PROCEDURE", "TABLE FUNCTION", "FUNCTION"})
 # contract exists to prevent, and exactly what could trigger an incorrect autonomous CREATE against
 # production under the 2026-07-28 directive). Fixed by passing an explicit, generously-sized
 # --max_rows on every batched query — comfortably above any realistic per-dataset object count in
-# this repo (currently: state 111, analytics 53, ops 34, perf 1) with a wide margin for growth.
+# this repo (state 111, analytics 53, ops 34, perf 1 when this was written 2026-07-30; re-measured
+# 2026-09-04: state 146, analytics 61, ops 46, perf 1 — the growth this margin was sized for, and
+# still three orders of magnitude below the cap).
 BATCH_MAX_ROWS = 10000
 
 
@@ -725,8 +825,9 @@ def parse_views_batch(rows):
 
 def parse_routines_batch(rows):
     """{(routine_name, routine_type): routine_definition} from one dataset's
-    INFORMATION_SCHEMA.ROUTINES batch result (already WHERE-filtered to PROCEDURE/TABLE FUNCTION
-    by fetch_live_definitions()). Keyed by (name, type) rather than name alone — mirrors the old
+    INFORMATION_SCHEMA.ROUTINES batch result (already WHERE-filtered to PROCEDURE / TABLE FUNCTION /
+    scalar FUNCTION by fetch_live_definitions() — that third kind joined 2026-09-01 and this line was
+    corrected in the 2026-09-04 doc sweep). Keyed by (name, type) rather than name alone — mirrors the old
     per-object live_definition()'s own `routine_type = '<type>'` filter — so a same-named
     PROCEDURE and TABLE FUNCTION in the same dataset (not observed in this repo today) could never
     shadow each other."""
@@ -741,11 +842,18 @@ def fetch_live_definitions(project, final):
     For each dataset that has at least one expected VIEW object (per `final`, find_final_
     definitions()'s return value), issues ONE `SELECT table_name, view_definition FROM
     ...INFORMATION_SCHEMA.VIEWS` covering every view in that dataset. For each dataset with at
-    least one expected PROCEDURE/TABLE FUNCTION object, issues ONE `SELECT routine_name,
-    routine_type, routine_definition FROM ...INFORMATION_SCHEMA.ROUTINES WHERE routine_type IN
-    ('PROCEDURE', 'TABLE FUNCTION')` covering every routine of those two kinds in that dataset.
-    Against the real repo (199 objects across 4 datasets: state 111 VIEW-only, analytics 50 VIEW +
-    3 TABLE FUNCTION, ops 34 PROCEDURE-only, perf 1 VIEW-only) this is 5 queries total, not 199.
+    least one expected PROCEDURE / TABLE FUNCTION / scalar FUNCTION object, issues ONE `SELECT
+    routine_name, routine_type, routine_definition FROM ...INFORMATION_SCHEMA.ROUTINES WHERE
+    routine_type IN ('PROCEDURE', 'TABLE FUNCTION', 'FUNCTION')` covering every routine of those
+    three kinds in that dataset. (Scalar FUNCTION joined the filter 2026-09-01; this paragraph still
+    described the two-kind IN-list until the 2026-09-04 doc sweep — a reader repairing the filter from
+    it would have re-narrowed it, and every object of a dropped kind becomes a false MISSING that D3
+    branch (d) consumes as an autonomous CREATE against production.)
+    Against the real repo, re-measured 2026-09-04: 254 objects across 4 datasets — state 146 VIEW,
+    analytics 56 VIEW + 4 TABLE FUNCTION + 1 FUNCTION, ops 46 PROCEDURE, perf 1 VIEW (the original
+    2026-07-30 census read "199 objects: state 111 VIEW-only, analytics 50 VIEW + 3 TABLE FUNCTION,
+    ops 34 PROCEDURE-only, perf 1 VIEW-only"). Still 5 queries total, not 254 — which is the property
+    this paragraph exists to record, and it survives the growth.
 
     Returns (views_by_dataset, routines_by_dataset). Each maps a dataset name to EITHER a parsed
     dict (batch query succeeded — see parse_views_batch/parse_routines_batch) OR the raised

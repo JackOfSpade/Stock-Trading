@@ -328,6 +328,75 @@ def test_supersed_word_in_one_block_cannot_pair_with_a_pointer_in_the_other(tmp_
     assert [entry[0][3] for entry in new] == ["30_old.sql"]
 
 
+# ---- D7 contradiction detection + canonical ambiguity: the two detectors nothing exercised --------
+# COVERAGE GAP (closed 2026-09-04). contradiction_violations() and canonical_ambiguities() had NO
+# caller anywhere outside scripts/check_superseded_markers.py itself: the only mention of either in
+# this file was `_tree`'s `CONTRADICTION_BASELINE -> frozenset()` monkeypatch, which NEUTRALIZES the
+# contradiction detector in every synthetic tree. Proven by mutation: with
+# `SUPERSEDED_LIVE_CLAIM = re.compile(r"(?!x)x")` and `canonical_ambiguities = lambda: []` forced in,
+# all 23 tests here still passed and a real run printed "0 new violation(s)" and exited 0.
+#
+# It regressed INTO that state two days before these tests were written: until 91d462e (2026-09-02)
+# CONTRADICTION_BASELINE held two real entries (bigquery/26 and /118's declared_vs_realized), so a
+# regex rot emptied `live_keys`, made `stale = CONTRADICTION_BASELINE - live_keys` non-empty, and
+# failed the live CI invocation loudly. Burning the baseline to zero removed that canary. The
+# fail-CLOSED direction is still covered (four tests assert main() == 0 on clean synthetic trees);
+# these two close the fail-OPEN direction, which is the one that matters for a blocking gate with
+# five real historical instances (bigquery/75, 111, 120 plus the two baselined 26/118).
+def test_stacked_contradictory_superseded_live_claims_are_flagged(tmp_path, monkeypatch):
+    # The live 2026-08-06 shape: an older "SUPERSEDED LIVE by bigquery/20 ... current single source of
+    # truth" banner left standing directly above a newer, CORRECT "...by bigquery/30" one — two
+    # competing current-truth claims naming different files (bigquery/75, 111 and 120 each carried
+    # this for ops.sp_sq_cadence_check). violations() cannot see it: marks_superseded(preceding, 30) is
+    # True, so its loop `continue`s before ever inspecting the stale 20 claim, which is exactly why
+    # contradiction_violations() is an INDEPENDENT pass.
+    _tree(tmp_path, {
+        "10_old.sql": ("-- SUPERSEDED LIVE by bigquery/20_mid.sql — current single source of truth.\n"
+                       "-- SUPERSEDED LIVE by bigquery/30_new.sql — current single source of truth.\n"
+                       + DDL),
+        "20_mid.sql": "-- SUPERSEDED LIVE by bigquery/30_new.sql\n" + DDL,
+        "30_new.sql": "-- canonical\n" + DDL,
+    }, monkeypatch)
+    c_new, c_still, c_stale = cs.contradiction_violations()
+    assert [entry for entry, _claims, _line in c_new] == [("VIEW", "state", "thing", "10_old.sql")]
+    assert c_new[0][1] == [20, 30], "both claimed targets must be reported, not just the stale one"
+    assert (c_still, c_stale) == ([], [])
+    # The ORDINARY marker check is clean on this tree (10_old does name the true canonical 30), so
+    # main()'s failure can only be coming from the contradiction pass — a non-vacuous pin.
+    assert cs.violations() == ([], [], [])
+    assert cs.main() == 1
+
+
+def test_a_single_correct_superseded_live_banner_is_not_a_contradiction(tmp_path, monkeypatch):
+    # The other half: the detector must not be trigger-happy. One banner, one target, no finding —
+    # otherwise every correctly-marked file in the tree would fail the gate.
+    _tree(tmp_path, {
+        "10_old.sql": "-- SUPERSEDED LIVE by bigquery/20_new.sql — current single source of truth.\n" + DDL,
+        "20_new.sql": "-- canonical\n" + DDL,
+    }, monkeypatch)
+    assert cs.contradiction_violations() == ([], [], [])
+    assert cs.main() == 0
+
+
+def test_two_files_sharing_one_nn_prefix_for_the_same_object_is_ambiguous(tmp_path, monkeypatch):
+    """canonical_ambiguities() is what stops a duplicate NN prefix from producing a SILENT GREEN: when
+    two files tie at the highest number defining one object, BOTH look canonical, so violations() and
+    contradiction_violations() skip the object and NEITHER definition is asked for a marker.
+
+    This does NOT re-open CLAUDE.md's settled "duplicate numeric prefixes are tolerated" decision — the
+    settled rule is that a shared prefix is fine exactly while the two files touch DISJOINT objects
+    (both real pairs, 114_* and 185_*, do). What is flagged here is the narrower same-OBJECT collision,
+    which is also what main()'s own FAIL text says: "a shared prefix is fine only while the two files
+    that share it touch DISJOINT objects"."""
+    _tree(tmp_path, {"10_old.sql": "-- header\n" + DDL,
+                     "20_a.sql": "-- header\n" + DDL,
+                     "20_b.sql": "-- header\n" + DDL}, monkeypatch)
+    # resolve_canonical() returns the SORTED, DEDUPED tied set, so this literal is not listdir-order
+    # dependent.
+    assert cs.canonical_ambiguities() == [("VIEW", "state", "thing", 20, ["20_a.sql", "20_b.sql"])]
+    assert cs.main() == 1
+
+
 def test_a_marker_wholly_inside_the_preceding_comment_still_counts(tmp_path, monkeypatch):
     """The other half of the contract: splitting the blocks must not stop a correct marker that
     lives entirely in the preceding comment from satisfying the check (the top-of-file-banner case

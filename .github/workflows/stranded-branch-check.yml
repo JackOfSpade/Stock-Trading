@@ -168,9 +168,16 @@ jobs:
           set -uo pipefail
           # BigQuery custom quotas (QueryUsagePerUserPerDay) reset at midnight PACIFIC, not UTC —
           # gate the once-per-day rerun on the Pacific calendar day so the retry fires in the first
-          # sweep AFTER the quota actually reset (typically the 11:23Z sweep = ~03:23 PT, fresh
-          # quota) instead of the 05:23Z sweep (= ~21:23 PT, the tail of the SAME still-exhausted
-          # Pacific day — which would deterministically re-fail and burn the attempt budget).
+          # sweep AFTER the quota actually reset (the 08:23Z sweep = 01:23 PDT / 00:23 PST, fresh
+          # quota — under PST the margin over the 08:00Z reset is only 23 minutes) instead of the
+          # 00:23Z sweep (= 17:23 PDT / 16:23 PST of the PREVIOUS Pacific day, the tail of the SAME
+          # still-exhausted Pacific day — which would deterministically re-fail and burn the attempt
+          # budget).
+          # TIMES CORRECTED 2026-09-04 (comment-only; the mechanism was and is right): this paragraph
+          # used to cite an "11:23Z"/"05:23Z" sweep pair that matches NO cron this workflow has ever
+          # had — they were the PT renderings of the pre-2026-08-30 `23 */6` schedule's 18:23Z/12:23Z
+          # slots, mislabelled "Z", and were already wrong when the step landed. Read the times off
+          # `on.schedule` above (`23 0,8,16`) if this is ever re-checked.
           today_pt=$(TZ=America/Los_Angeles date +%F)
           while IFS= read -r line; do
             # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted markdown
@@ -326,7 +333,9 @@ jobs:
             echo "**Resolve:** get the branch's CI green (the auto-merge then drains it), or merge/close the conflict PR. If the branch is obsolete, confirm its outputs are superseded (or back-fill cumulative files like \`B_Sub_Pattern_Taxonomy.md\`) before deleting."
           } > /tmp/body.md
 
-          # Dedup by title prefix (avoids a new issue every 6h while one incident is open).
+          # Dedup by title prefix (avoids a new issue every sweep while one incident is open — the
+          # cadence was every 6h until the 2026-08-30 retune to `23 0,8,16`, i.e. every 8h; MAX_AGE_HOURS
+          # a few steps up is a DIFFERENT 6, the staleness threshold, and is unaffected).
           existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
             --jq '[.[] | select(.title|startswith("⚠️ Stranded routine branch"))][0].number // empty')
           if [ -n "$existing" ]; then

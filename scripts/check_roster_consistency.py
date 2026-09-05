@@ -216,6 +216,13 @@ from lib.roster_common import roster_active_codes
 # stripping anywhere, unlike check_sq_version_registry.py in this same lib/ slice, so a documentation
 # aside narrating the exact forbidden pattern -- e.g. this file's own dense "BUG FIX: ..." comment style --
 # could flip R-B/R-C/R-E false-FAIL or false-PASS with zero live SQL change; see the call sites below).
+# COVERAGE CORRECTION (roster-group bug, 2026-09-04): the sentence above USED TO overstate what the
+# 2026-09-02 pass actually converted. That pass reached three of the FIVE readers here (R-B's and R-C's
+# derived-SQL loops in main(), and arsenal_rails_sql_consts()'s R-E scan); the other two readers of
+# bigquery/35_strategy_arsenal.sql -- arsenal_coverage_cell_tokens() (R-J) and seed_active_codes() (R-A)
+# -- were left scanning RAW text and carried the identical false-FAIL-on-a-doc-comment exposure, on the
+# one arsenal file autonomous SL1/SL3/SL5 landings edit. Both now strip too, so ALL FIVE call sites below
+# are covered; do not add a sixth raw read_text(ARSENAL_SQL) without stripping.
 from lib.sql_files import strip_sql_comments
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -953,7 +960,16 @@ def arsenal_coverage_cell_tokens():
     bigquery/35_strategy_arsenal.sql's state.arsenal_regime_coverage `cells` CTE. Returns
     (spy_set, vix_set); either element is None if its literal cannot be located. The `AS code` seed
     UNNEST (a different alias) cannot collide."""
-    txt = read_text(ARSENAL_SQL)
+    # strip_sql_comments() FIRST (roster-group bug, 2026-09-04) — the same false-FAIL-on-a-doc-comment
+    # exposure R-B/R-C/R-E were fixed for on 2026-09-02, which this reader did not get. toks() uses
+    # re.search, so the FIRST matching UNNEST wins, and bigquery/35's own `-- H7 FIX (2026-07-17)` header
+    # already narrates the RETIRED cell tokens (UPTREND/RANGE/DOWNTREND x LOW_VIX/ELEVATED_VIX/HIGH_VIX)
+    # in prose immediately ABOVE the live literals; re-writing those retired cells in UNNEST form inside
+    # that comment — this repo's habitual "prior form, kept for the DR record" idiom — would make R-J
+    # compare strategy/01's shared vocabulary against the DEAD tokens and false-FAIL a CI-BLOCKING gate
+    # with zero live SQL change. No-op on today's tree (verified: same {UP,NEUTRAL,DOWN}/{LOW,NORMAL,HIGH}
+    # sets before and after), and blanking-to-spaces keeps every offset the re.search below relies on.
+    txt = strip_sql_comments(read_text(ARSENAL_SQL))
 
     def toks(alias):
         m = re.search(r"UNNEST\(\s*\[([^\]]*)\]\s*\)\s+AS\s+" + alias + r"\b", txt)
@@ -1005,7 +1021,17 @@ def seed_active_codes():
     # overrode a literal-tuple row for the same code regardless of which actually appears LATER in the
     # file. Both match kinds are now merged into a single list of (start_pos, code, state) events and
     # applied in true textual order, so "the last row/block per code wins" is what actually happens.
-    txt = read_text(ARSENAL_SQL)
+    #
+    # strip_sql_comments() FIRST (roster-group bug, 2026-09-04) — the same false-FAIL-on-a-doc-comment
+    # exposure R-B/R-C/R-E were fixed for on 2026-09-02, which this reader did not get. Because the
+    # last-in-textual-order event wins (see the loop below), a commented-out lifecycle row narrating a
+    # PRIOR seed state — e.g. an SL5-style `--   (CURRENT_TIMESTAMP(), 'E', 'ADOPTED', 'TERMINATED', ...)`
+    # aside kept for the DR record, written textually AFTER the live seed — used to OVERRIDE the real
+    # row: R-A then reports the code as roster-active in roster.yaml but absent from the bigquery/35
+    # seed and exits 1, blocking every merge with zero live SQL change. No-op on today's tree (verified:
+    # same {A,B,C,D,E} / 5 codes before and after); blanking-to-spaces preserves every m.start() offset
+    # the textual-order sort below depends on.
+    txt = strip_sql_comments(read_text(ARSENAL_SQL))
     events = []
     for m in SEED_ROW.finditer(txt):
         events.append((m.start(), m.group(1), m.group(2)))

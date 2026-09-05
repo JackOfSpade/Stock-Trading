@@ -13,7 +13,9 @@ this compares the two SELECT logics over identical inputs. NOTE: this does NOT `
 generate_schema_name override pins models to the bare live datasets, so a build would overwrite
 them; compile+EXCEPT stays read-only.
 
-Run AFTER `dbt compile` (the CI job does that), from the repo root. Running it by hand? clear
+Run AFTER `dbt compile` (the CI job does that). CI runs it from the repo root, but every path this
+module reads is resolved from this file's own location (see REPO), so the cwd does not change the
+verdict. Running it by hand? clear
 `dbt/target` first (`dbt clean`): that directory is git-ignored and `dbt compile` does not purge
 it, so artifacts of models the repo no longer has survive there and used to be compared as if
 they were ported models — see compiled_models()' ORPHAN GUARD. They are now skipped and counted. Requires the `bq` CLI authed
@@ -37,7 +39,25 @@ from lib.sql_files import DBT_DATASETS
 from lib.textio import read_text
 
 PROJECT = "stock-trading-498512"
-COMPILED_ROOT = os.path.join("dbt", "target", "compiled", "stock_trading", "models")
+# Anchored to the REPO, not to the cwd. CI always invokes this from the repo root (ci.yml's
+# "Row-level parity (compiled vs live, EXCEPT both ways)" step sets no working-directory), so
+# COMPILED_ROOT and model_source_names()' dbt/models walk were originally written cwd-relative and
+# LIVE_SCOPE_YML below was the only anchored path in the file.
+#
+# BUG FIX (2026-09-04 quality pass): run from ANY other cwd, both of those walks found nothing, and
+# main()'s total==0 branch read the empty walk as "no dbt models ported yet" and returned 0 — a
+# vacuous green over ~190 real ports, through a cause none of the three exit-code guards cover
+# (model_source_count() consulted the same missing directory, so the "sources exist but nothing
+# compiled" escape hatch was empty too, and checked==0 is never reached). The 2026-09-02 stale-name
+# guard fired in the same run, reporting all 85 CORRECT dbt/parity_live_scope.yml names as stale,
+# precisely because that one config WAS anchored and still loaded. Reproduced from a scratch cwd; no
+# BigQuery job is issued on that path (`batch_cols = live_columns_all() if models else None`
+# short-circuits on the empty model list). CI was never affected — the interactive/agent full-suite
+# run was, i.e. exactly the run compiled_models()' ORPHAN GUARD was already fixed for once. Every
+# path this module reads is now resolved from this file's own location, matching the three sibling
+# scripts (gen_dbt_port.py, verify_dbt_port.py, check_dbt_view_coverage.py), which all anchor.
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+COMPILED_ROOT = os.path.join(REPO, "dbt", "target", "compiled", "stock_trading", "models")
 # DEDUP (sql-parity#0, 2026-08-31 code-quality pass): this used to be its own locally-declared
 # tuple, `("state", "perf", "analytics")`, duplicating check_dbt_view_coverage.py's `DATASETS` —
 # same three datasets, different name, different order, unconsolidated. Now shared via
@@ -265,12 +285,14 @@ def compiled_models():
             yield dataset, name, sql
 
 
-# Anchored to the REPO, not to the cwd: every other path in this file is cwd-relative because CI
-# always runs it from the repo root, but a config that silently becomes "absent" (-> compare
+# Anchored to the REPO, not to the cwd: a config that silently becomes "absent" (-> compare
 # everything) when invoked from elsewhere would make the live scope depend on the caller's
-# directory. Resolve it once, from this file's own location.
-LIVE_SCOPE_YML = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                              "dbt", "parity_live_scope.yml")
+# directory. Resolve it once, from this file's own location. This was for a while the ONLY anchored
+# path in the file — COMPILED_ROOT and model_source_names() were cwd-relative on the reasoning that
+# CI always runs from the repo root — and that asymmetry is itself what made the 2026-09-04 vacuous-
+# green so confusing to read (this config loaded while the model walks came back empty); see REPO at
+# the top of this module for the failure and the fix.
+LIVE_SCOPE_YML = os.path.join(REPO, "dbt", "parity_live_scope.yml")
 
 
 def live_scope():
@@ -306,10 +328,14 @@ def model_source_names():
     universe compiled_models() should reproduce. Lets main() distinguish 'no models ported yet'
     (legitimately OK when empty) from 'sources exist but compile emitted nothing, or only a SUBSET,
     under COMPILED_ROOT' (a stale path / renamed dbt project / partial `dbt compile` — breakage that
-    must NOT report OK; 2026-07-17 audit + parallel-refactor partial-compile guard)."""
+    must NOT report OK; 2026-07-17 audit + parallel-refactor partial-compile guard).
+
+    REPO-anchored (2026-09-04 quality pass): a cwd-relative walk here returned an empty set from any
+    directory but the repo root, which fed main()'s total==0 branch a false 'nothing is ported yet'
+    — see REPO at the top of this module."""
     names = set()
     for dataset in DATASET_FOLDERS:
-        d = os.path.join("dbt", "models", dataset)
+        d = os.path.join(REPO, "dbt", "models", dataset)
         if os.path.isdir(d):
             for fn in os.listdir(d):
                 if fn.endswith(".sql"):

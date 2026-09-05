@@ -252,7 +252,14 @@ def test_resolve_allowed_map_source_raises_when_nothing_defines_the_view(tmp_pat
 
 def test_real_allowed_map_source_still_parses():
     live = ch.parse_allowed_map(ch.ALLOWED_MAP_SOURCE)
-    assert live, "bigquery/180's allowed_map CTE no longer parses — CHECK A's live source is broken"
+    # Name the RESOLVED file, not a hardcoded one: ALLOWED_MAP_SOURCE is chosen at runtime by
+    # resolve_allowed_map_source() (bigquery/199 today, /180 before 2026-08-25). This message used to
+    # say "bigquery/180's", which is the exact "reports a file that is no longer canonical" failure
+    # the runtime resolver was introduced to kill — 180 is superseded and will keep parsing fine
+    # forever while the real canonical source is the broken one.
+    assert live, (
+        f"{os.path.basename(ch.ALLOWED_MAP_SOURCE)}'s allowed_map CTE no longer parses — "
+        "CHECK A's live source is broken")
     assert all(isinstance(drainers, list) and drainers for drainers in live.values())
 
 

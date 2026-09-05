@@ -498,8 +498,26 @@ def test_derive_profile_exact_match_has_no_overrides():
 
 
 def test_derive_profile_picks_best_scoring_profile_on_a_near_match():
-    # env_SL + autofix False + push notifications match "sl" on those 3 fields and "fleet" on 0 of
-    # them -- "sl" wins even though nothing is a PERFECT match.
+    # env_SL + autofix False + push notifications match "sl" on those 3 fields and "fleet" on none of
+    # them; the model override then means NEITHER profile is a PERFECT match (measured on this exact
+    # fixture: sl 6/7, fleet 3/7), so this pins genuine best-of-IMPERFECT selection -- what the test's
+    # name claims. Until 2026-09-04 the fixture carried no model override, so "sl" scored a perfect
+    # 7/7 and the `overrides == {}` assertion below was satisfiable only by an exact match: the test
+    # was a second exact-match test while its own comment said "nothing is a PERFECT match". The
+    # perfect-match-against-a-NON-DEFAULT-profile case it used to cover is kept directly below.
+    normalized = _norm(environment_id="env_SL", autofix_on_pr_create=False, model="claude-opus-6",
+                       notifications={"channel": {"email": False, "push": True, "slack": False}})
+    profile, overrides = rb.derive_profile(normalized, PROFILES)
+    assert profile == "sl"
+    assert overrides == {"model": "claude-opus-6"}
+
+
+def test_derive_profile_exact_match_against_a_non_default_profile_has_no_overrides():
+    # The other half of the case above, kept as its own test rather than dropped: with no model
+    # override "sl" is a PERFECT 7/7 match (fleet 4/7), so the winner is decided on SCORE alone --
+    # note the lexicographic tie-break would have picked "fleet" ("fleet" < "sl"), so this is not
+    # redundant with test_derive_profile_exact_match_has_no_overrides above, which exercises the
+    # profile a tie-break would coincidentally agree with.
     normalized = _norm(environment_id="env_SL", autofix_on_pr_create=False,
                        notifications={"channel": {"email": False, "push": True, "slack": False}})
     profile, overrides = rb.derive_profile(normalized, PROFILES)
@@ -561,6 +579,29 @@ def test_derive_profile_empty_policy_still_matches_a_profile_connector_missing_t
     profile, overrides = rb.derive_profile(normalized, PROFILES)
     assert profile == "fleet"
     assert "mcp_connections" not in overrides
+
+
+def test_derive_profile_same_connector_uuid_different_url_is_an_override():
+    """REGRESSION (quality pass 2026-09-04). `url` used to be excluded from _conn_key, so a live
+    connector ENDPOINT migration (versioned shapes like `.../mcp/v1` are exactly the kind that move)
+    matched the profile with ZERO override recorded -- and every restored trigger would then point at
+    the stale profile URL. Nothing else in the repo can catch it: the URLs live only in CONNECTORS and
+    ops/routine_backup.json's profiles, ops/connector_tools.yaml has no url field, and check() never
+    calls derive_profile(). Asserted end to end (override recorded AND carried into the create body),
+    since the override is only worth anything if a restore actually emits the new endpoint."""
+    normalized = _norm(mcp_connections=[
+        {"connector_uuid": "u-a", "name": "A", "url": "https://NEW-endpoint.example/mcp"},
+        {"connector_uuid": "u-b", "name": "B", "url": "https://b"},
+    ])
+    profile, overrides = rb.derive_profile(normalized, PROFILES)
+    assert profile == "fleet"
+    assert overrides["mcp_connections"] == normalized["mcp_connections"], (
+        "an endpoint change must be recorded as an override, not absorbed into the profile match")
+    entry = {"profile": profile, "overrides": overrides, "name": "n", "enabled": True,
+             "instruction": "i", "cron_expression": "0 1 * * *"}
+    body = rb.build_create_body(entry, PROFILES)
+    assert [c["url"] for c in body["mcp_connections"]] == [
+        "https://NEW-endpoint.example/mcp", "https://b"]
 
 
 def test_conn_key_set_treats_permitted_tools_order_insensitively():
@@ -998,6 +1039,116 @@ def test_ingest_records_a_duplicate_when_both_colliding_triggers_are_id_less(tmp
     assert doc["routines"]["D1"]["enabled"] is True, "the first-filed raw's data must survive intact"
 
 
+# ---- ingest(): the synthetic `__no_id__:` _unmatched key must never collapse two live triggers -------
+def test_ingest_keeps_two_id_less_unmatched_raws_sharing_a_60_char_core(tmp_path, monkeypatch):
+    """REGRESSION (quality pass 2026-09-04). The `_unmatched` key for an id-less raw is
+    `__no_id__:<first 60 chars of the core instruction>`, assigned into doc["_unmatched"] with a plain
+    dict assignment -- so two DISTINCT id-less triggers whose cores agree for 60 characters collapsed
+    onto ONE key: the first was recorded NOWHERE (not `routines`, not `_unmatched`, not `conflicts`),
+    a restore rebuilt only one of the two, and the summary printed the same key twice, over-reporting
+    the count. That is the same "record it rather than dropping it silently" contract violation the
+    duplicate-live-trigger guard three lines below was hardened for twice (2026-08-22, 2026-09-02).
+    Reachable via an operator-saved RemoteTrigger payload missing `id`/`trigger_id`, exactly the input
+    _dedup_raw_triggers() deliberately preserves rather than collapsing."""
+    _wire(tmp_path, monkeypatch)
+    core = "x" * 60
+    raws = [_raw_trigger(tid=None, name="Zed A", content=f"{core} AAAA"),
+            _raw_trigger(tid=None, name="Zed B", content=f"{core} BBBB")]
+    result = rb.ingest(str(_write(tmp_path, "in.json", {"data": raws})))
+
+    doc = rb.load_backup()
+    assert len(doc["_unmatched"]) == 2, "both live triggers must be recorded, not one overwritten"
+    assert sorted(e["instruction"] for e in doc["_unmatched"].values()) == [
+        f"{core} AAAA", f"{core} BBBB"]
+    assert len(set(result["unmatched"])) == 2, "the summary must name two distinct keys, not one twice"
+    assert result["unmatched"] == sorted(doc["_unmatched"])
+
+
+def test_ingest_keeps_two_id_less_unmatched_raws_with_empty_instructions(tmp_path, monkeypatch):
+    """The cheaper real-world trigger for the same collapse: normalize_trigger() yields
+    instruction="" whenever `ccr.events` is empty (a truncated/partial saved payload), so EVERY such
+    raw keys to the literal "__no_id__:" regardless of what it actually is."""
+    _wire(tmp_path, monkeypatch)
+    raws = []
+    for name in ("Empty One", "Empty Two"):
+        raw = _raw_trigger(tid=None, name=name)
+        raw["job_config"]["ccr"]["events"] = []
+        raws.append(raw)
+    result = rb.ingest(str(_write(tmp_path, "in.json", {"data": raws})))
+
+    doc = rb.load_backup()
+    assert sorted(e["name"] for e in doc["_unmatched"].values()) == ["Empty One", "Empty Two"]
+    assert result["unmatched"] == ["__no_id__:", "__no_id__:#2"]
+
+
+def test_ingest_id_less_raw_ingested_twice_reuses_its_key(tmp_path, monkeypatch):
+    """The suffix must fire on a genuine COLLISION only, never on a re-ingest of the same raw --
+    otherwise repeated ingests of one unchanged payload would pile up `#2`, `#3`, ... copies of the
+    same trigger, and a restore-all would rebuild it several times over."""
+    _wire(tmp_path, monkeypatch)
+    infile = _write(tmp_path, "in.json", {"data": [
+        _raw_trigger(tid=None, name="Zed", content="unrelated instruction text entirely")]})
+    rb.ingest(str(infile))
+    result = rb.ingest(str(infile))
+    assert list(rb.load_backup()["_unmatched"]) == ["__no_id__:unrelated instruction text entirely"]
+    assert result["unmatched"] == ["__no_id__:unrelated instruction text entirely"]
+
+
+def test_ingest_id_less_raw_with_a_CHANGED_config_updates_its_key_in_place(tmp_path, monkeypatch):
+    """REGRESSION (review of the 2026-09-04 collision fix). The collision test must be scoped to keys
+    claimed by THIS ingest run, not to the persisted doc["_unmatched"]. Testing against the persisted
+    doc with exact value equality meant an id-less trigger whose config CHANGED between ingests was
+    filed under a fresh `#N` while its stale copy survived at the base key forever -- nothing prunes
+    it, since B4's cleanup pops by trigger_id and an id-less entry never has one. That is precisely
+    the stale-`_unmatched`-copy hazard the branch's own comment rules out for the trigger_id branch
+    (see test_ingest_unmatched_entry_with_a_trigger_id_is_still_updated_in_place below), reintroduced
+    on the id-less side; each further config change appended another `#N`."""
+    _wire(tmp_path, monkeypatch)
+    rb.ingest(str(_write(tmp_path, "a.json", {"data": [
+        _raw_trigger(tid=None, name="Zed", content="an unidentifiable thing", cron="0 1 * * *")]})))
+    result = rb.ingest(str(_write(tmp_path, "b.json", {"data": [
+        _raw_trigger(tid=None, name="Zed", content="an unidentifiable thing", cron="0 2 * * *")]})))
+
+    unmatched = rb.load_backup()["_unmatched"]
+    assert list(unmatched) == ["__no_id__:an unidentifiable thing"], (
+        "a changed id-less config must UPDATE its single entry, not mint a `#N` beside a stale copy")
+    assert unmatched["__no_id__:an unidentifiable thing"]["cron_expression"] == "0 2 * * *"
+    assert result["unmatched"] == ["__no_id__:an unidentifiable thing"]
+
+
+def test_ingest_same_id_less_raw_twice_in_ONE_payload_stores_one_entry(tmp_path, monkeypatch):
+    """The value-equality half of the collision test is load-bearing too: run-scoping ALONE would
+    store `__no_id__:X` and `__no_id__:X#2` with identical values when the SAME raw appears twice in
+    one payload -- the very "pile up #2, #3 copies of the same trigger" hazard
+    test_ingest_id_less_raw_ingested_twice_reuses_its_key guards across runs. That input is reachable:
+    _dedup_raw_triggers() collapses only NON-None trigger_ids (two overlapping saved `list` pages in a
+    directory ingest are its own docstring's example), so two identical id-less raws survive dedup as
+    separate entries. The two collision tests above use DISTINCT content and would not catch it."""
+    _wire(tmp_path, monkeypatch)
+    raw = _raw_trigger(tid=None, name="Zed", content="an unidentifiable thing")
+    result = rb.ingest(str(_write(tmp_path, "in.json", {"data": [raw, dict(raw)]})))
+
+    assert list(rb.load_backup()["_unmatched"]) == ["__no_id__:an unidentifiable thing"], (
+        "the same raw twice in one payload must reuse its key, not store an identical `#2` duplicate")
+    assert result["unmatched"] == ["__no_id__:an unidentifiable thing"]
+
+
+def test_ingest_unmatched_entry_with_a_trigger_id_is_still_updated_in_place(tmp_path, monkeypatch):
+    """The suffix is scoped to the id-less branch on purpose. An unmatched trigger that HAS a
+    trigger_id must keep updating its single `_unmatched` entry in place across ingests: suffixing it
+    would leave the stale copy under the un-suffixed key forever, and a `restore` with no args would
+    rebuild that stale copy as a DUPLICATE live trigger -- exactly the hazard B4's comment in ingest()
+    warns about."""
+    _wire(tmp_path, monkeypatch)
+    rb.ingest(str(_write(tmp_path, "a.json", {"data": [
+        _raw_trigger(tid="trig_UNKNOWN", name="Mystery", content="totally unrelated")]})))
+    rb.ingest(str(_write(tmp_path, "b.json", {"data": [
+        _raw_trigger(tid="trig_UNKNOWN", name="Mystery renamed", content="totally unrelated, v2")]})))
+    unmatched = rb.load_backup()["_unmatched"]
+    assert list(unmatched) == ["trig_UNKNOWN"]
+    assert unmatched["trig_UNKNOWN"]["name"] == "Mystery renamed"
+
+
 # ---- ingest/restore: enabled=False must survive end to end (mutation gap 2) -----------------------------
 def test_build_create_body_preserves_a_disabled_routine(tmp_path, monkeypatch):
     """Two REAL routines are deliberately paused (enabled=False) -- a restore must never re-enable
@@ -1312,6 +1463,38 @@ def test_restore_rejects_an_unmatched_entry_whose_recovery_data_was_wiped(tmp_pa
     assert bodies == [], "a wiped unmatched entry must never produce a create body"
     assert any("environment_id" in e for e in errors)
     assert any("model" in e for e in errors)
+
+
+def test_restore_rejects_an_unmatched_entry_whose_instruction_is_empty(tmp_path, monkeypatch):
+    """REGRESSION (quality pass 2026-09-04). `instruction` -- the single most load-bearing recovery
+    field, the thing that IS the routine -- had no guard anywhere: not in _fields_errors (which
+    validated the other seven), not in _schedule_errors, not in _one_shot_restore_error, not in the
+    CRON_UNCONFIRMED guard. normalize_trigger() yields instruction="" whenever a payload's
+    `ccr.events` is empty (a truncated/partial saved payload -- the same wiped-payload class as the
+    B3 `session_context: {}` shape reproduced live), and check() never inspects `_unmatched` at all,
+    so a restore silently emitted a ready-to-paste create body recreating a live SCHEDULED trigger
+    with an EMPTY prompt, reporting zero errors."""
+    _wire(tmp_path, monkeypatch)
+    raw = _raw_trigger(tid="trig_BLANK", name="Blank", content="totally unrelated")
+    raw["job_config"]["ccr"]["events"] = []          # -> normalize_trigger() -> instruction == ""
+    rb.ingest(str(_write(tmp_path, "in.json", {"data": [raw]})))
+    assert rb.load_backup()["_unmatched"]["trig_BLANK"]["instruction"] == ""
+    bodies, errors, _ = rb.restore(["trig_BLANK"])
+    assert bodies == [], "an empty-instruction entry must never produce a create body"
+    assert any("instruction is missing/empty" in e for e in errors)
+
+
+def test_restore_rejects_a_routines_entry_whose_instruction_is_blank(tmp_path, monkeypatch):
+    """The same guard on the `routines` branch. Whitespace-only counts as empty -- a create body
+    whose prompt is " " is no more runnable than one whose prompt is ""."""
+    _wire(tmp_path, monkeypatch)
+    rb.ingest(str(_write(tmp_path, "in.json", {"data": [_raw_trigger()]})))
+    doc = json.loads((tmp_path / "routine_backup.json").read_text())
+    doc["routines"]["D1"]["instruction"] = "   "
+    (tmp_path / "routine_backup.json").write_text(json.dumps(doc))
+    bodies, errors, _ = rb.restore(["D1"])
+    assert bodies == []
+    assert any("instruction is missing/empty" in e for e in errors)
 
 
 def test_restore_still_accepts_a_healthy_unmatched_entry(tmp_path, monkeypatch):

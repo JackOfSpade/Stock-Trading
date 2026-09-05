@@ -31,9 +31,23 @@ WHAT THIS DELIBERATELY DOES NOT CHECK:
     bigquery/**+dbt/** paths from ADOPT, so an adoptable branch can never change what dbt parse
     reads). Its `run:` body names no scripts/tests/*.py|.sh|.js target, so it is never a
     candidate here either -- both guards agree by construction, not by a special case.
-  - Any step with `continue-on-error: true` (the two ruff steps) or a `|| true` shell fallback
-    (dbt view coverage) -- both are advisory in ci.yml itself, so precondition 5 omitting them
-    does not weaken the local gate relative to what CI actually enforces.
+  - Any step with `continue-on-error: true` (the two ruff steps) or a `|| true` shell fallback --
+    both are advisory in ci.yml itself, so precondition 5 omitting them does not weaken the local
+    gate relative to what CI actually enforces.
+    STALE-EXAMPLE CORRECTION (2026-09-04): this bullet used to name "dbt view coverage" as the
+    `|| true` example. That stopped being true on 2026-09-01, when the uncovered backlog reached
+    zero and commit 8a533a7 dropped the fallback (ci.yml's step is now "dbt view coverage
+    (ENFORCING as of 2026-09-01 -- backlog is zero)", with a bare `run:` and an inline "WAS
+    `|| true`" note). check_dbt_view_coverage.py is consequently a REQUIRED identifier this script
+    now enforces, and it is present in BOTH mirrors -- the exact opposite of an excluded step, so
+    do not "restore" an exclusion for it. The checks job's ONLY `|| true` today is on the ruff
+    invocation, and required_identifiers() already drops that step one clause earlier on its
+    `continue-on-error: true` -- so the `|| true` line-skip below is currently REDUNDANT, not
+    unexercised-for-lack-of-an-example. Keep it: it is the only guard for a future advisory step
+    that relies on `|| true` alone, with no continue-on-error. (`warehouse-validation` also has a
+    `|| true` line, on `gcloud config set`; this script never reads that job.) Re-measure with a
+    PyYAML walk over jobs.checks.steps before restating any of this -- the previous example
+    rotted in three days.
   - `warehouse-validation` job steps (dbt-parity, the SQL dry-run) -- precondition 2's own text
     already argues these are unreproducible-and-excluded-by-path, a separate, already-verified
     argument this script does not re-litigate.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Advisory check: which live state/analytics/perf VIEWs have neither a dbt model nor a declared
+"""Coverage check: which live state/analytics/perf VIEWs have neither a dbt model nor a declared
 dbt source (2026-07-14 self-improvement audit finding).
 
 WHY. scripts/dbt_parity.py only proves row-level parity for views that already HAVE a dbt model —
@@ -15,9 +15,15 @@ can triage "port it" vs "declare it out of scope" for each one.
 Read-only, no BigQuery/dbt CLI needed — pure text parsing of files already in the repo.
 
 Usage:  python scripts/check_dbt_view_coverage.py     # exit 0 if fully covered, 1 + list if not
-Wired ADVISORY in .github/workflows/ci.yml's `dbt` job (never blocks CI/auto-merge) — there is no
-baseline/allowlist here (unlike check_cadence/roster/autonomy_consistency.py), so it prints the full
-backlog on every run until items are ported or explicitly declared out of scope.
+Wired BLOCKING in .github/workflows/ci.yml's `checks` job (step "dbt view coverage (ENFORCING as of
+2026-09-01 — backlog is zero)", path-gated via `dbt_needed` on bigquery/**, dbt/** or
+requirements-ci.txt), and re-run against main's merged tip by auto-merge-claude.yml's post-merge
+coverage check. It was advisory (`|| true`) until 2026-09-01, when the 102-view backlog was burned
+down to zero — a permanently-red advisory is indistinguishable from a broken one, so this earns its
+keep instead by failing the build on a NEW live view with no dbt model and no source declaration.
+There is still no baseline/allowlist here (unlike check_cadence/roster/autonomy_consistency.py): the
+uncovered list is printed in full, and today it is empty. A bug in THIS file therefore reddens CI —
+weigh changes accordingly.
 """
 import os
 import re
@@ -136,10 +142,13 @@ def live_views():
         #
         # check_live_sql_parity.py's find_final_definitions() already merges the two event kinds by
         # match position for exactly this reason and has a regression test for it
-        # (test_drop_then_create_same_file_leaves_object_expected); this sibling scanner never
-        # adopted the fix. Latent on today's tree — no file both creates and drops the same view —
-        # and this script is advisory-only, but the divergence between two scanners that must agree
-        # about what is live is the kind that goes unnoticed until it matters.
+        # (test_drop_then_create_same_file_leaves_object_expected); this sibling scanner had not
+        # adopted it until the 2026-08-22 pass above. Latent on today's tree — no file both creates
+        # and drops the same view — and the impact was bounded, when this was written, by the script
+        # being advisory-only. That mitigation is GONE (2026-09-01: it now BLOCKS the build — see the
+        # module docstring), so a wrong answer here strands branches, which only sharpens the original
+        # point: a divergence between two scanners that must agree about what is live is the kind that
+        # goes unnoticed until it matters.
         events = [(m.start(), True, m.group(1), m.group(2)) for m in VIEW_DDL.finditer(txt)]
         events += [(m.start(), False, m.group(1), m.group(2)) for m in DROP_VIEW_DDL.finditer(txt)]
         for _pos, is_create, dataset, name in sorted(events, key=lambda e: e[0]):
@@ -165,7 +174,22 @@ def dbt_model_names():
 
 def dbt_source_names():
     """(dataset, name) for every table declared under a dbt source block whose (possibly-overridden)
-    `dataset:` is one of state/analytics/perf.
+    dataset — spelled `schema:` (dbt's canonical key) or `dataset:` (its BigQuery alias), else the
+    block's own `name:` — is one of state/analytics/perf.
+
+    KEY PRECEDENCE FIX (2026-09-04 quality pass). This read `src.get("dataset") or src.get("name")`,
+    honouring ONLY the alias. dbt's own resolution is the authority: UnparsedSourceDefinition declares
+    the field as `schema` (there is no `dataset` field), and dbt/parser/schemas.py runs
+    `credentials.translate_aliases(data, recurse=True)` over every source dict, where dbt-bigquery's
+    _ALIASES maps legacy `dataset` -> `schema`. So both spellings are valid input, `schema:` is the
+    one dbt's docs use, and a source written that way resolved to the BLOCK NAME here — which is not
+    in DATASETS for the `- name: state_external` / `schema: state` shape this repo already uses with
+    the other spelling, so every table under it silently dropped out of `covered` and its views
+    reddened this now-BLOCKING gate as falsely uncovered (the mirror shape, `- name: state` /
+    `schema: other`, fails OPEN instead, crediting coverage dbt does not provide). Zero blocks in
+    dbt/models/sources.yml spell it `schema:` today, so this is a strict widening with no verdict
+    change. scripts/gen_dbt_port.py's source_index() is the other reader of the same file and already
+    used this precedence — see its docstring for why the two must not drift apart again.
 
     Uses lib.textio.load_yaml() (2026-07-29). This is a small BEHAVIOR FIX, not the pure no-op
     refactor it was first described as: for its whole committed history this function was the bare
@@ -179,7 +203,10 @@ def dbt_source_names():
     found = set()
     doc = load_yaml(DBT_SOURCES_YML)
     for src in doc.get("sources", []) or []:
-        dataset = src.get("dataset") or src.get("name")
+        # `.get("name")`, not `src["name"]`: a malformed block degrades to a miss rather than raising
+        # a KeyError inside a blocking gate (its sibling reader, gen_dbt_port.py's source_index(), is
+        # a GENERATOR and deliberately keeps the loud spelling — see that function's docstring).
+        dataset = src.get("schema") or src.get("dataset") or src.get("name")
         if dataset not in DATASETS:
             continue
         for tbl in src.get("tables", []) or []:

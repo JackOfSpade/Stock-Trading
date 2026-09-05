@@ -51,7 +51,12 @@
  *   - fallbackBarsHtml_    (weekly_report.gs)
  *   - pctCellHtml_         (weekly_report.gs)
  *   - buildParkSection_    (weekly_report.gs) -- 2026-07-29: was zero-coverage; pluralization bugs here
- *                           (e.g. "1 days") would be silent in the rendered email
+ *                           (e.g. "1 days") would be silent in the rendered email. RESYNCED 2026-09-04
+ *                           (v10): PARK v4 made it render the two-sleeve SPLIT instead of the majority-
+ *                           sleeve `vehicle` label (bigquery/220), and the counterfactuals gained the
+ *                           AI-era-anchored quartet ahead of the inception one (bigquery/212). Both
+ *                           degrade to the v9 rendering when the newer columns are absent, and each
+ *                           quartet must state its own anchor -- all three pinned below.
  *   - esc2_                (alert_emailer.gs)
  *   - ALERT_PROJECT_ID     (alert_emailer.gs) -- 2026-09-02: copied so bqAlerts_ below can resolve
  *                           verbatim, same literal as weekly_report.gs's PROJECT_ID
@@ -121,7 +126,19 @@ const ALERT_SCRIPT_VERSION_SYNCED_AS_OF = 'v10';
 // the same way -- buildSubject_ hardcoded SUBJECT_LABEL's value instead of interpolating the const, so a
 // rename in the .gs would have left the buildSubject_ assertions below asserting the OLD phrase, green.
 // Bump this in the SAME commit that re-verifies those copies against a new SCRIPT_VERSION.
-const SCRIPT_VERSION_SYNCED_AS_OF = 'v9';
+// v10 (2026-09-04): re-verified for the weekly_report.gs v10 pass. THREE copies below changed in this
+// commit. Two because the .gs changed: buildParkSection_ (PARK v4 two-sleeve split label, bigquery/220,
+// plus the dual-anchor counterfactual blocks, bigquery/212) and buildHealthReasons_ (the stale-marks
+// reason text now keys on health.marks_due_through -- a THIRD field read straight off the health row --
+// with the pre-173 last_trading_day / d2_ran_last_trading_day wording kept as the fallback branch).
+// The third is a drift REPAIR with no .gs change behind it: fallbackBarsHtml_'s copy had never carried
+// the .gs's two-line "null returnPct -> render no data, never a false 0% bar" comment, which went into
+// weekly_report.gs alone in 4522cb0 (2026-07-17) while that same commit synced the code lines to both
+// files -- a second, comment-only instance of the drift class this pin exists to catch, found by
+// byte-diffing every copy against the .gs during this pass. Every other copy is byte-identical to the
+// .gs at v10, verified by extraction rather than by eye. gatherData_'s cadence-aware data-trust fix and
+// gatherParkData_'s query changes are impure (live BigQuery) and are NOT copied here.
+const SCRIPT_VERSION_SYNCED_AS_OF = 'v10';
 
 // ===== copied verbatim from weekly_report.gs ================================================
 
@@ -276,6 +293,8 @@ function fallbackBarsHtml_(d) {
   const hasVooReturn = !!(d.voo && d.voo.returnPct != null);
   const items = deployed.map(r => ({
     label: r.strategy,
+    // null when the latest deployed_unit_value is missing (returnPct null) — render "no data", never a
+    // false 0% bar; the beat-vs-VOO comparison is likewise only meaningful with a real return.
     val: r.returnPct != null ? r.returnPct * 100 : null,
     beat: (hasVooReturn && r.returnPct != null) ? (r.returnPct > d.voo.returnPct) : null
   }));
@@ -310,35 +329,61 @@ function pctCellHtml_(v, colorBySign, extrapolated) {
   return `<span style="color:${color};font-weight:${colorBySign ? 700 : 400};">${signPct_(v * 100)}${marker}</span>`;
 }
 
-// Compact PARK section (2026-07-18, PARK_ROUTER_DESIGN.md v2 §9) — current vehicle, tenure, switch
+// Compact PARK section (2026-07-18, PARK_ROUTER_DESIGN.md v2 §9) — current allocation, tenure, change
 // cadence, and the AI's own realized TWR vs the three counterfactuals (100% SGOV, 100% VOO, the
 // record-only v1 rule-shadow). Reuses pctCellHtml_/esc_ exactly like the Average Return table above.
 // Guards every field independently (never a bare "undefined"/fabricated 0%) — bigquery/91-93 may not
-// be applied live yet, see gatherParkData_.
+// be applied live yet, and neither may bigquery/220 / 212, see gatherParkData_.
 function buildParkSection_(d) {
   const p = d.park || {};
-  const vehicleLabel = p.vehicle ? esc_(p.vehicle) : 'unknown';
-  const daysLabel = p.daysInVehicle != null ? `${p.daysInVehicle} day${p.daysInVehicle === 1 ? '' : 's'}` : 'n/a';
+  // PARK v4 (bigquery/220, live 2026-09-04): render the SPLIT, because the book is two sleeves at a
+  // graded f. "Current vehicle: VOO" is the MAJORITY-sleeve label and is not the book — reporting it
+  // alone is what made a real f=0→25→50 reallocation read as no change at all. Falls back to the
+  // single-vehicle label when target_f_pct is absent (a pre-220 live view via gatherParkData_'s legacy
+  // fallback, or genuinely no park data), which is exactly the v9 rendering.
+  const graded = p.targetFPct != null && !!p.riskSleeve && !!p.defensiveSleeve;
+  const allocLabel = graded
+    ? `Current allocation: <b>${100 - p.targetFPct}% ${esc_(p.riskSleeve)} / ${p.targetFPct}% ${esc_(p.defensiveSleeve)}</b>`
+    : `Current vehicle: <b>${p.vehicle ? esc_(p.vehicle) : 'unknown'}</b>`;
+  const daysLabel = p.daysInAllocation != null ? `${p.daysInAllocation} day${p.daysInAllocation === 1 ? '' : 's'}` : 'n/a';
   const switchesLabel = p.switches30d != null ? `${p.switches30d} switch${p.switches30d === 1 ? '' : 'es'} / 30d` : 'n/a';
 
   const hasCf = p.ai != null || p.sgov != null || p.voo != null || p.rule != null;
+  // AI-era quartet, present only once bigquery/212 is live AND a BOUND allocator call exists to anchor
+  // on (212 emits ai_era_start_date NULL + four NULL columns otherwise, deliberately).
+  const hasEraCf = p.aiEraStart != null &&
+    (p.aiEra != null || p.sgovEra != null || p.vooEra != null || p.ruleEra != null);
   const cfRowHtml = (label, val, colorBySign) => `
       <tr>
         <td style="padding:6px 8px;color:#3d4a59;">${esc_(label)}</td>
         <td style="padding:6px 8px;text-align:right;">${pctCellHtml_(val, !!colorBySign)}</td>
       </tr>`;
-  const cfTable = hasCf ? `
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;border-collapse:collapse;font-size:12px;">
-      ${cfRowHtml('AI (actual)', p.ai, true)}${cfRowHtml('100% SGOV', p.sgov, false)}${cfRowHtml('100% VOO', p.voo, false)}${cfRowHtml('Rule-shadow (record-only)', p.rule, false)}
-    </table>` :
-    `<div style="margin-top:8px;font-size:11px;color:#8a96a3;">Not enough data yet.</div>`;
+  // One quartet + the anchor it was measured on, ALWAYS stated together. bigquery/212 measured the
+  // sign of AI-vs-SGOV as anchor-dependent (published inception −1.17pp vs AI era +0.67pp), so an
+  // unlabelled quartet is not a number the operator can act on; Claude_Task_Plan.md's W5 PARK SCORECARD
+  // carries the same "state which anchor each number uses" rule.
+  const cfBlock = (caption, ai, sgov, voo, rule) => `
+    <div style="margin-top:8px;font-size:11px;color:#8a96a3;">${caption}</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:4px;border-collapse:collapse;font-size:12px;">
+      ${cfRowHtml('AI (actual)', ai, true)}${cfRowHtml('100% SGOV', sgov, false)}${cfRowHtml('100% VOO', voo, false)}${cfRowHtml('Rule-shadow (record-only)', rule, false)}
+    </table>`;
+  // AI era LEADS when it exists; the inception quartet is kept (no number is removed — 212 left the
+  // five original columns byte-identical) but demoted and labelled with what it inherits.
+  const cfTable = hasEraCf
+    ? cfBlock(`AI era — park TWR since ${esc_(p.aiEraStart)}, the allocator's own decisions only (bigquery/212).`,
+              p.aiEra, p.sgovEra, p.vooEra, p.ruleEra) +
+      cfBlock(`Since book inception 2026-04-17 — includes the owner's 2026-07-15 SGOV→VOO cutover, which the allocator did not decide.`,
+              p.ai, p.sgov, p.voo, p.rule)
+    : (hasCf
+        ? cfBlock('Park TWR since book inception 2026-04-17.', p.ai, p.sgov, p.voo, p.rule)
+        : `<div style="margin-top:8px;font-size:11px;color:#8a96a3;">Not enough data yet.</div>`);
 
   return `
   <tr><td style="padding:16px 22px 6px 22px;">
     <div style="font-size:12px;color:#8a96a3;text-transform:uppercase;letter-spacing:0.6px;font-weight:700;">Park (AI Allocator)</div>
-    <div style="margin-top:6px;font-size:12px;color:#1f2d3d;">Current vehicle: <b>${vehicleLabel}</b> · ${daysLabel} · ${switchesLabel}</div>
+    <div style="margin-top:6px;font-size:12px;color:#1f2d3d;">${allocLabel} · ${daysLabel} · ${switchesLabel}</div>
     ${cfTable}
-    <div style="font-size:11px;color:#8a96a3;margin-top:6px;">Park TWR since 2026-04-17 vs. the three PARK_ROUTER_DESIGN.md counterfactuals — SGOV never-left, VOO the prior static policy, rule-shadow the record-only v1 lookup table (owner-rejected as decision-maker).</div>
+    <div style="font-size:11px;color:#8a96a3;margin-top:6px;">Counterfactuals per PARK_ROUTER_DESIGN.md — SGOV never-left, VOO the prior static policy, rule-shadow the record-only v1 lookup table (owner-rejected as decision-maker). Each block states its own anchor: bigquery/212 measured AI-vs-SGOV as sign-flipping between them.</div>
   </td></tr>`;
 }
 
@@ -346,10 +391,26 @@ function buildParkSection_(d) {
 function buildHealthReasons_(health, marksFresh, engineFresh, firingKillFlags, killFlagDetails, openCriticalAlerts, criticalAlerts) {
   const reasons = [];
   if (!marksFresh || !engineFresh) {
-    const d2Ran = String(health.d2_ran_last_trading_day) === 'true';
-    reasons.push(d2Ran
-      ? `marks/engine still stale even though D2 logged complete for ${health.last_trading_day} — check state.freshness directly`
-      : `today's evening data batch (D2) hasn't completed yet for ${health.last_trading_day} — normal before ~22:30 MT, not a fault by itself`);
+    // v10: marksFresh/engineFresh are the CADENCE-AWARE terms now (see gatherData_) — "marks cover every
+    // trading day a scheduled D2a run has already been able to ingest", i.e. state.freshness.
+    // marks_due_through, NOT the MARKET last_trading_day. The reason text must key on the same basis the
+    // predicate did, or it misdirects: on a Sunday, last_trading_day is FRIDAY while marks_due_through is
+    // Thursday, so the old wording would have named Friday (whose D2a slot has not arrived yet) for a gap
+    // that is actually at Thursday — and worse, d2_ran_last_trading_day is FALSE every Sunday, so it would
+    // have taken the benign "not a fault by itself" branch for a genuinely missed, already-elapsed slot.
+    // A cadence-aware miss is BY CONSTRUCTION a slot that has already elapsed, so the benign branch cannot
+    // apply to it. The pre-173 wording is kept below, unchanged, for a live view with no marks_due_through
+    // column — there the predicate really did fall back to the strict last_trading_day pair, so its
+    // last_trading_day / d2_ran_last_trading_day framing is the correct one.
+    const dueThrough = health.marks_due_through;
+    if (dueThrough != null && dueThrough !== '') {
+      reasons.push(`marks/engine do not cover ${dueThrough} — the last trading day D2a was already scheduled to ingest, so this is a real gap, not the normal pre-22:30 MT wait — check state.freshness directly`);
+    } else {
+      const d2Ran = String(health.d2_ran_last_trading_day) === 'true';
+      reasons.push(d2Ran
+        ? `marks/engine still stale even though D2 logged complete for ${health.last_trading_day} — check state.freshness directly`
+        : `today's evening data batch (D2) hasn't completed yet for ${health.last_trading_day} — normal before ~22:30 MT, not a fault by itself`);
+    }
   }
   if (firingKillFlags > 0) {
     const shown = killFlagDetails.map(f => {
@@ -1189,6 +1250,34 @@ t('buildHealthReasons_ flags stale marks/engine with the "D2 ran but still stale
   assert.ok(reasons[0].includes('marks/engine still stale even though D2 logged complete for 2026-07-08'),
     `unexpected message: ${reasons[0]}`);
 });
+// v10 (2026-09-04): the reason text must key on the SAME basis gatherData_'s predicate keyed on. Once
+// marksFresh/engineFresh came from the cadence-aware marks_current/engine_current pair (bigquery/173),
+// naming last_trading_day pointed at a day whose D2a slot had not arrived yet, and the
+// d2_ran_last_trading_day branch -- FALSE at every Sunday send -- would have labelled a genuinely missed,
+// already-elapsed slot as "normal ... not a fault by itself". These two pin both halves.
+t('buildHealthReasons_ names marks_due_through (not last_trading_day) and drops the benign framing when the cadence-aware basis is available', () => {
+  // Sunday shape: last_trading_day is FRIDAY, marks_due_through is the Thursday slot D2a has already had.
+  const health = { marks_due_through: '2026-09-03', last_trading_day: '2026-09-04', d2_ran_last_trading_day: 'false' };
+  const reasons = buildHealthReasons_(health, false, true, 0, [], 0, []);
+  assert.strictEqual(reasons.length, 1);
+  assert.ok(reasons[0].includes('do not cover 2026-09-03'), `expected the due-through day, got: ${reasons[0]}`);
+  assert.ok(!reasons[0].includes('2026-09-04'),
+    'must not name last_trading_day: its D2a slot has not arrived yet, so it is not the gap');
+  assert.ok(!reasons[0].includes('not a fault by itself'),
+    'a cadence-aware miss is by construction an ALREADY-ELAPSED slot -- the benign pre-22:30 MT framing cannot apply');
+});
+t('buildHealthReasons_ keeps the pre-173 last_trading_day wording when marks_due_through is absent (pre-bigquery/173 live view)', () => {
+  // gatherData_ falls back to the strict marks_fresh/engine_fresh pair against such a view, so the old
+  // last_trading_day / d2_ran_last_trading_day framing is the CORRECT one there -- pinned so the v10
+  // branch above cannot quietly swallow it.
+  const noDueThrough = { last_trading_day: '2026-07-08', d2_ran_last_trading_day: 'false' };
+  assert.ok(buildHealthReasons_(noDueThrough, false, true, 0, [], 0, [])[0]
+    .includes("today's evening data batch (D2) hasn't completed yet for 2026-07-08"));
+  const blankDueThrough = { marks_due_through: '', last_trading_day: '2026-07-08', d2_ran_last_trading_day: 'true' };
+  assert.ok(buildHealthReasons_(blankDueThrough, false, true, 0, [], 0, [])[0]
+    .includes('marks/engine still stale even though D2 logged complete for 2026-07-08'),
+    'an empty-string cell (BigQuery can return one for a NULL) must take the fallback, not render a blank day');
+});
 t('buildHealthReasons_ lists firing kill-flags with strategy + the specific flag names', () => {
   const killFlagDetails = [{ strategy: 'B', drawdown_kill: 'true', runaway_review: 'false', m2m_underperf_review: 'true' }];
   const reasons = buildHealthReasons_({}, true, true, 1, killFlagDetails, 0, []);
@@ -1281,13 +1370,13 @@ t('buildSubject_ appends the "⚠ check data" warning suffix when green is false
 // ---- buildParkSection_ (2026-07-29: zero-coverage; a pluralization or "n/a" regression here (e.g.
 //      "1 days") reads as normal prose to a skim and would be silent in the rendered email) ----
 t('buildParkSection_ singularizes "1 day" / "1 switch" and pluralizes for any other count, including 0', () => {
-  const one = buildParkSection_({ park: { vehicle: 'VOO', daysInVehicle: 1, switches30d: 1 } });
+  const one = buildParkSection_({ park: { vehicle: 'VOO', daysInAllocation: 1, switches30d: 1 } });
   assert.ok(one.includes('1 day ·'), 'expected singular "1 day", not "1 days"');
   assert.ok(one.includes('1 switch / 30d'), 'expected singular "1 switch", not "1 switches"');
-  const zero = buildParkSection_({ park: { vehicle: 'VOO', daysInVehicle: 0, switches30d: 0 } });
+  const zero = buildParkSection_({ park: { vehicle: 'VOO', daysInAllocation: 0, switches30d: 0 } });
   assert.ok(zero.includes('0 days ·'), 'expected plural "0 days" (0 is not "1")');
   assert.ok(zero.includes('0 switches / 30d'), 'expected plural "0 switches"');
-  const many = buildParkSection_({ park: { vehicle: 'VOO', daysInVehicle: 5, switches30d: 2 } });
+  const many = buildParkSection_({ park: { vehicle: 'VOO', daysInAllocation: 5, switches30d: 2 } });
   assert.ok(many.includes('5 days ·'));
   assert.ok(many.includes('2 switches / 30d'));
 });
@@ -1303,10 +1392,69 @@ t('buildParkSection_ falls back to the same "park" defaults when d.park itself i
   assert.ok(out.includes('Not enough data yet.'));
 });
 t('buildParkSection_ renders the counterfactual table once any of ai/sgov/voo/rule is non-null', () => {
-  const out = buildParkSection_({ park: { vehicle: 'SGOV', daysInVehicle: 3, switches30d: 1, ai: 0.01, sgov: null, voo: null, rule: null } });
+  const out = buildParkSection_({ park: { vehicle: 'SGOV', daysInAllocation: 3, switches30d: 1, ai: 0.01, sgov: null, voo: null, rule: null } });
   assert.ok(!out.includes('Not enough data yet.'));
   assert.ok(out.includes('AI (actual)'));
   assert.ok(out.includes('+1.00%'));
+});
+
+// ---- buildParkSection_ under PARK v4 (v10, 2026-09-04) ----
+// bigquery/220 made `vehicle` the MAJORITY sleeve, so the v9 "Current vehicle: X" line reported a
+// graded book as if it were still binary: PARK_ALLOCATOR_V4_DESIGN.md's own replayed f=0->25->50 week
+// has majority sleeve VOO at every step. These pin the SPLIT rendering and, just as importantly, that
+// the pre-220 shape (no target_f_pct) still renders the v9 line rather than a blank or "undefined".
+t('buildParkSection_ renders the two-sleeve SPLIT, not the majority-sleeve label, once target_f_pct is present', () => {
+  const out = buildParkSection_({ park: { vehicle: 'VOO', targetFPct: 25, riskSleeve: 'VOO', defensiveSleeve: 'SGOV',
+                                          daysInAllocation: 2, switches30d: 2 } });
+  assert.ok(out.includes('Current allocation: <b>75% VOO / 25% SGOV</b>'),
+    `expected the graded split, got: ${out}`);
+  assert.ok(!out.includes('Current vehicle:'),
+    'a graded book must not also print the binary "Current vehicle" line -- that label is the majority sleeve, not the book');
+});
+t('buildParkSection_ renders the f=50 tie as an explicit 50/50 split (where the "majority sleeve" label is most misleading)', () => {
+  // bigquery/220: a 50/50 book reads vehicle='VOO' because the tie goes to the RISK sleeve. That is the
+  // exact input where reporting `vehicle` alone claims a 100% VOO book that is half defensive.
+  const out = buildParkSection_({ park: { vehicle: 'VOO', targetFPct: 50, riskSleeve: 'VOO', defensiveSleeve: 'SGOV',
+                                          daysInAllocation: 1, switches30d: 1 } });
+  assert.ok(out.includes('Current allocation: <b>50% VOO / 50% SGOV</b>'), `expected a 50/50 split, got: ${out}`);
+});
+t('buildParkSection_ degrades to the v9 single-vehicle label when the v4 columns are absent (pre-bigquery/220 live view)', () => {
+  // gatherParkData_'s legacy fallback query returns no target_f_pct/risk_sleeve/defensive_sleeve, so
+  // this shape must still render exactly what v9 rendered -- never a partial "undefined% ..." line.
+  const out = buildParkSection_({ park: { vehicle: 'SGOV', daysInAllocation: 4, switches30d: 0 } });
+  assert.ok(out.includes('Current vehicle: <b>SGOV</b>'), `expected the v9 vehicle label, got: ${out}`);
+  assert.ok(!out.includes('undefined'), 'a pre-v4 row must never leak an undefined into the rendered line');
+  assert.ok(!out.includes('Current allocation'), 'without target_f_pct there is no split to state');
+});
+t('buildParkSection_ leads with the AI-era quartet and STATES THE ANCHOR ON EACH block (bigquery/212)', () => {
+  // bigquery/212 measured the AI-vs-SGOV sign as anchor-dependent (published inception -1.17pp vs AI era
+  // +0.67pp), so a quartet rendered without its anchor is unactionable -- and with two quartets on the
+  // page, an unlabelled one is worse than none. Claude_Task_Plan.md's W5 PARK SCORECARD carries the same
+  // "state which anchor each number uses" rule; this is its email-side guard.
+  const out = buildParkSection_({ park: {
+    vehicle: 'VOO', targetFPct: 25, riskSleeve: 'VOO', defensiveSleeve: 'SGOV', daysInAllocation: 2, switches30d: 2,
+    ai: 0.00196, sgov: 0.01369, voo: 0.08072, rule: 0.00470,
+    aiEraStart: '2026-07-24', aiEra: 0.01063, sgovEra: 0.00392, vooEra: 0.03574, ruleEra: 0.02855 } });
+  assert.ok(out.includes('2026-07-24'), 'the AI-era block must name its derived anchor date');
+  assert.ok(out.includes('2026-04-17'), 'the demoted inception block must still name its own anchor');
+  assert.ok(out.indexOf('2026-07-24') < out.indexOf('2026-04-17'),
+    'the AI-era block must LEAD; the inception block is demoted below it');
+  assert.ok(out.includes('+1.06%'), 'the AI-era AI figure must be rendered');
+  assert.ok(out.includes('+0.20%'), 'the inception AI figure must be KEPT, not dropped (212 left it byte-identical)');
+  // Two quartets -> exactly two "AI (actual)" rows, each under its own captioned anchor.
+  assert.strictEqual((out.match(/AI \(actual\)/g) || []).length, 2,
+    'expected exactly two quartets (AI era + inception) when the anchor is available');
+});
+t('buildParkSection_ renders ONE anchored quartet when ai_era_start_date is null (pre-212 view, or no BOUND call yet)', () => {
+  // bigquery/212 emits ai_era_start_date NULL + four NULL rebased columns rather than anchoring at row
+  // zero, and gatherParkData_'s pre-212 fallback omits the columns entirely. Both must degrade to the v9
+  // rendering -- one quartet, still labelled with the inception anchor, never a blank or unlabelled row.
+  const out = buildParkSection_({ park: { vehicle: 'VOO', daysInAllocation: 3, switches30d: 0,
+                                          ai: 0.00196, sgov: 0.01369, voo: 0.08072, rule: 0.00470,
+                                          aiEraStart: null, aiEra: null, sgovEra: null, vooEra: null, ruleEra: null } });
+  assert.strictEqual((out.match(/AI \(actual\)/g) || []).length, 1, 'expected exactly one quartet without an anchor');
+  assert.ok(out.includes('2026-04-17'), 'the single quartet must still state the anchor it was measured on');
+  assert.ok(!out.includes('AI era'), 'no AI-era block may render without an anchor date to caption it');
 });
 
 // ---- isTest_ (alert_emailer.gs) ----
@@ -1726,6 +1874,55 @@ t('alert_emailer.gs\'s alert-timestamp format string includes a 4-digit year (v1
   assert.ok(m, 'could not find fmtAlertTs_\'s Utilities.formatDate call in alert_emailer.gs -- regex may need updating if the call shape changed');
   assert.ok(/yyyy/.test(m[1]),
     `expected the alert timestamp format string to include a 4-digit year (yyyy), got: ${JSON.stringify(m[1])}`);
+});
+
+// ---- v10 ALERT_PROBE_TOKEN contract -- read from the LIVE .gs sources, not mirrored ----
+// verifyInboxDelivery_ (alert_emailer.gs) is the only thing in the system that would notice alert mail
+// being ACCEPTED by Gmail and then routed away from the Inbox. Since v10 (2026-08-31) it rests on a
+// three-part contract that spans two functions AND two files: the write end (checkAlerts_ appends
+// ALERT_PROBE_TOKEN to the sent body), the read end (verifyInboxDelivery_'s search base uses that same
+// const), and the disambiguation invariant the v10 comment states outright -- "weekly_report.gs never
+// emits it". The v10 BUG was a broken version of exactly that contract: the probe searched
+// subject:Stock-Trading, a token BOTH scripts emit, so a healthy weekly report sitting in the Inbox
+// inside the 600s probe window satisfied `inbox > 0` just as well as this script's own alert mail
+// would, resetting inbox_fail_streak while alert mail was silently landing in Trash.
+// Both failure directions are SILENT: drop the send-site append and `anywhere` is permanently 0, which
+// the probe treats as inconclusive and returns WITHOUT touching the streak (the v8 detector goes dark);
+// re-introduce the token into weekly_report.gs and the v10 false-green is back. All three parts are
+// impure/cross-file, so pin them by source read -- the same technique the ALERT_SCRIPT_VERSION and
+// fmtAlertTs_ guards above use for the same reason.
+t('alert_emailer.gs appends ALERT_PROBE_TOKEN at the send site and probes on that same const', () => {
+  const gsPath = path.join(__dirname, '..', 'monitoring', 'alert_emailer.gs');
+  const gs = fs.readFileSync(gsPath, 'utf8');
+  // Anchored on the const NAME, not on its literal value, so a future token rename cannot silently make
+  // these assertions vacuous. Whitespace-tolerant (\s*) like the neighbouring guards, so a reformat of
+  // alert_emailer.gs produces no spurious red.
+  assert.ok(/const\s+ALERT_PROBE_TOKEN\s*=\s*'([a-z0-9]+)'/.test(gs),
+    'could not find ALERT_PROBE_TOKEN in alert_emailer.gs -- regex may need updating if the declaration shape changed');
+  assert.ok(/plainBody\s*\+=\s*'\\n\\n'\s*\+\s*ALERT_PROBE_TOKEN/.test(gs),
+    'the send site (checkAlerts_) must append ALERT_PROBE_TOKEN to the plain body, or the probe can never ' +
+    'find its own mail: `anywhere` stays 0 forever, the probe takes its inconclusive branch, and the ' +
+    'inbox-misroute detector is dark with no signal');
+  assert.ok(/const\s+base\s*=\s*'from:me '\s*\+\s*ALERT_PROBE_TOKEN/.test(gs),
+    "verifyInboxDelivery_'s search base must read the same const -- not a literal copy of it, and never a " +
+    'subject substring the two .gs files share (that sharing WAS the v10 bug)');
+});
+t('weekly_report.gs never emits ALERT_PROBE_TOKEN (the v10 disambiguation invariant)', () => {
+  const alertGs = fs.readFileSync(path.join(__dirname, '..', 'monitoring', 'alert_emailer.gs'), 'utf8');
+  const m = /const\s+ALERT_PROBE_TOKEN\s*=\s*'([a-z0-9]+)'/.exec(alertGs);
+  assert.ok(m, 'could not find ALERT_PROBE_TOKEN in alert_emailer.gs');
+  const token = m[1];   // derived from the source, never hardcoded, so a rename re-points the check
+  const weekly = fs.readFileSync(path.join(__dirname, 'weekly_report.gs'), 'utf8');
+  // DELIBERATELY OVER-STRICT: this asserts the token appears NOWHERE in weekly_report.gs, comments
+  // included, even though a comment is never emitted in mail. Scoping it to non-comment lines would
+  // mean re-implementing JS comment parsing here to buy a maintainer the ability to mention the token
+  // in passing; tripping instead forces a deliberate re-read of this invariant, which is the cheaper
+  // failure. If you are here because a comment tripped it: state the token as ALERT_PROBE_TOKEN by
+  // name, not by value.
+  assert.ok(!weekly.includes(token),
+    `weekly_report.gs must not contain '${token}' anywhere (comments included): if it ever EMITS the token, ` +
+    "a healthy weekly report in the Inbox satisfies the probe exactly as one of alert_emailer.gs's own " +
+    'alerts would -- the v10 false-green, reopened');
 });
 
 // ---- copy-drift guard: this file's weekly_report.gs copies vs the live SCRIPT_VERSION / SUBJECT_LABEL ----

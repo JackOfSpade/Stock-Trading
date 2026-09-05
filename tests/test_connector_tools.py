@@ -383,6 +383,39 @@ def test_ignore_fence_suppresses_check3_and_check4(tmp_path, monkeypatch):
     assert cct.main() == 0
 
 
+def test_one_line_fence_masks_only_its_own_line(tmp_path, monkeypatch, capsys):
+    """REGRESSION (quality pass 2026-09-04). Both markers on ONE line must fence exactly that line.
+    ignored_line_mask() used to test IGNORE_START first and `continue`, so the END branch was never
+    reached on such a line and `ignored` stayed True to EOF -- a single inline fence silently disarmed
+    CHECK 3 and CHECK 4 for the whole rest of Claude_Task_Plan.md. Nothing looked different either:
+    main()'s summary counts manifest entries, not scanned references. This asserts both halves at
+    once -- the fenced mention is exempt, and the retired-tool call on the NEXT line still hard-fails."""
+    task_plan = (
+        "<!-- connector-tools-checker: ignore-start --> `old_tool` is retired "
+        "<!-- connector-tools-checker: ignore-end -->\n"
+        "But this live line still calls `old_tool` and must be caught.\n"
+    )
+    manifest_path, task_plan_path, settings = _write_fixtures(
+        tmp_path, _base_manifest(), task_plan, _base_allow())
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 1
+    out = capsys.readouterr().out
+    assert "CHECK4" in out
+    assert "Claude_Task_Plan.md:2:" in out, "only the line AFTER the one-line fence may be reported"
+    assert "Claude_Task_Plan.md:1:" not in out
+
+
+def test_ignored_line_mask_one_line_fence_closes_itself():
+    """Unit-level companion to the end-to-end test above, pinning the rindex rule directly: a
+    self-contained `start ... end` line closes, an `end ... start` line opens."""
+    closes = cct.ignored_line_mask(
+        ["a", f"{cct.IGNORE_START} x {cct.IGNORE_END}", "b", "c"])
+    assert closes == [False, True, False, False]
+    opens = cct.ignored_line_mask(
+        ["a", f"{cct.IGNORE_END} x {cct.IGNORE_START}", "b", "c"])
+    assert opens == [False, True, True, True]
+
+
 def test_reference_outside_fence_still_fails(tmp_path, monkeypatch):
     # Sanity check on the fence test above: the SAME reference OUTSIDE the fence must still fail,
     # proving the green result above came from the fence and not from a broken absent-index lookup.

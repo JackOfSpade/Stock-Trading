@@ -15,7 +15,23 @@
 #   KEEP=1 scripts/restore_drill.sh          # don't drop the scratch dataset afterwards (inspect it)
 #
 # Env: PROJECT (default stock-trading-498512), BUCKET (default gs://stock-trading-backups),
-#      SCRATCH (default events_restore_drill), DATE (default = newest dt= partition found in the bucket).
+#      SCRATCH (default events_restore_drill_adhoc), DATE (default = newest dt= partition found in the bucket).
+#
+# WHY THE DEFAULT SCRATCH IS *_adhoc AND NOT `events_restore_drill` (2026-09-04 quality pass):
+# `events_restore_drill` is NOT a throwaway name — it is owned by the AUTOMATED monthly drill
+# (ops.sp_restore_drill, bigquery/17_restore_drill.sql, scheduled via
+# bigquery/scheduled_queries/restore_drill.sql). That dataset is PRE-CREATED once by hand and carries a
+# dataset-SCOPED `roles/bigquery.dataEditor` grant to bq-scheduler@ (ops/RUNBOOK.md §3) precisely so the
+# scheduled-query identity never needs project-level dataEditor; the procedure body only does
+# `LOAD DATA OVERWRITE ...events_restore_drill.<table>` and deliberately never creates or drops it
+# ("Scratch tables persist between runs (overwritten each run) by design, so no dataset-delete
+# permission is needed"). Dropping a BigQuery dataset destroys its dataset-level ACL along with it, and
+# the `bq mk --force` below re-creates the dataset WITHOUT re-applying that grant — so this ad-hoc
+# script defaulting to the shared name and then cleaning up would permanently disarm the monthly DR
+# drill: every table would fall into sp_restore_drill's per-table `EXCEPTION WHEN ERROR` handler ->
+# `failed != ''` -> a critical `scheduled.restore_drill` ops.alerts row (itself a trading-gate input),
+# until the operator re-ran the console GRANT by hand. The cleanup branch at the bottom therefore also
+# REFUSES to drop that name even when it is passed explicitly.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -25,7 +41,9 @@ source "$SCRIPT_DIR/bq_csv.sh"
 PROJECT="${PROJECT:-stock-trading-498512}"
 BUCKET="${BUCKET:-gs://stock-trading-backups}"
 BUCKET="${BUCKET%/}"
-SCRATCH="${SCRATCH:-events_restore_drill}"
+# Default is *_adhoc, NOT the automated drill's pre-created, IAM-granted `events_restore_drill` —
+# see the "WHY THE DEFAULT SCRATCH IS *_adhoc" note in the header above before changing this.
+SCRATCH="${SCRATCH:-events_restore_drill_adhoc}"
 KEEP="${KEEP:-0}"
 
 command -v bq >/dev/null || { echo "bq CLI not found (install Google Cloud SDK)"; exit 1; }
@@ -39,7 +57,10 @@ bqq() { bq_csv_query_headless "$PROJECT" "$1"; }
 # resolve_backup_date(bucket, table...): the newest dt= partition present ACROSS ALL tables named,
 # tolerating any individual table having zero snapshots. Kept as a standalone function (2026-09-02,
 # rather than left inlined) specifically so it is unit-testable against a stubbed `gcloud` in isolation
-# from live GCS/BigQuery access -- see tests/test_restore_drill_date_resolution.sh, which exercises the
+# from live GCS/BigQuery access -- see tests/test_restore_drill.sh (2026-09-04: this citation read
+# `tests/test_restore_drill_date_resolution.sh`, a filename that has never existed in this repo's
+# history -- it was wrong on the day it landed, not rename rot; ci.yml and auto-merge-claude.yml both
+# run `bash tests/test_restore_drill.sh`), which exercises the
 # exact bug this replaced: a table that sorts alphabetically first but whose OWN daily EXTRACT has
 # started silently erroring (bigquery/scheduled_queries/backup_events_export.sql isolates each table's
 # export in its own BEGIN/EXCEPTION block precisely so this can happen to one table while every other
@@ -122,8 +143,15 @@ for t in "${TABLES[@]}"; do
   # for this table, no PASS/FAIL summary, every remaining table unchecked, and — because the script
   # died before its cleanup — the scratch dataset left behind in the project. Reproduced with a
   # stubbed `bq` that fails only the first COUNT: the run printed the header row, then the raw bq
-  # error, and exited 1 with `$PROJECT:events_restore_drill` still present. A flaky COUNT now
-  # behaves like a flaky load: reported in the table, counted in rc, non-fatal to the rest of the run.
+  # error, and exited 1 with the scratch dataset still present. A flaky COUNT now behaves like a
+  # flaky load: reported in the table, counted in rc, non-fatal to the rest of the run.
+  # CORRECTION (2026-09-04 quality pass): that repro note originally named the leftover dataset as
+  # `$PROJECT:events_restore_drill` and framed leaving it behind as the bad outcome. Both halves were
+  # wrong, and the inverted mental model is exactly what produced this file's SCRATCH-default bug —
+  # the genuinely destructive outcome is DROPPING that shared, IAM-granted dataset (header note),
+  # not leaking a throwaway one. The leftover dataset is only the observable symptom of the abort
+  # this guard fixes; and the default scratch is now `events_restore_drill_adhoc`, so it is that
+  # name, not the automated drill's, that a leak would leave behind.
   if ! restored="$(bqq "SELECT COUNT(*) FROM \`$PROJECT.$SCRATCH.$t\`")"; then
     printf '%-26s %12s %12s   %s\n' "$t" "-" "-" "QUERY FAILED (restored count)"; rc=1; continue
   fi
@@ -138,7 +166,21 @@ for t in "${TABLES[@]}"; do
   printf '%-26s %12s %12s   %s\n' "$t" "$restored" "$live" "$status"
 done
 
-if [ "$KEEP" = "1" ]; then
+# Checked BEFORE the KEEP branch (2026-09-04 quality pass) so an explicit
+# `SCRATCH=events_restore_drill` override is never even HANDED the "drop with: bq rm -r -f -d ..."
+# hint the KEEP branch prints. That dataset is the automated monthly drill's pre-created,
+# dataset-scoped-IAM-granted one (see the header note): dropping it takes bq-scheduler@'s
+# `roles/bigquery.dataEditor` grant with it and disarms ops.sp_restore_drill until the operator
+# re-runs the console GRANT by hand. REUSING it is otherwise harmless, which is why this guards the
+# drop rather than rejecting the name outright — the `bq mk --force` above is a NO-OP on an existing
+# dataset (-f suppresses the already-exists error; it does not recreate the dataset or touch its ACL),
+# and the per-table `bq load --replace` overwrites exactly the tables the monthly drill itself
+# overwrites on every run.
+if [ "$SCRATCH" = "events_restore_drill" ]; then
+  echo "Scratch dataset kept: $PROJECT:$SCRATCH — NOT dropping it; it is the pre-created dataset"
+  echo "  ops.sp_restore_drill depends on (bigquery/17_restore_drill.sql), and its dataset-scoped"
+  echo "  bq-scheduler@ dataEditor grant would be destroyed along with it."
+elif [ "$KEEP" = "1" ]; then
   echo "Scratch dataset kept: $PROJECT:$SCRATCH (drop with: bq rm -r -f -d $PROJECT:$SCRATCH)"
 else
   bq --project_id="$PROJECT" rm -r -f -d "$PROJECT:$SCRATCH" >/dev/null 2>&1 || true

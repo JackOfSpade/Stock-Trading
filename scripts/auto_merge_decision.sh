@@ -314,8 +314,30 @@ marker_author_is_routine() {
 # marker_subject_declares_no_completion <subject> — true when a commit subject AFFIRMATIVELY states the
 # run did not complete, so no marker should be written no matter how well-formed the id/date are.
 # Deliberately narrow: it matches only the halt/abort vocabulary the halt-commit convention actually
-# uses, as whole words, so an ordinary output subject cannot trip it. It is a BACKSTOP, never the
-# authoritative completion signal — that remains the routine's own ops.sp_routine_end write.
+# uses, as whole words. It is a BACKSTOP, never the authoritative completion signal — that remains the
+# routine's own ops.sp_routine_end write.
+#
+# CORRECTION (2026-09-04 quality pass): this comment used to end that first sentence with "...so an
+# ordinary output subject cannot trip it", and that claim is measurably FALSE. Measured over the whole
+# repo history (source this file, walk `git log`, keep commits where marker_author_is_routine AND
+# marker_routine_from_subject both hold): 447 candidate commits, 8 suppressed — and only 4 of the 8 are
+# true halts (W5 "HALT at pre-flight", D3 "HALTED at dependency gate", D2 "HALTED on dependency gate",
+# D2 "HALTED on missing D1 dependency"). The other 4 are COMPLETED runs whose subjects merely mention a
+# halt: "AR_orc: stop a routine's own decision write from halting its own gate" (the word describes the
+# fix), "W4 2026-W30: ... trading-halt root cause re-diagnosed" (`\bhalt\b` matches inside the hyphen
+# compound), "D2a ... trading gate RED (halt)", "W4 2026-W32: ... MTZ exit confirmed but halted".
+#
+# That over-suppression (~0.9% of candidates) is left in place ON PURPOSE — it is the DESIGNED-SAFE
+# direction, per the BIAS paragraph above: a missing marker degrades to the loud path, a false marker
+# silently blinds the dead-man's switches (the measured harm that cost two W5 cycles). A narrower
+# alternation was evaluated and REJECTED in the same pass: dropping halts/halting/aborts/aborting to
+# recover 2 of those 4 historical commits also stops matching plausible genuine halt declarations
+# ("D1 2026-09-01: aborting on connector failure", "W5 halts on pre-flight"), i.e. it trades the
+# safe error for the dangerous one in this repo's most consequential automation. Do NOT re-propose it.
+# The four measured false suppressions are pinned as regression cases in tests/test_auto_merge_logic.sh
+# ("(B) halt/abort subjects") so the current, deliberate behavior cannot drift silently.
+# Suppression is announced via ::notice:: in auto-merge-claude.yml, so an over-suppressed run is loud;
+# what it loses is the RUNBOOK §38 sp_backfill_run_log_from_markers repair for that run.
 marker_subject_declares_no_completion() {
   printf '%s' "${1:-}" | grep -qiE '\b(halt|halts|halted|halting|abort|aborts|aborted|aborting)\b'
 }

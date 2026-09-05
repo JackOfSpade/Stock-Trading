@@ -249,7 +249,7 @@ required_column_naming:
     - table: ops.arsenal_control
       why: "Owner-only kill-switch (CLAUDE.md settled decision, SISA autonomy note) -- routines only READ it via ops.sp_assert_arsenal_enabled; zero INSERT/UPDATE instruction against it anywhere in Claude_Task_Plan.md."
     - table: ops.backup_log
-      why: "Written by the infra script scripts/backup_events.sh, not a Claude routine; zero mentions in Claude_Task_Plan.md."
+      why: "Written by the scheduled-query procedures ops.sp_sq_backup_events_export (dataset='events') and ops.sp_sq_ops_export (dataset='ops') in bigquery/75_scheduled_query_wrappers.sql -- the only two INSERT sites against this table -- not by a Claude routine; zero mentions in Claude_Task_Plan.md. CORRECTION (2026-09-04): this entry previously credited the infra script scripts/backup_events.sh, which is the AD-HOC/offsite GCS export and contains no INSERT against ops.backup_log at all (it only cites the procedure's Denver-plane run_date as the convention it mirrors); the exemption conclusion is unchanged either way -- the writer is scheduled-query SQL, not a routine composing a literal."
     - table: ops.capital_control
       why: "Owner/infra control-plane toggle; zero INSERT/UPDATE instruction against it in Claude_Task_Plan.md (routines only read it to gate the D2a sweep/restore substep)."
     - table: ops.capital_dormancy_control
@@ -259,7 +259,7 @@ required_column_naming:
     - table: ops.ci_findings
       why: "Written only by the CI service account bridge (bigquery/67_ci_findings_bridge.sql); D3's CI-FINDINGS ADJUDICATION step is explicitly told 'Do NOT write the ops.ci_findings resolved row yourself -- the next daily parity run confirms and closes it.'"
     - table: ops.drill_log
-      why: "Written by the infra script scripts/restore_drill.sh, not a Claude routine; zero mentions in Claude_Task_Plan.md."
+      why: "Written by the scheduled-query procedure ops.sp_restore_drill (bigquery/17_restore_drill.sql), which appends one liveness marker on EVERY completion (pass AND fail) -- the only INSERT site against this table -- not by a Claude routine; zero mentions in Claude_Task_Plan.md. CORRECTION (2026-09-04): this entry previously credited the infra script scripts/restore_drill.sh, which is the AD-HOC shell equivalent of that drill (it restores into its own *_adhoc scratch dataset and writes no ops.drill_log row); the exemption conclusion is unchanged either way -- the writer is scheduled-query SQL, not a routine composing a literal."
     - table: ops.monitor_health_history
       why: "Populated by the monitor-promotion self-heal MERGE machinery (bigquery/45/57/79), not a literal routine-composed INSERT in Claude_Task_Plan.md."
     - table: ops.order_stage_mutex

@@ -33,7 +33,19 @@ def test_clean_plan_passes():
 
 def test_sections_are_isolated_from_sibling_examples():
     text = _plan({"W2": "W2 consumes D1 events.decision_log research-screen records. Use event identity and skip an already queued thesis in events.queue_events. W2 logs an entry_type post-event-enrichment provenance record, not a second significance screen.\n"})
-    text += "\n## M2. Example — regular routine\nUse get_price_history and an AI-SIGNIFICANCE SCREEN.\n"
+    text += ("\n## M2. Example — regular routine\n"
+             # sp_embed_pending is W5's OWN forbidden token, and W5 is the section this M2 example
+             # FOLLOWS (_plan()'s bodies dict is insertion-ordered and ends at W5) -- so if the sibling
+             # routine heading ever stops being a boundary, this example leaks into W5's body and trips
+             # its embedding-catch-up rule.  Planting only W2's tokens (get_price_history /
+             # AI-SIGNIFICANCE SCREEN) made this assertion UNFAILABLE: W5's _check_absent patterns are
+             # sp_embed_pending / get_account_(...) / the repair-or-drift alternation, none of which
+             # either W2 token can match, and W2 is unreachable from a section appended after W5.
+             # Verified both directions after this change: boundary intact -> check() == []; boundary
+             # removed -> ['W5: forbidden overlap reappeared — embedding catch-up or live account
+             # repair'] (2026-09-04 quality pass).  The two W2 tokens are KEPT alongside it -- M2 is
+             # matched by no rule, so they cost nothing and preserve the original intent.
+             "Use get_price_history, call sp_embed_pending, and an AI-SIGNIFICANCE SCREEN.\n")
     assert crs.check(text) == []
 
 

@@ -92,8 +92,13 @@ def _has_all(text: str, patterns: tuple[str, ...]) -> bool:
     return all(re.search(pattern, text, re.IGNORECASE) for pattern in patterns)
 
 
-def _has_any(text: str, patterns: tuple[str, ...]) -> bool:
-    return any(re.search(pattern, text, re.IGNORECASE) for pattern in patterns)
+# (A symmetric `_has_any()` used to sit here beside _has_all().  It was dead from birth -- introduced
+# by 60f338e, the commit that created this guard, and never called by any rule, test or prose in the
+# repo -- so it was removed in the 2026-09-04 quality pass.  The three checkers that could plausibly
+# have wanted any-of semantics all use something else: _check_present -> _has_all, _check_absent ->
+# _has_active_match, and _has_active_match -> its own finditer walk.  If a future ownership rule
+# genuinely needs any-of, reintroduce it NEXT TO that rule's call site, where the requirement is
+# visible.)
 
 
 # A negation governs the rest of its clause, but a CONTRASTIVE conjunction ends that scope: in

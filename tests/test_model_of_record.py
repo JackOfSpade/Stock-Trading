@@ -86,6 +86,38 @@ def test_tooling_prefix_hides_version_true_for_letter_then_version_suffix():
     assert _tooling_prefix_hides_version("claude-codex-5", "claude-code")
 
 
+# DEFECT B, FOURTH CASE (quality pass 2026-09-04): the third case's rule was END-ANCHORED ("the WHOLE
+# token ends in a version"), so a version FOLLOWED BY an alias suffix -- '-latest'/'-preview'/'-beta'/
+# '-exp', the convention the module's own ROUND 1 block names as the REAL one ('claude-opus-4-latest')
+# and DEFECT A's repro list enumerates -- fell back through and was silently subtracted. Same class as
+# the third case, one alias suffix away. The anchor is gone: a separator-led digit ANYWHERE flags.
+_ALIAS_SUFFIXED_VERSION_TOOLING_TOKENS = [
+    "claude-codex-5-latest", "claude-codex-5-preview", "claude-clinical-5-beta",
+    "claude-desktopia-1-exp", "claude-agent-sdkx-3-latest", "claude-cli-2.1-preview",
+]
+
+
+def test_tooling_prefix_hides_version_true_for_a_version_followed_by_an_alias_suffix():
+    assert _tooling_prefix_hides_version("claude-codex-5-latest", "claude-code")
+    assert _tooling_prefix_hides_version("claude-code-5-preview", "claude-code")
+    assert _tooling_prefix_hides_version("claude-desktopia-1-beta", "claude-desktop")
+
+
+def test_tooling_prefix_hides_version_still_false_for_every_genuine_tooling_extension():
+    # Non-regression for the FOURTH CASE widening: dropping the end anchor must not start flagging any
+    # real tooling name. None of these carries a separator-led digit anywhere, so none is affected.
+    for token, prefix in [
+        ("claude-code", "claude-code"),
+        ("claude-codebase", "claude-code"),
+        ("claude-code-action", "claude-code"),
+        ("claude-code-settings.json", "claude-code"),
+        ("claude-agent-sdk-python", "claude-agent-sdk"),
+        ("claude-desktop.app", "claude-desktop"),
+        ("claude-cli-tools", "claude-cli"),
+    ]:
+        assert not _tooling_prefix_hides_version(token, prefix), token
+
+
 # ---- _is_subtracted_non_assertion ----
 def test_is_subtracted_non_assertion_true_for_the_bare_tooling_names():
     for token in NOT_A_MODEL_PREFIXES:
@@ -95,6 +127,10 @@ def test_is_subtracted_non_assertion_true_for_the_bare_tooling_names():
 def test_is_subtracted_non_assertion_false_for_version_shaped_tooling_lookalikes():
     assert not _is_subtracted_non_assertion("claude-code-5")
     assert not _is_subtracted_non_assertion("claude-codex-5")
+    # FOURTH CASE (2026-09-04): a version plus an alias suffix is the same class -- see
+    # _ALIAS_SUFFIXED_VERSION_TOOLING_TOKENS above.
+    for token in _ALIAS_SUFFIXED_VERSION_TOOLING_TOKENS:
+        assert not _is_subtracted_non_assertion(token), token
 
 
 def test_is_subtracted_non_assertion_false_for_an_unrelated_model_id():
@@ -150,6 +186,21 @@ def test_check_model_of_record_flags_a_drifted_mirror(tmp_path):
     assert len(errs) == 1
     assert "claude-opus-6" in errs[0]
     assert model == "claude-opus-5"
+
+
+def test_check_model_of_record_flags_a_tooling_lookalike_carrying_a_version_plus_alias_suffix(tmp_path):
+    # DEFECT B, FOURTH CASE end to end (2026-09-04). Pre-fix this returned ZERO errors: the token
+    # starts with the tooling prefix 'claude-code', and the end-anchored version test did not see the
+    # version because '-latest' follows it -- so a genuinely drifted model id passed CI clean, the
+    # exact silent false-clean check N exists to prevent.
+    cadence = tmp_path / "cadence.yaml"
+    cadence.write_text("routine_model: claude-opus-5\n")
+    mirror = tmp_path / "OWNER_ACTIONS.md"
+    for token in _ALIAS_SUFFIXED_VERSION_TOOLING_TOKENS:
+        mirror.write_text(f"All remote routines now run {token} for grunt work.\n")
+        errs, model = check_model_of_record(str(cadence), [str(mirror)], str(tmp_path))
+        assert len(errs) == 1 and token in errs[0], (token, errs)
+        assert model == "claude-opus-5"
 
 
 def test_check_model_of_record_missing_routine_model(tmp_path):

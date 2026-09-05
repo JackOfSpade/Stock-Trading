@@ -36,8 +36,31 @@ Every test below that exercises a BLOCKED path also puts a harmless stub `bq`/`g
 real process ever spawns, so the stub should never actually execute, but per this session's explicit
 instructions these tests must never be able to reach the real CLI even if the fix under test has a
 bug.
+
+ONE test still takes no `stub_cli_path` — and no longer needs one. This paragraph briefly carved out
+`test_absolute_path_to_the_binary_is_blocked` as structurally un-backstoppable, while its argv
+hardcoded /opt/homebrew/bin/bq — a REAL gcloud-cli binary on a developer machine. The carve-out's
+reasoning was narrowly correct (an explicit absolute path never consults PATH, so `stub_cli_path`
+cannot backstop that call, and adding the fixture WITHOUT changing the argv would have been purely
+cosmetic) but it drew the wrong conclusion: the fix was never the fixture, it was the ARGV. That test
+now points at a guaranteed-nonexistent path under `tmp_path` — a STRONGER backstop than the stub,
+structurally incapable of executing anything even with the guard removed entirely — so the blast
+radius is closed for all 19 blocked-path tests even though only 18 take the fixture. The general
+lesson: when a test cannot be given the standard backstop, re-examine what it REACHES rather than
+documenting the gap. Its sibling `test_pathlike_argv_is_blocked` made the same point by construction,
+exercising the identical absolute-path code path while staying inside the stub directory.
+
+The stub-backstop paragraph two above was written in the 2026-07-30 hardening pass and was FALSE for
+7 of the then-16 blocked-path tests until 2026-09-04: the six predating that pass were never
+retrofitted with the fixture (the 7th is the absolute-path test just discussed).
+The differential risk was not uniform — five of the six ran only `--version` — but
+`test_run_keyword_args_form_still_blocks_a_real_bq_call` issues a real `bq query "SELECT 1"`, and
+`which bq` on a developer machine resolves to a real gcloud-cli binary, so a guard regression there
+would have made a genuine network round-trip and left a real job row in the live project's history.
+All six now take the fixture.
 """
 import os
+import pathlib
 import shutil
 import stat
 import subprocess
@@ -66,36 +89,44 @@ def stub_cli_path(tmp_path, monkeypatch):
 
 # ---- blocked: every entry point must trip the guard ----------------------------------------------
 
-def test_run_with_list_argv_is_blocked():
+def test_run_with_list_argv_is_blocked(stub_cli_path):
     with pytest.raises(pytest.fail.Exception, match=GUARD_MSG):
         subprocess.run(["bq", "--version"], capture_output=True)
 
 
-def test_run_with_shell_string_is_blocked():
+def test_run_with_shell_string_is_blocked(stub_cli_path):
     # basename("bq --version") is the whole string; only shell-token splitting finds "bq" here.
     with pytest.raises(pytest.fail.Exception, match=GUARD_MSG):
         subprocess.run("bq --version", shell=True, capture_output=True)
 
 
-def test_check_output_is_blocked():
+def test_check_output_is_blocked(stub_cli_path):
     with pytest.raises(pytest.fail.Exception, match=GUARD_MSG):
         subprocess.check_output(["bq", "--version"])
 
 
-def test_call_is_blocked():
+def test_call_is_blocked(stub_cli_path):
     with pytest.raises(pytest.fail.Exception, match=GUARD_MSG):
         subprocess.call(["gcloud", "--version"])
 
 
-def test_direct_popen_is_blocked():
+def test_direct_popen_is_blocked(stub_cli_path):
     with pytest.raises(pytest.fail.Exception, match=GUARD_MSG):
         subprocess.Popen(["bq", "--version"], stdout=subprocess.PIPE)
 
 
-def test_absolute_path_to_the_binary_is_blocked():
+def test_absolute_path_to_the_binary_is_blocked(tmp_path):
     # The real call site would be a bare "bq", but a PATH-resolved absolute path must not slip past.
+    # The property under test is the absolute-path FORM (the guard's `os.path.basename(argv[0])`
+    # extraction), NOT any particular location -- so the argv points at a guaranteed-NONEXISTENT
+    # path under tmp_path, which is structurally incapable of executing anything even if the guard
+    # is removed entirely. That is a stronger backstop than `stub_cli_path` (which cannot help here
+    # at all: an explicit absolute path never consults PATH). Until 2026-09-04 this hardcoded
+    # /opt/homebrew/bin/bq, a REAL gcloud-cli binary on a developer machine.
+    # Differs from test_pathlike_argv_is_blocked only in passing a `str` rather than an os.PathLike;
+    # both matter, since the guard's `_as_text` handles them by different branches.
     with pytest.raises(pytest.fail.Exception, match=GUARD_MSG):
-        subprocess.run(["/opt/homebrew/bin/bq", "--version"], capture_output=True)
+        subprocess.run([str(tmp_path / "nowhere" / "bq"), "--version"], capture_output=True)
 
 
 # ---- blocked: the 2026-07-30 hardening pass (off-by-one, wrapper indirection, os-level spawn) ----
@@ -168,7 +199,60 @@ def test_os_spawnve_is_blocked(stub_cli_path):
         os.spawnve(os.P_WAIT, str(stub_cli_path / "bq"), ["bq", "--version"], os.environ.copy())
 
 
+# ---- blocked: the 2026-09-04 pass (shell=True with a SEQUENCE, and bytes argv) -------------------
+
+def test_shell_true_with_a_sequence_command_line_is_blocked(stub_cli_path):
+    """The sequence half of the "shell=True STRING COMMANDS" hole the 2026-07-29 pass closed only for
+    bare strings. `_blocked_program_in` branched on TYPE first and dropped `shell` entirely for a
+    list/tuple, handing element 0 to `_find_blocked_program`, which reads it as a program NAME -- so
+    "bq query 'SELECT 1'" matched nothing and the call really executed (POSIX Popen prepends
+    ['/bin/sh','-c'], making element 0 the whole command line and the rest $0/$1/...). Verified
+    pre-fix by running `subprocess.run(['echo hi from the shell'], shell=True)` and getting output."""
+    with pytest.raises(pytest.fail.Exception, match=GUARD_MSG):
+        subprocess.run(["bq --version"], shell=True, capture_output=True)
+    with pytest.raises(pytest.fail.Exception, match=GUARD_MSG):
+        subprocess.run(["gcloud --version"], shell=True, capture_output=True)
+
+
+def test_bytes_argv_is_blocked(stub_cli_path):
+    """subprocess accepts str, bytes and os.PathLike argv elements. The guard normalized with
+    `str(a)`, whose result for bytes is the REPR "b'bq'" -- matching no program name -- so both the
+    bytes-list and bytes-shell-string forms sailed through. `os.fsdecode` (conftest's `_as_text`)
+    round-trips all three."""
+    with pytest.raises(pytest.fail.Exception, match=GUARD_MSG):
+        subprocess.run([b"bq", b"--version"], capture_output=True)
+    with pytest.raises(pytest.fail.Exception, match=GUARD_MSG):
+        subprocess.run(b"bq --version", shell=True, capture_output=True)
+    # ...and through a wrapper, since _scan_wrapper_body normalizes its own tokens separately.
+    with pytest.raises(pytest.fail.Exception, match=GUARD_MSG):
+        subprocess.run([b"sh", b"-c", b"bq --version"], capture_output=True)
+
+
+def test_pathlike_argv_is_blocked(stub_cli_path):
+    """os.PathLike is the third argv element type subprocess accepts. `str()` happened to work for it
+    already; `os.fsdecode` must not regress that (non-regression for the bytes fix)."""
+    with pytest.raises(pytest.fail.Exception, match=GUARD_MSG):
+        subprocess.run([pathlib.Path(stub_cli_path) / "bq", "--version"], capture_output=True)
+
+
 # ---- allowed: the guard must not break ordinary subprocess use -----------------------------------
+
+def test_shell_true_sequence_and_bytes_argv_do_not_over_block():
+    """Anti-over-broad control for the 2026-09-04 pass: the same forms, with a program that is NOT
+    blocked, must still run normally. An EMPTY sequence must also pass through to subprocess rather
+    than crashing inside the guard on `cmd[0]` -- and note the two empty-sequence behaviours differ,
+    which is exactly why the guard must not substitute one of its own: with shell=True CPython runs
+    `/bin/sh -c` with no argument (returncode 2, no exception), while with shell=False it raises
+    IndexError. Both must reach subprocess untouched."""
+    assert subprocess.run(["echo hi"], shell=True, capture_output=True, text=True).stdout.strip() == "hi"
+    assert subprocess.run([b"echo", b"hi"], capture_output=True, text=True).stdout.strip() == "hi"
+    assert subprocess.run(b"echo hi", shell=True, capture_output=True, text=True).stdout.strip() == "hi"
+    assert subprocess.run([b"sh", b"-c", b"echo hi"], capture_output=True, text=True).stdout.strip() == "hi"
+    assert subprocess.run([], shell=True, capture_output=True).returncode == 2
+    with pytest.raises(IndexError):
+        subprocess.run([], capture_output=True)
+
+
 
 def test_unrelated_command_still_runs():
     assert subprocess.run(["echo", "hi"], capture_output=True, text=True).stdout.strip() == "hi"
@@ -238,9 +322,16 @@ def test_run_keyword_args_form_is_guarded_not_a_typeerror():
     assert subprocess.check_output(args=["echo", "ok"], text=True).strip() == "ok"
 
 
-def test_run_keyword_args_form_still_blocks_a_real_bq_call():
+def test_run_keyword_args_form_still_blocks_a_real_bq_call(stub_cli_path):
     """...and covering the keyword form must not weaken what gets blocked: a `bq` invocation passed
-    via `args=` is caught exactly like the positional form."""
-    with pytest.raises(BaseException) as excinfo:
+    via `args=` is caught exactly like the positional form.
+
+    `stub_cli_path` matters MORE here than anywhere else in this file (added 2026-09-04): this is the
+    only blocked-path test whose argv is a real BigQuery QUERY rather than `--version`, so a guard
+    regression would otherwise make a live round-trip and leave a real job row in the project's
+    history. `pytest.raises(pytest.fail.Exception, match=GUARD_MSG)` replaces a bare
+    `pytest.raises(BaseException)`, matching the convention this module's docstring states for every
+    other blocked-path test; the explicit message assertion below is kept as-is."""
+    with pytest.raises(pytest.fail.Exception, match=GUARD_MSG) as excinfo:
         subprocess.run(args=["bq", "query", "SELECT 1"], capture_output=True)
     assert "live `bq` CLI" in str(excinfo.value)

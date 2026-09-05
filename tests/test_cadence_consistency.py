@@ -451,6 +451,86 @@ def _write_catchup_refire_readiness_fixture(tmp_path, ids, filename="902_test_ca
     return f
 
 
+def _cadence_period_routines_from_yaml(cadence_path):
+    """[(id, monitor_class), ...] for a fixture cadence.yaml's PERIOD-tier routines (monitor_class in
+    cc.PERIOD_CLASSES) -- the "want" set checks E/J's canonical mirror compares bigquery/113's
+    hand-mirrored `routines` CTE against. Same call-time-independence rationale as
+    _cadence_ids_from_yaml above (called from _patch_fixture_paths() itself while cc.CADENCE is still
+    being patched, so it must not depend on that patch having landed)."""
+    doc = yaml.safe_load(open(cadence_path, encoding="utf-8")) or {}
+    return [(r["id"], r["monitor_class"]) for r in (doc.get("routines") or [])
+            if r.get("monitor_class") in cc.PERIOD_CLASSES]
+
+
+def _cadence_period_grace_from_yaml(cadence_path):
+    """A fixture cadence.yaml's top-level period_grace_days mapping (or {} when it declares none) --
+    same call-time-independence rationale as _cadence_ids_from_yaml above."""
+    doc = yaml.safe_load(open(cadence_path, encoding="utf-8")) or {}
+    return doc.get("period_grace_days") or {}
+
+
+def _write_period_watch_fixture(tmp_path, routines, grace,
+                                filename="903_test_cadence_period_watch.sql", preamble=""):
+    """Writes a canonical-shaped `CREATE OR REPLACE VIEW ...state.cadence_period_watch` definition
+    into tmp_path/filename, whose `routines` CTE carries exactly `routines` ([(id, monitor_class), ...])
+    and whose grace-day literals are DERIVED from `grace` ({monitor_class: days}, possibly empty) --
+    checks E/J's canonical mirror (2026-09-04, 'cadence-ej-pinned-to-superseded-24' finding). Mirrors
+    _write_stalled_runs_fixture (check O) / _write_cadence_watch_fixture (check D-extended) /
+    _write_catchup_refire_readiness_fixture (check K's yesterday tier) exactly, one canonical object
+    over. The chosen leading number (903) never collides with 900/901/902 (the other canonical-object
+    fixtures written into the SAME tmp_path) or any bare `NN.sql` fixture written elsewhere -- see
+    _write_stalled_runs_fixture's own docstring for why that is safe.
+
+    The month/quarter/year literals are written as `OFFSET (days - 1)`, matching the real body's
+    0-indexed OFFSET convention that cc.parse_canonical_period_watch un-does (+1); the weekly one is a
+    plain INTERVAL day count. A grace class absent from `grace` has its clause omitted entirely, which
+    is what makes the SHARED fixture (whose cadence.yaml declares no period_grace_days at all) clean.
+
+    `preamble` prepends arbitrary SQL -- used by the view-scoping test to put a DECOY sibling statement
+    ahead of this one, proving the parse is scoped to this view's own body and not a whole-file scan."""
+    rows = ",\n".join(
+        f"    STRUCT('{rid}' AS routine, '{mc}' AS monitor_class)" for rid, mc in routines)
+    nth_lines = []
+    for cls, alias in (("monthly_ftd", "month"), ("quarterly_ftd", "quarter"), ("annual_ftd", "year")):
+        if cls in grace:
+            nth_lines.append(
+                f"    (SELECT cal_date FROM `stock-trading-498512.state.market_calendar`\n"
+                f"       WHERE is_trading_day AND DATE_TRUNC(cal_date, {alias.upper()}) = p.{alias}_start\n"
+                f"       ORDER BY cal_date LIMIT 1 OFFSET {int(grace[cls]) - 1}) AS {alias}_grace_day")
+    weekly = (f"      WHEN 'weekly_sun' THEN DATETIME(DATE_ADD(n.week_start, "
+              f"INTERVAL {int(grace['weekly_sun'])} DAY), TIME '21:00:00')\n"
+              if "weekly_sun" in grace else "")
+    f = tmp_path / filename
+    f.write_text(
+        preamble
+        + "CREATE OR REPLACE VIEW `stock-trading-498512.state.cadence_period_watch` AS\n"
+        "WITH t AS (SELECT today FROM `stock-trading-498512.state.trading_day_today`),\n"
+        "periods AS (\n"
+        "  SELECT today,\n"
+        "    DATE_SUB(today, INTERVAL (EXTRACT(DAYOFWEEK FROM today) - 1) DAY) AS week_start,\n"
+        "    DATE_TRUNC(today, MONTH) AS month_start, DATE_TRUNC(today, QUARTER) AS quarter_start,\n"
+        "    DATE_TRUNC(today, YEAR) AS year_start\n"
+        "  FROM t\n"
+        "),\n"
+        "nth AS (\n"
+        "  SELECT p.*" + ("" if not nth_lines else ",\n" + ",\n".join(nth_lines)) + "\n"
+        "  FROM periods p\n"
+        "),\n"
+        "routines AS (\n"
+        "  SELECT * FROM UNNEST([\n" + rows + "\n"
+        "  ])\n"
+        "),\n"
+        "joined AS (\n"
+        "  SELECT r.routine, r.monitor_class, n.today,\n"
+        "    CASE r.monitor_class\n" + weekly +
+        "    END AS grace_deadline\n"
+        "  FROM routines r, nth n\n"
+        ")\n"
+        "SELECT * FROM joined;\n"
+    )
+    return f
+
+
 def _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql):
     monkeypatch.setattr(cc, "PLAN", str(plan))
     monkeypatch.setattr(cc, "CADENCE", str(cadence))
@@ -496,6 +576,21 @@ def _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, cata
     # fixture file (_write_catchup_refire_readiness_fixture) directly.
     monkeypatch.setattr(cc, "CATCHUP_REFIRE_READINESS_BIGQUERY_DIR", str(tmp_path))
     _write_catchup_refire_readiness_fixture(tmp_path, _cadence_daily_catchup_safe_ids_from_yaml(cadence))
+    # checks E/J's canonical mirror (2026-09-04): point PERIOD_WATCH_BIGQUERY_DIR (kept SEPARATE from
+    # the three directory constants above for the identical test-isolation reason) at this SAME
+    # tmp_path, and drop in a canonical state.cadence_period_watch definition whose `routines` CTE and
+    # grace literals are derived from THIS fixture's own cadence.yaml. THIS PATCH IS MANDATORY, not
+    # merely tidy: PERIOD_WATCH_BIGQUERY_DIR defaults to the real bigquery/ tree, so leaving it
+    # unpatched while BIGQUERY_DIR points at tmp_path makes main() scan the REAL directory, find
+    # bigquery/113's 20 period routines, and report all 20 as "extra" against this fixture's
+    # single-daily-routine cadence.yaml -- breaking every one of this shared fixture's ~55 cc.main()
+    # callers at once. (The check's own "no definition found anywhere" branch is a silent skip, unlike
+    # check O/D-extended's hard error -- see main()'s comment at that call site -- so the fixture file
+    # itself is what keeps the mirror EXERCISED here rather than merely skipped.) Tests that want to
+    # exercise the mirror itself overwrite this fixture file (_write_period_watch_fixture) directly.
+    monkeypatch.setattr(cc, "PERIOD_WATCH_BIGQUERY_DIR", str(tmp_path))
+    _write_period_watch_fixture(tmp_path, _cadence_period_routines_from_yaml(cadence),
+                                _cadence_period_grace_from_yaml(cadence))
     # check N's mirror scan is now resolved at call time (the model_mirror_files()
     # call-time-resolution fix) from CADENCE/OWNER_ACTIONS/PLAN/CATALOG_SQL -- without patching
     # OWNER_ACTIONS too, a fixture test would silently scan the REAL repo's OWNER_ACTIONS.md instead
@@ -514,12 +609,20 @@ def _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, cata
     monkeypatch.setattr(cc, "CATCHUP_NOTIFY_SQL", str(tmp_path / "absent_31.sql"))
     monkeypatch.setattr(cc, "CATCHUP_AUTOFIRE_SQL", str(tmp_path / "absent_59.sql"))
     monkeypatch.setattr(cc, "CATCHUP_INPROGRESS_GUARD_SQL", str(tmp_path / "absent_90.sql"))
+    # bigquery/184's two CTE-scoped copies (2026-09-04, 'cadence-checkk-blind-to-live-184-and-second-
+    # bracket'): same absent-path "skip silently" convention as the three constants above, so the
+    # shared fixture gains no new error. Tests that exercise those copies point the constant at a
+    # fixture file of their own.
+    monkeypatch.setattr(cc, "CATCHUP_INFLIGHT_HOSTED_SQL", str(tmp_path / "absent_184.sql"))
     # check M's membership cross-check (evening_slot_guard_membership_errors) compares
-    # EVENING_DAILY_GUARD_IDS/NOON_CLAUSE_EXEMPT_EVENING_IDS -- the REAL 11-routine evening-slot
-    # cohort -- against THIS fixture's `cad`, which normally carries only D1 with no expected_trigger
-    # at all. Left unpatched, every one of this shared fixture's ~40 callers (which exercise checks
-    # A/B/C/G/H/J/K/L/N/O, not this new membership check) would get a spurious STALE error for the 10
-    # real ids the minimal cad never declares. Isolate it here the same way
+    # EVENING_DAILY_GUARD_IDS/NOON_CLAUSE_EXEMPT_EVENING_IDS -- the REAL evening-slot cohort, 12
+    # routines as of 2026-09-04 (this comment said 11 / "the 10 real ids" until then; W5 joined on
+    # 2026-08-17 when it was retimed 04:00 -> 23:00 MDT) -- against THIS fixture's `cad`, which
+    # normally carries only D1 with no expected_trigger at all. Left unpatched, every one of this
+    # shared fixture's ~40 callers (which exercise checks A/B/C/G/H/J/K/L/N/O, not this membership
+    # check) would get a spurious STALE error for the 11 real ids the minimal cad never declares --
+    # plus, since 2026-09-04, an UNPLACEABLE error for D1 itself, which the fixture declares as
+    # daily_trading with no expected_trigger.time_local. Isolate it here the same way
     # tests/test_check_cron_dst_safety.py's write_cadence() isolates the analogous
     # daily_sun_thu_coverage_errors() from its own minimal fixtures (there via resetting the two id
     # sets to empty) -- here via a no-op override of the check function itself, because
@@ -747,6 +850,151 @@ def test_parse_period_watch_routines_sql_empty_on_reformat_is_caught(tmp_path, m
 def test_parse_period_watch_routines_sql_returns_none_when_file_absent(tmp_path, monkeypatch):
     monkeypatch.setattr(cc, "PERIOD_WATCH_SQL", str(tmp_path / "does_not_exist.sql"))
     assert cc.parse_period_watch_routines_sql() is None
+
+
+# ---- checks E/J's CANONICAL MIRROR (2026-09-04, 'cadence-ej-pinned-to-superseded-24' finding).
+# Checks E and J parse bigquery/24, which is SUPERSEDED LIVE for state.cadence_period_watch by
+# bigquery/113 -- whose hand-mirrored `routines` CTE and grace literals were validated by nothing
+# (113 carries no BEGIN GENERATED ROUTINE LIST markers, so gen_routine_lists.py never touches it, and
+# verify_dbt_port.py only proves the dbt port token-identical TO 113, so a divergence propagates into
+# the port and both stay green). Same additive shape as check D-extended's canonical deadline
+# compare; bigquery/24 stays the declared/generated anchor. ----
+_PW_GRACE = {"weekly_sun": 1, "monthly_ftd": 3, "quarterly_ftd": 3, "annual_ftd": 5}
+
+
+def test_parse_canonical_period_watch_matches_known_good(tmp_path, monkeypatch):
+    _write_period_watch_fixture(tmp_path, [("W1", "weekly_sun"), ("M2", "monthly_ftd")], _PW_GRACE)
+    monkeypatch.setattr(cc, "PERIOD_WATCH_BIGQUERY_DIR", str(tmp_path))
+    routines, grace, number, fn, ambiguous = cc.parse_canonical_period_watch()
+    assert ambiguous is None
+    assert number == 903 and fn == "903_test_cadence_period_watch.sql"
+    assert routines == {"W1": "weekly_sun", "M2": "monthly_ftd"}
+    assert grace == _PW_GRACE
+
+
+def test_parse_canonical_period_watch_resolves_the_highest_numbered_definition(tmp_path, monkeypatch):
+    # The real supersession this closes: bigquery/24 -> bigquery/113. The parser must always resolve
+    # to the HIGHEST-numbered definer, never to the file checks E/J themselves are pinned to.
+    _write_period_watch_fixture(tmp_path, [("W1", "weekly_sun")], _PW_GRACE,
+                                filename="24_old_period_watch.sql")
+    _write_period_watch_fixture(tmp_path, [("W1", "weekly_sun"), ("A1", "annual_ftd")], _PW_GRACE,
+                                filename="113_new_period_watch.sql")
+    monkeypatch.setattr(cc, "PERIOD_WATCH_BIGQUERY_DIR", str(tmp_path))
+    routines, _grace, number, fn, ambiguous = cc.parse_canonical_period_watch()
+    assert ambiguous is None
+    assert number == 113 and fn == "113_new_period_watch.sql"
+    assert routines == {"W1": "weekly_sun", "A1": "annual_ftd"}
+
+
+def test_parse_canonical_period_watch_is_scoped_to_its_own_view_not_the_whole_file(tmp_path, monkeypatch):
+    # THE scoping test. The real canonical file (bigquery/113) defines TWO views -- state.cadence_watch
+    # FIRST, then state.cadence_period_watch -- so a blind whole-file scrape would be positional across
+    # an unrelated sibling statement, exactly the shape CLS_CTE_UNNEST_RE and YESTERDAY_TIER_CTE_UNNEST_
+    # RE were both written to avoid. This decoy preamble puts a `routines` CTE row and a
+    # DATE_ADD(n.week_start, INTERVAL 6 DAY) weekly-grace literal in a PRECEDING statement; both must be
+    # ignored in favour of the real view's own body further down.
+    decoy = (
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.cadence_watch` AS\n"
+        "WITH routines AS (\n"
+        "  SELECT * FROM UNNEST([\n"
+        "    STRUCT('GHOST' AS routine, 'weekly_sun' AS monitor_class)\n"
+        "  ])\n"
+        "),\n"
+        "n AS (SELECT DATE_ADD(n.week_start, INTERVAL 6 DAY) AS x)\n"
+        "SELECT * FROM routines;\n\n"
+    )
+    _write_period_watch_fixture(tmp_path, [("W1", "weekly_sun")], _PW_GRACE, preamble=decoy)
+    monkeypatch.setattr(cc, "PERIOD_WATCH_BIGQUERY_DIR", str(tmp_path))
+    routines, grace, _number, _fn, _ambiguous = cc.parse_canonical_period_watch()
+    assert routines == {"W1": "weekly_sun"}
+    assert "GHOST" not in routines
+    assert grace["weekly_sun"] == 1  # the real view's literal, NOT the decoy's 6
+
+
+def test_parse_canonical_period_watch_returns_none_filename_when_view_absent(tmp_path, monkeypatch):
+    monkeypatch.setattr(cc, "PERIOD_WATCH_BIGQUERY_DIR", str(tmp_path))  # empty dir, no .sql files
+    routines, grace, _number, fn, ambiguous = cc.parse_canonical_period_watch()
+    assert routines == {} and grace == {} and fn is None and ambiguous is None
+
+
+def test_check_ej_canonical_period_watch_extra_row_is_caught(tmp_path, monkeypatch, capsys):
+    # main()-level drift injection: the canonical file lists a period routine ops/cadence.yaml has
+    # never heard of. Pre-fix this file was read by nothing at all.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    _write_period_watch_fixture(tmp_path, [("W9", "weekly_sun")], {})
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert "W9: in state.cadence_period_watch's routines CTE (canonical file, " in out
+    assert "903_test_cadence_period_watch.sql) but not a period-class routine in cadence.yaml" in out
+
+
+def test_check_ej_canonical_period_grace_drift_is_caught(tmp_path, monkeypatch, capsys):
+    # The check-E half: ops/cadence.yaml declares period_grace_days, the canonical file's own literal
+    # disagrees. bigquery/24 is absent in this fixture (PERIOD_WATCH_SQL points at absent.sql), so
+    # check E itself is skipped -- this error can ONLY come from the new canonical mirror.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    cadence.write_text(
+        "timezone: America/Denver\n"
+        'cadence_watch_deadline_local: "21:00"\n'
+        "routine_model: claude-opus-5\n"
+        "period_grace_days:\n"
+        "  weekly_sun: 1\n"
+        "  monthly_ftd: 3\n"
+        "  quarterly_ftd: 3\n"
+        "  annual_ftd: 5\n"
+        "routines:\n"
+        "  - id: D1\n"
+        "    monitor_class: daily_trading\n"
+        "    catchup_safe: true\n"
+    )
+    drifted = dict(_PW_GRACE, monthly_ftd=7)
+    _write_period_watch_fixture(tmp_path, [], drifted)
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert "period_grace_days DRIFT for monthly_ftd (canonical file)" in out
+    assert "ops/cadence.yaml=3 vs bigquery/903_test_cadence_period_watch.sql=7" in out
+
+
+def test_check_ej_canonical_period_watch_disarmed_is_caught(tmp_path, monkeypatch, capsys):
+    # Vacuity guard: cadence.yaml declares period-tier routines but the canonical file's `routines`
+    # CTE cannot be parsed at all (regex rot). Must fail loudly, mirroring check O / check K's
+    # yesterday-tier DISARMED contract, rather than silently validating nothing.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    cadence.write_text(
+        "timezone: America/Denver\n"
+        'cadence_watch_deadline_local: "21:00"\n'
+        "routine_model: claude-opus-5\n"
+        "routines:\n"
+        "  - id: W1\n"
+        "    monitor_class: weekly_sun\n"
+        "    catchup_safe: true\n"
+    )
+    (tmp_path / "903_test_cadence_period_watch.sql").write_text(
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.cadence_period_watch` AS\n"
+        "WITH routines AS (\n"
+        "  SELECT * FROM UNNEST(ARRAY[STRUCT('W1' AS routine, 'weekly_sun' AS monitor_class)])\n"
+        ")\nSELECT * FROM routines;\n"
+    )
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert ("bigquery/903_test_cadence_period_watch.sql: could not parse any labelled STRUCT(... AS "
+            "monitor_class) row out of its state.cadence_period_watch `routines` CTE" in out)
+    assert "DISARMED" in out
+
+
+def test_check_ej_canonical_period_watch_against_real_repo_agrees_with_24():
+    # The property that makes this fix a green no-op today AND the thing that would have caught the
+    # gap: bigquery/24 (what checks E and J parse) and the canonical, actually-deployed definer must
+    # carry the SAME routine rows and the SAME grace literals.
+    routines, grace, number, fn, ambiguous = cc.parse_canonical_period_watch()
+    assert ambiguous is None
+    assert fn is not None and number is not None
+    assert routines and grace  # non-empty -- exercises the vacuity guards' happy path on the real repo
+    assert routines == cc.parse_period_watch_routines_sql()
+    assert grace == cc.parse_period_grace_sql()
 
 
 # ---- check K: parse_unnest_routine_ids — 31/59's comment-stripped UNNEST([...]) AS routine list ----
@@ -1019,6 +1267,168 @@ def test_check_k_bigquery_90_daily_copy_drift_is_caught(tmp_path, monkeypatch, c
     assert "90_catchup_inprogress_guard.sql" in out and "DRIFT" in out
 
 
+# ---- check K's CTE-SCOPED extension (2026-09-04, 'cadence-checkk-blind-to-live-184-and-second-
+# bracket' finding). Two compounding gaps: (1) UNNEST_ROUTINE_BRACKET.search() is first-match-only, so
+# the PERIOD bracket of a file that carries both tiers (bigquery/90 and bigquery/184 each do) was
+# structurally unreachable -- a second catchup_list_errors(..., 'period', ...) call on such a file
+# re-reads the DAILY bracket and false-fails; and (2) bigquery/184 -- the file that actually DEPLOYS
+# state.catchup_available and state.period_catchup_available -- was named by no constant at all, so
+# both of its LIVE lists were watched by nothing from the day it landed. ----
+_BOTH_TIER_SQL = (
+    "-- header prose naming 'GHOST' inside a comment must never be read as an entry\n"
+    "CREATE OR REPLACE VIEW `stock-trading-498512.state.catchup_available` AS\n"
+    "WITH catchup_safe_routines AS (\n"
+    "  SELECT routine FROM UNNEST(['D1', 'D3']) AS routine\n"
+    "),\n"
+    "x AS (SELECT 1)\n"
+    "SELECT * FROM catchup_safe_routines;\n"
+    "\n"
+    "CREATE OR REPLACE VIEW `stock-trading-498512.state.period_catchup_available` AS\n"
+    "WITH catchup_safe_period_routines AS (\n"
+    "  SELECT routine FROM UNNEST([\n"
+    "    'W1', 'W2',                 -- weekly research\n"
+    "    'A1'                        -- annual research (A3 excluded — action-conversion)\n"
+    "  ]) AS routine\n"
+    ")\n"
+    "SELECT * FROM catchup_safe_period_routines;\n"
+)
+
+
+def test_parse_catchup_safe_cte_ids_reaches_the_second_bracket(tmp_path):
+    # THE regression assertion for gap (1), measured against the same shape bigquery/90 and 184 have:
+    # the generic first-match scraper returns the DAILY list for BOTH tiers, while the CTE-name-scoped
+    # parser reaches each one.
+    f = tmp_path / "184.sql"
+    f.write_text(_BOTH_TIER_SQL)
+    assert cc.parse_unnest_routine_ids(str(f)) == ["D1", "D3"]  # first bracket only -- the old blind spot
+    assert cc.parse_catchup_safe_cte_ids(str(f), "catchup_safe_routines") == [["D1", "D3"]]
+    assert cc.parse_catchup_safe_cte_ids(str(f), "catchup_safe_period_routines") == [["W1", "W2", "A1"]]
+
+
+def test_parse_catchup_safe_cte_ids_absent_file_and_missing_cte_both_return_none(tmp_path):
+    f = tmp_path / "184.sql"
+    f.write_text("CREATE OR REPLACE VIEW `x` AS SELECT 1;\n")
+    assert cc.parse_catchup_safe_cte_ids(str(tmp_path / "nope.sql"), "catchup_safe_routines") is None
+    assert cc.parse_catchup_safe_cte_ids(str(f), "catchup_safe_routines") is None
+
+
+def test_catchup_cte_list_errors_matching_list_is_silent(tmp_path):
+    f = tmp_path / "184.sql"
+    f.write_text(_BOTH_TIER_SQL)
+    cad = {"W1": {"catchup_safe": True, "monitor_class": "weekly_sun"},
+           "W2": {"catchup_safe": True, "monitor_class": "weekly_sun"},
+           "A1": {"catchup_safe": True, "monitor_class": "annual_ftd"},
+           "Q4": {"catchup_safe": False, "monitor_class": "quarterly_ftd"}}
+    assert cc.catchup_cte_list_errors(
+        cad, str(f), "bigquery/184_inflight_guard_hosted_runs.sql", "period",
+        cc.PERIOD_CLASSES, "catchup_safe_period_routines") == []
+
+
+def test_catchup_cte_list_errors_period_drift_is_caught(tmp_path):
+    f = tmp_path / "184.sql"
+    f.write_text(_BOTH_TIER_SQL)
+    cad = {"W1": {"catchup_safe": True, "monitor_class": "weekly_sun"},
+           "W2": {"catchup_safe": True, "monitor_class": "weekly_sun"}}  # cadence.yaml dropped A1
+    errs = cc.catchup_cte_list_errors(
+        cad, str(f), "bigquery/184_inflight_guard_hosted_runs.sql", "period",
+        cc.PERIOD_CLASSES, "catchup_safe_period_routines")
+    assert len(errs) == 1, errs
+    # Wording is byte-compatible with catchup_list_errors()'s own DRIFT string (CI and a BigQuery
+    # bridge parse these), differing only in the filename.
+    assert "bigquery/184_inflight_guard_hosted_runs.sql catchup-safe period UNNEST list DRIFT" in errs[0]
+    assert "['A1', 'W1', 'W2']" in errs[0] and "['W1', 'W2']" in errs[0]
+
+
+def test_catchup_cte_list_errors_absent_file_is_silent(tmp_path):
+    cad = {"D1": {"catchup_safe": True, "monitor_class": "daily_trading"}}
+    assert cc.catchup_cte_list_errors(
+        cad, str(tmp_path / "absent.sql"), "bigquery/184_inflight_guard_hosted_runs.sql", "daily",
+        cc.DAILY_CLASSES, "catchup_safe_routines") == []
+
+
+def test_catchup_cte_list_errors_disarmed_is_caught(tmp_path):
+    # A reformat that reshapes the bracket must fail LOUDLY, not silently validate nothing -- same
+    # contract catchup_list_errors() established for the first-bracket copies, and the same
+    # `UNNEST(ARRAY[...]` reformat its own DISARMED message cites as the example. (Whitespace
+    # reflows -- `AS  (`, `SELECT  routine` -- are deliberately TOLERATED by CATCHUP_SAFE_CTE_RE's
+    # `\s+`/`\s*`, so they are not a disarm; only a structural change is.)
+    f = tmp_path / "184.sql"
+    f.write_text(_BOTH_TIER_SQL.replace("FROM UNNEST([\n", "FROM UNNEST(ARRAY[\n"))
+    cad = {"W1": {"catchup_safe": True, "monitor_class": "weekly_sun"}}
+    errs = cc.catchup_cte_list_errors(
+        cad, str(f), "bigquery/184_inflight_guard_hosted_runs.sql", "period",
+        cc.PERIOD_CLASSES, "catchup_safe_period_routines")
+    assert len(errs) == 1, errs
+    assert "DISARMED" in errs[0] and "catchup_safe_period_routines" in errs[0]
+
+
+def test_check_k_184_period_copy_drift_is_caught_at_main_level(tmp_path, monkeypatch, capsys):
+    # main()-level: gap (2). Pre-fix no constant named this file, so this drift was reported by nothing.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    f = tmp_path / "184.sql"
+    f.write_text(_BOTH_TIER_SQL)  # lists W1/W2/A1; this fixture's cadence.yaml declares only D1
+    monkeypatch.setattr(cc, "CATCHUP_INFLIGHT_HOSTED_SQL", str(f))
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert "bigquery/184_inflight_guard_hosted_runs.sql catchup-safe period UNNEST list DRIFT" in out
+    # ...and the DAILY copy in the same file is checked independently, against the daily want set.
+    assert "bigquery/184_inflight_guard_hosted_runs.sql catchup-safe daily UNNEST list DRIFT" in out
+
+
+def test_catchup_canonical_coverage_flags_an_unwatched_superseding_file(tmp_path):
+    # The DURABLE half: a future bigquery/2NN that supersedes bigquery/184 must fail CI rather than
+    # silently un-watch the live list, which is exactly how 184 itself went unwatched. No monkeypatch
+    # needed -- the REAL bigquery/31/59/90/184 basenames are the watched set, and 999 is not among them.
+    (tmp_path / "999_future_supersede.sql").write_text(_BOTH_TIER_SQL)
+    scan = cc._scan_bigquery_dir(str(tmp_path))
+    errs = cc.catchup_canonical_coverage_errors(scan)
+    assert len(errs) == 2, errs
+    assert all("999_future_supersede.sql is now the highest-numbered file defining" in e for e in errs)
+    assert any("state.catchup_available`" in e for e in errs)
+    assert any("state.period_catchup_available`" in e for e in errs)
+
+
+def test_catchup_canonical_coverage_is_wired_into_main(tmp_path, monkeypatch, capsys):
+    # main()-level, deliberately: a direct-call-only test would leave the same fail-open check Q had
+    # (see test_check_q_is_wired_into_main) -- dropping the errors.extend() line from main() would
+    # keep every other test green, because no shared fixture's BIGQUERY_DIR contains a catch-up view.
+    # Here one does, at a leading number no watched constant names.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    (tmp_path / "999_future_supersede.sql").write_text(_BOTH_TIER_SQL)
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert "999_future_supersede.sql is now the highest-numbered file defining" in out
+    assert "watched by nothing" in out
+
+
+def test_catchup_canonical_coverage_is_silent_when_the_winner_is_watched(tmp_path, monkeypatch):
+    # Same scan, but the winning file IS one check K reads -- no error. Also covers the empty-scan
+    # skip that keeps the ~55 shared-fixture main() callers clean.
+    winner = tmp_path / "184_inflight_guard_hosted_runs.sql"
+    winner.write_text(_BOTH_TIER_SQL)
+    monkeypatch.setattr(cc, "CATCHUP_INFLIGHT_HOSTED_SQL", str(winner))
+    assert cc.catchup_canonical_coverage_errors(cc._scan_bigquery_dir(str(tmp_path))) == []
+    assert cc.catchup_canonical_coverage_errors([]) == []
+
+
+def test_check_k_184_copies_against_the_real_repo_are_clean():
+    # Real-repo assertion, the green-no-op claim this fix rests on: bigquery/90's and bigquery/184's
+    # four CTE-scoped copies all already equal the cadence.yaml-derived want sets, and the deployed
+    # definer of each view is a file check K watches.
+    cad = cc.load_cadence()
+    for path, tier, classes, cte in (
+        (cc.CATCHUP_INPROGRESS_GUARD_SQL, "period", cc.PERIOD_CLASSES, "catchup_safe_period_routines"),
+        (cc.CATCHUP_INFLIGHT_HOSTED_SQL, "daily", cc.DAILY_CLASSES, "catchup_safe_routines"),
+        (cc.CATCHUP_INFLIGHT_HOSTED_SQL, "period", cc.PERIOD_CLASSES, "catchup_safe_period_routines"),
+    ):
+        brackets = cc.parse_catchup_safe_cte_ids(path, cte)
+        assert brackets, (path, cte)  # non-empty -- the DISARMED guard's happy path on the real repo
+        assert cc.catchup_cte_list_errors(cad, path, path, tier, classes, cte) == []
+    assert cc.catchup_canonical_coverage_errors(cc._scan_bigquery_dir(cc.BIGQUERY_DIR)) == []
+
+
 def test_check_k_missing_catchup_safe_key_is_caught(tmp_path, monkeypatch, capsys):
     plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
     _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
@@ -1199,10 +1609,13 @@ def _write_gen_fixture(tmp_path):
     sql114.write_text(marker_body)
     sql132 = tmp_path / "132.sql"
     sql132.write_text(marker_body)
-    return plan, cadence, sql12, sql15, sql24, sql105, sql114, sql132
+    sql205 = tmp_path / "205.sql"
+    sql205.write_text(marker_body)
+    return plan, cadence, sql12, sql15, sql24, sql105, sql114, sql132, sql205
 
 
-def _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql105, sql114, sql132):
+def _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql105, sql114, sql132,
+                     sql205):
     # MUST patch every build_targets() entry, including ROUTINE_CATCHUP_SQL and DEP_GATE_SQL —
     # otherwise a test that calls gen.write_region() for all of build_targets() writes real content
     # straight into the actual repo's bigquery/105_routine_catchup_window.sql (or
@@ -1214,7 +1627,20 @@ def _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql10
     # lands: the no-op test writes the CORRECT content back, so it fails while leaving the working tree
     # looking clean, which reads like a flaky test rather than the cross-test clobber it actually is.
     # THIRD occurrence 2026-08-03, when QUEUE_SILENCE_SQL/gen_132_region were added. Same failure,
-    # same cause, same fix. If you are adding a 7th generated target: patch it HERE, in
+    # same cause, same fix.
+    #
+    # SEVENTH TARGET, wired 2026-09-04: ALERT_MSG_STABILITY_SQL (bigquery/205), the SUPERSEDING and
+    # therefore LIVE copy of the same ops.sp_assert_deps period_class rows DEP_GATE_SQL (bigquery/114)
+    # carries — it reuses gen_24_region verbatim, exactly as 114 does. This helper was NOT updated when
+    # 205 was registered as a target, which is precisely why gen_routine_lists.py's build_targets()
+    # grew its PAIRED-PATH GUARD (`if os.path.dirname(ALERT_MSG_STABILITY_SQL) ==
+    # os.path.dirname(DEP_GATE_SQL)`): with 114 redirected here and 205 not, an unguarded append would
+    # have let a --write reach PAST this fixture and overwrite the real, frozen, live-parity-checked
+    # bigquery/205 with the fixture's single-row period_class list — the fourth occurrence of the
+    # clobber above. Now that 205 IS patched here the guard is DORMANT for these tests (both paths sit
+    # in tmp_path, so its dirname equality holds and the target is exercised normally) — KEEP IT
+    # ANYWAY: it is the safety net for the NEXT fixture that forgets, and it costs one comparison.
+    # If you are adding an 8th generated target: patch it HERE, in
     # tests/test_gen_routine_lists.py::_wire_fixture, AND in that file's build_targets() count test.
     monkeypatch.setattr(gen, "PLAN", str(plan))
     monkeypatch.setattr(gen, "CADENCE", str(cadence))
@@ -1224,12 +1650,14 @@ def _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql10
     monkeypatch.setattr(gen, "ROUTINE_CATCHUP_SQL", str(sql105))
     monkeypatch.setattr(gen, "DEP_GATE_SQL", str(sql114))
     monkeypatch.setattr(gen, "QUEUE_SILENCE_SQL", str(sql132))
+    monkeypatch.setattr(gen, "ALERT_MSG_STABILITY_SQL", str(sql205))
 
 
 def test_gen_routine_lists_write_then_check_is_clean(tmp_path, monkeypatch):
     gen = load_module_from_path("gen_routine_lists", "scripts", "gen_routine_lists.py")
-    plan, cadence, sql12, sql15, sql24, sql105, sql114, sql132 = _write_gen_fixture(tmp_path)
-    _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql105, sql114, sql132)
+    plan, cadence, sql12, sql15, sql24, sql105, sql114, sql132, sql205 = _write_gen_fixture(tmp_path)
+    _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql105, sql114, sql132,
+                     sql205)
     # --write: populates the marker regions
     for path, body in gen.build_targets():
         gen.write_region(path, body)
@@ -1243,8 +1671,9 @@ def test_gen_routine_lists_write_then_check_is_clean(tmp_path, monkeypatch):
 
 def test_gen_routine_lists_check_is_dirty_after_row_deleted(tmp_path, monkeypatch):
     gen = load_module_from_path("gen_routine_lists", "scripts", "gen_routine_lists.py")
-    plan, cadence, sql12, sql15, sql24, sql105, sql114, sql132 = _write_gen_fixture(tmp_path)
-    _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql105, sql114, sql132)
+    plan, cadence, sql12, sql15, sql24, sql105, sql114, sql132, sql205 = _write_gen_fixture(tmp_path)
+    _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql105, sql114, sql132,
+                     sql205)
     for path, body in gen.build_targets():
         gen.write_region(path, body)
     # delete W1 from cadence.yaml (simulating drift) without re-running --write
@@ -1264,10 +1693,34 @@ def test_gen_routine_lists_check_is_dirty_after_row_deleted(tmp_path, monkeypatc
 
 
 def test_gen_routine_lists_against_real_repo_write_is_noop():
-    # The real, already-normalized bigquery/12/15/24/105/114/132 must be a byte-level no-op for --write, and
-    # --check must pass clean (proves the generator reproduces today's routine-fleet state exactly).
+    # The real, already-normalized bigquery/12/15/24/105/114/132/205 must be a byte-level no-op for
+    # --write, and --check must pass clean (proves the generator reproduces today's routine-fleet state
+    # exactly). 205 joined the list on 2026-09-04, when it was registered as the seventh generated
+    # target; its region was already byte-identical to gen_24_region's output at registration, so this
+    # test covered it from the first run.
     gen = load_module_from_path("gen_routine_lists", "scripts", "gen_routine_lists.py")
-    changed = [path for path, body in gen.build_targets() if gen.write_region(path, body)]
+    # Computed WITHOUT calling the mutating write_region() (2026-09-04, 'testsbig-3'). This test runs
+    # UNPATCHED, so build_targets() resolves to the seven REAL repo paths (bigquery/12, 15, 24, 105,
+    # 114, 132, 205) -- frozen apply-in-order DR-record files diffed daily against live BigQuery by
+    # scripts/check_live_sql_parity.py. write_region() computes
+    # `new_txt = txt[:b+len(BEGIN_MARKER)] + wanted_region(body) + txt[e:]` and writes iff
+    # new_txt != txt; since txt is by construction `txt[:b+len(BEGIN_MARKER)] + current_region(path) +
+    # txt[e:]`, that condition is EXACTLY `current_region(path) != wanted_region(body)` -- the very
+    # comparison the loop below already makes. So the write added zero detection power and only the
+    # risk: on a drifted tree the list comprehension rewrote every landed SQL file in the target list
+    # (six when that was written; seven since bigquery/205 was registered later the same day) BEFORE
+    # `assert changed == []` was ever evaluated, normalizing the working tree while reporting a
+    # failure -- the "don't silence a verifier by editing its input" shape, and the same real-repo
+    # clobber _patch_gen_paths' own comment above records biting three times.
+    # ONE BEHAVIOURAL NUANCE, deliberate: write_region() RAISES SystemExit when the BEGIN/END markers
+    # are missing, while current_region() catches that and returns None. The missing-marker case
+    # therefore now surfaces as a `changed != []` assertion failure instead of a SystemExit -- both
+    # fail this test, only the message differs. write_region()'s own write path stays covered by
+    # test_gen_routine_lists_write_then_check_is_clean and
+    # test_gen_routine_lists_check_is_dirty_after_row_deleted above (both tmp_path-fixtured), plus
+    # tests/test_gen_routine_lists.py's write_region() unit tests.
+    changed = [path for path, body in gen.build_targets()
+               if gen.current_region(path) != gen.wanted_region(body)]
     assert changed == []
     for path, body in gen.build_targets():
         assert gen.current_region(path) == gen.wanted_region(body)
@@ -1391,8 +1844,11 @@ def test_check_m_disarmed_when_guard_query_unparseable_is_caught(tmp_path, monke
 def test_check_m_total_absence_of_sentinel_is_caught(tmp_path, monkeypatch, capsys):
     # REGRESSION (2026-08-08): check M used to be wrapped in `if "SAME-DAY DOUBLE-RUN GUARD" in
     # plan_txt:`, so a plan carrying NONE of that text (the sentinel renamed, or the whole section
-    # removed) made the check skip silently rather than flag all four EVENING_DAILY_GUARD_IDS routines
-    # as DISARMED. _write_check_fixture's own default plan has no guard text, so the plain, unmodified
+    # removed) made the check skip silently rather than flag every EVENING_DAILY_GUARD_IDS routine as
+    # DISARMED (this comment said "all four" until 2026-09-04; the tuple has held FIVE ids since D2a
+    # was added on 2026-08-09 -- the loop below iterates cc.EVENING_DAILY_GUARD_IDS itself, so it has
+    # always covered whatever the real tuple holds).
+    # _write_check_fixture's own default plan has no guard text, so the plain, unmodified
     # fixture already exercises this -- no plan override needed.
     plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
     _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
@@ -1481,11 +1937,74 @@ def test_evening_slot_membership_correctly_classified_baseline_is_clean(monkeypa
     assert cc.evening_slot_guard_membership_errors(cad) == []
 
 
+# ---- check M membership cross-check, UNPLACEABLE branch (2026-09-04, 'cadence-evening-candidates-
+# need-daily-time-local'). The candidate derivation reads expected_trigger.time_local, an OPTIONAL
+# field 15 of the 32 live routines omit; a DAILY-tier routine that omits it does not become
+# UNCLASSIFIED or STALE, it silently leaves the candidate set and check M never looks at it at all.
+# Note these two use the FULL routine shape (monitor_class + expected_trigger), not
+# _cad_with_time_local, precisely because the new branch is scoped by monitor_class -- which is also
+# why the five direct-call tests above, whose cads carry no monitor_class key, stay unaffected. ----
+def test_evening_slot_membership_daily_routine_without_time_local_is_caught(monkeypatch):
+    monkeypatch.setattr(cc, "EVENING_DAILY_GUARD_IDS", ("DX",))
+    monkeypatch.setattr(cc, "NOON_CLAUSE_EXEMPT_EVENING_IDS", {})
+    cad = {
+        "DX": {"monitor_class": "daily_sun_thu", "expected_trigger": {"time_local": "19:00"}},
+        # The exact shape a new daily routine lands in today: recurrence custom_cron, a cron_utc, and
+        # no time_local at all -- which no other checker requires (check I validates time_local only
+        # under recurrence daily/weekly; check_cron_dst_safety.py's check 3 is gated on `if tl:`).
+        "D4": {"monitor_class": "daily_sun_thu",
+               "expected_trigger": {"recurrence": "custom_cron", "cron_utc": "0 1 * * 1,2,3,4,5"}},
+    }
+    errs = cc.evening_slot_guard_membership_errors(cad)
+    assert len(errs) == 1, errs
+    assert "D4: expected_trigger.time_local" in errs[0]
+    assert "INVISIBLE to check M" in errs[0]
+    # It must NOT be reported as UNCLASSIFIED -- that is the whole point: pre-fix it was reported as
+    # nothing at all, and a bare UNCLASSIFIED would be the wrong diagnosis (nobody can classify a
+    # routine whose slot is unknown).
+    assert "NEITHER EVENING_DAILY_GUARD_IDS" not in errs[0]
+
+
+def test_evening_slot_membership_daily_routine_with_malformed_time_local_is_caught(monkeypatch):
+    # "present but malformed" must be caught too, not just "absent": an UNQUOTED 19:00 in YAML is
+    # base-60 int 1140, which the candidate derivation's isinstance(tl, str) test silently drops.
+    monkeypatch.setattr(cc, "EVENING_DAILY_GUARD_IDS", ("DX",))
+    monkeypatch.setattr(cc, "NOON_CLAUSE_EXEMPT_EVENING_IDS", {})
+    cad = {
+        "DX": {"monitor_class": "daily_sun_thu", "expected_trigger": {"time_local": "19:00"}},
+        "D4": {"monitor_class": "daily_trading", "expected_trigger": {"time_local": 1140}},
+    }
+    errs = cc.evening_slot_guard_membership_errors(cad)
+    assert len(errs) == 1, errs
+    assert "D4" in errs[0] and "1140" in errs[0]
+    # Message wording is delegated to lib.textio.validate_hhmm_field, not re-literalized here.
+    assert 'must be a quoted "HH:MM" string' in errs[0]
+
+
+def test_evening_slot_membership_period_routine_without_time_local_is_silent(monkeypatch):
+    # SCOPING TEST, and the reason the new branch is restricted to DAILY_CLASSES: 15 live routines
+    # (M1a M1b M2 M3 M4 M5 SL4 Q1 Q2 Q3 Q4 SL1 A1 A2 A3) legitimately declare no time_local, and
+    # widening the branch to every routine would red-line CI on all of them.
+    monkeypatch.setattr(cc, "EVENING_DAILY_GUARD_IDS", ("DX",))
+    monkeypatch.setattr(cc, "NOON_CLAUSE_EXEMPT_EVENING_IDS", {})
+    cad = {
+        "DX": {"monitor_class": "daily_sun_thu", "expected_trigger": {"time_local": "19:00"}},
+        "M9": {"monitor_class": "monthly_ftd",
+               "expected_trigger": {"recurrence": "custom_cron", "cron_utc": "0 1 2 * *"}},
+        "AR_x": {"monitor_class": "queue_driven", "expected_trigger": {"cron_utc": "0 1 * * 1"}},
+    }
+    assert cc.evening_slot_guard_membership_errors(cad) == []
+
+
 def test_evening_slot_membership_against_real_repo_is_clean():
     # The real, unmodified ops/cadence.yaml and the real EVENING_DAILY_GUARD_IDS /
-    # NOON_CLAUSE_EXEMPT_EVENING_IDS classification must agree today (verified 2026-08-09: exactly the
-    # 11 evening-slot routines D1/D2a/D2/AR_att/AR_orc/D3/SL2/SL5/SL3/OPS2/OPS0 split 5/6 across the two
-    # sets) -- a regression here would fail this AND check M in main() for every cadence.yaml change.
+    # NOON_CLAUSE_EXEMPT_EVENING_IDS classification must agree today (re-verified 2026-09-04: exactly
+    # the 12 evening-slot routines D1/D2a/D2/AR_att/AR_orc/D3/SL2/SL5/SL3/OPS2/OPS0/W5 split 5/7 across
+    # the two sets -- W5 joined on 2026-08-17 when it was retimed 04:00 -> 23:00 MDT, see
+    # NOON_CLAUSE_EXEMPT_EVENING_IDS['W5']'s own entry text; this comment claimed "11 ... split 5/6"
+    # until 2026-09-04) -- a regression here would fail this AND check M in main() for every
+    # cadence.yaml change. Since 2026-09-04 this also covers the UNPLACEABLE branch: every DAILY_CLASSES
+    # routine in the real file must carry a well-formed expected_trigger.time_local.
     assert cc.evening_slot_guard_membership_errors(cc.load_cadence()) == []
 
 
@@ -2434,7 +2953,25 @@ def test_check_n_defect_b_glued_digit_tooling_prefix_also_flagged(tmp_path, monk
 # OWNER_ACTIONS.md line "All remote routines now run claude-codex-5 for grunt work" returned ZERO
 # errors — a genuinely drifted model id passing CI clean, the exact false-clean check N exists to
 # prevent. The letter-continuation itself must STAY subtracted ('claude-codebase' above), so the
-# signal is "the whole token ends in a version", not "it continues with a letter".
+# signal is not "it continues with a letter".
+#
+# WHAT THE SIGNAL ACTUALLY IS, CORRECTED 2026-09-04. This block used to finish "...so the signal is
+# 'the whole token ends in a version'". That END-ANCHORED rule is no longer what the code does, and
+# was itself a defect: a version FOLLOWED BY an alias suffix ('claude-codex-5-latest',
+# 'claude-codex-5-preview', 'claude-desktopia-1-beta' — the '-latest'/'-preview'/'-beta'/'-exp'
+# convention scripts/lib/model_of_record.py's own ROUND 1 block names as the REAL one) does not END in
+# a version, so it fell straight back through and was silently subtracted — the same false-clean, one
+# alias suffix away. _tooling_prefix_hides_version() therefore dropped the anchor (DEFECT B, FOURTH
+# CASE — see that function's docstring): the signal is now "the remainder carries a separator-led
+# digit ANYWHERE", strictly LOUDER than before, and measured to change the classification of zero
+# tokens in this repo or in any of the pinned tables here.
+#
+# The four tokens below are pinned as-is and are unaffected by that widening (each already flags). The
+# alias-suffixed class they do NOT reach is pinned in full — at BOTH the _tooling_prefix_hides_version
+# helper level and end-to-end through check_model_of_record() — by
+# tests/test_model_of_record.py::_ALIAS_SUFFIXED_VERSION_TOOLING_TOKENS. This table is deliberately
+# NOT extended to duplicate it: this file's job here is the check-N path through cc's wrappers and
+# fixture paths, which the alias suffix does not exercise differently.
 _LETTER_THEN_VERSION_TOOLING_TOKENS = [
     "claude-codex-5", "claude-clinical-5", "claude-desktopia-1", "claude-agent-sdkx-3",
 ]
@@ -2807,3 +3344,39 @@ def test_check_q_duplicate_id_in_table_is_caught(tmp_path, monkeypatch):
     # The ordinary per-id drift check must NOT ALSO fire -- both occurrences match cadence.yaml, so
     # this is purely the new duplicate guard, not a rediscovery of the existing mismatch path.
     assert not any("fires at" in e for e in errs), errs
+
+
+def test_check_q_is_wired_into_main(tmp_path, monkeypatch, capsys):
+    # The seven tests above all call queue_owner_slot_mirror_errors() DIRECTLY, so nothing caught the
+    # `errors.extend(queue_owner_slot_mirror_errors(cad))` line being dropped from main() -- deleting
+    # it left the entire suite green (verified 2026-09-04, 'testsbig-4'). Every OTHER main()-level
+    # test misses it for a structural reason: the helper short-circuits on
+    # `if QUEUE_OWNER_SLOT_SCOPE not in txt: return []` and no shared-fixture plan carries the
+    # 'queue_item_stale' sentinel, so check Q returns [] for all ~55 of them; and
+    # test_main_against_real_repo_is_clean passes either way because the real plan is clean. Check Q
+    # landed 2026-08-31 and its duplicate-id guard 2026-09-02, so this is coverage for logic changed
+    # inside the recent window. Sentinel-injection convention, same shape as
+    # test_check_d_deadline_hhmm_delegates_to_shared_validator above.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    monkeypatch.setattr(cc, "queue_owner_slot_mirror_errors", lambda cad: ["SENTINEL check Q error"])
+    assert cc.main() == 1
+    assert "SENTINEL check Q error" in capsys.readouterr().out
+
+
+def test_check_q_shared_fixture_without_the_sentinel_is_clean(tmp_path, monkeypatch, capsys):
+    # Companion to the wiring test above, and what makes it non-vacuous: with NO sentinel injected the
+    # identical fixture yields main() == 0, so the `main() == 1` there is caused by the
+    # queue_owner_slot_mirror_errors extend() line and not by some unrelated error the fixture already
+    # produces. It also pins the short-circuit itself: the fixture plan carries no 'queue_item_stale'
+    # text, so check Q must stay out of scope rather than report a DISARMED anchor.
+    #
+    # Deliberately NOT extended to evening_slot_guard_membership_errors: _patch_fixture_paths
+    # permanently no-ops that one (`lambda cad: []`) and its own comment explains why, so ITS missing
+    # main()-level coverage is a documented, deliberate exception -- not the same gap check Q had.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    assert cc.QUEUE_OWNER_SLOT_SCOPE not in plan.read_text(encoding="utf-8")
+    assert cc.queue_owner_slot_mirror_errors(cc.load_cadence()) == []
+    assert cc.main() == 0
+    assert "SENTINEL check Q error" not in capsys.readouterr().out
