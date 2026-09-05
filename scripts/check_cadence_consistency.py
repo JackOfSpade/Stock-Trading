@@ -410,8 +410,8 @@ def evening_slot_guard_membership_errors(cad):
     # UNPLACEABLE (2026-09-04, 'cadence-evening-candidates-need-daily-time-local'). The candidate
     # derivation above reads expected_trigger.time_local, an OPTIONAL documentation field: no checker
     # REQUIRES it for a custom_cron routine (check I validates it only under `rec in ("daily",
-    # "weekly")`, a branch no routine reaches today — all 32 are custom_cron — and
-    # check_cron_dst_safety.py's check 3 is gated on `if tl:`), and 15 of the 32 live routines omit it
+    # "weekly")`, a branch no routine reaches today — all 33 are custom_cron — and
+    # check_cron_dst_safety.py's check 3 is gated on `if tl:`), and 15 of the 33 live routines omit it
     # outright. So a routine with no time_local is not UNCLASSIFIED and not STALE: it silently drops
     # OUT of `candidates` and becomes invisible to check M entirely — the SAME fail-open drop-out
     # property the comment block above NOON_CLAUSE_EXEMPT_EVENING_IDS forbids for the guard-TEXT
@@ -1350,21 +1350,41 @@ def class_map_errors(want, have, *, missing_from, mismatch_label, mismatch_ref, 
 # expected_trigger.time_local, and they have drifted before -- AR_orc moved 18:20 -> 18:35 on
 # 2026-08-04 (see that entry's own comment in ops/cadence.yaml). A stale restatement here does not
 # fail loudly; it silently flips a suppress into a raise (or worse, a raise into a suppress) for the
-# fleet's ONLY dead-trigger detector on AR_att/AR_orc/SL2/SL5. So the mirror is machine-checked.
+# fleet's ONLY dead-trigger detector on M1R/AR_att/AR_orc/SL2/SL5. So the mirror is machine-checked.
 #
-# It also asserts the branch's OTHER load-bearing premise -- that all four owners fire Sun-Thu -- by
+# It also asserts the branch's OTHER load-bearing premise -- that all five owners fire Sun-Thu -- by
 # reading each one's cron day-of-week field rather than trusting the prose. UTC Mon-Fri (1,2,3,4,5) IS
-# Denver Sun-Thu for these evening slots.
+# Denver Sun-Thu for the four EVENING slots; M1R's morning slot spells the same Denver day-set as UTC
+# Sun-Thu (0,1,2,3,4) -- see the two DENVER_SUN_THU_UTC_DOW_* constants below.
 QUEUE_OWNER_SLOT_ANCHOR = "CLAUSE (b) IS THE ENTIRE FIX"
 # Presence of the raise itself is what puts this file in scope for check Q (see the scope note
 # in queue_owner_slot_mirror_errors) -- it is the thing the slot table exists to decide.
 QUEUE_OWNER_SLOT_SCOPE = "queue_item_stale"
-QUEUE_OWNER_SLOT_PAIR = re.compile(r"\b(AR_att|AR_orc|D3|SL2|SL5)\s+(\d{1,2}:\d{2})\b")
-QUEUE_DRIVEN_OWNERS = ("AR_att", "AR_orc", "SL2", "SL5")
+QUEUE_OWNER_SLOT_PAIR = re.compile(r"\b(AR_att|AR_orc|D3|M1R|SL2|SL5)\s+(\d{1,2}:\d{2})\b")
+QUEUE_DRIVEN_OWNERS = ("AR_att", "AR_orc", "M1R", "SL2", "SL5")
+# UTC day-of-week fields that both spell "Denver Sun-Thu", selected by the cron's UTC HOUR. Denver is
+# UTC-6 in MDT (the season time_local documents, per check_cron_dst_safety.py), so a slot at or after
+# 06:00 UTC falls on the SAME Denver calendar day and its day-of-week field must read 0,1,2,3,4, while
+# a slot before 06:00 UTC belongs to the PREVIOUS Denver day and must read 1,2,3,4,5. Until M1R was
+# added (2026-09-05) every queue-driven owner was an evening one (00:00-01:25 UTC), so this check
+# hardcoded 1,2,3,4,5; M1R's 13:00 UTC / 07:00 MDT morning slot is the same Denver day-set expressed
+# the other way, and hardcoding either literal alone would fail one of the two cohorts on a premise
+# that is actually TRUE. The boundary is the hour, not the routine id, so a future morning or evening
+# owner is classified without touching this file again.
+DENVER_SUN_THU_UTC_DOW_SAME_DAY = "0,1,2,3,4"
+DENVER_SUN_THU_UTC_DOW_PREV_DAY = "1,2,3,4,5"
+# MDT ONLY, and the name says so. In MST (UTC-7, ~November-March) the boundary hour is 7, so a slot
+# in the 06:00-06:59 UTC band is 23:00-23:59 the PREVIOUS Denver day for that season and this check
+# would demand the SAME-day field for it. No owner occupies that band today (evening owners fire
+# 00:00-01:25 UTC, M1R 13:00 UTC), and every other hour classifies identically under both offsets, so
+# the limitation is latent rather than live -- but a future queue-driven owner scheduled into the
+# 06:00-06:59 UTC hour must derive its offset from the DST source check_cron_dst_safety.py uses
+# rather than from this constant.
+DENVER_UTC_OFFSET_HOURS_MDT = 6
 
 
 def queue_owner_slot_mirror_errors(cad):
-    """D3's OWNER-ELIGIBLE-DAY BRANCH fire-time table matches ops/cadence.yaml, and the four
+    """D3's OWNER-ELIGIBLE-DAY BRANCH fire-time table matches ops/cadence.yaml, and the five
     queue-driven owners really do fire Sun-Thu. Returns a list of error strings."""
     errs = []
     txt = read_text(PLAN)
@@ -1433,10 +1453,20 @@ def queue_owner_slot_mirror_errors(cad):
             errs.append(f"ops/cadence.yaml: {rid} expected_trigger.cron_utc is not a 5-field cron, "
                         f"so the OWNER-ELIGIBLE-DAY BRANCH's 'fires Sun-Thu' premise cannot be verified.")
             continue
-        if cron[4] != "1,2,3,4,5":
+        try:
+            utc_hour = int(cron[1])
+        except ValueError:
+            errs.append(f"ops/cadence.yaml: {rid} expected_trigger.cron_utc hour field is {cron[1]!r}, "
+                        f"not a plain integer, so the OWNER-ELIGIBLE-DAY BRANCH's 'fires Sun-Thu' "
+                        f"premise cannot be verified.")
+            continue
+        want_dow = (DENVER_SUN_THU_UTC_DOW_SAME_DAY if utc_hour >= DENVER_UTC_OFFSET_HOURS_MDT
+                    else DENVER_SUN_THU_UTC_DOW_PREV_DAY)
+        if cron[4] != want_dow:
             errs.append(f"ops/cadence.yaml: {rid} cron_utc day-of-week is '{cron[4]}', not "
-                        f"'1,2,3,4,5' (UTC Mon-Fri = Denver Sun-Thu). D3's OWNER-ELIGIBLE-DAY BRANCH "
-                        f"asserts all four queue-driven owners fire Sun-Thu and counts eligible days "
+                        f"'{want_dow}' (the UTC day-set that spells Denver Sun-Thu for a "
+                        f"{utc_hour:02d}:xx UTC slot). D3's OWNER-ELIGIBLE-DAY BRANCH "
+                        f"asserts all five queue-driven owners fire Sun-Thu and counts eligible days "
                         f"on that basis; if this owner's day-set really changed, update that "
                         f"paragraph in the same pass.")
     return errs

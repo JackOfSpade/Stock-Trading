@@ -3,7 +3,7 @@
 That script is a BLOCKING ci.yml gate whose three checks all rest on a hand-rolled scan of
 bigquery/*.sql text: CHECK A diffs ops/handoff_contracts.yaml against the `allowed_map` CTE in
 ALLOWED_MAP_SOURCE (resolved at runtime by resolve_allowed_map_source() below to whichever
-bigquery/*.sql file currently defines state.queue_venue_claim_unwired -- bigquery/199 today), and
+bigquery/*.sql file currently defines state.queue_venue_claim_unwired -- bigquery/225 today), and
 CHECK B derives each write target's NOT NULL/no-default column list from a CREATE TABLE body. Every
 one of those scans FAILS OPEN when it mis-parses — a swallowed column is simply a column the plan is
 no longer required to name, with nothing printed — so the parsers need their own regression net
@@ -264,10 +264,14 @@ def test_real_allowed_map_source_still_parses():
 
 
 def test_real_allowed_map_source_resolves_to_the_current_canonical_file():
-    """The live guard: on the real repo tree, ALLOWED_MAP_SOURCE must resolve to bigquery/199
-    (the current canonical definition per its own header and bigquery/180's own "SUPERSEDED LIVE
-    by ..." note), not to bigquery/180 (the original hardcoded pin this fix replaced)."""
-    assert os.path.basename(ch.ALLOWED_MAP_SOURCE) == "199_queue_venue_claim_status_normalisation.sql"
+    """The live guard: on the real repo tree, ALLOWED_MAP_SOURCE must resolve to the CURRENT
+    canonical definition of state.queue_venue_claim_unwired -- bigquery/225 since 2026-09-05, which
+    added the PENDING_REGIME_REFRESH -> ['M1R'] lane (chain: 160 -> 180 -> 199 -> 225) -- and never
+    to a superseded link in that chain. The expected filename is deliberately spelled out rather
+    than recomputed: recomputing it here would just re-run resolve_allowed_map_source() against
+    itself and assert nothing, while a literal makes the next supersede a deliberate, reviewed
+    edit. Update it in the same commit that lands the next redefinition."""
+    assert os.path.basename(ch.ALLOWED_MAP_SOURCE) == "225_regime_refresh_queue_lane.sql"
 
 
 # =================================================================================================

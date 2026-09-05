@@ -235,7 +235,7 @@ should_redispatch_stuck_secondary_gate() {
 # first and silently validate a placeholder instead of the real allowlist.
 marker_routine_from_subject() {
   local token routine_re
-  routine_re='^(D1|D2a|D2|D3|OPS0|OPS1|OPS2|W[1-5]|M1a|M1b|M[2-5]|Q[1-4]|A[1-3]|SL[1-5]|AR_att|AR_orc)$'
+  routine_re='^(D1|D2a|D2|D3|OPS0|OPS1|OPS2|W[1-5]|M1a|M1b|M1R|M[2-5]|Q[1-4]|A[1-3]|SL[1-5]|AR_att|AR_orc)$'
   token="$(printf '%s' "${1:-}" | grep -oE '^[A-Za-z][A-Za-z0-9_]*' || true)"
   if [ -n "$token" ] && [[ "$token" =~ $routine_re ]]; then
     printf '%s\n' "$token"

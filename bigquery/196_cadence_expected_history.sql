@@ -54,7 +54,7 @@
 -- The retrospective twin of state.cadence_expected_today. Same monitor_class predicates, evaluated
 -- per calendar date over a trailing 90-day window instead of only for CURRENT_DATE.
 --
--- queue_driven routines (AR_att/AR_orc/SL2/SL5) appear with expected = FALSE on every date, exactly
+-- queue_driven routines (AR_att/AR_orc/SL2/SL5/M1R) appear with expected = FALSE on every date, exactly
 -- as they are excluded from state.cadence_expected_today: their firing day is not calendar-derivable
 -- (they fire only when a queue entry is due), so "expected" is undefined for them and they must never
 -- contribute to a blackout verdict. state.queue_driven_silence_watch (bigquery/132) is their monitor.

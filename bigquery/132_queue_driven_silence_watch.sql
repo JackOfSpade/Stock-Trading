@@ -70,7 +70,8 @@ WITH routines AS (
     STRUCT('AR_att' AS routine, 'queue_driven' AS monitor_class),
     STRUCT('AR_orc' AS routine, 'queue_driven' AS monitor_class),
     STRUCT('SL2' AS routine, 'queue_driven' AS monitor_class),
-    STRUCT('SL5' AS routine, 'queue_driven' AS monitor_class)
+    STRUCT('SL5' AS routine, 'queue_driven' AS monitor_class),
+    STRUCT('M1R' AS routine, 'queue_driven' AS monitor_class)
   -- END GENERATED ROUTINE LIST
   ])
 ),

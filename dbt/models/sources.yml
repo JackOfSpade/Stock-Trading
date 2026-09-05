@@ -607,8 +607,9 @@ sources:
         description: >
           v1's deterministic regime->vehicle rule table, running RECORD-ONLY as counterfactual
           benchmark #3 the AI Park Allocator's judgment is measured against
-          (bigquery/92_park_allocator.sql, PARK_ROUTER_DESIGN.md v2 §1/§9/§11 -- owner-rejected as
-          decision-maker 2026-07-18). Never trades; nothing in the live decision path reads it.
+          (bigquery/226_park_rule_shadow_inflation_token.sql, superseding bigquery/92_park_allocator.sql;
+          PARK_ROUTER_DESIGN.md v2 §1/§9/§11 -- owner-rejected as decision-maker 2026-07-18).
+          Never trades; nothing in the live decision path reads it.
           Declared out-of-scope for now (not yet ported as a dbt model, whole bigquery/92 file is
           out of scope for this dbt-port pass) -- added here so analytics.park_counterfactuals can
           reference it and stay off scripts/check_dbt_view_coverage.py's advisory uncovered list.

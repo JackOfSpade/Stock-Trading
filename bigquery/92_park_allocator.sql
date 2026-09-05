@@ -302,6 +302,13 @@ CROSS JOIN cooldown;
 -- is NOT part of the has_signals gate: IF(inflation_trend IN (...), 'IEF', 'SGOV') already resolves
 -- an unknown inflation_trend to the safer vehicle (SGOV) rather than blanking the whole row, which
 -- is consistent with the rule table's own de-risk-safe posture.
+--
+-- SUPERSEDED LIVE by bigquery/226_park_rule_shadow_inflation_token.sql (2026-09-05) -- current single
+-- source of truth for this view. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation. 226 changes ONE TOKEN and nothing else:
+-- the RISK_OFF sub-branch below keys on `inflation_trend IN ('disinflationary', 'stable')`, and
+-- 'disinflationary' is not a value M1a has ever written -- the operative enum says 'disinflating'.
+-- Every other object in THIS file remains canonical here and is not superseded.
 -- ============================================================================
 CREATE OR REPLACE VIEW `stock-trading-498512.state.park_rule_shadow` AS
 WITH sig AS (

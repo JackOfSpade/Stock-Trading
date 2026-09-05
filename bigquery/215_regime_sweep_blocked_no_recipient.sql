@@ -70,6 +70,15 @@
 
 -- ===== state.regime_capital_sync_pending =====
 -- SUPERSEDES the definition in bigquery/168_nomadic_capital_fixes.sql (chain: 98 -> 167 -> 168 -> 215).
+-- SUPERSEDED LIVE by bigquery/223_regime_restore_blocked_zero_payable.sql -- current single source of
+-- truth for this view (chain: 98 -> 167 -> 168 -> 215 -> 223). Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation. 223 REPLACES
+-- this file's restore_blocked guard -- `WHERE NOT EXISTS (SELECT 1 FROM enabled_recipients)`, the
+-- SWEEP's exact complement but strictly NARROWER than the restore's, since `donors` self-excludes the
+-- debtor and requires positive available_funds -- with `payable = 0`, and adds a blocked_reason STRING
+-- distinguishing "no eligible recipient" from "recipients exist, none can fund this". Everything this
+-- file's header defends (the sweep branch, the capital_enabled AND NOT nomadic predicate, the $25
+-- floor, the baselines, the debt accounting, the kill-switch) is carried forward unchanged.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.regime_capital_sync_pending` AS
 WITH ctrl AS (
   SELECT enabled AS control_enabled FROM `stock-trading-498512.state.capital_control_latest`

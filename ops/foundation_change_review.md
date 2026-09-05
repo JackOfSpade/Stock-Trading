@@ -29,8 +29,14 @@ authority — two tiers", cadence audit 2026-07-29 — D3 daily, Q4 quarterly ba
    `bigquery/39_beta_adjusted_alpha.sql`, `bigquery/46_weekly_benchmarks.sql`).
 3. **Model version** — the operating LLM generation (per `AI_Trading_Foundation.md` "On what actually
    transfers forward": model-specific numerical calibration does NOT transfer and must be re-derived).
-4. **Regime vocabulary** — the `strategy/01_shared_regime_vocabulary.md` axis tokens / cells (the
-   regime-cell strings SL1/SL3/M1a and `state.arsenal_regime_coverage` join on).
+4. **Regime vocabulary** — BOTH planes, which are different files and are routinely conflated:
+   (i) the TECHNICAL tokens / cells in `strategy/01_shared_regime_vocabulary.md` (the regime-cell
+   strings SL1/SL3 and `state.arsenal_regime_coverage` join on), and (ii) the five strategy-blind
+   FUNDAMENTAL axis tokens, frozen in `Strategy.md` under `## Regime scoring (strategy-blind,
+   monthly)` (generated slice `strategy/09_regime_scoring_strategy_blind_monthly.md`), whose
+   operative enums are M1a's OUTPUT 2 in `Claude_Task_Plan.md`. *Corrected 2026-09-05 (R6
+   vocabulary alignment): this item named only `strategy/01`, which contains no fundamental axis
+   token at all — see §D row 1's correction note for the measurement.*
 
 ## Checklist — which calibrated constants / bands / vocabularies to re-validate
 
@@ -90,10 +96,24 @@ in the decision-log entry.
 - [ ] **Process / workflow / taxonomy** artifacts confirmed to transfer as-is (these DO transfer).
 
 ### D. Regime-vocabulary change
-- [ ] **Regime-cell token set** — the `strategy/01_shared_regime_vocabulary.md` axis tokens are the
-      single source; SL1 `target_regime_cells`, SL3 incubation `regime_cell`, M1a strategy-blind
-      scoring, and `state.arsenal_regime_coverage` all join on the SAME tokens joined by `/`
-      (`Claude_Task_Plan.md` SL1 STEP 2 / SL3 STEP 1, H7).
+- [ ] **Regime-cell token set (TECHNICAL plane)** — the `strategy/01_shared_regime_vocabulary.md`
+      axis tokens are the single source for the mechanical vocabulary (SPY Trend State, VIX Regime,
+      Yield Curve State, Yield Curve Sustained Inversion Flag, Equity Breadth State); SL1
+      `target_regime_cells`, SL3 incubation `regime_cell`, and `state.arsenal_regime_coverage` all
+      join on the SAME tokens joined by `/` (`Claude_Task_Plan.md` SL1 STEP 2 / SL3 STEP 1, H7).
+      `scripts/check_roster_consistency.py` check R-J equality-checks the SPY/VIX sets against
+      `bigquery/35_strategy_arsenal.sql`, so a token added here without the SQL reddens CI.
+- [ ] **Fundamental axis token set (M1a plane)** — the five strategy-blind axes (`growth_momentum`,
+      `inflation_trend`, `policy_stance`, `risk_sentiment`, `shock_overlay`) are frozen in
+      `Strategy.md` under `## Regime scoring (strategy-blind, monthly)` — generated slice
+      `strategy/09_regime_scoring_strategy_blind_monthly.md` — and NOT in `strategy/01`. The
+      operative enums are M1a's OUTPUT 2 in `Claude_Task_Plan.md`; the values land in
+      `events.regime_events` (scope `FUNDAMENTAL_AXIS`). *Correction, 2026-09-05:* row 1 above
+      previously claimed `strategy/01` was "the single source" for M1a strategy-blind scoring too,
+      which sent an executing routine to the wrong file — `strategy/01` contains zero occurrences
+      of any of the five axis names (measured during the R6 alignment). Slice 09 is one of R-F's
+      `SHARED_LOCKED_OPERATIONAL_PROSE` inputs, so ANY edit here moves all five `spec_hash` values
+      in `strategy/roster.yaml` and must be landed with the recompute in the same commit.
 - [ ] **Per-strategy activation rules** in `Strategy.md` / `strategy/02_regime_router.md` still
       reference valid vocabulary tokens.
 - [ ] **Router / M1a scoring** SQL and `events.regime_events` values use the new vocabulary consistently.

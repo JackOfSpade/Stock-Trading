@@ -160,6 +160,11 @@ SELECT
 -- the D1/D2a/D2/D3 line since OPS0/OPS1/OPS2 are same-day daily-ops routines of the same shape. See the
 -- WHY section above -- without an entry here, `JOIN cls c USING (routine)` drops these three routines
 -- before the stall check ever runs, so a hung OPS0/OPS1/OPS2 can never raise routine_stalled.
+-- AMENDED 2026-09-05 (shock-override fix package): a FOURTH 6-hour entry, M1R, added below the SISA line
+-- when that queue-driven routine landed -- so this statement now differs from bigquery/18 by four STRUCT
+-- entries, not three. This `cls` table is hand-kept by design (no generator owns it, unlike the marker
+-- regions in bigquery/12/15/24/105/114/132/205), which is exactly why every new run-logging routine has
+-- to be added here deliberately or it is silently dropped by the JOIN described above.
 -- (marginal) state.stalled_runs — a routine logged 'started' but never a terminal status.
 -- A session that dies AFTER sp_routine_start but BEFORE sp_routine_end (the documented §20 abnormal-end
 -- mode: usage-limit cutoff / container reclamation) leaves a stuck 'started' row that NOTHING reads — the
@@ -195,6 +200,11 @@ WITH cls AS (
     -- SISA fast tier (rev 2026-07-10): SL3 daily monitor, SL4 monthly scanner, SL5 registrar — all
     -- same-day work (no multi-hour deep research), so a >6h 'started' with no terminal row is stalled.
     STRUCT('SL3', 6), STRUCT('SL4', 6), STRUCT('SL5', 6),
+    -- M1R added (2026-09-05, shock-override fix package): the queue-driven out-of-cycle regime re-score.
+    -- Fast tier even though the plan files it in the MONTHLY group — it is a short mechanical drain of one
+    -- regime-refresh queue item (gate, one 5-axis write, close the item), not the deep research M1a does,
+    -- so the 18h research tier would let a hung run sit most of a day before anything said so.
+    STRUCT('M1R', 6),
     STRUCT('W1', 18), STRUCT('W2', 18), STRUCT('W3', 18), STRUCT('W5', 18),
     STRUCT('M1a', 18), STRUCT('M1b', 18), STRUCT('M2', 18), STRUCT('M3', 18), STRUCT('M5', 18),
     STRUCT('Q1', 18), STRUCT('Q2', 18), STRUCT('Q3', 18),

@@ -23,6 +23,7 @@ Read-optimized slices of the canonical `Claude_Task_Plan.md`. Each `<ID>.md` is 
 | M3 | M3. D Position Deep-Dive — deep research | `M3.md` |
 | M4 | M4. Monthly Action Conversion — regular routine | `M4.md` |
 | M5 | M5. Deployed-TWR & Macro Forecast — regular routine | `M5.md` |
+| M1R | M1R. Out-of-cycle Regime Re-score — regular routine | `M1R.md` |
 | AR_att | Adversarial Review Attacker — regular routine | `AR_att.md` |
 | AR_orc | Adversarial Review Orchestrator — regular routine | `AR_orc.md` |
 | Q1 | Q1. Regime Retrospective — deep research | `Q1.md` |

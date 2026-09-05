@@ -115,15 +115,19 @@ LEFT JOIN restored rs ON rs.strategy = r.strategy_code;
 -- (capped at donor capacity; >= $25-or-full-debt floor). D2a executes ONE movement per read
 -- (Operating_Protocols.md §16 — stale-snapshot rule).
 --
--- SUPERSEDED LIVE by bigquery/215_regime_sweep_blocked_no_recipient.sql — current single source of truth for
--- this view (bigquery/167_nomadic_capital.sql is an intermediate, also-superseded definition — do
--- not stop there; it first added a nomadic-strategy exclusion to the enabled_set CTE below, but
--- applied it to BOTH the sweep-recipient set AND restore_candidates, which made a nomadic debtor's
--- regime debt permanently unrestorable — audit finding 10, CRITICAL). Kept here, unmodified, for
--- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in
--- isolation. 168 splits enabled_set into a nomadic-EXCLUSIVE set (sweep recipients + restore
--- donors) and a nomadic-INCLUSIVE set preserving this file's original semantics for
--- restore_candidates.
+-- SUPERSEDED LIVE by bigquery/223_regime_restore_blocked_zero_payable.sql — current single source of
+-- truth for this view. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
+-- re-apply this CREATE statement live in isolation.
+-- HISTORY, no longer a current-truth claim (the chain is 98 -> 167 -> 168 -> 215 -> 223, and every
+-- link named here is itself superseded — do not stop at one of them):
+-- bigquery/167_nomadic_capital.sql first added a nomadic-strategy exclusion to the enabled_set CTE
+-- below, but applied it to BOTH the sweep-recipient set AND restore_candidates, which made a nomadic
+-- debtor's regime debt permanently unrestorable — audit finding 10, CRITICAL.
+-- bigquery/168_nomadic_capital_fixes.sql splits enabled_set into a nomadic-EXCLUSIVE set (sweep
+-- recipients + restore donors) and a nomadic-INCLUSIVE set preserving this file's original semantics
+-- for restore_candidates. bigquery/215_regime_sweep_blocked_no_recipient.sql adds the
+-- blocked_no_recipient signal to both directions, and 223 keys the RESTORE side of it on
+-- `payable = 0` — the condition that actually silences a restore — and adds a blocked_reason column.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.regime_capital_sync_pending`
 AS WITH ctrl AS (
   SELECT enabled AS control_enabled FROM `stock-trading-498512.state.capital_control_latest`

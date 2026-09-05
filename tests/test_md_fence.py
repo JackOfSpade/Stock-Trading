@@ -220,5 +220,10 @@ def test_claude_task_plan_corpus_heading_counts():
     # Derived 2026-07-26 against the current Claude_Task_Plan.md (see docstring above for how to
     # tell a legitimate content edit from a fence-parsing regression if this ever fails).
     # 52 as of 2026-07-27: +1 for the new `## OPS2.` (Catch-up Executor) routine heading.
-    assert h2_headings == 52
+    # 53 as of 2026-09-05: +1 for the new `## M1R.` (Out-of-cycle Regime Re-score) routine heading,
+    # added by the shock-override fix package. Measured against `git show HEAD:Claude_Task_Plan.md`
+    # rather than assumed: the outside-of-fence `## ` set gained exactly that one line and lost none,
+    # and the `# ` count is unchanged at 11 — the small, explainable delta the docstring describes,
+    # not the sharp drop that fingerprints a fence-parsing regression.
+    assert h2_headings == 53
     assert h1_headings == 11

@@ -337,13 +337,19 @@ AS (
 
 -- ===== FIX 7. state.regime_capital_sync_pending — split the enabled set.
 -- SUPERSEDES bigquery/167_nomadic_capital.sql's definition (which itself superseded bigquery/98's).
--- SUPERSEDED LIVE by bigquery/215_regime_sweep_blocked_no_recipient.sql -- current single source of truth for
--- this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
--- re-apply this CREATE statement live in isolation. 215 adds the blocked_no_recipient branch (both SWEEP and RESTORE) that the sibling
--- state.nomadic_capital_sync_pending has had since bigquery/167: with every capital-enabled
--- strategy nomadic, the CROSS JOIN onto enabled_recipients yields ZERO rows and a whole-roster
--- deactivation reads as the healthy empty-view steady state. Eligibility, the $25 floor and the
--- equal-share baseline are all unchanged -- 215 adds a SIGNAL, not a capital movement.
+-- SUPERSEDED LIVE by bigquery/223_regime_restore_blocked_zero_payable.sql -- current single source of
+-- truth for this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
+-- re-apply this CREATE statement live in isolation. 223 keys the RESTORE side of the blocked signal
+-- on `payable = 0` -- the condition that actually silences a restore -- and adds a blocked_reason
+-- column; the sweep branch, this file's split enabled set, the $25 floor and the baselines are
+-- unchanged.
+-- HISTORY, no longer a current-truth claim (chain: 98 -> 167 -> 168 -> 215 -> 223):
+-- bigquery/215_regime_sweep_blocked_no_recipient.sql adds the blocked_no_recipient branch (both SWEEP
+-- and RESTORE) that the sibling state.nomadic_capital_sync_pending has had since bigquery/167: with
+-- every capital-enabled strategy nomadic, the CROSS JOIN onto enabled_recipients yields ZERO rows and
+-- a whole-roster deactivation reads as the healthy empty-view steady state. Eligibility, the $25
+-- floor and the equal-share baseline are all unchanged there -- 215 adds a SIGNAL, not a capital
+-- movement.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.regime_capital_sync_pending`
 AS WITH ctrl AS (
   SELECT enabled AS control_enabled FROM `stock-trading-498512.state.capital_control_latest`

@@ -73,8 +73,8 @@
 -- design call for whoever wires this into the routines' actual evidence-gathering steps, not assumed here.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.routine_catchup_window` AS
 WITH routines AS (
-  -- GENERATED (scripts/gen_routine_lists.py --write, from ops/cadence.yaml, file order), ALL 32 ids
-  -- incl. the 4 queue_driven ones. Do NOT hand-edit -- see header note above.
+  -- GENERATED (scripts/gen_routine_lists.py --write, from ops/cadence.yaml, file order), ALL 33 ids
+  -- incl. the 5 queue_driven ones. Do NOT hand-edit -- see header note above.
   SELECT * FROM UNNEST([
     -- BEGIN GENERATED ROUTINE LIST (scripts/gen_routine_lists.py --write; do not hand-edit)
     STRUCT('D1' AS routine, 'daily_sun_thu' AS monitor_class),
@@ -100,6 +100,7 @@ WITH routines AS (
     STRUCT('M3' AS routine, 'monthly_ftd' AS monitor_class),
     STRUCT('M4' AS routine, 'monthly_ftd' AS monitor_class),
     STRUCT('M5' AS routine, 'monthly_ftd' AS monitor_class),
+    STRUCT('M1R' AS routine, 'queue_driven' AS monitor_class),
     STRUCT('SL4' AS routine, 'monthly_ftd' AS monitor_class),
     STRUCT('Q1' AS routine, 'quarterly_ftd' AS monitor_class),
     STRUCT('Q2' AS routine, 'quarterly_ftd' AS monitor_class),

@@ -1,9 +1,54 @@
--- Parallel-run dbt port of bigquery/225_regime_refresh_queue_lane.sql:state.queue_venue_claim_unwired — canonical source is that file until
--- owner cutover. Generated MECHANICALLY by scripts/gen_dbt_port.py from that canonical body — the
--- only edit is ref()/source() substitution for fully-qualified names — and proved token-identical
--- to it by scripts/verify_dbt_port.py. Do not hand-edit the BODY: re-generate, then re-verify.
--- Regenerating REPLACES this header, so any hand-written provenance above the body must be put
--- back by the person who regenerates it.
+-- ============================================================================================
+-- 225_regime_refresh_queue_lane.sql (2026-09-05, owner-directed shock-override package, item R2)
+--
+-- ONE CHANGE: `state.queue_venue_claim_unwired`'s `allowed_map` gains a fifth lane,
+-- `PENDING_REGIME_REFRESH -> ['M1R']`. Nothing else in the view changes: both finding classes, the
+-- (queue,item_key)+event_id tiebreaker, the four existing lanes, the case-normalized terminal-status
+-- filter from bigquery/199 and the analysis_type enum are carried forward byte-identical.
+--
+-- WHY THE LANE HAS TO BE REGISTERED HERE, IN THE SAME CHANGE THAT CREATES IT. This view treats a
+-- queue that is ABSENT from allowed_map as one where "no legitimate venue claim is possible on this
+-- lane at all" -- its own comment, and the reason bigquery/180 had to register PENDING_ROSTER before
+-- SISA's first graduation wrote a row. The re-risking limb (Strategy.md Section 6 scenario 3, Rev 46,
+-- rewired by this package's R2) has D2a enqueue an out-of-cycle regime-refresh item that M1R drains.
+-- If D2a's payload names M1R as the resolving venue -- which it should, so the item says who will act
+-- on it -- and the lane is unregistered, D3's VENUE-CLAIM HONORING CHECK raises
+-- `queue_venue_claim_unwired` against a perfectly correct row, on the FIRST item ever written. The
+-- alternative (write the item with no venue claim at all, so the detector stays silent) buys silence
+-- by removing the fact the detector exists to check, and is exactly the shape this repo has already
+-- rejected once.
+--
+-- LANE VOCABULARY: the queue literal is `PENDING_REGIME_REFRESH` and the item_key convention is
+-- `regime-refresh-YYYYMMDD`, matching the PENDING_* naming of the four existing drain-to-completion
+-- lanes (WATCHLIST and ORDER_STAGED are the two deliberately-absent non-lanes, recorded in
+-- ops/handoff_contracts.yaml's excluded_queues). Terminal status is `complete`, the same token the
+-- other four lanes close on. This file is the machine-readable half; ops/handoff_contracts.yaml's
+-- queue_lanes entry is the prose half, and scripts/check_handoff_contracts.py CHECK A asserts the two
+-- stay set-identical in both directions -- a lane in one and not the other is a named FAIL.
+--
+-- WHY A WHOLE-VIEW SUPERSEDE FOR A ONE-ROW UNNEST. bigquery/*.sql is apply-in-order and
+-- supersede-only: there is no in-place edit of a landed definition, and the allowed_map is a literal
+-- inside the view body, not a table anything can INSERT into. bigquery/180 registered its lane the
+-- same way. scripts/check_handoff_contracts.py's resolve_allowed_map_source() finds this file by
+-- resolving the HIGHEST-numbered file that CREATEs the view -- it pins no filename -- so the checker
+-- follows the supersede automatically.
+--
+-- NOT CHANGED, DELIBERATELY: no new alert category and no new raise site (D3 already reads this view
+-- every run and raises `queue_venue_claim_unwired` per row; that category's ops.alert_policy row stays
+-- canonical in bigquery/160), no change to state.open_queue_detail, no queue row rewritten,
+-- and no relaxation of the terminal-status predicate bigquery/199 landed.
+--
+-- SUPERSEDES `state.queue_venue_claim_unwired` in bigquery/199_queue_venue_claim_status_normalisation.sql
+-- (chain: 160 -> 180 -> 199 -> 225). All three prior definition sites' markers are repointed here in
+-- the same commit. Do NOT re-apply any of them in isolation: doing so drops this lane, and 160's or
+-- 180's would additionally revert the case-normalized status filter that bigquery/199 exists to hold.
+--
+-- APPLY: live via the BigQuery MCP, after 224, together with the regenerated dbt mirror
+-- (dbt/models/state/queue_venue_claim_unwired.sql) and the ops/handoff_contracts.yaml entry.
+-- Defines exactly one view; creates, redefines or drops nothing else.
+-- ============================================================================================
+
+CREATE OR REPLACE VIEW `stock-trading-498512.state.queue_venue_claim_unwired` AS
 WITH latest AS (
   -- Latest status per (queue, item_key), same idiom as state.open_queue_detail
   -- (bigquery/01_schema.sql:148-153) -- partitioning by (queue, item_key) rather than item_key alone
@@ -38,7 +83,7 @@ WITH latest AS (
   SELECT
     queue, item_key, item_type, status, strategy, ticker, due_date, conservative_default,
     payload, event_ts AS latest_event_ts
-  FROM {{ source('events', 'queue_events') }}
+  FROM `stock-trading-498512.events.queue_events`
   QUALIFY ROW_NUMBER() OVER (PARTITION BY queue, item_key ORDER BY event_ts DESC, event_id DESC) = 1
 ),
 first_seen AS (
@@ -46,7 +91,7 @@ first_seen AS (
   -- PENDING_REVIEW cycle -- e.g. an echo-suspect cool-off requeue, Claude_Task_Plan.md's Step 3.5 --
   -- reuses the same item_key with a fresh row, so this must scan the raw table, not `latest`).
   SELECT item_key, MIN(event_ts) AS first_seen_ts
-  FROM {{ source('events', 'queue_events') }}
+  FROM `stock-trading-498512.events.queue_events`
   GROUP BY item_key
 ),
 allowed_map AS (
@@ -161,4 +206,13 @@ WHERE analysis_type IS NOT NULL
                           -- analysis_type, so this carried no operational risk -- the enum was simply
                           -- incomplete. See Claude_Task_Plan.md's analysis_type enum (line 285 as of
                           -- 2026-08-10), which now documents both values under one dated parenthetical.
-  )
+  );
+
+-- VERIFICATION (run after apply; read-only).
+-- SELECT * FROM `stock-trading-498512.state.queue_venue_claim_unwired`;
+--   -- ZERO rows, both before and after -- verified read-only on 2026-09-05 by replaying this file's
+--   -- body and EXCEPT-DISTINCT-ing it against the live view in both directions (0 and 0). This is a
+--   -- no-change apply BY CONSTRUCTION: the file adds a lane to allowed_map and events.queue_events
+--   -- holds no PENDING_REGIME_REFRESH row yet, so no candidate row's LEFT JOIN result can move.
+-- NOTE: double-dash line comments only. A trailing C-style block comment placed after this file's
+-- last statement causes permanent live-sql-parity drift -- never introduce one here.

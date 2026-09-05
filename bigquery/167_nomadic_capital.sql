@@ -302,14 +302,18 @@ AS (
 -- ~$0 under steady state anyway (excluding a ~$0-capacity donor from a SUM of positive capacities
 -- changes nothing). Every other line of bigquery/98's definition is UNCHANGED, copied verbatim. =====
 --
--- SUPERSEDED LIVE by bigquery/215_regime_sweep_blocked_no_recipient.sql — current single source of truth for
--- this view. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
--- this CREATE statement live in isolation. 168 splits this definition's single nomadic-exclusive
--- enabled_set into two: a nomadic-EXCLUSIVE set for sweep recipients and restore donors (the actual
--- intent above), and a nomadic-INCLUSIVE set preserving bigquery/98's original semantics for
--- restore_candidates — this definition excluded nomadic strategies from restore_candidates too,
--- which made a nomadic debtor's regime debt permanently unrestorable, silently (audit finding 10,
--- CRITICAL).
+-- SUPERSEDED LIVE by bigquery/223_regime_restore_blocked_zero_payable.sql — current single source of
+-- truth for this view. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
+-- re-apply this CREATE statement live in isolation.
+-- HISTORY, no longer a current-truth claim (chain: 98 -> 167 -> 168 -> 215 -> 223, every link named
+-- here itself superseded): bigquery/168_nomadic_capital_fixes.sql splits this definition's single
+-- nomadic-exclusive enabled_set into two — a nomadic-EXCLUSIVE set for sweep recipients and restore
+-- donors (the actual intent above), and a nomadic-INCLUSIVE set preserving bigquery/98's original
+-- semantics for restore_candidates — because THIS definition excluded nomadic strategies from
+-- restore_candidates too, which made a nomadic debtor's regime debt permanently unrestorable,
+-- silently (audit finding 10, CRITICAL). bigquery/215_regime_sweep_blocked_no_recipient.sql then adds
+-- the blocked_no_recipient signal to both directions, and 223 keys the RESTORE side of it on
+-- `payable = 0`, the condition that actually silences a restore.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.regime_capital_sync_pending`
 AS WITH ctrl AS (
   SELECT enabled AS control_enabled FROM `stock-trading-498512.state.capital_control_latest`

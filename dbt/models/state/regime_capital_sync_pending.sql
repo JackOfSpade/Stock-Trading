@@ -1,4 +1,4 @@
--- Parallel-run dbt port of bigquery/215_regime_sweep_blocked_no_recipient.sql:state.regime_capital_sync_pending — canonical source is that file until
+-- Parallel-run dbt port of bigquery/223_regime_restore_blocked_zero_payable.sql:state.regime_capital_sync_pending — canonical source is that file until
 -- owner cutover. Generated MECHANICALLY by scripts/gen_dbt_port.py from that canonical body — the
 -- only edit is ref()/source() substitution for fully-qualified names — and proved token-identical
 -- to it by scripts/verify_dbt_port.py. Do not hand-edit the BODY: re-generate, then re-verify.
@@ -42,7 +42,8 @@ sweep_rows AS (
     sc.amount,
     es.strategy_code            AS counterparty_strategy,
     ROUND(sc.amount / n.n, 2)   AS counterparty_baseline_amount,
-    FALSE                       AS blocked_no_recipient
+    FALSE                       AS blocked_no_recipient,
+    CAST(NULL AS STRING)        AS blocked_reason
   FROM sweep_candidates sc
   CROSS JOIN n_enabled n
   CROSS JOIN enabled_recipients es
@@ -57,7 +58,8 @@ sweep_blocked AS (
     sc.amount,
     CAST(NULL AS STRING)        AS counterparty_strategy,
     CAST(NULL AS NUMERIC)       AS counterparty_baseline_amount,
-    TRUE                        AS blocked_no_recipient
+    TRUE                        AS blocked_no_recipient,
+    'no_eligible_recipient'     AS blocked_reason
   FROM sweep_candidates sc
   WHERE NOT EXISTS (SELECT 1 FROM enabled_recipients)
 ),
@@ -91,6 +93,19 @@ restore_payable AS (
   FROM restore_candidates rc
   LEFT JOIN donor_totals dt ON dt.debtor = rc.strategy
 ),
+-- bigquery/223: how many ELIGIBLE recipients OTHER THAN the debtor itself exist, per restore
+-- candidate. This is the only thing that separates the two ways a restore can reach payable = 0, and
+-- they call for different operator responses: zero others means the roster has collapsed to the
+-- debtor (a router/roster question), while others exist but hold no funds means the book is fully
+-- deployed (a capital question that clears itself as positions close). LEFT JOIN + COUNTIF rather
+-- than a correlated EXISTS: BigQuery rejects a correlated subquery over another relation unless it
+-- can de-correlate it.
+restore_recipient_reach AS (
+  SELECT rc.strategy, COUNTIF(es.strategy_code IS NOT NULL) AS other_recipients
+  FROM restore_candidates rc
+  LEFT JOIN enabled_recipients es ON es.strategy_code != rc.strategy
+  GROUP BY rc.strategy
+),
 restore_rows AS (
   SELECT
     'RESTORE'                                                          AS action,
@@ -98,37 +113,46 @@ restore_rows AS (
     ROUND(rp.payable, 2)                                               AS amount,
     dn.donor_strategy                                                  AS counterparty_strategy,
     ROUND(rp.payable * dn.donor_capacity / dt.total_donor_capacity, 2) AS counterparty_baseline_amount,
-    FALSE                                                              AS blocked_no_recipient
+    FALSE                                                              AS blocked_no_recipient,
+    CAST(NULL AS STRING)                                               AS blocked_reason
   FROM restore_payable rp
   JOIN donor_totals dt ON dt.debtor = rp.strategy
   JOIN donors dn ON dn.debtor = rp.strategy
   WHERE rp.payable >= LEAST(25, rp.outstanding_debt)
 ),
--- bigquery/215: the mirror image of sweep_blocked. With no eligible donors, restore_payable.payable
--- computes 0 and the payable >= LEAST(25, outstanding_debt) guard drops the row -- silently, exactly
--- like the sweep did. Not live today (C is the only capital_enabled strategy and carries zero
--- outstanding_regime_debt) but live the moment a debt-carrying strategy is re-enabled while every
--- recipient is still nomadic.
+-- bigquery/223: the mirror image of sweep_blocked, keyed on the condition that actually silences a
+-- restore. bigquery/215 keyed this on an empty enabled_recipients -- the SWEEP's exact complement,
+-- but strictly narrower than the restore's: `donors` self-excludes the debtor and requires positive
+-- available_funds, so payable reaches 0 with a NON-empty recipient set whenever the only eligible
+-- recipient IS the debtor, or every recipient is fully deployed. payable = 0 subsumes the empty
+-- set (no recipients -> no donors -> payable 0), so this REPLACES that guard rather than joining it:
+-- two branches would emit two rows for one candidate. Mutually exclusive with restore_rows by
+-- construction -- restore_candidates admits only outstanding_debt > 0, so LEAST(25, outstanding_debt)
+-- is strictly positive and payable = 0 can never clear it. A nonzero payable below that floor is a
+-- THROTTLE, not a block, and is deliberately not reported here (see this file's header).
 restore_blocked AS (
   SELECT
     'RESTORE'                   AS action,
-    rc.strategy,
-    rc.outstanding_debt         AS amount,
+    rp.strategy,
+    rp.outstanding_debt         AS amount,
     CAST(NULL AS STRING)        AS counterparty_strategy,
     CAST(NULL AS NUMERIC)       AS counterparty_baseline_amount,
-    TRUE                        AS blocked_no_recipient
-  FROM restore_candidates rc
-  WHERE NOT EXISTS (SELECT 1 FROM enabled_recipients)
+    TRUE                        AS blocked_no_recipient,
+    CASE WHEN rr.other_recipients = 0 THEN 'no_eligible_recipient'
+         ELSE 'no_donor_capacity' END AS blocked_reason
+  FROM restore_payable rp
+  JOIN restore_recipient_reach rr ON rr.strategy = rp.strategy
+  WHERE rp.payable = 0
 )
-SELECT action, strategy, amount, counterparty_strategy, counterparty_baseline_amount, blocked_no_recipient, ctrl.control_enabled
+SELECT action, strategy, amount, counterparty_strategy, counterparty_baseline_amount, blocked_no_recipient, blocked_reason, ctrl.control_enabled
 FROM sweep_rows CROSS JOIN ctrl
 UNION ALL
-SELECT action, strategy, amount, counterparty_strategy, counterparty_baseline_amount, blocked_no_recipient, ctrl.control_enabled
+SELECT action, strategy, amount, counterparty_strategy, counterparty_baseline_amount, blocked_no_recipient, blocked_reason, ctrl.control_enabled
 FROM sweep_blocked CROSS JOIN ctrl
 UNION ALL
-SELECT action, strategy, amount, counterparty_strategy, counterparty_baseline_amount, blocked_no_recipient, ctrl.control_enabled
+SELECT action, strategy, amount, counterparty_strategy, counterparty_baseline_amount, blocked_no_recipient, blocked_reason, ctrl.control_enabled
 FROM restore_rows CROSS JOIN ctrl
 UNION ALL
-SELECT action, strategy, amount, counterparty_strategy, counterparty_baseline_amount, blocked_no_recipient, ctrl.control_enabled
+SELECT action, strategy, amount, counterparty_strategy, counterparty_baseline_amount, blocked_no_recipient, blocked_reason, ctrl.control_enabled
 FROM restore_blocked CROSS JOIN ctrl
 ORDER BY action, strategy, counterparty_strategy

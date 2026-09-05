@@ -83,6 +83,7 @@ FROM UNNEST([
   STRUCT('M3' AS routine, 'Read Claude_Task_Plan.md. Perform M3 — deep research.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
   STRUCT('M4' AS routine, 'Read Claude_Task_Plan.md. Perform M4 — regular routine.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
   STRUCT('M5' AS routine, 'Read Claude_Task_Plan.md. Perform M5 — regular routine.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('M1R' AS routine, 'Read Claude_Task_Plan.md. Perform M1R — regular routine.' AS canonical_instruction, DATE '2026-09-05' AS canonical_since),
   STRUCT('SL4' AS routine, 'Read Claude_Task_Plan.md. Perform SL4 — regular routine.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
   STRUCT('Q1' AS routine, 'Read Claude_Task_Plan.md. Perform Q1 — deep research.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
   STRUCT('Q2' AS routine, 'Read Claude_Task_Plan.md. Perform Q2 — deep research.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),

@@ -42,7 +42,7 @@ Regions generated (marker-delimited, one BEGIN/END pair per file):
                                         unwrapped gate that must not gain a runtime view dependency.
   bigquery/132_queue_driven_silence_watch.sql -- state.queue_driven_silence_watch's `routines` CTE
                                         STRUCT rows, ONLY the queue_driven routines -- the exact
-                                        complement of the bigquery/12 region. Those four sit outside
+                                        complement of the bigquery/12 region. Those five sit outside
                                         state.cadence_expected_today and therefore outside BOTH
                                         cadence nets; 132 is the only thing watching them.
   bigquery/205_alert_message_stability.sql -- ops.sp_assert_deps' `period_class` CTE STRUCT rows

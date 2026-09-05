@@ -644,7 +644,7 @@ scenarios:
     category: park_allocator
     situation: >
       The park's current vehicle is VOO (risk_tier 4). Today's PARK ALLOCATION CALL evidence:
-      shock_overlay reads 'contained' (neither 'none' nor 'acute'), live VIX closes at 19.8 with no
+      shock_overlay reads 'latent' (neither 'none' nor 'acute'), live VIX closes at 19.8 with no
       band-crossing significance, hy_oas is flat month-over-month, and today's scanned developments
       contain nothing shock-relevant. D1's own assessment is LOW conviction for any switch away from VOO
       -- nothing clears the MEDIUM+ de-risk bar or the HIGH re-risk bar in either direction. D1 calls

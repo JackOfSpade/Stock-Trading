@@ -19,7 +19,7 @@ Every routine reads and/or writes BigQuery for operational state (positions, reg
 |---|---|---|---|---|---|
 | **D1** | Market Development Scan | Sun-Thu · research | `state.daily_briefing`, `state.current_positions`, `perf.kill_flags`/`perf.strategy_daily`, `state.current_regime`, `find_precedents()`; PARK ALLOCATION CALL adds `state.park_signal_daily`, `state.macro_fred_latest` (hy_oas), `state.park_allocation_latest` | `events.decision_log` (dev notes + `entry_type='park-allocation'` every day, surfaced on `state.park_allocation_latest`; + `entry_type='research-screen'` ×2 — single-name-move + sector-move AI-significance screens, Operating_Protocols.md §19, 2026-07-19); inline router review → `events.regime_events`; `events.regime_events` scope `TECHNICAL_INPUT` key `EQUITY_BREADTH_PCT` (EQUITY-BREADTH OBSERVATION, daily, 2026-08-05 — read by D2a STEP 1e); `ops.heartbeat` (`source='loop:park_allocator'`); `state.strategy_candidates` (FRONTIER-LLM CAPABILITY CHECK, `source_routine='D1'`, on a materiality-clearing HF capture) | Daily.md |
 | **D2** | Daily Action Conversion | Sun-Thu · regular | `state.daily_briefing`, `state.current_positions`, `events.daily_marks`, `state.entry_staging_allowed`; PARK ALLOCATION CONVERSION adds `state.park_allocation_latest`, `state.park_policy_current`, `state.park_position_current` (2026-07-19 first-leg SELL craft; 2026-07-26 — BOTH legs crafted same session); STRATEGY TERMINATIONS (step 5) adds `state.strategy_probe_funding_gap`, `state.strategy_roster` | `events.position_events`; `events.decision_log` (+embedding) via `ops.sp_log_decision` (incl. `entry_type='capital-allocation'` on a termination, 2026-07-19 — `AI_DECISION_REDESIGN.md` §3 Redesign A); `events.regime_events`; `events.queue_events`; `events.cash_flows` (newcomer floor fill / capital-allocation split); `events.park_policy_changes` (on a BOUND switch); Watchlist.md (fills reconciliation + NAV/TWR engine maintenance moved to **D2a** in the 2026-07-09 cutover — see the D2 §"STEP 0…now run in D2a" note) | — (reads Daily.md) |
-| **D2a** | Broker Reconcile & Snapshot | Sun-Thu · regular | live IBKR connector state (positions/balances/trades), `events.daily_marks`, `state.current_positions`, `state.account_latest` | `events.trade_fills`/`events.position_events` reconciliation, `analytics.strategy_nav`, `perf.strategy_daily`, NAV snapshot, `ops.run_log`/`ops.alerts`; STEP 1d adds `events.signal_marks` (11 menu tickers + SPY + `^VIX`, isolated from `daily_marks`) | — |
+| **D2a** | Broker Reconcile & Snapshot | Sun-Thu · regular | live IBKR connector state (positions/balances/trades), `events.daily_marks`, `state.current_positions`, `state.account_latest`; Step 0 adds `state.regime_capital_sync_pending`, `state.nomadic_capital_sync_pending` and `state.rerisking_limb_status` (RE-RISKING LIMB EVALUATION, 2026-09-05) | `events.trade_fills`/`events.position_events` reconciliation, `analytics.strategy_nav`, `perf.strategy_daily`, NAV snapshot, `ops.run_log`/`ops.alerts`; STEP 1d adds `events.signal_marks` (11 menu tickers + SPY + `^VIX`, isolated from `daily_marks`); RE-RISKING LIMB EVALUATION adds `events.queue_events` (`PENDING_REGIME_REFRESH` `regime-refresh`, drained by M1R) | — |
 | **D3** | Calendar Hygiene | Sun-Thu · regular | `state.open_queue`, `state.current_positions`, `events.queue_events`/`events.decision_log`; self-heal reads add `state.ci_findings_open`, `state.ddl_drift_promotion_readiness`/`state.restore_stale_promotion_readiness`/`state.append_only_integrity_promotion_readiness`/`state.b3_promotion_readiness`, `ops/trigger_ids.json` (repo file), `ops/cadence.yaml` `routine_model`, and `AI_Trading_Foundation.md`'s in-use-model field | `events.queue_events` (terminal-entry sweep + `PENDING_REVIEW` prose-regression entries); self-heal writes a NEW numbered `bigquery/NN_*.sql` superseding the current source of truth for the promoted procedure, which is then re-applied live via MCP (corrected 2026-08-20 — this cell used to name `bigquery/75_scheduled_query_wrappers.sql`, which is superseded and must never be re-applied) + new `bigquery/NN_*.sql` resync/create files, `ops.monitor_promotion_log`, `ops.parity_selfheal_log`, `ops.alerts`, `events.decision_log`, `events.position_events` (the PRE-FILL INVALIDATION RE-CHECK's phantom-close net-out, 2026-08-03); `AI_Trading_Foundation.md` (MODEL-OF-RECORD DOC SYNC, cadence audit 2026-07-29) | — |
 | **OPS0** | Cadence Watchdog | Sun-Thu · regular | `state.catchup_refire_readiness`, `ops/trigger_ids.json` (repo file); STEP 4 GIT LANDING SWEEP adds git remote refs (`git fetch`/`merge-base`, external) + optional `gh api` (CI conclusion/PR lookup, external) | `ops.catchup_refire_log`, `events.decision_log` (+ `entry_type='stranded-branch-adoption'`/`'unlanded-completed-run'`, STEP 4d/4f), `ops.alerts` (+ `stranded_branch`, `stranded_branch_adopted`, `unlanded_completed_run`), `ops.routine_commit_markers` (STEP 4d adoption only); STEP 4d may also merge arbitrary NON-excluded repo files from an adopted branch onto OPS0's own branch (`bigquery/*.sql`, `dbt/**` and the spec-locked strategy surfaces are hard-excluded); `RemoteTrigger run(...)` (external call, not a BigQuery write) | — |
 | **OPS1** | Morning Connector Liveness Probe | Sun-Thu · regular | — (no state reads beyond the standard `state.trading_day_today` pre-flight; probes IBKR/Calendar/FMP/Gmail live, read-only; TOOL-INVENTORY DRIFT CHECK also reads the repo manifest `ops/connector_tools.yaml` and the live per-connector tool inventory) | `ops.alerts` (`connector_reauth_needed`, `connector_tool_added`, `connector_tool_removed`, `connector_tool_enumeration_failed` — raise + self-heal resolve), `ops.connector_tool_inventory`; `ops.web_calls` (exactly one row every run — the FMP `^VIX` probe is a metered call against FMP's 250/day free cap, 2026-08-20); on an `added` drift tool only, also `ops/connector_tools.yaml` (auto-add a `use: unused` row, 2026-08-12 owner directive) + git commit/push | — |
@@ -29,12 +29,13 @@ Every routine reads and/or writes BigQuery for operational state (positions, reg
 | **W3** | Open-Position Deep-Dive (A,B,C,E) | Weekly · research | `state.current_positions`, `state.current_regime`, `events.decision_log` / D1 coverage | — | Weekly_Position_Deep_Dive.md |
 | **W4** | Weekly Research Handoff | Weekly · regular | W1–W3 `.md`, `state.current_positions`, `state.current_regime`, `events.decision_log` | `events.regime_events`, `events.decision_log`, idempotent `events.queue_events`; Watchlist.md (D2 solely revalidates/converts weekly-only actions) | — |
 | **W5** | Factbase & Analytics Consolidation | Weekly · regular | `events.decision_log`, `analytics.calibration_summary`, historical account/reconciliation reporting, `state.current_positions`; PARK SCORECARD adds `analytics.park_nav_daily`, `analytics.park_counterfactuals`; CAPITAL-ALLOCATION SCORECARD adds `state.capital_allocation_calls`; RESEARCH-SCREEN SCORECARD adds `state.research_screen_calls`, `analytics.research_screen_disagreements` | `events.decision_log` (outcome) via `ops.sp_log_decision` (incl. `entry_type='capital-allocation-scorecard'`, `entry_type='research-screen-scorecard'`); factbase `.md` mirroring (B_Sub_Pattern, Watchlist, Operating_Protocols) | — |
-| **M1a** | Strategy-Blind Regime Scoring | Monthly · research | prior `events.macro_series` (+ web); `state.signal_marks_curated` (`ticker='^VIX'` ONLY — the dated month-end close, 2026-08-05) | `events.macro_series`; `events.macro_fred`; `events.regime_events` (`FUNDAMENTAL_AXIS`) | — |
+| **M1a** | Strategy-Blind Regime Scoring | Monthly · research | prior `events.macro_series` (+ web); `state.signal_marks_curated` (`ticker='^VIX'` ONLY — the dated month-end close, 2026-08-05); `state.signal_marks_curated` (`ticker='BZUSD'` ONLY — the shock-overlay rubric's Brent triplet, 2026-09-05) | `events.macro_series`; `events.macro_fred`; `events.regime_events` (`FUNDAMENTAL_AXIS`) | — |
 | **M1b** | Strategy Mapping & Activation | Monthly · regular | `state.current_regime` / `events.regime_events` (`FUNDAMENTAL_AXIS`) | — | Monthly_Fundamental.md |
 | **M2** | E Pair Divergence Screen | Monthly · research | `state.current_positions`, `events.decision_log` | `events.decision_log` via `ops.sp_log_decision` (`entry_type='research-screen'`, screen='pair-divergence' — Operating_Protocols.md §19, 2026-07-19) | Monthly_E_Pairs.md |
 | **M3** | D Position Deep-Dive | Monthly · research | `state.current_positions`, `events.decision_log` | — | Monthly_D_Position_Deep_Dive.md |
 | **M4** | Monthly Action Conversion | Monthly · regular | M1b/M2/M3 `.md`, `state.current_positions`, `state.current_regime`, `perf.kill_flags`/`perf.strategy_daily` (§H gate/kill), `strategy/08_pre_mortems.md` (§I owner-assigned check walk, 2026-09-01) | `events.regime_events`, `events.decision_log`, `events.queue_events`; Watchlist.md | — |
 | **M5** | Deployed-TWR & Macro Forecast | Monthly · regular | `perf.strategy_daily`, `perf.kill_flags`, `state.macro_fred_latest` (FRED), prior `analytics.deployed_twr_forecast` | `analytics.deployed_twr_forecast`; `events.decision_log` (outcome) | — |
+| **M1R** | Out-of-cycle Regime Re-score | Queue-driven · regular | `events.queue_events` / `state.open_queue_detail` (`PENDING_REGIME_REFRESH`), prior `events.regime_events` (`FUNDAMENTAL_AXIS`), `state.signal_marks_curated` (`^VIX` and `BZUSD` only), `events.macro_series`/`events.macro_fred`, `state.market_calendar` | `events.regime_events` (`FUNDAMENTAL_AXIS`, out-of-cycle snapshot), `events.queue_events` (terminal `complete` on the drained item), `ops.alerts` (resolve of the `rerisking_limb_fired` raise) | — |
 | **AR_att** | Adversarial Review Attacker | Daily¹ · regular | review queue (`state.open_queue`/`events.queue_events`, `PENDING_REVIEW`); artifact | `events.adversarial_reviews` (attacker) | — |
 | **AR_orc** | Adversarial Review Orchestrator | Daily¹ · regular | `state.adversarial_reviews_current` (exact attacker row); artifact; on an m2m-TERMINATE verdict adds `state.strategy_probe_funding_gap`, `state.strategy_roster` | `events.adversarial_reviews` (orchestrator); `events.regime_events` (binding activation); `events.decision_log` (incl. `entry_type='capital-allocation'` on a termination, 2026-07-19 — `AI_DECISION_REDESIGN.md` §3 Redesign A); `events.cash_flows` (newcomer floor fill / capital-allocation split) | — |
 | **Q1** | Regime Retrospective | Quarterly · research | `events.regime_events`, `events.decision_log` | `state.strategy_candidates`, `events.decision_log` (`entry_type='strategy-retirement-signal'`) | Quarterly_Regime.md |
@@ -298,7 +299,7 @@ FROM `stock-trading-498512.state.staging_halt_disposition`;
   fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an
   `events.queue_events` row or an `ops.alerts` info row naming the owning routine or surface — and move on."*
   That addendum is the binding rule; it lives in the trigger prompt (`scripts/routine_backup.py` `SCOPE_ADDENDUM`,
-  mirrored onto all 32 fleet triggers and CI-enforced by that script's `check` (2)), which means it is NOT in this
+  mirrored onto all 33 fleet triggers and CI-enforced by that script's `check` (2)), which means it is NOT in this
   corpus and specifies only *record it*. This bullet is the missing half — the part a routine can actually read
   while it works, restated here because a rule that reaches a routine only through its prompt preamble, and never
   through the plan it executes from, gets honored inconsistently. Measured 2026-08-28: it was.
@@ -1412,7 +1413,7 @@ Concretely, every run:
   Empty (the steady state) → no-op, nothing to log. Non-empty:
   - `control_enabled = FALSE` (the `ops.capital_control` kill-switch) → log a one-line `events.decision_log`
     note recording what WOULD have moved, and move nothing.
-  - **`blocked_no_recipient = TRUE`** (`bigquery/215`; capital to sweep, but EVERY capital-enabled
+  - **`blocked_no_recipient = TRUE` on a `SWEEP` row** (`bigquery/215`; capital to sweep, but EVERY capital-enabled
     strategy is itself nomadic, so there is nowhere legal to put it) → move nothing and `CALL
     ops.sp_raise_alert_once('warning','D2a','regime_sweep_blocked', <the EXACT STABLE message below>,
     <JSON payload>)`. **PIN THE MESSAGE — it is `sp_raise_alert_once`'s dedup key, so any varying value
@@ -1431,6 +1432,28 @@ Concretely, every run:
     the recipient set; `capital_enabled AND NOT nomadic` is load-bearing (`bigquery/168` FIX 7, and
     `sweep_recipient_view_drift` records what happened the last time the set was taken from elsewhere).
     The correct response is an owner decision about the roster.
+  - **`blocked_no_recipient = TRUE` on a `RESTORE` row** (`bigquery/223`, which supersedes `bigquery/215` for this
+    view; a debtor strategy is capital-enabled again and owed a restore, but the eligible donor set cannot fund
+    even the de-minimis floor — `payable = 0` — so there is nothing to move) → move nothing and `CALL
+    ops.sp_raise_alert_once('warning','D2a','regime_restore_blocked', <the EXACT STABLE message below>, <JSON
+    payload>)`. **ITS OWN CATEGORY AND ITS OWN MESSAGE — never reuse the sweep pair above.** `sp_raise_alert_once`
+    dedups on `(category, message)` while unresolved, so a restore raised under the sweep category and the
+    sweep-worded message would be SILENTLY SWALLOWED by an already-open sweep alert — the restore would never
+    reach the board at all, and the sweep message ("a capital-disabled strategy holds sweepable idle cash") is
+    factually wrong about a restore besides. **PIN THE MESSAGE**, same dedup-key rule as the sweep bullet above;
+    use verbatim, with no interpolation: `'Regime restore blocked: a debtor strategy is capital-enabled again and
+    owed a restore, but the eligible donor set cannot fund the de-minimis floor, so nothing moved. Strategies and
+    amounts in payload.'` The varying figures — `strategy`, `outstanding_debt`, the donor set and its capacity,
+    and the row's own `blocked_reason` (`'no_eligible_recipient'` when the debtor is the only eligible recipient
+    or there is none at all, `'no_donor_capacity'` when eligible recipients exist but hold no available funds) —
+    go in the PAYLOAD, never the message. Carry `blocked_reason`: it is the one field that says WHICH of the two
+    configurations blocked the restore, and the pinned message deliberately cannot, so without it the payload
+    leaves the reader to re-derive it from the donor set by hand. Same rationale as its sweep sibling: `bigquery/223` emits this row
+    precisely so a blocked restore is distinguishable from the healthy empty-view steady state, so do NOT treat
+    it as a no-op. The gap it closes (found 2026-09-05): `bigquery/215`'s guard was `NOT EXISTS (SELECT 1 FROM
+    enabled_recipients)`, which misses the case where the only capital-enabled non-nomadic strategy IS the debtor
+    — the donor CTE excludes self, `payable` computes 0, the restore row is dropped by the `>= LEAST(25,
+    outstanding_debt)` floor, and nothing surfaces anywhere.
   - SWEEP rows (a capital-disabled strategy with `available_funds ≥ $25`): **THE RECIPIENT SET IS THE
     `counterparty_strategy` VALUES `state.regime_capital_sync_pending` ITSELF RETURNS — that view is the
     sole authority on recipient ELIGIBILITY (`bigquery/168` FIX 7: `capital_enabled AND NOT nomadic`).
@@ -1510,6 +1533,61 @@ Concretely, every run:
     the same "never sweep cash a pending buy needs" rule §13 applies to the park sweep). A ≥$25 de-minimis
     movement floor applies (same figure as the regime sweep); below it the balance simply waits.
   - ONE MOVEMENT PER READ, same discipline as REGIME-CAPITAL SYNC above.
+- RE-RISKING LIMB EVALUATION (owner directive 2026-09-05 — shock-override fix package; canonical rails Strategy.md
+  § "Pre-mortem: Regime router" → §6 Misclassification scenarios, scenario 3 → the **Re-risking limb** (Rev 46,
+  dwell clock corrected Rev 48); schema
+  `bigquery/224_rerisking_limb_status.sql`). **MECHANICAL, no AI call** — D2a carries no analysis by design, so this
+  substep reads one view and may write ONE queue row: it never scores a regime, never reads roster membership or
+  activation intent, and never moves capital. Runs after the two capital substeps above, last in Step 0; its
+  position relative to them is not load-bearing precisely because it moves nothing.
+  `SELECT * FROM state.rerisking_limb_status`. No row with `sql_limbs_fired = TRUE` (the steady state) → no-op,
+  nothing to log. One or more rows with `sql_limbs_fired = TRUE`:
+  - **DEDUP GATE FIRST — it is the whole anti-churn rail, and it is checked BEFORE anything is written.** Write
+    nothing if EITHER (a) a `regime-refresh` item is already open — `SELECT item_key FROM
+    state.open_queue_detail WHERE queue = 'PENDING_REGIME_REFRESH' AND item_type = 'regime-refresh'`
+    returns any row — OR (b) a `regime-refresh` item reached `complete` within the last **5 TRADING days**
+    (`state.market_calendar`, trading days, not calendar days) — `SELECT item_key FROM events.queue_events WHERE
+    queue = 'PENDING_REGIME_REFRESH' AND item_type = 'regime-refresh' AND UPPER(status) = 'COMPLETE' AND event_ts
+    >= TIMESTAMP((SELECT MIN(cal_date) FROM (SELECT cal_date FROM state.market_calendar WHERE is_trading_day AND
+    cal_date <= CURRENT_DATE('America/Denver') ORDER BY cal_date DESC LIMIT 5)), 'America/Denver')` returns any
+    row. **(b) reads the RAW event table on purpose:** `state.open_queue_detail` excludes terminal-status rows by
+    construction, so a completed item is invisible there and a literal reading of (b) against that view would find
+    nothing and re-queue — the exact failure (b) exists to prevent. The `event_ts` bound is pinned to
+    America/Denver because `event_ts` is stored UTC and a bare `DATE(event_ts)` would compare on the wrong day.
+    Either way → no-op, and name the suppressing `item_key` and which leg suppressed it in this
+    run's `<note>`. Without (b) the limb re-queues every evening for as long as the legs stay satisfied, which is
+    the same permanently-red-advisory failure the sweep bullet above records; without (a) two open items race for
+    one drain. **A re-queue every 5 trading days is the ACCEPTED steady state, not a defect a later audit should
+    "fix":** while the axis still reads `acute` with a retraced price leg, a periodic re-check of a proposition
+    whose inputs move daily is exactly what the limb is for, and the moment the axis leaves `acute` the limb goes
+    inert by `state.rerisking_limb_status`'s acute-state conjunct — so the cadence is bounded by the axis itself,
+    not by a counter that has to be tended.
+  - Otherwise write the item: `INSERT INTO events.queue_events` with `queue =
+    'PENDING_REGIME_REFRESH'`, `item_key = 'regime-refresh-YYYYMMDD'` (today, America/Denver — one
+    item per day at most, so the key is its own idempotency guard), `item_type = 'regime-refresh'`,
+    `status = 'pending'`, `due_date = <today>`,
+    `conservative_default = 'no re-score; the standing monthly FUNDAMENTAL_AXIS snapshot remains in force'`, and
+    `payload` carrying `resolving_venue = 'M1R'` plus the fired legs as booleans. The lane is registered
+    (`allowed_map` in whichever `bigquery/*.sql` currently defines `state.queue_venue_claim_unwired`, plus
+    `ops/handoff_contracts.yaml` `queue_lanes`); do NOT write this row into a lane that is not registered in
+    BOTH, or D3's VENUE-CLAIM HONORING CHECK reports it unwired on the very first firing.
+  - **THE ITEM TEXT IS STRATEGY-BLIND — name the condition class, never a strategy.** M1R drains this row and M1R
+    is strategy-blind by construction (it re-runs M1a's OUTPUT 2), so the row it reads must not leak roster
+    identity: leave the `strategy` column NULL, and keep strategy codes, dwell counts per strategy and activation
+    states out of `note` and `payload` alike. The item says only that the measurable legs of the shock-overlay
+    de-escalation test are satisfied and that the standing `FUNDAMENTAL_AXIS` snapshot may therefore be stale —
+    e.g. `note = 'Dwell, technical and Brent price legs of the shock-overlay de-escalation test are all satisfied;
+    the standing monthly FUNDAMENTAL_AXIS snapshot may be stale. Re-score the 5 axes out of cycle.'` The
+    per-strategy detail belongs in D2a's own `<note>` and in the alert payload below, neither of which M1R reads.
+  - Then `CALL ops.sp_raise_alert_once('warning','D2a','rerisking_limb_fired', <the EXACT STABLE message below>,
+    <JSON payload>)`, raised ONLY on a run that actually wrote the item (a dedup-suppressed run raises nothing —
+    the suppressing item's own alert is already open or already resolved). **PIN THE MESSAGE**, same dedup-key
+    rule as the two blocked-row bullets above; use verbatim, with no interpolation: `'Re-risking limb fired: the
+    dwell, technical and Brent price legs of the shock-overlay de-escalation test are all satisfied, and an
+    out-of-cycle regime re-score has been queued. Strategies, dwell counts and Brent readings in payload.'` The
+    varying figures go in the PAYLOAD. **Its own category, distinct from both blocked-row categories above**, and
+    it has a reachable closure path: M1R resolves it by `alert_id` when it drains the item, so this alert cannot
+    latch on the board after the condition is serviced.
 
 STEP 0b — ACCOUNT SNAPSHOT (run after Step 0, while connector account data is fresh; one INSERT, best-effort).
 Persist the account-level NAV/cash/TWR read in Step 0 so the weekly self-email + account-NAV history have it —

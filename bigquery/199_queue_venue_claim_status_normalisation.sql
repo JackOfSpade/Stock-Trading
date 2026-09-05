@@ -74,6 +74,16 @@
 --
 -- Apply after bigquery/180_probe_register_queue_lane.sql. Defines exactly one view; creates,
 -- redefines or drops nothing else.
+--
+-- SUPERSEDED LIVE by bigquery/225_regime_refresh_queue_lane.sql (2026-09-05) — that file is the
+-- CURRENT canonical definition of state.queue_venue_claim_unwired (chain: 160 -> 180 -> 199 -> 225).
+-- Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE
+-- statement live in isolation: 225 carries this file's terminal-status normalisation and both finding
+-- classes forward byte-identical and adds ONE allowed_map lane, PENDING_REGIME_REFRESH -> ['M1R'],
+-- for the re-risking limb's out-of-cycle regime-refresh item (D2a enqueues, M1R drains). Re-applying
+-- this definition silently drops that lane, and a lane absent from allowed_map is treated as "no
+-- legitimate venue claim is possible on this lane at all" — so the first correct
+-- resolving_venue='M1R' row would be reported as an unwired claim.
 -- ============================================================================================
 
 CREATE OR REPLACE VIEW `stock-trading-498512.state.queue_venue_claim_unwired` AS

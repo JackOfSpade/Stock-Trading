@@ -151,11 +151,14 @@ PROJECT = "stock-trading-498512"
 
 # BUG FIX (finding allowed-map-source-points-at-superseded-file). This used to be a hand-pinned
 # `os.path.join(BIGQUERY_DIR, "180_probe_register_queue_lane.sql")` -- but bigquery/180's own
-# header says it is "SUPERSEDED LIVE by bigquery/199_queue_venue_claim_status_normalisation.sql
-# (2026-08-25, D3)". The two files' allowed_map CTE bodies are byte-identical TODAY (199 carries
-# 180's PENDING_ROSTER -> ['SL5'] row forward unchanged), so pointing here at 180 was behavior-
-# preserving -- but latently wrong: the next edit to allowed_map anywhere would leave CHECK A
-# silently validating a STALE map instead of the live one. Resolved at runtime instead of
+# header already declared itself superseded, by bigquery/199_queue_venue_claim_status_normalisation.sql
+# (2026-08-25, D3); it now names bigquery/225_regime_refresh_queue_lane.sql, the current canonical
+# definition. At the time of this fix the two files' allowed_map CTE bodies were byte-identical (199
+# carried 180's PENDING_ROSTER -> ['SL5'] row forward unchanged), so pointing here at 180 was
+# behavior-preserving -- but latently wrong, and the latency has since expired: bigquery/225's map
+# carries a fifth lane (PENDING_REGIME_REFRESH -> ['M1R'], 2026-09-05) that 180's and 199's do not,
+# so a hand-pin at either would now leave CHECK A silently validating a STALE map instead of the
+# live one. Resolved at runtime instead of
 # hand-pinned a second time, via the SAME "highest-numbered file that defines the object wins"
 # rule lib.sql_files.resolve_canonical already applies for every other canonical-file lookup in
 # this codebase (check_sq_version_registry.py, check_cadence_consistency.py) -- one mechanism,

@@ -196,6 +196,14 @@
       "profile": "fleet",
       "trigger_id": "trig_01B9Dw1E8DqucUVWTmafstcR"
     },
+    "M1R": {
+      "cron_expression": "0 13 * * 0,1,2,3,4",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform M1R — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "name": "M1R — regular routine",
+      "profile": "fleet",
+      "trigger_id": "trig_01R6YpUzw3pk7UEeWB5Bdtvq"
+    },
     "M1a": {
       "cron_expression": "0 11 1 * *",
       "enabled": true,

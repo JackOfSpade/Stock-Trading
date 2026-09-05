@@ -14,10 +14,14 @@
 # ============================================================================================
 # CHECK A -- queue_lanes: drainer routine(s) must state their own terminal-status close.
 # ============================================================================================
-# Ground truth: the `allowed_map` inside bigquery/180_probe_register_queue_lane.sql
-# (state.queue_venue_claim_unwired) -- scripts/check_handoff_contracts.py asserts this section's
-# queue->drainers map stays byte-identical (as a set) to that SQL file's allowed_map, so this YAML
-# cannot silently drift from the live venue-claim truth. `drainers` is a LIST because PENDING_REVIEW
+# Ground truth: the `allowed_map` inside whichever bigquery/*.sql file currently defines
+# state.queue_venue_claim_unwired -- scripts/check_handoff_contracts.py resolves that file at runtime
+# (resolve_allowed_map_source(): the highest-numbered file that CREATEs the view; bigquery/225 as of
+# 2026-09-05, after 160 -> 180 -> 199) and asserts this section's queue->drainers map stays
+# byte-identical (as a set) to that file's allowed_map, so this YAML cannot silently drift from the
+# live venue-claim truth. The filename is deliberately NOT pinned here: this comment named
+# bigquery/180 for a week after bigquery/199 superseded it, which is the drift the runtime
+# resolution exists to prevent. `drainers` is a LIST because PENDING_REVIEW
 # has two legitimate venues (AR_att, AR_orc) even though only one of them (AR_orc) performs the
 # TERMINAL close in the current design -- CHECK A therefore only requires that AT LEAST ONE listed
 # drainer's own section states the close (see the script docstring for why "all of them must" would
@@ -58,6 +62,19 @@ queue_lanes:
       ITEM" bullet (pinned 2026-08-19) is the fix for defect instance 2 in the founding incident set --
       the arsenal's first real-capital registration would otherwise have left the item open forever,
       relying only on the change_key idempotency guard as an accidental backstop.
+
+  - queue: PENDING_REGIME_REFRESH
+    terminal_status: complete
+    drainers: [M1R]
+    why: >
+      D2a -> M1R out-of-cycle regime-refresh handoff (owner-directed shock-override package,
+      2026-09-05). D2a's re-risking-limb substep enqueues one `regime-refresh-YYYYMMDD` item when
+      state.rerisking_limb_status (bigquery/224) reports a fired limb; M1R (Out-of-cycle Regime
+      Re-score) is the lane's only drainer and closes it at status = complete after performing M1a's
+      blind five-axis re-score. Registered in allowed_map by bigquery/225 in the same change that
+      creates the lane -- a queue absent from that map is treated as "no legitimate venue claim is
+      possible on this lane at all", so an item correctly naming M1R as its resolving venue would be
+      reported as an unwired claim on the first one ever written.
 
 # Queues that exist in events.queue_events but are DELIBERATELY not drain-to-completion handoffs --
 # recorded explicitly (never silently omitted) per bigquery/180's own allowed_map comment: "A queue

@@ -1,9 +1,12 @@
 -- Parallel-run dbt port of bigquery/148_audit_2026_08_08_fixes.sql:state.stalled_runs — canonical source is that file until
--- owner cutover. Added 2026-09-01 (dbt view-coverage burn-down): this view had NO dbt presence,
--- so scripts/check_dbt_view_coverage.py reported it uncovered and it carried no port at all.
--- Generated MECHANICALLY by scripts/gen_dbt_port.py from the canonical body — the only edit is
--- ref()/source() substitution for fully-qualified names — and proved token-identical to that body
--- by scripts/verify_dbt_port.py. Do not hand-edit: re-generate, then re-verify.
+-- owner cutover. Generated MECHANICALLY by scripts/gen_dbt_port.py from that canonical body — the
+-- only edit is ref()/source() substitution for fully-qualified names — and proved token-identical
+-- to it by scripts/verify_dbt_port.py. Do not hand-edit the BODY: re-generate, then re-verify.
+-- Regenerating REPLACES this header, so any hand-written provenance above the body must be put
+-- back by the person who regenerates it.
+-- Added 2026-09-01 (dbt view-coverage burn-down): this view had NO dbt presence, so
+-- scripts/check_dbt_view_coverage.py reported it uncovered and it carried no port at all.
+-- Re-generated 2026-09-05 when routine M1R joined the hand-kept `cls` threshold table.
 WITH cls AS (
   -- fast tier (~6h): daily, adversarial, and action-conversion routines (same-day work).
   -- slow tier (~18h): deep-research weeklies/monthlies/quarterlies/annuals (longer legitimate runtime).
@@ -24,6 +27,11 @@ WITH cls AS (
     -- SISA fast tier (rev 2026-07-10): SL3 daily monitor, SL4 monthly scanner, SL5 registrar — all
     -- same-day work (no multi-hour deep research), so a >6h 'started' with no terminal row is stalled.
     STRUCT('SL3', 6), STRUCT('SL4', 6), STRUCT('SL5', 6),
+    -- M1R added (2026-09-05, shock-override fix package): the queue-driven out-of-cycle regime re-score.
+    -- Fast tier even though the plan files it in the MONTHLY group — it is a short mechanical drain of one
+    -- regime-refresh queue item (gate, one 5-axis write, close the item), not the deep research M1a does,
+    -- so the 18h research tier would let a hung run sit most of a day before anything said so.
+    STRUCT('M1R', 6),
     STRUCT('W1', 18), STRUCT('W2', 18), STRUCT('W3', 18), STRUCT('W5', 18),
     STRUCT('M1a', 18), STRUCT('M1b', 18), STRUCT('M2', 18), STRUCT('M3', 18), STRUCT('M5', 18),
     STRUCT('Q1', 18), STRUCT('Q2', 18), STRUCT('Q3', 18),

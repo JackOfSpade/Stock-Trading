@@ -1939,7 +1939,7 @@ def test_evening_slot_membership_correctly_classified_baseline_is_clean(monkeypa
 
 # ---- check M membership cross-check, UNPLACEABLE branch (2026-09-04, 'cadence-evening-candidates-
 # need-daily-time-local'). The candidate derivation reads expected_trigger.time_local, an OPTIONAL
-# field 15 of the 32 live routines omit; a DAILY-tier routine that omits it does not become
+# field 15 of the 33 live routines omit; a DAILY-tier routine that omits it does not become
 # UNCLASSIFIED or STALE, it silently leaves the candidate set and check M never looks at it at all.
 # Note these two use the FULL routine shape (monitor_class + expected_trigger), not
 # _cad_with_time_local, precisely because the new branch is scoped by monitor_class -- which is also
@@ -3270,20 +3270,28 @@ def test_parse_stalled_runs_cls_ids_resolves_the_highest_numbered_definition(tmp
 # refactor that silently stops parsing it (regex rot, a reformat, a renamed anchor) must fail loudly
 # rather than pass vacuously. Test 3 is the one that matters most: it asserts the DISARMED branch.
 
-def _cadQ(sl2_dow="1,2,3,4,5"):
-    def r(rid, local, dow):
-        return {"id": rid, "expected_trigger": {"time_local": local, "cron_utc": f"0 0 * * {dow}"}}
+def _cadQ(sl2_dow="1,2,3,4,5", m1r_dow="0,1,2,3,4"):
+    # `hour` distinguishes the two UTC day-set cohorts check Q derives (see DENVER_SUN_THU_UTC_DOW_*
+    # in the checker): the four EVENING owners sit before 06:00 UTC and belong to the PREVIOUS Denver
+    # day (UTC Mon-Fri), while M1R's 13:00 UTC morning slot sits on the SAME Denver day (UTC Sun-Thu).
+    # Both spell Denver Sun-Thu; hardcoding one literal for both cohorts is the bug this parameter
+    # exists to keep the suite honest about.
+    def r(rid, local, dow, hour=0):
+        return {"id": rid,
+                "expected_trigger": {"time_local": local, "cron_utc": f"0 {hour} * * {dow}"}}
     return {
         "AR_att": r("AR_att", "18:00", "1,2,3,4,5"),
         "AR_orc": r("AR_orc", "18:35", "1,2,3,4,5"),
         "D3":     r("D3",     "18:45", "1,2,3,4,5"),
+        "M1R":    r("M1R",    "07:00", m1r_dow, hour=13),
         "SL2":    r("SL2",    "19:05", sl2_dow),
         "SL5":    r("SL5",    "19:25", "1,2,3,4,5"),
     }
 
 
 _Q_TABLE = ("queue_item_stale\n\n**CLAUSE (b) IS THE ENTIRE FIX** ... "
-            "**AR_att 18:00 · AR_orc 18:35 · D3 18:45 · SL2 19:05 · SL5 19:25** (read the file).\n\n")
+            "**M1R 07:00 · AR_att 18:00 · AR_orc 18:35 · D3 18:45 · SL2 19:05 · SL5 19:25** "
+            "(read the file).\n\n")
 
 
 def _writeQ(tmp_path, monkeypatch, text):
@@ -3328,6 +3336,21 @@ def test_check_q_missing_owner_from_table_is_caught(tmp_path, monkeypatch):
     assert any("omits SL5" in e for e in errs), errs
 
 
+def test_check_q_morning_owner_with_the_evening_day_set_is_caught(tmp_path, monkeypatch):
+    """The 2026-09-05 generalization: 'fires Sun-Thu' is ONE premise with TWO correct UTC spellings.
+
+    Before M1R the day-of-week loop hardcoded '1,2,3,4,5', which is right only for a slot before
+    06:00 UTC. A morning owner carrying that literal really has LOST Sunday and gained Friday in
+    Denver terms, so it must still fail -- the fix widened the check to derive the expected day-set
+    from the cron's UTC hour, not to accept both literals for everyone."""
+    _writeQ(tmp_path, monkeypatch, _Q_TABLE)
+    errs = cc.queue_owner_slot_mirror_errors(_cadQ(m1r_dow="1,2,3,4,5"))
+    assert any("M1R cron_utc day-of-week is '1,2,3,4,5'" in e and "'0,1,2,3,4'" in e
+               for e in errs), errs
+    # ...and the correct morning spelling is accepted, so the widening is real, not vacuous.
+    assert cc.queue_owner_slot_mirror_errors(_cadQ()) == []
+
+
 def test_check_q_duplicate_id_in_table_is_caught(tmp_path, monkeypatch):
     # THE regression test for 'queue-slot-table-duplicate-id-uncaught' (2026-09-02): a routine id
     # restated TWICE in the slot table must be caught -- even when the SECOND (kept-by-dict()) value
@@ -3336,8 +3359,8 @@ def test_check_q_duplicate_id_in_table_is_caught(tmp_path, monkeypatch):
     # sees a clean match and reports NOTHING even though the paragraph restates SL2 twice -- this
     # fixture reproduces exactly that "stale first occurrence, correct second occurrence" shape.
     dup_table = _Q_TABLE.replace(
-        "SL5 19:25** (read the file).",
-        "SL5 19:25 · SL2 19:05** (read the file).")
+        "SL5 19:25** ",
+        "SL5 19:25 · SL2 19:05** ")
     _writeQ(tmp_path, monkeypatch, dup_table)
     errs = cc.queue_owner_slot_mirror_errors(_cadQ())
     assert any("names 'SL2' more than once" in e and "19:05, 19:05" in e for e in errs), errs

@@ -1,16 +1,20 @@
 -- Parallel-run dbt port of bigquery/132_queue_driven_silence_watch.sql:state.queue_driven_silence_watch — canonical source is that file until
--- owner cutover. Added 2026-09-01 (dbt view-coverage burn-down): this view had NO dbt presence,
--- so scripts/check_dbt_view_coverage.py reported it uncovered and it carried no port at all.
--- Generated MECHANICALLY by scripts/gen_dbt_port.py from the canonical body — the only edit is
--- ref()/source() substitution for fully-qualified names — and proved token-identical to that body
--- by scripts/verify_dbt_port.py. Do not hand-edit: re-generate, then re-verify.
+-- owner cutover. Generated MECHANICALLY by scripts/gen_dbt_port.py from that canonical body — the
+-- only edit is ref()/source() substitution for fully-qualified names — and proved token-identical
+-- to it by scripts/verify_dbt_port.py. Do not hand-edit the BODY: re-generate, then re-verify.
+-- Regenerating REPLACES this header, so any hand-written provenance above the body must be put
+-- back by the person who regenerates it.
+-- Added 2026-09-01 (dbt view-coverage burn-down): this view had NO dbt presence, so
+-- scripts/check_dbt_view_coverage.py reported it uncovered and it carried no port at all.
+-- Re-generated 2026-09-05 when routine M1R joined the generated routine list.
 WITH routines AS (
   SELECT * FROM UNNEST([
 -- BEGIN GENERATED ROUTINE LIST (scripts/gen_routine_lists.py --write; do not hand-edit)
     STRUCT('AR_att' AS routine, 'queue_driven' AS monitor_class),
     STRUCT('AR_orc' AS routine, 'queue_driven' AS monitor_class),
     STRUCT('SL2' AS routine, 'queue_driven' AS monitor_class),
-    STRUCT('SL5' AS routine, 'queue_driven' AS monitor_class)
+    STRUCT('SL5' AS routine, 'queue_driven' AS monitor_class),
+    STRUCT('M1R' AS routine, 'queue_driven' AS monitor_class)
   -- END GENERATED ROUTINE LIST
   ])
 ),

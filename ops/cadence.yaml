@@ -231,7 +231,11 @@ routines:
     catchup_safe: false
     depends_on: []   # deliberately independent of D1 -- the book must reconcile even if D1 failed
     writes: [events.trade_fills, events.position_events, events.daily_marks, perf.strategy_daily,
-             ops.account_snapshot, events.signal_marks]
+             ops.account_snapshot, events.signal_marks, events.queue_events]
+             # events.queue_events added 2026-09-05: Step 0's RE-RISKING LIMB EVALUATION writes the
+             # PENDING_REGIME_REFRESH regime-refresh item M1R drains. Dataset.table entries are documentation
+             # only -- OPS0 STEP 4f consumes just the FILE-PATH entries as git pathspecs, and D2a
+             # deliberately declares none (it is one of the routines that lands no repo file).
     expected_trigger:
       recurrence: custom_cron
       cron_utc: "40 22 * * 0,1,2,3,4"
@@ -623,7 +627,7 @@ routines:
              # BUT THE FIX WAS WRONG, on a premise that is factually false. It claimed task_plan/SL2.md
              # is "the SL2-exclusive generated mirror". It is not exclusive at all: every task_plan/
              # slice regenerates whenever the ROUTINE INVENTORY table in Claude_Task_Plan.md changes,
-             # so all 34 move together on most routine commits, from any routine. MEASURED 2026-08-20
+             # so all 35 move together on most routine commits, from any routine. MEASURED 2026-08-20
              # over the fifteen 2-day windows ending 2026-08-06..2026-08-20, task_plan/SL2.md matched
              # 13 windows of which 10 contained NO SL2 commit whatsoever (77% masking); over 45 days
              # 79 commits touch it and only 3 are SL2's (96.2% foreign). Contrast Daily.md, genuinely
@@ -842,6 +846,40 @@ routines:
       recurrence: custom_cron
       cron_utc: "0 16 1 * *"
       enabled: true
+
+  # ---- MONTHLY REGIME — QUEUE-DRIVEN (out-of-cycle re-score, added 2026-09-05; fires only if a
+  # regime-refresh item is open) ----
+  - id: M1R
+    name: Out-of-cycle Regime Re-score
+    schedule: "Sun-Thu; if events.queue_events PENDING_REGIME_REFRESH regime-refresh is open"
+    monitor_class: queue_driven           # NOT calendar-predictable -> excluded from cadence_expected_today (like AR/SL2/SL5)
+    catchup_safe: true
+    depends_on: []
+    writes: [events.regime_events, events.queue_events]
+    expected_trigger:
+      recurrence: custom_cron
+      cron_utc: "0 13 * * 0,1,2,3,4"
+      time_local: "07:00"
+      enabled: true
+      # MORNING slot, unlike the other four queue-driven owners (all evening). 13:00 UTC renders
+      # 07:00 MDT, which is well below the 16:00 EVENING_SLOT_THRESHOLD, so check M's noon-clause
+      # membership guard does not bite and M1R needs no entry in EVENING_DAILY_GUARD_IDS /
+      # NOON_CLAUSE_EXEMPT_EVENING_IDS. It is also why this is the one row in D3's clause-(b) slot
+      # table whose fire time is unconditionally already elapsed when D3 runs at 18:45.
+      # Day-of-week is UTC Sun-Thu (0,1,2,3,4) rather than the evening owners' UTC Mon-Fri
+      # (1,2,3,4,5): a 13:00 UTC slot lands on the SAME Denver day, an 00:00-01:25 UTC slot on the
+      # PREVIOUS one. Both spell Denver Sun-Thu; check Q derives which is expected from the hour.
+    notes: >
+      Drains the PENDING_REGIME_REFRESH regime-refresh item D2a's RE-RISKING LIMB EVALUATION writes, by re-running
+      M1a's OUTPUT 2 (the strategy-blind 5-axis FUNDAMENTAL_AXIS score) with today's as_of_date, then closing
+      the item and resolving the rerisking_limb_fired alert by alert_id. Same blinding rules as M1a: no
+      roster/position/activation reads, no per-strategy mapping, no orders, no capital. It decides no
+      activation — D2's item 4 picks the new axis row up the same evening and queues the affected router
+      review(s); the activation write stays with the existing review machinery. catchup_safe: true because a
+      later run reproduces the same work (a pure re-score off dated series, no live-quote or order crafting) —
+      inert in practice, since queue_driven routines are outside the calendar catch-up nets entirely.
+      queue_driven: registers in bigquery/15 + ops/triggers.json + bigquery/105 + bigquery/132 +
+      state.stalled_runs only (NOT 12/24).
   - id: SL4
     name: Discretionary Retirement Proposer
     schedule: "monthly after M4"

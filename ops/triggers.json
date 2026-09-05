@@ -35,6 +35,10 @@
     "instruction": "Read Claude_Task_Plan.md. Perform D3 — regular routine.",
     "monitor_class": "daily_sun_thu"
   },
+  "M1R": {
+    "instruction": "Read Claude_Task_Plan.md. Perform M1R — regular routine.",
+    "monitor_class": "queue_driven"
+  },
   "M1a": {
     "instruction": "Read Claude_Task_Plan.md. Perform M1a — deep research.",
     "monitor_class": "monthly_ftd"
