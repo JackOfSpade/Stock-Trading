@@ -193,6 +193,21 @@ jobs:
         # the same rot for adversarial_reviews. Checks CANONICAL definitions only — a raw read in a
         # superseded, never-re-applied file is DR history, not a finding.
         run: python scripts/check_superseded_by_discipline.py
+      - name: alert-message stability (STRING_AGG feeding a sp_raise_alert_once message must be a TOTAL order)
+        # ops.sp_raise_alert_once dedups on EXACT (category, message) string equality and NOTHING else,
+        # so any message whose text can change while the CONDITION does not degenerates `_once` into a
+        # plain sp_raise_alert: a new unresolved row, separately emailed, on every run. bigquery/205 swept
+        # the "message embeds a moving VALUE" half of that class in 2026-08-31. This blocks the other half
+        # — a STRING_AGG whose ORDER BY is NARROWER than the fields the message prints, or absent entirely,
+        # so tied rows permute and the SAME set renders as a DIFFERENT string. Measured twice live before
+        # bigquery/227 fixed it (2026-07-24/25 and 2026-07-31 05:00/05:16: identical open finding sets,
+        # duplicate alert rows, duplicate emails). 205's sweep declared every other site "stable and left
+        # alone" and missed all four that 227 fixes, which is precisely why this is now machine-checked
+        # rather than hand-swept. Pure text parsing over the FINAL-EFFECTIVE definitions only (it imports
+        # check_live_sql_parity's own parser, so superseded DR-rebuild copies are structurally excluded and
+        # header prose quoting an offending snippet is unreachable) — no BigQuery, no network, no creds.
+        # Its allowlist is anti-rot: an entry that stops tripping FAILS the build telling you to delete it.
+        run: python scripts/check_alert_message_stability.py
       - name: session-config tool coverage (Claude_Task_Plan.md/ops/triggers.json mcp__ refs ⇄ .claude/settings.json allowlist — completeness-critic N-1)
         # An unattended scheduled routine calling an mcp__ tool absent from .claude/settings.json's
         # permissions.allow gets an unanswerable permission prompt and silently stalls that step (no

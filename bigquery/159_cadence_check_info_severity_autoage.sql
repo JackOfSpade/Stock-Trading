@@ -72,6 +72,16 @@
 -- so defeated that procedure's own exact-message dedup, re-alerting daily on a persisting
 -- condition. No predicate, threshold, severity or control flow differs. Kept here, unmodified,
 -- for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE live in isolation.
+-- SUPERSEDED (2026-09-06) by bigquery/227_alert_message_stability_ordering.sql, the current
+-- canonical definition of this procedure. 227 changes ORDER BY CLAUSES ONLY, on four
+-- sp_raise_alert_once messages (ci_finding, routine_stalled, process_constant_evidence_invalidated,
+-- constant_tuning_loop_heartbeat_missing) whose STRING_AGG ordering was NARROWER than the fields the
+-- message prints -- or absent outright -- so tied rows could permute and render the SAME condition as
+-- a DIFFERENT string, defeating that procedure's own exact-message dedup and re-alerting on an
+-- UNCHANGED condition (measured twice live: 2026-07-24/25 and 2026-07-31 05:00/05:16, identical open
+-- sets, duplicate rows and duplicate emails). No predicate, threshold, severity or control flow
+-- differs. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this
+-- CREATE live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';

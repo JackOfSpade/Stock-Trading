@@ -1,108 +1,131 @@
--- 149_cadence_check_script_version_autoage.sql (2026-08-08)
--- Project: stock-trading-498512. Fix a live bug: the `script_version_drift` WARNING alert
--- ops.sp_sq_cadence_check raises can NEVER auto-resolve, because the category is absent from BOTH
--- clearing mechanisms.
--- Apply after 10_observability.sql, 18_stack_review_fixes.sql,
--- 142_cadence_deadline_revert_and_evidence_drift.sql, 147_run_log_content_quality.sql.
+-- ============================================================================
+-- 227 — ALERT MESSAGE STABILITY II: a STRING_AGG whose ORDER BY is narrower
+--       than the fields it prints is just as message-unstable as an embedded
+--       counter, and it defeats `sp_raise_alert_once` the same way.
 --
--- APPLY TOGETHER with bigquery/63_scheduled_query_version_registry.sql's MERGE seed, which this change
--- bumps to cadence_check='v14' in the same commit -- or apply THIS procedure first. Applying only the
--- registry sets expected_version=v14 while a live v13 procedure keeps beating v13, and
--- state.scheduled_query_version_drift then raises a scheduled_query_version_drift warning every night
--- until the pair is reconciled. That partial-apply has bitten this project three times already
--- (embed_pending 2026-07-17/18; daily_staging_cap_check v4->v5, alert 0c2b631a; integrity_check v3
--- 2026-08-06) -- see bigquery/63's own version-history notes.
+-- WHY (2026-09-06 interactive triage of the ci_finding warning alert).
+-- bigquery/205_alert_message_stability.sql swept ~95 `sp_raise_alert_once` call sites
+-- for messages that embed a MOVING VALUE (a run date, a day counter, a row count, a
+-- dollar figure), fixed five, and recorded that "every other site is stable and was
+-- left alone". That sweep looked for values that change when the CONDITION changes.
+-- It did not look for the second way the same message can change while the condition
+-- does NOT: a `STRING_AGG(...) ORDER BY <key>` whose key does not uniquely identify
+-- the rows being aggregated. Tied rows have NO guaranteed relative order in BigQuery,
+-- so the identical open set can render as a DIFFERENT STRING on a later run.
 --
--- ===== WHY =====
--- `ops.sp_sq_cadence_check` raises a `script_version_drift` WARNING (state.script_version_drift, the
--- Apps Script drift detector -- bigquery/43_script_version_registry.sql) whenever a deployed .gs is
--- ahead of or behind the version this repo declares it should be. That condition is self-healing: it
--- reads the LATEST beat per script and clears the moment a fresh, matching beat lands, exactly like its
--- structurally-identical sibling `scheduled_query_version_drift` (state.scheduled_query_version_drift,
--- same self-bootstrapping shape, same bigquery/43-style latest-beat-vs-expected comparison). But the
--- open `ops.alerts` ROW for a `script_version_drift` finding never clears on its own, because the
--- category is missing from BOTH places that could close it:
---   1. `ops.alert_policy` has no row for `script_version_drift`, so `ops.sp_auto_resolve_alerts`'
---      mechanical per-category resolve rules skip it entirely (Rule 1/2/etc. never match).
---   2. This procedure's own #14 time-based auto-age block -- the UPDATE ops.alerts ... category IN
---      (...) block a few lines below the heartbeat CALL -- ages out several other self-healing WARNING
---      classes after 7 days specifically so a condition that already healed does not sit open forever
---      inflating `state.system_health.open_alerts`. `scheduled_query_version_drift` is IN that list
---      (added bigquery/111, 2026-07-27, for exactly this reason). `script_version_drift` is not, despite
---      being the SAME self-healing shape one check-block above it in this same procedure.
--- NOT hypothetical: a `script_version_drift` alert sat open in `ops.alerts` from 2026-08-07 until it was
--- closed by hand on 2026-08-08, with the underlying condition already clear the whole time.
+-- `ops.sp_raise_alert_once` (bigquery/10_observability.sql) dedups with exactly:
+--     IF NOT EXISTS (SELECT 1 FROM ops.alerts
+--                    WHERE NOT resolved AND category = in_category AND message = in_message)
+-- EXACT STRING EQUALITY on `message`, and nothing else — the payload argument is never
+-- compared. So a permuted aggregate cannot match its own prior open row: `_once`
+-- silently degenerates into `sp_raise_alert`, and an UNCHANGED condition raises a NEW
+-- unresolved row with notified_ts NULL, which is then separately emailed. That is the
+-- same alarm fatigue 205 was written to stop, arriving through a different door.
 --
--- FIX, narrowly scoped: add `'script_version_drift'` to the #14 auto-age category IN-list, immediately
--- after `'scheduled_query_version_drift'`, so a stale `script_version_drift` row ages out the same way
--- its sibling already does. No new ops.alert_policy row is added -- the 7-day auto-age IN-list is the
--- established mechanism for this exact self-healing-warning-with-no-policy-row shape (mirrors
--- `scheduled_query_version_drift`, `scheduled_query_stale`, `ci_findings_bridge_stale`,
--- `run_log_note_missing`, all documented inline at the IN-list itself). A STILL-drifted script is simply
--- re-raised by the script_version_drift check in this same procedure, so a genuinely undeployed .gs
--- cannot be aged away silently.
+-- THIS IS MEASURED, NOT THEORISED. Two live instances, both on the `ci_finding` site,
+-- recovered from ops.alerts (sets compared by sorting the message's finding-key list):
+--   * 2026-07-24 05:16 and 2026-07-25 05:16 — IDENTICAL 5-element open set, different
+--     order  ->  two unresolved alert rows, two emails.
+--   * 2026-07-31 05:00 and 2026-07-31 05:16 — IDENTICAL 9-element open set, different
+--     order  ->  two unresolved alert rows, two emails, SIXTEEN MINUTES APART.
+-- At least 2 of the 16 ci_finding alerts ever raised carried no new information. The
+-- ops.alert_policy note for this category already tells a triage session that the
+-- message "is a point-in-time snapshot that never re-renders"; it did not know that the
+-- snapshot could also re-render itself into a duplicate.
 --
--- ===== STATEMENT 1: ops.sp_sq_cadence_check (SQ_VERSION v14; supersedes bigquery/147) =====
--- Copied verbatim from bigquery/147_run_log_content_quality.sql's ops.sp_sq_cadence_check, per the
--- supersede-only convention in bigquery/README.md, with EXACTLY two changes: the heartbeat version
--- literal v13 -> v14, and 'script_version_drift' inserted into the #14 auto-age category IN-list
--- immediately after 'scheduled_query_version_drift'. A comment-stripped code-line diff proving only
--- these two lines differ from bigquery/147's statement was produced during construction of this file
--- and is reported alongside it. Every other check in the body is carried forward unchanged.
+-- THE RULE APPLIED HERE (checkable without a uniqueness proof): for a STRING_AGG that
+-- builds a DEDUPED alert message, the ORDER BY must be a TOTAL order over the rows —
+-- either the ordering key is the whole aggregated expression (ties are then identical
+-- strings, so any tie order prints the same), or it uniquely keys the source relation.
+-- Ordering by a PREFIX of the fields the message prints is the defect.
 --
--- SUPERSEDED LIVE by bigquery/153_account_snapshot_gap_watch.sql — current single
--- source of truth for ops.sp_sq_cadence_check (supersedes this file, via the intermediate
--- bigquery/150). 150 bumps the heartbeat to v15
--- and adds 'connector' + 'strategy_revised' to the #14 auto-age category list (the same
--- self-healing-warning-with-no-policy-row bug class this file's own script_version_drift fix closed,
--- two more instances); 153 bumps the heartbeat to v17 and adds the account_snapshot_gap record-only
--- WARNING block (+ 'account_snapshot_gap' to the #14 auto-age list); both are otherwise a verbatim copy
--- of the body below. Kept here, unmodified, for
--- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
-
--- SUPERSEDED (2026-08-19) by bigquery/186_monitor_promoted_autoage.sql (SQ_VERSION v21) -- the
--- CURRENT single source of truth for ops.sp_sq_cadence_check. 186 adds 'monitor_promoted' to the #14
--- auto-age allowlist: an info-severity COMPLETED-ACTION record (a monitor tier promotion) that is
--- filtered out of both notification relays before reaching notified_ts AND has no ops.alert_policy
--- row, so no automated path could ever close one -- all three prior rows were closed by hand, days
--- late. The full chain is 75 -> 111 -> 120 -> 128 -> 132 -> 142 -> 147 -> 149 -> 150 -> 153 -> 157
--- -> 159 -> 172 -> 186. DO NOT re-apply this file's CREATE statement live in isolation. The marker
--- immediately below is the PRIOR one, kept intact as the chain's history:
--- SUPERSEDED (2026-08-14) by bigquery/172_run_log_unpaired_terminal.sql (SQ_VERSION v20) -- the
--- current single source of truth for ops.sp_sq_cadence_check. 172 bumps the cadence_check wrapper to
--- v20 and adds a run_log_start_row_missing record-only WARNING over the new
--- state.run_log_unpaired_terminal view (a terminal ops.run_log row with no paired started row), plus
--- that category in the #14 auto-age allowlist. Its predecessor was bigquery/159_cadence_check_info_
--- severity_autoage.sql (SQ_VERSION v19), which is NO LONGER current. Its predecessor in turn was
--- bigquery/157_account_snapshot_gap_recoverable.sql (SQ_VERSION v18), which is NO LONGER current.
--- 157 retracts a FALSEHOOD carried by every
--- version from v17 down: the account_snapshot_gap alert message claimed the gap days could never be
--- backfilled because IBKR exposes no historical-NAV endpoint. It does -- get_pa_performance_all_periods
--- returns parallel dates[]/nav[] arrays, and D2a Step 0b already calls it but keeps only the last
--- element. 157 changes exactly three strings (heartbeat v17->v18, that message, one comment) and no
--- check logic. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
--- DO NOT re-apply this CREATE statement live in isolation.
--- SUPERSEDED (2026-08-31) by bigquery/205_alert_message_stability.sql, the current canonical
--- definition of this procedure. 205 changes MESSAGE TEXT ONLY, on three sp_raise_alert_once calls
--- (queue_driven_silent, backup_per_table_row_drop, process_constant_evidence_invalidated) whose
--- messages embedded run-varying values -- a day-count, two row counts, two streak counters -- and
--- so defeated that procedure's own exact-message dedup, re-alerting daily on a persisting
--- condition. No predicate, threshold, severity or control flow differs. Kept here, unmodified,
--- for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE live in isolation.
--- SUPERSEDED (2026-09-06) by bigquery/227_alert_message_stability_ordering.sql, the current
--- canonical definition of this procedure. 227 changes ORDER BY CLAUSES ONLY, on four
--- sp_raise_alert_once messages (ci_finding, routine_stalled, process_constant_evidence_invalidated,
--- constant_tuning_loop_heartbeat_missing) whose STRING_AGG ordering was NARROWER than the fields the
--- message prints -- or absent outright -- so tied rows could permute and render the SAME condition as
--- a DIFFERENT string, defeating that procedure's own exact-message dedup and re-alerting on an
--- UNCHANGED condition (measured twice live: 2026-07-24/25 and 2026-07-31 05:00/05:16, identical open
--- sets, duplicate rows and duplicate emails). No predicate, threshold, severity or control flow
--- differs. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this
--- CREATE live in isolation.
+-- THE FOUR SITES FIXED (every one an `sp_raise_alert_once` message; each source view's
+-- natural key was read from its live definition, not guessed):
+--  (1) ci_finding                  ORDER BY workflow -> workflow, finding_key.
+--      state.ci_findings_open is `ROW_NUMBER() OVER (PARTITION BY workflow, finding_key)`,
+--      so the pair is the key and `workflow` alone ties across every finding from the
+--      same producer. This is the site with the two measured incidents above: all six
+--      findings in the 2026-09-05 episode shared workflow='live-sql-parity'.
+--  (2) routine_stalled             ORDER BY routine -> routine, run_date.
+--      state.stalled_runs is built `GROUP BY routine, run_date`; the message already
+--      prints `routine/run_date`, so one routine hanging on two days inside the trailing
+--      7-day window is orderable only by the pair.
+--  (3) process_constant_evidence_invalidated
+--                                  ORDER BY routine -> routine, deadline_key, change_key,
+--                                  old_value, new_value.
+--      205's own item (4) touched THIS call site (it dropped two threat-streak counters)
+--      and left the ORDER BY narrower than the `deadline_key`/`old_value`/`new_value` the
+--      message still prints. 205's header states this category is deliberately ABSENT
+--      from the auto-age allowlist so it stays open as ONE row until a human closes it —
+--      a goal a permutable message quietly defeats. `change_key` is a projected column of
+--      state.process_constant_evidence_drift and the change log's own uniqueness anchor,
+--      so `routine, deadline_key, change_key` is ALREADY total and the two trailing value
+--      columns change no output whatsoever. They are listed anyway so the ordering key is a
+--      SUPERSET of every field the message prints, which makes total-ness checkable FROM THE
+--      CALL SITE ALONE rather than by appeal to a uniqueness argument living in another view.
+--      scripts/check_alert_message_stability.py enforces exactly that subset rule; this
+--      spelling is what lets the site pass on its own merits instead of via an allowlist
+--      entry a future reader would have to re-derive and re-trust.
+--  (4) constant_tuning_loop_heartbeat_missing
+--                                  (no ORDER BY at all) -> ORDER BY loop_source.
+--      The worst form of the same defect: `STRING_AGG(loop_source, ', ')` over a filtered
+--      UNNEST of seven DISTINCT literal loop names, with no ordering clause whatsoever, so
+--      element order is unspecified outright rather than merely tied.
+--
+-- DELIBERATELY NOT CHANGED — each verified total, so an edit would be churn with no
+-- behaviour change (and would re-raise a live alert once for nothing):
+--   * period_missed — prints routine/monitor_class/period_start but orders by `routine`,
+--     which IS unique: state.cadence_period_watch is a hardcoded 20-element UNNEST with
+--     each routine named exactly once, and monitor_class/period_start are functionally
+--     determined by it via a CASE. Verified against the live view definition.
+--   * scheduled_query_version_drift, scheduled_query_stale, script_version_drift — keyed
+--     on sq_name/script_name, whose registries are BASE TABLES written only through a
+--     `MERGE ... ON T.<key> = S.<key>`, so the key is structurally unique.
+--   * account_snapshot_gap, missed_run, queue_driven_silent, instruction_drift,
+--     trigger_missing, position_drift, backup_per_table_row_drop, probe_funding_stalled,
+--     connector_tool_inventory_stale, automation_heartbeat — the aggregated expression IS
+--     the ordering key, so tied elements are identical strings.
+--   * ddl_drift — orders by (table_name, column_name), the view's actual key.
+--   * Every ARRAY_AGG feeding a PAYLOAD argument, ordered or not: sp_raise_alert_once
+--     never compares the payload, so payload ordering cannot affect dedup.
+--
+-- WHAT CHANGES: four ORDER BY clauses. No predicate, no threshold, no severity, no
+-- category, no control flow, and no field printed by any message is added or removed.
+-- The set of alerts that CAN fire is identical; only the order of names inside four
+-- message strings becomes deterministic. Mirrors 205's own scope discipline.
+--
+-- WHY NOT MAKE THE MESSAGE FULLY STATIC (the ci_findings_bridge_stale pattern, where the
+-- names live only in the payload)? Considered and REJECTED for ci_finding. The open-finding
+-- SET is the identity of the condition: with a static message, a genuinely NEW finding key
+-- arriving while an older alert is still unresolved would raise nothing at all, and the open
+-- row's payload — frozen at raise time — would never mention it. That trades a duplicate-email
+-- defect for a silent-miss defect on the fleet's CI-guard bridge. Keeping the set in the
+-- message with a TOTAL order dedups the unchanged case and still surfaces a changed one.
+--
+-- ALSO CONSIDERED AND REJECTED: auto-resolving an open ci_finding alert whose message no
+-- longer matches the CURRENT open set, so the board would carry exactly one accurate row.
+-- It would require a SECOND copy of the message-building expression inside the resolve
+-- predicate, byte-identical to the one in the raise. Any drift between the two copies would
+-- resolve-and-re-raise the alert on EVERY run — an alert storm strictly worse than the stale
+-- row it tidies. The existing all-or-nothing resolver (clear when state.ci_findings_open is
+-- empty) is left exactly as it is; ops.alert_policy already documents that behaviour and
+-- instructs triage to diagnose by the VIEW, not by the message.
+--
+-- VERSION TOKEN DELIBERATELY UNCHANGED at 'v21'. bigquery/186 introduced v21 and bigquery/205
+-- kept it while rewriting five message strings — the established precedent for a
+-- message-text-only change, and the reason state.expected_scheduled_query_versions needs no
+-- MERGE here (a bump without one would fire scheduled_query_version_drift for nothing). The
+-- question "is the NEW body live?" is answered precisely by scripts/check_live_sql_parity.py,
+-- which compares whole definitions, not by this coarse heartbeat token.
+--
+-- CANONICAL BODY from bigquery/205_alert_message_stability.sql, which remains canonical for
+-- the OTHER two objects it defines (ops.sp_assert_deps and state.entry_staging_allowed);
+-- only ops.sp_sq_cadence_check moves here.
+-- ============================================================================
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';
-  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v14', 'cadence_check.sql ran');
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v21', 'cadence_check.sql ran');
 
   -- RUNBOOK section 38 self-heal (ITEM 3, bigquery/38_run_log_selfheal.sql): backfill any
   -- ops.run_log completion row whose routine already has a landed-commit marker in
@@ -135,9 +158,9 @@ BEGIN
   UPDATE `stock-trading-498512.ops.alerts`
   SET resolved = TRUE,
       resolved_ts = CURRENT_TIMESTAMP(),
-      resolved_note = CONCAT('auto-aged (>7d self-healing warning; cadence_check.sql #14). ', COALESCE(resolved_note, ''))
+      resolved_note = CONCAT('auto-aged (>7d self-healing warning/info; cadence_check.sql #14). ', COALESCE(resolved_note, ''))
   WHERE NOT resolved
-    AND severity = 'warning'
+    AND severity IN ('warning', 'info')
     -- trigger_missing added 2026-07-04 (audit finding): its message used to embed a daily-changing
     -- day-count, defeating sp_raise_alert_once's dedup and letting undeduped rows accumulate
     -- indefinitely since it was the one self-healing class missing from this auto-age list. The
@@ -170,7 +193,29 @@ BEGIN
     -- alert is stranded by dropping it) -- but do not re-derive "never raised" from the old wording.
     -- CAUTION for any future allowlist edit: before dropping a category from this FAIL-CLOSED list,
     -- query ops.alerts for OPEN rows in it. An open row in a removed category never auto-ages again.
-    AND category IN ('instruction_drift', 'calendar_runway_low', 'routine_stalled', 'trigger_missing', 'immediate_action_flagged', 'process_scorecard_signal', 'scheduled_query_stale', 'ci_findings_bridge_stale', 'control_plane_insert', 'scheduled_query_version_drift', 'script_version_drift', 'queue_driven_silent', 'run_log_note_missing')
+    -- connector_tool_inventory_stale added 2026-08-08 (same v16 change that adds the check block below,
+    -- bigquery/151_connector_tool_inventory.sql): the identical self-healing shape as scheduled_query_
+    -- version_drift / script_version_drift above -- state.connector_tool_inventory_stale reports only what
+    -- the LAST enumeration run observed, so once OPS1 resumes a trustworthy sweep the condition clears on
+    -- its own. It has no ops.alert_policy row either, so leaving it off this list would reproduce the exact
+    -- connector/strategy_revised bug this file exists to fix, for a third category, in the same commit.
+    -- monitor_promoted added 2026-08-19 (bigquery/186, by the D3 run that had just raised one) -- the SAME
+    -- structural bug as strategy_revised, which bigquery/150 added and bigquery/159 finally made effective.
+    -- It is an info-severity COMPLETED-ACTION RECORD ("check X promoted WARNING->CRITICAL, no owner action
+    -- required"), so at info severity it is filtered out of both alert_emailer.gs's and scripts/
+    -- alert_relay.py's notification queries before ever reaching notified_ts, and Rule 5's on-delivery
+    -- resolve path never sees it. It also has no ops.alert_policy row. Between those two facts NO automated
+    -- mechanism could ever close one, and the live table proves the cost was already being paid by hand:
+    -- all three prior rows (ddl_drift 2026-07-12, park_allocator/ddl_drift 2026-07-26, b3_trading_enabled_
+    -- drift 2026-08-03) were each closed manually in a later interactive triage session, days after the
+    -- change they announced had completed. SAFER TO AGE OUT THAN ANY OTHER ENTRY ON THIS LIST: a promotion
+    -- is idempotent by construction (ops.monitor_promotion_log makes the readiness view's
+    -- not_already_promoted FALSE forever after), so unlike every self-healing class above there is no
+    -- underlying condition that could still be true and no re-raise to rely on -- the row is a receipt for
+    -- something already done, and aging it can hide nothing. The promotion itself stays permanently
+    -- queryable in ops.monitor_promotion_log and events.decision_log (entry_type='monitor-promotion'),
+    -- which are the durable records; ops.alerts is only the announcement.
+    AND category IN ('instruction_drift', 'calendar_runway_low', 'routine_stalled', 'trigger_missing', 'immediate_action_flagged', 'process_scorecard_signal', 'scheduled_query_stale', 'ci_findings_bridge_stale', 'control_plane_insert', 'scheduled_query_version_drift', 'script_version_drift', 'queue_driven_silent', 'run_log_note_missing', 'run_log_start_row_missing', 'connector', 'strategy_revised', 'connector_tool_inventory_stale', 'account_snapshot_gap', 'trigger_drift_corrected', 'monitor_promoted')
     AND alert_ts < TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY);
 
   -- missed_run (critical) — a monitored routine expected today did not complete.
@@ -208,10 +253,7 @@ BEGIN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
       'warning', 'scheduled.cadence', 'queue_driven_silent',
       CONCAT('Queue-driven routine(s) silent past threshold — these sit OUTSIDE the cadence nets, so a disabled or dead trigger here produces no other signal. Check the trigger is enabled in claude.ai before assuming an empty queue: ',
-             (SELECT STRING_AGG(CONCAT(routine, ' (last completed ',
-                                       COALESCE(CAST(last_run_date AS STRING), 'NEVER'), ', ',
-                                       COALESCE(CAST(days_silent AS STRING), '?'), 'd ago)'),
-                                ', ' ORDER BY routine)
+             (SELECT STRING_AGG(routine, ', ' ORDER BY routine)
               FROM `stock-trading-498512.state.queue_driven_silence_watch` WHERE is_silent)),
       (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(routine, last_run_date, days_silent,
                                               silence_threshold_days, never_completed) ORDER BY routine))
@@ -322,7 +364,7 @@ BEGIN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
       'warning', 'scheduled.cadence', 'routine_stalled',
       CONCAT('Stalled run(s): a routine started but never logged a terminal status: ',
-             (SELECT STRING_AGG(CONCAT(routine, '/', CAST(run_date AS STRING)), ', ' ORDER BY routine)
+             (SELECT STRING_AGG(CONCAT(routine, '/', CAST(run_date AS STRING)), ', ' ORDER BY routine, run_date)
               FROM `stock-trading-498512.state.stalled_runs`)),
       (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(routine, run_date, hours_since_started)))
        FROM `stock-trading-498512.state.stalled_runs`));
@@ -363,6 +405,46 @@ BEGIN
       'Terminal run_log row(s) with no note in the trailing 3 days — a routine logged completed/failed/halted without recording what it did. See payload for the affected routine/run_date rows.',
       (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(routine, run_date, status, run_id)))
        FROM `stock-trading-498512.state.run_log_content_gaps`));
+  END IF;
+
+  -- run_log_start_row_missing — a routine logged a TERMINAL row for a run_date with no paired
+  -- 'started' row. Sibling of run_log_note_missing above and deliberately the same shape: record-only
+  -- (no raise_msg join), fixed message, detail in the payload, 3-day window, #14 auto-age allowlist.
+  --
+  -- WHAT IT CATCHES that nothing else did. state.stalled_runs is the mirror check — started with no
+  -- terminal — and ops.run_log has no key linking the two rows (run_id is GENERATE_UUID() per INSERT;
+  -- the pair is only (routine, run_date)), so a terminal row whose start was never logged was covered
+  -- by no monitor at all. It matters because the 'started' row is where `instruction` lives: without
+  -- it state.routine_last_instruction has no sample for that run, so state.instruction_drift is blind
+  -- to a drifted web-UI trigger for exactly that day, and state.stalled_runs can never see the run.
+  --
+  -- MEASURED over the trailing 120 days before shipping: 2 firings, both on 2026-07-18 (SL2 and D3,
+  -- both 'halted'), i.e. ~0.017/day. That is an order of magnitude quieter than run_log_note_missing
+  -- was at its own ship date (~0.27/day), so it clears the bar this file's v13 note sets: a check that
+  -- fires often enough to be ignored is worse than no check.
+  --
+  -- TWO EXCLUSIONS, both load-bearing — WITHOUT THEM this fires 12 times instead of 2, and the noise
+  -- would be entirely false positives:
+  --   * FIRE_DRILL% / SELFHEAL_RUN_LOG call ops.sp_log_run DIRECTLY and never call sp_routine_start.
+  --     They are procedures recording that they fired, not sessions with a start. 30 such rows in 120d.
+  --   * Rows written by ops.sp_backfill_run_log_from_markers (RUNBOOK §38 self-heal) reconstruct a
+  --     COMPLETED row from a git commit marker for a run that never logged anything — so a missing
+  --     'started' row is the PREMISE of that mechanism, not a defect in it. Matched on the same
+  --     '^(auto-)?backfilled' prefix bigquery/89 already anchors on; keep the two in step if either
+  --     changes. These accounted for every one of the 9 apparent D1 cases in the raw 120-day count.
+  --
+  -- The routine-id comparison is separator-normalised, matching state.instruction_drift and
+  -- state.routine_catchup_window, so the legacy middle-dot ids (AR·att/AR·orc, written 2026-06-19..
+  -- 2026-07-01) fold onto their ASCII form instead of pairing a terminal row against nothing.
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.run_log_unpaired_terminal`) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.cadence', 'run_log_start_row_missing',
+      -- DEDUP-CRITICAL — fixed string, same convention and same reason as the run_log_note_missing
+      -- block directly above: per-row detail here would open a new alert row every time the 3-day
+      -- window's membership shifts, instead of collapsing onto one.
+      'Terminal run_log row(s) with no paired started row in the trailing 3 days — a routine logged completed/failed/halted for a run_date it never logged a start for. See payload for the affected routine/run_date rows.',
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(routine, run_date, status, run_id)))
+       FROM `stock-trading-498512.state.run_log_unpaired_terminal`));
   END IF;
 
   -- position_drift (B4) — the two open-position representations (state.current_positions vs
@@ -527,7 +609,7 @@ BEGIN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
       'warning', 'scheduled.cadence', 'backup_per_table_row_drop',
       CONCAT('Backup per-table row-count DROP detected (append-only table(s) should never shrink): ',
-             (SELECT STRING_AGG(CONCAT(dataset, '.', table_name, ' ', CAST(prior_rows AS STRING), '->', CAST(latest_rows AS STRING)), ', ' ORDER BY dataset, table_name)
+             (SELECT STRING_AGG(CONCAT(dataset, '.', table_name), ', ' ORDER BY dataset, table_name)
               FROM `stock-trading-498512.state.backup_per_table_health` WHERE row_count_dropped)),
       (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(dataset, table_name, prior_run_date, prior_rows, latest_run_date, latest_rows)))
        FROM `stock-trading-498512.state.backup_per_table_health` WHERE row_count_dropped));
@@ -601,12 +683,10 @@ BEGIN
       CALL `stock-trading-498512.ops.sp_raise_alert_once`(
         'warning', 'scheduled.cadence', 'process_constant_evidence_invalidated',
         CONCAT('Process-constant autotune evidence INVALIDATED by a later metric-formula correction — ',
-               'persisted vs recomputed threat streak (of 3), 90-day trailing p90 completion-minute-of-day: ',
+               '90-day trailing p90 completion-minute-of-day; see payload for the persisted vs recomputed threat streaks: ',
                (SELECT STRING_AGG(
-                  CONCAT(routine, '/', deadline_key, ' change ', old_value, '->', new_value,
-                         ' (persisted ', CAST(n_persisted_threat AS STRING), ' of 3, recomputed ',
-                         CAST(n_recomputed_threat AS STRING), ' of 3)'),
-                  '; ' ORDER BY routine)
+                  CONCAT(routine, '/', deadline_key, ' change ', old_value, '->', new_value),
+                  '; ' ORDER BY routine, deadline_key, change_key, old_value, new_value)
                 FROM `stock-trading-498512.state.process_constant_evidence_drift` WHERE evidence_invalidated)),
         (SELECT TO_JSON_STRING(ARRAY_AGG(t))
          FROM `stock-trading-498512.state.process_constant_evidence_drift` t WHERE evidence_invalidated));
@@ -686,7 +766,7 @@ BEGIN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
       'warning', 'scheduled.cadence', 'ci_finding',
       CONCAT('Open CI guard finding(s): ',
-             (SELECT STRING_AGG(CONCAT(workflow, '/', finding_key), ', ' ORDER BY workflow)
+             (SELECT STRING_AGG(CONCAT(workflow, '/', finding_key), ', ' ORDER BY workflow, finding_key)
               FROM `stock-trading-498512.state.ci_findings_open`)),
       (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(workflow, finding_key, CAST(finding_ts AS STRING) AS finding_ts, detail, run_url)))
        FROM `stock-trading-498512.state.ci_findings_open`));
@@ -751,7 +831,7 @@ BEGIN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
       'warning', 'scheduled.cadence', 'constant_tuning_loop_heartbeat_missing',
       CONCAT('Constant-tuning loop(s) previously reporting a weekly W5 heartbeat have gone quiet >10 days: ',
-             (SELECT STRING_AGG(loop_source, ', ')
+             (SELECT STRING_AGG(loop_source, ', ' ORDER BY loop_source)
               FROM UNNEST(['loop:process_reliability','loop:strategy_playbook',
                             'loop:execution_quality_tuning','loop:calibration_parameter_carveout',
                             'loop:cross_model_referee_independence','loop:research_quality_feedback',
@@ -813,6 +893,80 @@ BEGIN
       END IF;
     END IF;
   END;
+
+  -- Connector tool-inventory staleness (2026-08-08, bigquery/151_connector_tool_inventory.sql).
+  -- OPS1's TOOL-INVENTORY DRIFT CHECK diffs the live per-connector tool roster against
+  -- ops/connector_tools.yaml so a vendor-added tool -- which arrives as ask/needs-approval in the
+  -- claude.ai connectors UI and would silently stall an unattended routine that calls it -- is caught
+  -- the morning it appears. That check is SELF-REPORTED, and a self-reported check cannot detect its
+  -- own omission: OPS1 could complete normally, log a clean note, and simply never have run the step
+  -- (prompt drift, a skipped sub-agent, a truncated session). This block is the independent witness.
+  -- It reads only the observation table's recency, so it stays true regardless of what OPS1 claims.
+  -- RECORD-ONLY, WARNING, self-healing: once OPS1 resumes a trustworthy sweep the underlying condition
+  -- clears on its own, so this category is in the #14 auto-age allowlist above (it has no ops.alert_
+  -- policy row) rather than getting its own resolve-on-heal UPDATE, matching the connector /
+  -- strategy_revised / script_version_drift convention this file already uses.
+  -- DEDUP-CRITICAL: the message lists ONLY the affected connector names (stable while the stale set
+  -- itself is stable, matching the trigger_missing / probe_funding_stalled / scheduled_query_stale
+  -- convention elsewhere in this procedure) -- days_stale changes daily while a connector stays stale
+  -- and lives in the payload only, per the exact bug this file's own #14 comment records for
+  -- trigger_missing ("its message used to embed a daily-changing day-count, defeating
+  -- sp_raise_alert_once's dedup").
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.connector_tool_inventory_stale`) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.cadence', 'connector_tool_inventory_stale',
+      CONCAT('Connector tool-inventory observations are stale for: ',
+             (SELECT STRING_AGG(connector, ', ' ORDER BY connector)
+              FROM `stock-trading-498512.state.connector_tool_inventory_stale`),
+             '. OPS1 completed without recording a trustworthy tool sweep, so the morning clean bill of health for connector tool drift is void. See payload for per-connector day counts.'),
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(connector, last_good_run_date, days_stale) ORDER BY connector))
+       FROM `stock-trading-498512.state.connector_tool_inventory_stale`));
+  END IF;
+
+  -- Account-snapshot gap watch (2026-08-08, bigquery/153_account_snapshot_gap_watch.sql). ops.
+  -- account_snapshot holds one measured NAV/cash row per snapshot_date, written by D2a Step 0b for a
+  -- single day per run -- there is no loop, so a trading day D2a does not run on is missing until it is
+  -- explicitly backfilled (2026-07-23/24, the two days that prompted this file, were backfilled
+  -- 2026-08-09 and the view is empty again). state.book_drawdown_watch's flow-adjusted peak_gain (bigquery/78) is a running MAX over
+  -- whatever snapshot_date rows exist, so a missing day's NAV never enters that max -- if the gap day
+  -- was a peak, peak_gain (and therefore peak_nav) is PERMANENTLY UNDERSTATED, and the -15% soft /
+  -- -40% hard drawdown breaker under-triggers -- the fail-dangerous direction. snapshot_stale
+  -- (bigquery/78) only catches a missing TODAY; it is structurally blind to a historical gap. BACKFILL
+  -- IS POSSIBLE (v18, 2026-08-09 -- this REPLACES the v17 claim that it was impossible and must not be
+  -- attempted). get_pa_performance_all_periods returns parallel dates[]/nav[] arrays per period, about a
+  -- year of daily NAV, and D2a Step 0b already calls it but keeps only the last element. The v17 claim
+  -- came from over-generalising events.cash_flows' 2026-08-05 deposit note, which correctly records that
+  -- IBKR has no cash-transaction/statement ITEMISATION endpoint -- a different, narrower thing. Only nav
+  -- is recoverable this way; cash/TWR columns are absent from that response and must stay NULL. This
+  -- block is DETECTION plus a RECOVERY POINTER: a record-only WARNING naming every trading day between
+  -- the first and last
+  -- ops.account_snapshot row that has no row of its own (state.account_snapshot_gap,
+  -- bigquery/153_account_snapshot_gap_watch.sql). RECORD-ONLY, WARNING, NEVER a halt -- does NOT join
+  -- raise_msg, and bigquery/153's redefinition of state.book_drawdown_watch adds an OBSERVABILITY-ONLY
+  -- peak_window_gap_days column with no new gate term, so state.trading_enabled behaves exactly as it
+  -- did before this file. SELF-HEALING SHAPE for auto-age purposes, now genuinely
+  -- so rather than only nominally (a gap day is no longer permanent): the check re-evaluates state.account_snapshot_gap fresh every run and simply re-raises
+  -- (same stable message, deduped) for as long as it is non-empty, exactly like connector_tool_
+  -- inventory_stale above -- it has no ops.alert_policy row, so it rides the #14 auto-age allowlist
+  -- below (added alongside connector / strategy_revised / connector_tool_inventory_stale) rather than
+  -- sitting open forever once raised.
+  -- DEDUP-CRITICAL: the message lists ONLY the gap dates -- stable while the gap set is stable, which
+  -- it is except when a NEW day goes missing. NOTE (v18): the set CAN now shrink, because gap days are
+  -- backfillable (see this file's header); a shrink changes the message and therefore starts a NEW
+  -- alert row rather than deduping onto the old one -- harmless, since the usual shrink is to empty,
+  -- which raises nothing at all. Day counts and the surrounding prior/next NAV context live in the payload
+  -- only, per the trigger_missing / probe_funding_stalled / connector_tool_inventory_stale convention
+  -- elsewhere in this procedure.
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.account_snapshot_gap`) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.cadence', 'account_snapshot_gap',
+      CONCAT('ops.account_snapshot is missing a snapshot on trading day(s) that D2a never wrote -- the flow-adjusted peak in state.book_drawdown_watch may be understated until they are filled. THESE ARE RECOVERABLE: IBKR get_pa_performance_all_periods returns parallel dates[]/nav[] arrays (1M/YTD/1Y) covering roughly a year, so the missing nav can be read straight out of the endpoint D2a Step 0b already calls -- insert with source=ibkr-pa-history-backfill and leave cash/TWR columns NULL (they are not in that response). Gap day(s): ',
+             (SELECT STRING_AGG(CAST(gap_date AS STRING), ', ' ORDER BY gap_date)
+              FROM `stock-trading-498512.state.account_snapshot_gap`),
+             '. See payload for per-gap surrounding NAV context.'),
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(gap_date, prior_snapshot_date, prior_nav, next_snapshot_date, next_nav) ORDER BY gap_date))
+       FROM `stock-trading-498512.state.account_snapshot_gap`));
+  END IF;
 
   -- Single consolidated RAISE so the DTS failure-email fires once, AFTER every condition is recorded.
   IF raise_msg != '' THEN
