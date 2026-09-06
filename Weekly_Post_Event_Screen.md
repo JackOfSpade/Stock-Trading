@@ -304,7 +304,7 @@ B is **DO-NOT-ACTIVATE**. Per W4 §C the top-tier candidates route to `Watchlist
 
 ## FINDINGS FOR D1 — two, both upstream, neither fixed here
 
-Both are D1 screen-design defects. W2 is not D1's surface and does not touch it; both are filed as `ops.alerts` info rows naming D1 and their consuming surface, per the shared OUT-OF-SCOPE FINDINGS rule.
+Both are D1 screen-design defects. W2 is not D1's surface and does not touch it; both are filed as `ops.alerts` info rows naming D1 and their consuming surface, per the shared OUT-OF-SCOPE FINDINGS rule: **F1 = `a9013b97-7395-4b0a-91d8-d346c2bf7172`** (`screen_fields_schema_drift`), **F2 = `ed5e2e24-9d43-41d9-bae6-aba1e48f0e9c`** (`screen_move_no_disposition`). The full provenance record for this cycle is `events.decision_log` `5c882ce3-4666-4802-9c4c-2ce80d561654` (`entry_type='post-event-enrichment'`).
 
 **F1 — `fields` schema drift across five consecutive `single-name-move` screens, and FOUR of the five land in W5's scorecard with a NULL ticker on every item.** MEASURED against `state.research_screen_calls`, the view W5's RESEARCH-SCREEN SCORECARD reads:
 
