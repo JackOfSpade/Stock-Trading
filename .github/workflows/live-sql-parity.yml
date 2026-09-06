@@ -208,6 +208,7 @@ jobs:
       # source of truth for the PER-OBJECT ops.ci_findings rows written below (six jq readers in this very
       # step). Do NOT drop the flag — only the committed-JSON-file half of the 2026-07-17 decision stands.
       - name: Open/refresh finding issue (dedup)
+        id: deliver_drift
         if: always() && steps.guard.outputs.skip == 'false' && steps.parity.outputs.result == 'drift'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -278,8 +279,25 @@ jobs:
           # That capture()/f-string coupling is pinned by tests/test_check_live_sql_parity.py's
           # test_missing_objects_key_extraction_matches_workflow_jq_pattern.
           run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          n=$(jq '.findings | length' /tmp/findings.json)
-          m=$(jq '.missing_objects | length' /tmp/findings.json)
+          # FAIL LOUD ON A MISSING/MALFORMED findings.json (2026-09-06 triage). These two reads used
+          # to be bare `n=$(jq ...)`. GitHub runs every `run:` block as `bash --noprofile --norc -eo
+          # pipefail {0}` — errexit is ON by default and this workflow sets no `shell:`/`defaults:`
+          # override, so this step's own `set -uo pipefail` (which deliberately omits -e) does NOT
+          # turn it off. A checker CRASH before write_json_out() leaves /tmp/findings.json absent;
+          # the parity step's if/else then correctly reports result=drift, this step runs, and jq
+          # exits 2 on the missing file — aborting the whole step AT THIS LINE, before ANY of the
+          # carefully-written `::error::` guards below can fire. Result: zero ops.ci_findings rows
+          # for the run, no per-object delivery, and only a bare jq/bash stderr line to show for it.
+          # Handling the failure explicitly keeps the diagnosis in the annotation stream where the
+          # other bridge failures already are.
+          if ! n=$(jq '.findings | length' /tmp/findings.json 2>/dev/null); then
+            echo "::error::/tmp/findings.json is missing or unreadable on a DRIFT run — scripts/check_live_sql_parity.py exited non-zero BEFORE writing its --json-out payload (an internal crash, not a parity finding). No per-object ops.ci_findings row can be derived, so the DECLARED single delivery path (bigquery/67) delivered NOTHING this run. See the 'Compare live BigQuery definitions' step output for the traceback."
+            exit 1
+          fi
+          if ! m=$(jq '.missing_objects | length' /tmp/findings.json 2>/dev/null); then
+            echo "::error::/tmp/findings.json is present but has no readable .missing_objects array on a DRIFT run — the payload is truncated or malformed, so per-object delivery cannot proceed. See the 'Compare live BigQuery definitions' step output."
+            exit 1
+          fi
           if [ "$n" -eq 0 ] && [ "$m" -eq 0 ]; then
             # Drift exit with ZERO per-object findings AND ZERO missing objects = the checker's
             # fail-closed path (checked==0 systemic auth failure, or an internal error) — there is
@@ -352,6 +370,7 @@ jobs:
           fi
 
       - name: Close finding issue if resolved
+        id: deliver_clean
         if: always() && steps.guard.outputs.skip == 'false' && steps.parity.outputs.result == 'ok'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -425,6 +444,36 @@ jobs:
           set -uo pipefail
           # 2026-08-31 code-quality pass (shell-workflows#0): VALUES-row insert extracted to
           # scripts/ci_finding.sh.
+          # DELIVERY-AWARE (2026-09-06 triage). The marker stays UNCONDITIONAL with respect to the
+          # parity RESULT — beating on both clean and drift runs is the whole point, and gating on
+          # result would reintroduce the conditional write this step exists to remove (see the block
+          # comment above). But it must not claim "bridge alive" when THIS run's delivery steps
+          # actually failed: the two delivery steps can abort mid-way (a crashed checker leaving no
+          # findings.json, a failed per-object INSERT, a failed auto-resolve), and because this step
+          # depended only on the WIF guard it would still write a fresh 'resolved' __run_marker__ row
+          # — refreshing the recency that cadence_check's ci_findings_bridge_stale 40h dead-man reads,
+          # and so silencing the ONE detector meant to catch a dead bridge. Repeated crashing runs
+          # would stay invisible to the monitored alert channel indefinitely.
+          #
+          # `outcome` is 'success' | 'failure' | 'cancelled' | 'skipped'. A step whose `if` was false
+          # reports 'skipped', NOT 'failure' — exactly one of these two ever runs on a given run (they
+          # gate on result=='drift' vs result=='ok'), so the skipped sibling must not trip this.
+          if [ "${{ steps.deliver_drift.outcome }}" = "failure" ] || [ "${{ steps.deliver_clean.outcome }}" = "failure" ]; then
+            # Write an OPEN row instead of the marker. This surfaces through state.ci_findings_open
+            # into cadence_check's ci_finding warning and the alert-emailer channel on the next beat —
+            # same-day, rather than waiting ~40h for the staleness dead-man that the marker would have
+            # suppressed. It also refreshes bridge recency, so the two signals cannot contradict.
+            # CLOSURE IS REACHABLE (required of any alert this repo raises): the next clean run's
+            # "Close finding issue if resolved" step resolves EVERY open live-sql-parity key, and a
+            # later successful drift run's per-object auto-resolve clears any key not in @p_keys —
+            # this key is in neither set, so both paths close it.
+            if ! scripts/ci_finding.sh "live-sql-parity" "bridge_delivery_incomplete" "open" "A delivery step FAILED this run (deliver_drift=${{ steps.deliver_drift.outcome }}, deliver_clean=${{ steps.deliver_clean.outcome }}), so ops.ci_findings did NOT receive this run's per-object findings or auto-resolve. Parity result was '${{ steps.parity.outputs.result }}'. Treat the per-object picture as UNKNOWN for this run, not clean: re-run the workflow and read the failed step's ::error:: annotation."; then
+              echo "::error::ops.ci_findings delivery-incomplete INSERT FAILED on a run whose delivery already failed — the bridge is doubly broken (WIF is present; verify the gh-ci-runner@ dataEditor grant on ops.ci_findings). cadence_check's ci_findings_bridge_stale 40h dead-man is now the only remaining signal."
+              exit 1
+            fi
+            echo "::warning::Wrote ops.ci_findings 'bridge_delivery_incomplete' (open) instead of the liveness marker — a delivery step failed this run."
+            exit 0
+          fi
           if ! scripts/ci_finding.sh "live-sql-parity" "__run_marker__" "resolved" "bridge alive; parity result=${{ steps.parity.outputs.result }}"; then
             echo "::error::ops.ci_findings liveness-marker INSERT FAILED — cadence_check's ci_findings_bridge_stale detector will read this bridge as DEAD (WIF is present; verify the gh-ci-runner@ dataEditor grant on ops.ci_findings). Failing the job so a dead bridge is visible, not swallowed."
             exit 1
