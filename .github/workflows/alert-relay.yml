@@ -13,11 +13,13 @@ name: Alert relay (webhook push)
 # Otherwise it skips cleanly (no auth, no post). Do NOT retire the Apps Scripts until this is proven.
 #
 # Self-improvement audit 2026-07-03 (guard-config-audit companion): also runs a weekly `heartbeat` —
-# alerts/orders are best-effort by design (a POST failure never fails the run, so it never adds noise
+# `alerts` is best-effort by design (a POST failure never fails the run, so it never adds noise
 # on top of the reliable emailer), which means a permanently dead webhook would otherwise go unnoticed
 # for months — it only has to fire when there happens to be something to relay. heartbeat POSTS a fixed
 # canary line and, uniquely, FAILS THE RUN on a POST error, so channel diversity is actively verified,
-# not just assumed from the secret being set. See scripts/alert_relay.py::relay_heartbeat.
+# not just assumed from the secret being set. Since 2026-09-07 that canary publishes SILENTLY
+# (ntfy Priority/Cache/Firebase headers) so it verifies the channel without buzzing the phone — the
+# evidence was always the HTTP round-trip, never the notification. See scripts/alert_relay.py::relay_heartbeat.
 #
 # RETIRED 2026-07-18 (consolidation audit): the daily `catchup` mode (WO-8 part 1, 2026-07-03 — a
 # "no rush, fire the trigger yourself" human notice over state.catchup_available). OPS0's autonomous
@@ -49,18 +51,30 @@ on:
                              # bought nothing and was reverted to this plainer form. The hole is
                              # closed by the window step's margin instead. Do not reintroduce an
                              # alignment trick here believing it fixes coverage — it does not.
-    - cron: '5 13 * * *'     # daily staged-order reminder ~07:05 MT confirm window (A3)
+    # RETIRED 2026-09-07: the daily 13:05-UTC staged-order reminder ~07:05 MT (A3). Its cron literal
+    # is deliberately NOT reproduced anywhere in this file — the self-check step below extracts crons
+    # by regex, and a retired literal left lying around in a comment is exactly the kind of thing a
+    # future loosening of that anchor would pick up as if it were still live.
+    # It was the ONLY operator-facing push in the system with no email counterpart of any kind, and
+    # it re-listed every unreconciled order every day including ones already confirmed via IBKR days
+    # earlier. Both defects are structural, not tunable — see scripts/alert_relay.py's Modes list.
+    # Replaced (not dropped) by the `staged_order_awaiting_confirm` ops.alerts warning that
+    # bigquery/229_staged_order_confirm_notice.sql raises daily from
+    # ops.sp_sq_daily_staging_cap_check, which reaches email AND this relay's `alerts` cron above.
+    # Do NOT restore this cron: an `orders` run would relay a state.* view that no email channel
+    # reads, re-breaking the RULE 1 invariant. Removing it also drops ~30 billable Actions runs/month
+    # (CLAUDE.md push-cost discipline) — the replacement runs inside an EXISTING scheduled query, so
+    # it adds no Actions minutes and no new cron anywhere.
     - cron: '15 13 * * 1'    # weekly (Monday) webhook liveness heartbeat
   workflow_dispatch:
     inputs:
       mode:
-        description: 'alerts | orders | heartbeat'
+        description: 'alerts | heartbeat  (orders retired 2026-09-07 — dispatching it is a clean no-op)'
         required: false
         default: 'alerts'
         type: choice
         options:
           - alerts
-          - orders
           - heartbeat
 
 permissions:
@@ -178,12 +192,13 @@ jobs:
           # uses for RELAY_MODE.
           MODE_INPUT: ${{ github.event.inputs.mode }}
         run: |
-          # The daily 13:05 UTC schedule is the staged-order reminder; the weekly Monday 13:15 UTC
-          # schedule is the webhook liveness heartbeat; everything else is alerts. (The former daily
-          # 04:30 UTC catchup schedule was retired 2026-07-18 — see the header.)
-          if [ "${{ github.event.schedule }}" = "5 13 * * *" ]; then
-            echo "mode=orders" >> "$GITHUB_OUTPUT"
-          elif [ "${{ github.event.schedule }}" = "15 13 * * 1" ]; then
+          # The weekly Monday 13:15 UTC schedule is the webhook liveness heartbeat; everything else
+          # is alerts. (The former daily 04:30 UTC catchup schedule was retired 2026-07-18, and the
+          # daily 13:05 UTC staged-order schedule 2026-09-07 — see the header. Their branches are
+          # deleted here, not left behind: the self-check step above FAILS the run on a comparison
+          # against a cron that no longer exists in on.schedule, precisely so a retired mode cannot
+          # linger as dead-but-plausible dispatch logic.)
+          if [ "${{ github.event.schedule }}" = "15 13 * * 1" ]; then
             echo "mode=heartbeat" >> "$GITHUB_OUTPUT"
           else
             echo "mode=${MODE_INPUT:-alerts}" >> "$GITHUB_OUTPUT"
@@ -210,9 +225,12 @@ jobs:
           # Best-effort BY CONSTRUCTION: no `set -e`, and continue-on-error, so an API/parse failure
           # degrades to a fixed generous window (> the measured max gap) rather than blocking
           # delivery; the Relay step below re-applies the same fallback if this step wrote no output.
-          # Caveat this cannot see: the daily orders and weekly heartbeat runs count as successes
-          # here although they relay no alerts, so for the alerts run following one of them the
-          # computed window is a floor, not proof of gapless coverage.
+          # Caveat this cannot see: the weekly heartbeat run counts as a success here although it
+          # relays no alerts, so for the alerts run following it the computed window is a floor, not
+          # proof of gapless coverage. (The daily `orders` run was a second such non-alerts anchor
+          # until it was retired 2026-09-07; removing it can only shrink that caveat, never widen
+          # it, and the +130 margin below is unchanged — it is justified by the heartbeat anchor
+          # alone.)
           window=240
           last_ts="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/alert-relay.yml/runs?status=success&per_page=1" --jq '.workflow_runs[0].created_at // empty' 2>/dev/null || true)"
           last_epoch="$(date -u -d "$last_ts" +%s 2>/dev/null || true)"
@@ -220,9 +238,11 @@ jobs:
             gap=$(( ( $(date -u +%s) - last_epoch ) / 60 ))
             if [ "$gap" -ge 0 ]; then
               # MARGIN = one full alerts interval + 10, NOT just 10 (2026-08-30). `gap` is measured
-              # from the last SUCCESSFUL run of ANY MODE — and the daily orders run (13:05) and the
-              # Monday heartbeat (13:15) relay NO alerts, yet still reset this anchor. When one of
-              # them is the anchor, `gap` understates how far back coverage must reach by up to a
+              # from the last SUCCESSFUL run of ANY MODE — and the Monday heartbeat (13:15) relays
+              # NO alerts, yet still resets this anchor. (The daily orders run at 13:05 was a second
+              # such anchor until it was retired 2026-09-07; one fewer non-alerts anchor can only
+              # shrink this hole, so the margin below stays as-is.) When it
+              # is the anchor, `gap` understates how far back coverage must reach by up to a
               # full alerts interval, silently dropping every alert raised in between (this relay is
               # stateless — a skipped row is never retried, so a hole is permanent). Brute-forced
               # over independent per-run delays: margin=10 leaves an 80-min hole; margin=130 leaves
@@ -327,7 +347,7 @@ jobs:
           # even when no GH issue was open to close ... it is what prevents a manually-closed GH issue
           # from stranding an open ops.ci_findings row / stuck cadence_check alert"). Previously this
           # was gated on `[ -n "$existing" ] || [ "$MODE" = "heartbeat" ]`, so a manually-closed GH
-          # issue for the alerts/orders modes followed by continued healthy runs left the "open" row
+          # issue for the alerts mode followed by continued healthy runs left the "open" row
           # (and its ci_finding alert) stuck forever. SELECT FROM state.ci_findings_open, scoped to
           # this mode's finding_key, writes zero rows on an already-clean run — no no-op-row-volume
           # cost, same concern the old issue-conditional gating was (incompletely) guarding against.

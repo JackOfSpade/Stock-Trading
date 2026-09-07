@@ -1071,6 +1071,19 @@ END;
 -- UNRELATED per-order guard-record checks and are unchanged. v3 bumped from v2 by DEF-3, 2026-07-17:
 -- added the order_guard_verdict_mismatch RECOMPUTE backstop below; v2 was the ARCH-1 wrapper
 -- migration, 2026-07-16).
+--
+-- SUPERSEDED LIVE by bigquery/229_staged_order_confirm_notice.sql (2026-09-07) — that file is now the
+-- current single source of truth for this procedure body. It carries everything below forward
+-- BYTE-IDENTICAL except (a) the heartbeat literal v5 -> v6, and (b) a new staged_order_awaiting_confirm
+-- WARNING block appended at the end, which raises the "a staged order is waiting to fill and reconcile"
+-- fact as an ops.alerts row so it reaches the owner by EMAIL (via alert_emailer.gs) as well as by push.
+-- That fact used to be a push-only GitHub Action (alert-relay.yml's daily `orders` mode), the one
+-- operator-facing notice in the system with no email counterpart; the cron is retired in the same
+-- change. Neither existing check here (order_guard_omitted / order_guard_verdict_mismatch) is altered
+-- by 229 — no predicate, threshold, exclusion or severity of either moves.
+-- Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation — doing so reverts the staged-order notice
+-- and silently takes that email path back out, with nothing to detect it but the daily parity check.
 -- =====================================================================================================
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_daily_staging_cap_check`()
 BEGIN

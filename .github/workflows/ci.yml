@@ -208,6 +208,16 @@ jobs:
         # header prose quoting an offending snippet is unreachable) — no BigQuery, no network, no creds.
         # Its allowlist is anti-rot: an entry that stops tripping FAILS the build telling you to delete it.
         run: python scripts/check_alert_message_stability.py
+      - name: roster-notice category lockstep (alert_relay.py ⇄ alert_emailer.gs ⇄ sp_auto_resolve_alerts Rule 5 ⇄ Claude_Task_Plan.md)
+        # The six SISA roster-change notice categories are listed in FOUR places, each with a
+        # different and individually silent failure mode if it drifts. alert_emailer.gs has warned
+        # about this in a comment since 2026-08-04 ("A category in only one of the three places is
+        # inert") with nothing enforcing it; 2026-09-07 added the fourth copy —
+        # alert_relay.py's NO_PUSH_CATEGORIES, the ntfy suppression list — whose failure mode is the
+        # worst of the four: a category listed there is SILENTLY never pushed to the phone. Exact-set
+        # equality across all four, not subset: a subset rule would permit precisely that mistake.
+        # Pure text parsing, no creds. A failed extraction is a FAILURE, never a vacuous pass.
+        run: python scripts/check_roster_notice_lockstep.py
       - name: session-config tool coverage (Claude_Task_Plan.md/ops/triggers.json mcp__ refs ⇄ .claude/settings.json allowlist — completeness-critic N-1)
         # An unattended scheduled routine calling an mcp__ tool absent from .claude/settings.json's
         # permissions.allow gets an unanswerable permission prompt and silently stalls that step (no

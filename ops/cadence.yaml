@@ -1169,8 +1169,8 @@ routines:
 # Two version-controlled scheduled GitHub Actions added 2026-06-24 (ops/RUNBOOK.md §25), run on GitHub's
 # runners via the read-only WIF SA — OFF until their gating secret/vars are set, so they never affect the
 # trading cadence:
-#   alert-relay         schedule: "every 2h + daily 13:05 UTC + weekly Mon 13:15 UTC" — POSTs
-#                       ops.alerts / staged-order reminders to a vendor-neutral webhook (A1/A2/A3);
+#   alert-relay         schedule: "every 2h + weekly Mon 13:15 UTC" — POSTs
+#                       ops.alerts to a vendor-neutral webhook (A1/A2);
 #                       the weekly run is a heartbeat canary that fails loud on a dead webhook
 #                       (RUNBOOK §34). Cadence moved from every 30 min to every 2h on 2026-08-30: this
 #                       is a backup/channel-diversity path behind ops/monitoring/alert_emailer.gs
@@ -1178,7 +1178,13 @@ routines:
 #                       backs up. (The daily 04:30 UTC catch-up-available notice for
 #                       state.catchup_available, WO-8 part 1, was RETIRED 2026-07-18 — see
 #                       alert-relay.yml's header — superseded by OPS0's autonomous catch-up
-#                       auto-refire.)
+#                       auto-refire. The daily 13:05 UTC staged-order confirm reminder, A3, was
+#                       RETIRED 2026-09-07 — superseded by the `staged_order_awaiting_confirm`
+#                       warning that bigquery/229_staged_order_confirm_notice.sql raises from the
+#                       EXISTING daily 05:25 UTC daily_staging_cap_check scheduled query, so it now
+#                       reaches email as well as the webhook and costs no Actions minutes. The
+#                       weekly heartbeat canary still runs but publishes SILENTLY as of the same
+#                       date — it proves the channel by its HTTP round-trip, not by buzzing a phone.)
 #   keyless-sa-audit    schedule: "monthly 1st 06:30 UTC" — asserts gh-ci-runner@/bq-scheduler@ stay
 #                       keyless (E2; opt-in via vars.RUN_SA_KEY_AUDIT).
 #   guard-config-audit  schedule: "monthly 1st 07:00 UTC" — consolidated view of which of the above

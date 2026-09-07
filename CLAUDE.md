@@ -209,6 +209,59 @@
   unchanged. The residual IBKR confirm-tap on orders and deposits are the execution/funding
   layer, and stay.
 
+- **Re-adding an ntfy push that has no email counterpart, or an "everything is fine" push.**
+  Owner directive 2026-09-07, implemented the same day: (1) every ntfy push must also reach the owner
+  Gmail; (2) ntfy is only for things needing owner action. These are not style preferences — they are
+  enforced structurally, because the alternative was measured to be impossible:
+
+  **There is exactly ONE email channel in this system — `ops.alerts` → `ops/monitoring/alert_emailer.gs`
+  — and GitHub Actions cannot reach any other.** Verified live 2026-09-07: no SMTP/mail secret exists
+  (`gh secret list` = `ALERT_WEBHOOK_URL` + `OFFSITE_BACKUP_GCS` only), no mail-sending Action is
+  `uses:`'d anywhere, the relay runs as the read-only WIF SA whose only `ops` write grant is
+  table-scoped to `ops.ci_findings`, and **ntfy.sh rejects its own `Email:` forwarding header on this
+  topic** — `HTTP 400 {"code":40053,"error":"anonymous email sending is not allowed"}`, because that
+  feature now needs an authenticated ntfy account and the topic is deliberately an anonymous
+  capability URL. So rule 1 reduces to: **`scripts/alert_relay.py` may only push rows of `ops.alerts`.**
+  A push sourced from anywhere else is email-less by construction.
+
+  **Do NOT re-propose any of these** (each was considered and rejected on evidence, not taste):
+  - *"Add the ntfy `Email:` header so pushes get emailed."* It 400s. It would not merely fail to send
+    mail — it would fail the POST and take the push channel, and the weekly liveness canary with it,
+    permanently red. `tests/test_alert_relay.py::test_post_never_sends_an_email_header` pins this.
+  - *"Restore the daily `orders` cron in alert-relay.yml"* (retired 2026-09-07, A3). It read
+    `state.open_orders` — a view no email path queries — and re-listed every unreconciled order every
+    day including craftable ones already confirmed in IBKR, since `pending` means "not yet filled AND
+    reconciled", never "not yet confirmed", and the relay has no live IBKR read to tell those apart.
+    Both defects are structural, not tunable. The fact is now the `staged_order_awaiting_confirm`
+    warning raised by `bigquery/229_staged_order_confirm_notice.sql` from the EXISTING daily 05:25 UTC
+    `daily_staging_cap_check` — email + push from one row, 7 days a week (D3 was rejected as its home:
+    Mon–Fri 00:45 UTC leaves a Thursday-staged order unnotified until Sunday), and it costs zero extra
+    Actions minutes.
+  - *"Put the item ticker/qty/price or a count in that alert's message."* `sp_raise_alert_once` dedups
+    on exact `(category, message)`, and `item_key` is the ONLY field stable across a persist-and-wait
+    re-craft (same key, possibly new qty/ref price). Anything else re-mints the alert — a fresh email
+    AND push — on every daily re-craft, which is the exact fatigue defect that got the old push retired.
+  - *"Make the weekly heartbeat loud again"* / *"post it to a scratch topic"* / *"poll the topic
+    instead of posting."* The canary is silent (`Priority: min` + `Cache: no` + `Firebase: no`, all
+    probed live) and must stay so. Its evidence was always the HTTP round-trip against the REAL
+    configured URL, never the phone buzz — and ntfy returns 200 for ANY topic name, so both
+    alternatives would pass against a typo'd URL and prove nothing.
+  - *"Push the SISA roster-change notices too."* They are completed, healthy, fully-autonomous actions
+    needing no action; `alert_emailer.gs` already renders them in a non-fault lane for that reason.
+    They stay EMAIL-ONLY via `NO_PUSH_CATEGORIES`. Note the asymmetry that makes this safe: rule 2 only
+    ever removes things from ntfy, never from email — the emailer's notification-complete contract
+    (every alert emailed exactly once) is untouched. The list lives in four places and
+    `scripts/check_roster_notice_lockstep.py` (blocking CI) asserts all four agree — extend it in all
+    four or none, and never extend it to "things that felt noisy this week": mis-suppressing a real
+    alert is silent, while an extra push is only a nuisance.
+  - *"Kill the weekly `[TEST]` delivery-canary email — it says no action needed."* That one is the
+    deliberate exception. The send IS the test: it is the only end-to-end proof that email delivery
+    works, the next canary asserts the previous one was delivered and stamped `notified_ts`, and the
+    owner asked on 2026-06-29 that it stay visible in the inbox. Silencing it destroys the check.
+
+  **Action: none.** Full rationale in `scripts/alert_relay.py`'s module docstring (RULE 1 / RULE 2),
+  `ops/RUNBOOK.md` §25, and `bigquery/229_staged_order_confirm_notice.sql`'s header.
+
 - **Making the OPERATING timezone plane dynamic / "detect the current location at runtime."**
   Asked and settled 2026-08-01, when the operator relocated Colorado → Toronto for ~6 months.
   The three planes (`bigquery/20_user_prefs.sql` is the reference):

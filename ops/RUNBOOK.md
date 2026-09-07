@@ -1337,11 +1337,54 @@ never applied. **Repo artifacts are DONE; this section lists the owner/console a
   **Owner:** set `alert_webhook_url` to a Slack/Discord/ntfy/Pub/Sub-push endpoint (NOT another Gmail
   address). Spec-only here (per §12); to make it live without Terraform, add the channel in the Console
   and attach it to the three "… scheduler absent >25h" policies.
-- **A2/A3 — version-controlled relay (`.github/workflows/alert-relay.yml` + `scripts/alert_relay.py`).**
+- **NOTIFICATION POLICY (owner directive 2026-09-07) — two rules that now bind every channel in this
+  section.** (1) **Every ntfy push must be accompanied by an email.** (2) **ntfy is for things needing
+  operator action — no "everything is fine" pings.** An audit of every outbound path (ntfy, email,
+  calendar, GitHub issue) established the constraint that makes rule 1 mechanical rather than a habit:
+  **`ops.alerts` → `alert_emailer.gs` is the only email channel that exists**, and a GitHub Actions job
+  cannot reach any other — there is no SMTP/mail secret (repo secrets are `ALERT_WEBHOOK_URL` +
+  `OFFSITE_BACKUP_GCS`, nothing else), no mail-sending Action is used anywhere, the relay runs as the
+  read-only WIF SA whose only `ops` write grant is table-scoped to `ops.ci_findings`, and **ntfy.sh
+  rejects its own `Email:` forwarding header on this topic** (probed live 2026-09-07: HTTP 400
+  `{"code":40053,"error":"anonymous email sending is not allowed"}` — it now requires an authenticated
+  ntfy account, which a capability URL deliberately is not). Rule 1 therefore reduces to a structural
+  invariant enforced in `scripts/alert_relay.py`: **the relay may only push events that are rows in
+  `ops.alerts`.** Anything sourced elsewhere (a bare `state.*` view, a CI step, a fixed canary string)
+  is email-less by construction and must not be pushed. Three consequences, all live as of 2026-09-07:
+  - **A3's daily staged-order push is RETIRED** — it read `state.open_orders`, which no email path
+    queries, making it the one operator-facing notice in the system with no email counterpart; and it
+    re-listed every unreconciled order every day, including craftable ones already confirmed in IBKR
+    (`pending` means "not yet filled AND reconciled", never "not yet confirmed"). Replaced by the
+    `staged_order_awaiting_confirm` warning that `bigquery/229_staged_order_confirm_notice.sql` raises
+    from the existing daily 05:25 UTC `daily_staging_cap_check` — one `ops.alerts` row, both channels,
+    one alert per `item_key`, auto-resolved when the order reconciles. See §25 A3 below and `bigquery/229`.
+  - **The weekly liveness heartbeat is now SILENT** — it still POSTs (the HTTP round-trip against the
+    real configured URL is the entire dead-channel proof) but with ntfy `Priority: min` + `Cache: no` +
+    `Firebase: no`, so it verifies the channel without notifying. Do NOT "fix" it by posting to a
+    scratch topic or by polling instead: ntfy returns 200 for any topic name, so both alternatives
+    would pass against a typo'd URL and prove nothing.
+  - **The six SISA roster-change notices are email-only** (`NO_PUSH_CATEGORIES`) — they are completed,
+    healthy, fully-autonomous actions needing no operator action, which `alert_emailer.gs` already
+    encodes by rendering them in a non-fault lane. The list now lives in four places and
+    `scripts/check_roster_notice_lockstep.py` (blocking CI) asserts all four hold the same set.
+  **The one deliberate exception, kept on purpose:** `delivery_canary`'s weekly `🧪 [TEST] … no action
+  needed` EMAIL still sends. It is not status chatter — it is the only end-to-end proof that email
+  delivery works at all (step 1 of the next canary asserts the previous one was delivered and stamped
+  `notified_ts`), it cannot be silenced without destroying that check because the send IS the test, and
+  the operator asked on 2026-06-29 that it stay visible in the inbox. See §18.
+
+- **A2 — version-controlled relay (`.github/workflows/alert-relay.yml` + `scripts/alert_relay.py`).**
+  **A3 (the once-daily staged-order reminder off `state.open_orders`) was RETIRED 2026-09-07 — see the
+  NOTIFICATION POLICY bullet above and `bigquery/229_staged_order_confirm_notice.sql`.** Everything below
+  about A3 describes the mechanism as it stood BEFORE that date and is retained as the historical record
+  of why it was built and why it was eventually removed; do not read any of it as current behaviour, and
+  do not restore the push (it had no email counterpart, which is the whole reason it went).
   A scheduled GHA reads `ops.alerts` via the EXISTING read-only WIF (no new grant) and POSTs to a webhook
-  — a git-reviewable poller whose failure mode is uncorrelated with the owner's Google account, plus a
-  once-daily staged-order reminder (A3) off `state.open_orders` so a silenced 07:00 calendar alarm is not
-  the ONLY notice of an order to confirm. **OFF until** repo **secret `ALERT_WEBHOOK_URL`** + the WIF vars
+  — a git-reviewable poller whose failure mode is uncorrelated with the owner's Google account. It once
+  also carried a once-daily staged-order reminder (A3) off `state.open_orders`, so that a silenced 07:00
+  calendar alarm was not the ONLY notice of an order to confirm; that need is now met by the
+  `staged_order_awaiting_confirm` `ops.alerts` warning, which reaches EMAIL as well as the push.
+  **OFF until** repo **secret `ALERT_WEBHOOK_URL`** + the WIF vars
   are set. It COMPLEMENTS (does not replace) the reliable ~2h `alert_emailer`; keep the Apps Scripts until
   the relay is proven. **Do not retire `alert_emailer.gs`/`weekly_report.gs` yet.**
   **Self-provisioned-channel note (OAE-6, 2026-07-16):** `ALERT_WEBHOOK_URL` no longer requires the
@@ -1355,7 +1398,11 @@ never applied. **Repo artifacts are DONE; this section lists the owner/console a
   audits changes. (A1's Cloud Monitoring webhook-channel spec in `monitoring.tf`, above, is unaffected
   and stays Terraform-spec-only per the standing decision — this note is about A2/A3's GHA-side
   channel only.)
-  **Craftability-aware wording (2026-07-20).** The daily A3 order reminder (`relay_orders()`) used to
+  **Craftability-aware wording (2026-07-20) — HISTORICAL: `relay_orders()` was RETIRED 2026-09-07.**
+  The reasoning below is NOT obsolete and was carried forward verbatim into its replacement: the
+  craftable-vs-manual-entry distinction is now rendered in the `staged_order_awaiting_confirm` alert
+  message and its `needs_calendar_tap` payload field (`bigquery/229_staged_order_confirm_notice.sql`).
+  Only the delivery mechanism changed. The daily A3 order reminder (`relay_orders()`) used to
   tell the operator to "tap the `[Claude] Confirm order` event" on every still-`pending` row, unconditionally
   — but per the 2026-07-09 calendar-scope narrowing a CRAFTABLE order (equity/ETF/single-leg-options,
   `instruction_id` set at staging) never gets that calendar event; its confirm surface is
@@ -2413,7 +2460,7 @@ then re-paste `weekly_report.gs` and run `testReport()` (no new OAuth scope).
 double-gated and default OFF, each printing its own `::notice::` when disabled. That notice only
 lives inside that one workflow's own run log — there was no single place showing the aggregate
 picture, so a guard could sit dormant indefinitely simply because nobody thought to check five
-separate Actions histories. Separately, `alert-relay`'s alerts/orders modes are deliberately
+separate Actions histories. Separately, `alert-relay`'s alerts mode is deliberately
 best-effort (a POST failure is swallowed so a transient webhook hiccup never adds noise on top of
 the reliable emailer) — but that same design meant a *permanently dead* webhook (revoked, URL
 typo'd) would never surface, since it only has to fire when there happens to be something to relay.
@@ -2431,7 +2478,8 @@ commented + auto-closed once resolved. Optional guards are `::notice::`-only, de
 be exactly the alert-fatigue/cry-wolf pattern §19 exists to avoid.
 
 **Fix — `alert-relay.yml` heartbeat mode.** Added a third schedule (`15 13 * * 1`, weekly Monday)
-that runs `RELAY_MODE=heartbeat`. Unlike alerts/orders, `relay_heartbeat()`
+that runs `RELAY_MODE=heartbeat`. Unlike alerts (and unlike the `orders` mode, a second best-effort
+mode until its 2026-09-07 retirement), `relay_heartbeat()`
 (`scripts/alert_relay.py`) does **not** swallow a POST failure — it is the one mode guaranteed to
 run even with nothing to relay, so it is the only mechanism that can ever catch a dead channel
 before a real alert silently fails to arrive. A failed heartbeat fails the scheduled run (red in the

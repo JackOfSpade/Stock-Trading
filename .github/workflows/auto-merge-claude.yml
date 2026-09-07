@@ -548,6 +548,7 @@ jobs:
           run_check python scripts/check_superseded_markers.py
           run_check python scripts/check_superseded_by_discipline.py
           run_check python scripts/check_alert_message_stability.py
+          run_check python scripts/check_roster_notice_lockstep.py
           run_check python scripts/check_settings_toolcov.py
           run_check python scripts/check_connector_tools.py
           run_check python scripts/check_adopt_gate_coverage.py
