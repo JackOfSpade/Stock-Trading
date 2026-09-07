@@ -320,7 +320,7 @@ routines:
                              # dependency on anything would recreate the exact failure class it exists
                              # to fix (self-improvement audit 2026-07-15, CONFIRMED GAP
                              # catchup-notify-no-auto-refire; Architect recommendation #1)
-    writes: [ops.catchup_refire_log, events.decision_log, ops.alerts, ops/cadence.yaml, ops/trigger_ids.json]
+    writes: [ops.catchup_refire_log, events.decision_log, ops.alerts, ops.trigger_observations, ops.trigger_change_intents, ops/cadence.yaml, ops/trigger_ids.json]
                              # ops.alerts also carries STEP 4's stranded_branch / stranded_branch_adopted /
                              # unlanded_completed_run categories, and events.decision_log the
                              # stranded-branch-adoption + unlanded-completed-run entry_types
