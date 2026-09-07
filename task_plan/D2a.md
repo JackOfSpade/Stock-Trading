@@ -1410,7 +1410,67 @@ Concretely, every run:
   Operating_Protocols.md §16 REGIME-CAPITAL SYNC + §13.C; schema `bigquery/98_regime_capital_enablement.sql`;
   substep reconstructed by W5 2026-07-19 — the implementing session's plan edit was stranded unpushed). LAST
   thing in Step 0, after fills/attribution/flattening: `SELECT * FROM state.regime_capital_sync_pending`.
-  Empty (the steady state) → no-op, nothing to log. Non-empty:
+  **HEAL FIRST, FROM THIS SAME READ, BEFORE YOU BRANCH (added 2026-09-07 — `ops.alert_policy` promised this and
+  nothing performed it).** Both `regime_sweep_blocked` and `regime_restore_blocked` are registered `latching = FALSE`
+  with a `resolve_rule` that opens "Auto-resolves when `state.regime_capital_sync_pending` stops returning …" and
+  closes "**D2a re-evaluates the condition each run**" — but until this clause landed this substep implemented only
+  the RAISE side, so a healed condition sat unresolved on the board forever behind an owner-only manual `UPDATE`.
+  From the rows you just read: if **no `SWEEP` row has `blocked_no_recipient = TRUE`** and an unresolved
+  `regime_sweep_blocked` alert exists → `UPDATE ops.alerts SET resolved=TRUE, resolved_ts=CURRENT_TIMESTAMP(),
+  resolved_note='condition healed: state.regime_capital_sync_pending no longer returns a SWEEP row with
+  blocked_no_recipient TRUE — <name what actually cleared it: a router re-enable, a roster change, or the holder
+  dropping below the $25 de-minimis floor>' WHERE category='regime_sweep_blocked' AND NOT resolved`. INDEPENDENTLY —
+  **and NOT by the same absence test, which would be wrong for RESTORE** — resolve `regime_restore_blocked` only on
+  POSITIVE evidence: either the view now returns a `RESTORE` row with `blocked_no_recipient = FALSE` (the restore is
+  fundable again), OR `state.regime_capital_debt` shows the debtor no longer carrying outstanding regime debt (it was
+  repaid by some other path). Then the same `UPDATE` with `category='regime_restore_blocked'` and the RESTORE wording,
+  naming which of the two cleared it.
+  **WHY RESTORE IS NOT SYMMETRIC WITH SWEEP, and why "no blocked row" must NOT be read as healed here.** For SWEEP
+  the two branches really are an exact partition (`sweep_blocked` on `NOT EXISTS (enabled_recipients)` versus
+  `sweep_rows` on the CROSS JOIN over the same `sweep_candidates`), and the candidate population emptying IS a
+  genuine heal — the registered `resolve_rule` says so outright ("or when the capital-disabled strategy holding the
+  cash drops below the $25 de-minimis floor"). RESTORE has no such partition: `restore_blocked` fires only at
+  `payable = 0` and `restore_rows` only at `payable >= LEAST(25, outstanding_debt)`, so the band
+  `0 < payable < LEAST(25, outstanding_debt)` emits **NO ROW AT ALL** — `bigquery/223`'s own header names this a
+  DELIBERATE RESIDUAL that "this file does NOT report". In that band the debt is still fully outstanding and the
+  alert's pinned message ("the eligible donor set cannot fund the de-minimis floor, so nothing moved") is still
+  literally TRUE, yet a bare absence test would read it as healed and close the only row on the board saying so.
+  Absence of a RESTORE row is AMBIGUOUS — debt repaid, or throttled — and only `state.regime_capital_debt`
+  disambiguates it. This is deliberately STRICTER than the category's registered `resolve_rule`, whose "holds
+  positive available_funds again" phrasing would close the throttled band; where the two disagree, prefer leaving a
+  true alert open over closing it, and note that `regime_restore_blocked` has never fired (zero rows ever), so this
+  is a forward-looking correctness choice with no live row affected. Same evidence-based
+  routine-owned resolve as the `owner_confirmation_stale` and `book_drawdown_soft_breach` clauses above. Scoping by
+  category ALONE is safe here for a reason specific to these two: both messages are PINNED literals, so
+  `sp_raise_alert_once`'s `(category, message)` dedup makes at most ONE unresolved row per category possible by
+  construction (verified live: one row total across both categories, ever). That argument does NOT generalise — a
+  category whose message interpolates a varying value can hold several open rows at once, and category-scoped
+  resolves are wrong for those.
+  **THIS IS AUTHORISED, and a future session must not revert it on a correct-looking reading of the shared rules.**
+  The shared INCIDENT INHERITANCE bullet says "every capital-affecting class stays human-only per the fail-closed
+  allowlist", and read alone that sentence forbids the UPDATE above. It is the DEFAULT for categories carrying no
+  registered rule, not a blanket prohibition — exactly the point SL3's `probe_funding_stalled` pin already
+  adjudicated for a structurally identical category: "Where a category carries its own registered rule, that rule
+  governs; the two-category sentence is the DEFAULT for categories that carry none." `bigquery/34_alert_lifecycle.sql`
+  built `ops.alert_policy` for precisely this, and all three categories here are registered `latching = FALSE` with a
+  `resolve_rule` — two of them naming D2a outright. Verified live besides: `ops.sp_auto_resolve_alerts` is hardcoded
+  to `missing_dependency`/`missed_run`/`routine_stalled`/`catchup_refire_blocked`/`staleness` plus the roster notices
+  and touches none of these three, so there is no second resolver to fight with.
+  **DO NOT MOVE THIS INSIDE THE "Empty" BRANCH — that would be a VACUOUS fix, and it is the obvious place to put
+  it.** The blocked and healthy shapes of a given strategy are COMPLEMENTARY branches of this same view over the
+  same population, keyed on the same predicate: `sweep_blocked` fires `WHERE NOT EXISTS (SELECT 1 FROM
+  enabled_recipients)` and `sweep_rows` populates the moment that relation is non-empty, so a heal flips
+  `blocked_no_recipient` TRUE→FALSE **without the view ever returning zero rows** (for RESTORE the shapes are NOT complementary — see the
+  asymmetry paragraph above — but the same "never returns zero rows" hazard applies to its healthy branch). Concretely, on the live
+  founding case: today the view returns one row, `SWEEP`/E/15368.39/`blocked_no_recipient = TRUE`; the moment any
+  non-nomadic strategy becomes capital-enabled while E still holds ≥ $25 idle, it returns one row,
+  `SWEEP`/E/`blocked_no_recipient = FALSE` — non-empty at both instants, genuinely healed, and an
+  empty-branch-only heal would never fire. **Read the FLAG, never the row count.** And do not re-`SELECT`: evaluate
+  the heal and the raise branches from ONE read, per the ONE MOVEMENT PER READ discipline this substep already
+  follows — a second read can observe a different snapshot and resolve an alert the raise branch is about to
+  re-assert.
+  Empty (the steady state) → no-op, nothing to log — apart from the heal above, which is evaluated either way.
+  Non-empty:
   - `control_enabled = FALSE` (the `ops.capital_control` kill-switch) → log a one-line `events.decision_log`
     note recording what WOULD have moved, and move nothing.
   - **`blocked_no_recipient = TRUE` on a `SWEEP` row** (`bigquery/215`; capital to sweep, but EVERY capital-enabled
@@ -1510,14 +1570,43 @@ Concretely, every run:
   **permanently** (`state.strategy_nomadic_status.is_nomadic`, sourced from
   `state.strategy_declared_frequency`) and holds no exclusive standing capital. Runs immediately after
   REGIME-CAPITAL SYNC above, same Step 0 position. `SELECT * FROM state.nomadic_capital_sync_pending`.
-  Empty (the steady state) → no-op, nothing to log. Non-empty:
+  **HEAL FIRST, FROM THIS SAME READ, BEFORE YOU BRANCH (added 2026-09-07, the exact sibling of the regime heal
+  above and landed with it so the pair cannot drift again).** `nomadic_sweep_blocked` is registered
+  `latching = FALSE` with a `resolve_rule` opening "Auto-resolves when `state.nomadic_capital_sync_pending` stops
+  emitting a `blocked_no_recipient` row" — and, unlike its two regime siblings, that rule names no resolver at all.
+  **D2a is the resolver**: D2a is the only routine that reads this view, so it is the only routine that can ever
+  observe the heal. If **no row has `blocked_no_recipient = TRUE`** and an unresolved `nomadic_sweep_blocked` alert
+  exists → `UPDATE ops.alerts SET resolved=TRUE, resolved_ts=CURRENT_TIMESTAMP(), resolved_note='condition healed:
+  state.nomadic_capital_sync_pending no longer emits a blocked_no_recipient row — <name what actually cleared it: a
+  capital-enabled non-nomadic strategy exists again, or the nomadic strategy fell below the $25 floor>' WHERE
+  category='nomadic_sweep_blocked' AND NOT resolved`. **The same "Empty branch" trap applies verbatim and is why
+  this sits above the branch:** this view's `blocked` CTE (`WHERE NOT EXISTS (SELECT 1 FROM weights)`) and its
+  `allocated` CTE (`CROSS JOIN weights`) are complementary over the same sweeping population, so the heal is a flag
+  flip, not a drop to zero rows. Read the FLAG, never the row count, and read it once.
+  Empty (the steady state) → no-op, nothing to log — apart from the heal above, which is evaluated either way.
+  Non-empty:
   - `control_enabled = FALSE` (the `ops.capital_nomad_control` kill-switch — separate from
     `ops.capital_control` above) → log a one-line `events.decision_log` note recording what WOULD have
     moved, and move nothing.
   - **`blocked_no_recipient = TRUE`** (capital to sweep, but every capital-enabled strategy is itself
     nomadic, so there is nowhere legal to put it) → move nothing and `CALL ops.sp_raise_alert_once('warning',
-    'D2a','nomadic_sweep_blocked', ...)`. This row exists specifically so a blocked sweep is
-    distinguishable from the healthy empty-view steady state; do NOT treat it as a no-op.
+    'D2a','nomadic_sweep_blocked', <the EXACT STABLE message below>, <JSON payload>)`. This row exists
+    specifically so a blocked sweep is distinguishable from the healthy empty-view steady state; do NOT treat
+    it as a no-op.
+    **PIN THE MESSAGE (2026-09-07 — until now this site carried a literal `...` where the message argument
+    goes, while BOTH regime siblings above were pinned verbatim).** `sp_raise_alert_once` dedups on
+    `(category, message)` by exact string equality, so an improvised message interpolating the strategy or the
+    amount raises a NEW warning EVERY run — and this condition does NOT self-clear within a session, so that
+    is one fresh email per day indefinitely: the permanently-red-advisory failure this fleet has hit before,
+    and the exact trap the regime bullet above spells out. It has never manifested only because
+    `nomadic_sweep_blocked` has never once fired (verified live: zero rows in `ops.alerts`, ever) — an
+    unfired-and-therefore-untested raise site, not a safe one. Use verbatim, with no interpolation:
+    `'Nomadic sweep blocked: a nomadic strategy holds sweepable idle cash, but every capital-enabled strategy
+    is itself nomadic, so there is no eligible recipient and nothing moved. Strategies and amounts in
+    payload.'` Deliberately DISTINCT wording from the regime sweep message, for the reason `bigquery/223`
+    gives for splitting the restore category out: two blocked conditions sharing one message would let an
+    already-open row of the other kind silently swallow this one. The varying figures — `strategy`, `amount`,
+    the capital-enabled set — go in the PAYLOAD, never the message.
   - SWEEP rows only — this view never carries a BORROW row; borrowing is on-demand at order-craft time,
     not a daily standing check (Operating_Protocols.md §16 explains why). Write the atomic $0-sum
     `events.cash_flows` double-entry (per the `flow_type` sign rule pinned at the regime-sweep bullet above: `'WITHDRAWAL'` on the negative leg, `'DEPOSIT'` on the positive one) on one flow_date tagged `source='nomadic_capital_sweep'`: one negative
