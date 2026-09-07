@@ -266,3 +266,76 @@ END;
     findings, _anomalies = cams.find_sites()
     assert len(findings) == 1
     assert findings[0][2] == "<non-literal category>"
+
+
+# =================================================================================================
+# PROSE PASS (added 2026-09-07). find_prose_sites() takes an optional `text` argument precisely so
+# these tests drive a SYNTHETIC document: the live Claude_Task_Plan.md changes most days, and a test
+# asserting against its current contents would fail on unrelated edits. Same motivation as the
+# find_final_definitions() monkeypatching described in this module's header.
+# =================================================================================================
+
+def _prose(call):
+    """A markdown fragment shaped like the plan's own inline-code call sites."""
+    return f"Some prose about the step. `CALL ops.{call}` and then more prose.\n"
+
+
+def test_prose_free_form_placeholder_is_reported_as_unregistered():
+    # The 2026-09-07 defect shape: the whole message is an instruction to compose, so every run
+    # renders a different string and _once cannot match its own open row.
+    doc = _prose("sp_raise_alert_once('warning','D3','selfheal_failed','<object + error>','<JSON>')")
+    unregistered, quote, used, sql_built, anomalies = cams.find_prose_sites(doc)
+    assert ("selfheal_failed", "<object + error>") in unregistered
+    assert not quote and not sql_built
+
+
+def test_prose_registered_placeholder_passes_and_is_marked_used():
+    doc = _prose("sp_raise_alert_once('warning','OPS0','stranded_branch','<branch> unmerged','<JSON>')")
+    unregistered, _quote, used, _sql_built, _anomalies = cams.find_prose_sites(doc)
+    assert unregistered == []
+    assert "<branch>" in used
+
+
+def test_prose_doubled_quote_escape_is_reported_on_both_raise_variants():
+    # GoogleSQL rejects '' as an apostrophe escape, so the CALL raises NOTHING at all -- worse than
+    # a degraded alert. It must be caught on the plain raise too, not just on _once.
+    once = _prose("sp_raise_alert_once('warning','OPS1','reauth','<branch> before today''s cutoff','<JSON>')")
+    plain = _prose("sp_raise_alert('info','Q4','synced','pushed on this session''s branch','<JSON>')")
+    for doc in (once, plain):
+        _unreg, quote, _used, _sql, _anom = cams.find_prose_sites(doc)
+        assert len(quote) == 1, doc
+    # ...and the backslash form is accepted.
+    ok = _prose("sp_raise_alert('info','Q4','synced','pushed on this session\\'s branch','<JSON>')")
+    _unreg, quote, _used, _sql, _anom = cams.find_prose_sites(ok)
+    assert quote == []
+
+
+def test_prose_narrative_mention_with_an_ellipsis_is_skipped():
+    # "sp_raise_alert_once('critical', …, 'trading_halted', …)" is prose ABOUT a call, not a
+    # template; the real template for that category lives elsewhere. 25 of the 29 sites on this
+    # pass's first run were these, and counting them made the output unreadable.
+    doc = _prose("sp_raise_alert_once('critical', …, 'trading_halted', …)")
+    unregistered, quote, _used, sql_built, anomalies = cams.find_prose_sites(doc)
+    assert unregistered == [] and quote == [] and sql_built == [] and anomalies == []
+
+
+def test_prose_concat_built_message_is_disclosed_not_silently_passed():
+    doc = _prose("sp_raise_alert_once('warning','SL3','probe_stalled', CONCAT(strategy_code, ' is frozen'), '<JSON>')")
+    unregistered, _quote, _used, sql_built, _anomalies = cams.find_prose_sites(doc)
+    assert unregistered == []
+    assert sql_built and sql_built[0][0] == "probe_stalled"
+
+
+def test_prose_unquoted_bare_placeholder_is_held_to_the_registry_too():
+    # "<reasons joined>" was written unquoted as the message argument. That is the same free-form
+    # shape as a quoted one and must not escape the gate by lacking quotes.
+    doc = _prose("sp_raise_alert_once('critical','D2a','order_guard_block', <reasons joined>, <JSON>)")
+    unregistered, _quote, _used, _sql, _anomalies = cams.find_prose_sites(doc)
+    assert ("order_guard_block", "<reasons joined>") in unregistered
+
+
+def test_prose_registry_has_no_stale_entries_against_the_live_plan():
+    # ANTI-ROT, mirroring the ALLOWLIST behaviour above: a placeholder that no longer appears in any
+    # prose message must be deleted from PROSE_PLACEHOLDERS rather than sit there forever.
+    _unreg, _quote, used, _sql, _anom = cams.find_prose_sites()
+    assert sorted(set(cams.PROSE_PLACEHOLDERS) - used) == []
