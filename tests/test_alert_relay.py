@@ -1,13 +1,19 @@
 """Guard the out-of-session alert/order relay's bq-JSON parsing + message formatting (2026-06-28 #8).
 
-scripts/alert_relay.py is the off-Google-inbox alert + staged-order delivery channel (RUNBOOK §25 A2/A3).
+scripts/alert_relay.py is the off-Google-inbox ops.alerts delivery channel (RUNBOOK §25 A2).
 Its bq() delegates to lib/bq_json.py's run_bq_query (2026-07-18 dedup-sweep), the shared subprocess-
 invoke/JSON-slice/returncode/timeout contract that already caused a production bug in its sibling
 (scripts/dbt_parity.py, commit "parse bq JSON, not CSV — KeyError on first run"). That contract is now
 proven ONCE on run_bq_query itself (tests/test_bq_json.py); this file only pins its own fixed args
 (C3 dedup, 2026-07-20 audit). main()'s broad `except` returns 0, so a parse/format regression fails
-SILENTLY — alerts/orders simply stop being POSTed with no red CI. These offline tests (no warehouse,
+SILENTLY — alerts simply stop being POSTed with no red CI. These offline tests (no warehouse,
 no creds) lock the row-shape contract.
+
+Also pins the two 2026-09-07 owner-directed delivery rules the module enforces (see its docstring):
+RULE 1 every push has an email counterpart, RULE 2 ntfy is for action-needed only. Both are one-line
+code changes to undo and neither has any runtime signal when broken — a suppressed push is invisible
+and an email-less push looks identical to one with email — so the tests below are the only thing
+standing between a well-meaning future edit and a silently re-broken channel.
 """
 import json
 import os
@@ -55,8 +61,9 @@ def _alerts_cron_interval_minutes():
     with open(workflow_path) as f:
         text = f.read()
     # The alerts (best-effort backup) schedule is the only INTERVAL-style cron in this workflow
-    # (the other two crons are the daily orders reminder and the weekly heartbeat, both fixed times,
-    # not intervals) — match that shape rather than assuming list position. Two forms are accepted so
+    # (the only other cron is the weekly heartbeat, a fixed time, not an interval; the daily orders
+    # reminder was retired 2026-09-07) — match that shape rather than assuming list position. Two forms
+    # are accepted so
     # a future retune in EITHER direction stays guarded instead of failing on the regex:
     #   `*/N * * * *`  -> every N MINUTES   (the pre-2026-08-30 shape, N=30)
     #   `M */N * * *` or `M A-B/N * * *` -> every N HOURS (current: `0 */2 * * *` -> 120 min)
@@ -104,7 +111,7 @@ def test_fmt_ts_real_bigquery_wire_format():
     assert out == "2026-07-09 12:26 (America/Denver)"
 
 
-# ---- relay_alerts() / relay_orders(): row-shape contract + no-spurious-post ----------------
+# ---- relay_alerts(): row-shape contract + no-spurious-post ---------------------------------
 
 def test_relay_alerts_empty_does_not_post(monkeypatch):
     monkeypatch.setattr(ar, "bq", lambda sql: [])
@@ -136,116 +143,25 @@ def test_relay_alerts_missing_column_raises_not_silent(monkeypatch):
         ar.relay_alerts()
 
 
-def test_relay_orders_empty_does_not_post(monkeypatch):
-    monkeypatch.setattr(ar, "bq", lambda sql: [])
-    posted = []
-    monkeypatch.setattr(ar, "post", lambda text: posted.append(text))
-    ar.relay_orders()
-    assert posted == []
-
-
-def test_relay_orders_posts_and_formats(monkeypatch):
-    monkeypatch.setattr(ar, "bq", lambda sql: [
-        {"item_key": "k1", "strategy": "B", "ticker": "KMX", "side": "BUY",
-         "qty": "10", "limit_price": "70.00", "window_close": "2026-06-30", "instruction_id": None},
-    ])
-    posted = []
-    monkeypatch.setattr(ar, "post", lambda text: posted.append(text))
-    ar.relay_orders()
-    assert len(posted) == 1
-    assert "KMX" in posted[0] and "BUY" in posted[0]
-
-
-def test_relay_orders_never_renders_limit_price_as_an_order_price(monkeypatch):
-    """REGRESSION (2026-09-04). Every live order is MARKET since the 2026-07-21 cutover and no
-    limit_price is transmitted (bigquery/100, /101) — the column survives only as a REFERENCE price
-    for reserved-cash / notional math. This push is the one operator-facing surface that renders it,
-    and it rendered `@ <price>`, asserting an order price no live order carries. The `@` label
-    outlived two earlier wording corrections to this same function (2026-07-20 craftability,
-    2026-08-03 'unreconciled'), both of which landed AFTER the cutover, so pin it."""
-    monkeypatch.setattr(ar, "bq", lambda sql: [
-        {"item_key": "k1", "strategy": "B", "ticker": "KMX", "side": "BUY",
-         "qty": "10", "limit_price": "70.00", "window_close": "2026-06-30", "instruction_id": None},
-    ])
-    posted = []
-    monkeypatch.setattr(ar, "post", lambda text: posted.append(text))
-    ar.relay_orders()
-    assert "@ 70.00" not in posted[0], "a reference price must never be rendered as an order price"
-    assert "ref ~70.00" in posted[0]
-
-
-def test_relay_orders_missing_column_raises_not_silent(monkeypatch):
-    monkeypatch.setattr(ar, "bq", lambda sql: [{"ticker": "KMX"}])  # missing side/qty/etc.
-    monkeypatch.setattr(ar, "post", lambda text: None)
-    with pytest.raises(KeyError):
-        ar.relay_orders()
-
-
-# ---- relay_orders(): craftability-aware wording (2026-07-20 fix — see scripts/alert_relay.py
-#      relay_orders' docstring). A craftable order (instruction_id set) never gets a
-#      `[Claude] Confirm order` calendar event by design (2026-07-09 policy) — telling the operator
-#      to tap one that doesn't exist is misleading, especially on a row already confirmed via IBKR's
-#      own notification days ago and just resting unfilled. Only a non-craftable/manual-entry row
-#      (instruction_id NULL) actually has that calendar event.
-
-def test_relay_orders_craftable_row_does_not_mention_calendar_event(monkeypatch):
-    monkeypatch.setattr(ar, "bq", lambda sql: [
-        {"item_key": "entry-TSM-D-20260717", "strategy": "D", "ticker": "TSM", "side": "BUY",
-         "qty": "0.0946", "limit_price": "399.3", "window_close": "2026-07-24", "instruction_id": "100"},
-    ])
-    posted = []
-    monkeypatch.setattr(ar, "post", lambda text: posted.append(text))
-    ar.relay_orders()
-    assert "[Claude] Confirm order" not in posted[0]
-    assert "IBKR's own order notification" in posted[0]
-
-
-def test_relay_orders_manual_entry_row_still_mentions_calendar_event(monkeypatch):
-    monkeypatch.setattr(ar, "bq", lambda sql: [
-        {"item_key": "k2", "strategy": "B", "ticker": "SPX 260918C05500000", "side": "BUY",
-         "qty": "1", "limit_price": "12.50", "window_close": "2026-07-30", "instruction_id": None},
-    ])
-    posted = []
-    monkeypatch.setattr(ar, "post", lambda text: posted.append(text))
-    ar.relay_orders()
-    assert "tap the [Claude] Confirm order event" in posted[0]
-
-
-def test_relay_orders_mixed_rows_annotate_independently(monkeypatch):
-    monkeypatch.setattr(ar, "bq", lambda sql: [
-        {"item_key": "k1", "strategy": "D", "ticker": "ISRG", "side": "BUY", "qty": "0.1091",
-         "limit_price": "346.3", "window_close": "2026-07-24", "instruction_id": "101"},
-        {"item_key": "k2", "strategy": "B", "ticker": "MANUAL", "side": "SELL", "qty": "1",
-         "limit_price": "10.00", "window_close": "2026-07-24", "instruction_id": None},
-    ])
-    posted = []
-    monkeypatch.setattr(ar, "post", lambda text: posted.append(text))
-    ar.relay_orders()
-    lines = posted[0].splitlines()
-    isrg_line = next(line for line in lines if "ISRG" in line)
-    manual_line = next(line for line in lines if "MANUAL" in line)
-    assert "IBKR's own order notification" in isrg_line
-    assert "tap the [Claude] Confirm order event" in manual_line
-
-
-# (relay_catchup + its tests RETIRED 2026-07-18 — subsumed by OPS0's autonomous catch-up
-#  auto-refire, bigquery/59_catchup_autofire.sql; see scripts/alert_relay.py's module docstring.)
-
 # ---- relay_heartbeat(): the ONE mode that must NOT swallow a POST failure ------------------
 
 def test_relay_heartbeat_posts_once(monkeypatch):
     posted = []
-    monkeypatch.setattr(ar, "post", lambda text: posted.append(text) or 200)
+    monkeypatch.setattr(ar, "post", lambda text, silent=False: posted.append(text) or 200)
     ar.relay_heartbeat()
     assert len(posted) == 1
-    assert "heartbeat" in posted[0].lower()
+    # Wording changed 2026-09-07 ("heartbeat" -> "liveness probe") when the canary went silent;
+    # what this pins is that exactly ONE post happens and that its text identifies the channel it
+    # is probing, so a maintainer hand-inspecting the ntfy topic can tell what the message is.
+    assert "alert-relay" in posted[0].lower()
+    assert "liveness probe" in posted[0].lower()
 
 
 def test_relay_heartbeat_propagates_post_failure(monkeypatch):
-    # Unlike relay_alerts/relay_orders, a broken heartbeat webhook must raise — it is the only
+    # Unlike relay_alerts, a broken heartbeat webhook must raise — it is the only
     # mode guaranteed to run even when there is nothing else to say, so it is the sole mechanism
-    # that can ever catch a dead channel (main()'s best-effort except only wraps alerts/orders).
-    def _boom(text):
+    # that can ever catch a dead channel (main()'s best-effort except only wraps alerts).
+    def _boom(text, silent=False):
         raise OSError("connection refused")
     monkeypatch.setattr(ar, "post", _boom)
     with pytest.raises(OSError):
@@ -256,7 +172,7 @@ def test_main_heartbeat_mode_failure_is_not_swallowed(monkeypatch):
     monkeypatch.setattr(ar, "WEBHOOK_URL", "https://example.invalid/hook")
     monkeypatch.setattr(ar, "MODE", "heartbeat")
 
-    def _boom(text):
+    def _boom(text, silent=False):
         raise OSError("connection refused")
     monkeypatch.setattr(ar, "post", _boom)
     with pytest.raises(OSError):
@@ -266,7 +182,7 @@ def test_main_heartbeat_mode_failure_is_not_swallowed(monkeypatch):
 def test_main_heartbeat_mode_success_returns_zero(monkeypatch):
     monkeypatch.setattr(ar, "WEBHOOK_URL", "https://example.invalid/hook")
     monkeypatch.setattr(ar, "MODE", "heartbeat")
-    monkeypatch.setattr(ar, "post", lambda text: 200)
+    monkeypatch.setattr(ar, "post", lambda text, silent=False: 200)
     assert ar.main() == 0
 
 
@@ -311,7 +227,7 @@ def test_post_non_ntfy_url_still_sends_json_body(monkeypatch):
     assert captured["headers"]["Content-type"] == "application/json"
 
 
-# ---- main()'s "best-effort — swallow the exception, return 0" contract for alerts/orders
+# ---- main()'s "best-effort — swallow the exception, return 0" contract for alerts
 #      (2026-07-14 audit finding: only exercised indirectly before, never through main()) --
 
 def test_main_alerts_mode_swallows_exception_and_returns_zero(monkeypatch, capsys):
@@ -324,16 +240,6 @@ def test_main_alerts_mode_swallows_exception_and_returns_zero(monkeypatch, capsy
     rc = ar.main()
     assert rc == 0
     assert "relay error (non-fatal)" in capsys.readouterr().err
-
-
-def test_main_orders_mode_swallows_exception_and_returns_zero(monkeypatch):
-    monkeypatch.setattr(ar, "WEBHOOK_URL", "https://example.invalid/hook")
-    monkeypatch.setattr(ar, "MODE", "orders")
-
-    def _boom(sql):
-        raise RuntimeError("bq error")
-    monkeypatch.setattr(ar, "bq", _boom)
-    assert ar.main() == 0
 
 
 def test_main_no_webhook_is_a_clean_noop(monkeypatch, capsys):
@@ -394,3 +300,178 @@ def test_relay_alerts_still_posts_when_user_tz_is_null(monkeypatch):
     monkeypatch.setattr(ar, "post", lambda t: posted.append(t))
     ar.relay_alerts()
     assert len(posted) == 1 and "s/c" in posted[0]   # batch delivered, not dropped
+
+
+# ---- 2026-09-07 owner directive: RULE 1 (every push has an email counterpart) and
+#      RULE 2 (ntfy is for action-needed only). See scripts/alert_relay.py's module docstring.
+#      Both rules are enforced only by code that is easy to "simplify" away and produces NO runtime
+#      signal when broken — a suppressed push is indistinguishable from a quiet week, and an
+#      email-less push looks exactly like one with email. These tests are the entire guard.
+
+def test_orders_mode_is_retired_and_never_posts(monkeypatch, capsys):
+    # RULE 1. The `orders` mode read state.open_orders — a view NO email channel queries — so it was
+    # the one push in the system with no email counterpart. It is retired; the fact is now raised as
+    # the staged_order_awaiting_confirm ops.alerts row by bigquery/229, which reaches email AND ntfy.
+    # Pinned as an explicit no-op rather than deleted-and-forgotten because a stale dispatch, an old
+    # re-run, or a leftover cron would otherwise fall through to relay_alerts() and silently relay
+    # ALERTS while reporting itself as "orders".
+    monkeypatch.setattr(ar, "WEBHOOK_URL", "https://ntfy.sh/stock-trading-testtopic")
+    monkeypatch.setattr(ar, "MODE", "orders")
+    posted = []
+    monkeypatch.setattr(ar, "post", lambda *a, **k: posted.append(a) or 200)
+    # bq must never be reached either — the retired mode does no warehouse work at all.
+    monkeypatch.setattr(ar, "bq", lambda sql: pytest.fail("retired orders mode queried BigQuery"))
+    assert ar.main() == 0
+    assert posted == [], "retired orders mode must not POST anything"
+    assert "RETIRED" in capsys.readouterr().out
+
+
+def test_relay_orders_function_is_gone():
+    # The mode is retired at BOTH layers. Leaving the function behind would invite a future edit to
+    # re-wire it (re-breaking RULE 1) without touching the workflow or the docstring that explain why
+    # it must not exist.
+    assert not hasattr(ar, "relay_orders")
+
+
+def test_alerts_query_excludes_every_no_push_category(monkeypatch):
+    # RULE 2. The six SISA roster-change notices are completed, healthy, fully-autonomous actions that
+    # need no operator action; alert_emailer.gs already renders them in a non-fault lane. They must be
+    # filtered OUT of the push — and, critically, filtered in the QUERY, so the exclusion is visible
+    # in one place rather than smeared across the formatting code.
+    seen = {}
+
+    def _bq(sql):
+        seen["sql"] = sql
+        return []
+    monkeypatch.setattr(ar, "bq", _bq)
+    monkeypatch.setattr(ar, "get_user_tz", lambda: "America/Denver")
+    ar.relay_alerts()
+    sql = seen["sql"]
+    assert "category NOT IN (" in sql
+    for cat in ar.NO_PUSH_CATEGORIES:
+        assert f"'{cat}'" in sql, f"{cat} is in NO_PUSH_CATEGORIES but absent from the relay query"
+
+
+def test_no_push_categories_does_not_touch_severity_or_resolved_filter(monkeypatch):
+    # The suppression is a CHANNEL filter and nothing else. It must never become a severity change or
+    # a resolve — the rows stay unresolved criticals/warnings on the alert board, still emailed, still
+    # counted by every state.* view and trading gate that reads ops.alerts. Silencing a verifier by
+    # editing its input is the failure mode this pins against.
+    seen = {}
+    monkeypatch.setattr(ar, "bq", lambda sql: seen.setdefault("sql", sql) and [] or [])
+    monkeypatch.setattr(ar, "get_user_tz", lambda: "America/Denver")
+    ar.relay_alerts()
+    sql = seen["sql"]
+    assert "NOT resolved" in sql
+    assert "severity IN ('critical','warning')" in sql
+
+
+def test_no_push_categories_matches_alert_emailer_roster_lane():
+    # Four-place lockstep, checked here too (not only by scripts/check_roster_notice_lockstep.py) so a
+    # drift fails in the ordinary pytest run a developer actually watches, not just in the dedicated
+    # guard step.
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    gs = open(os.path.join(repo_root, "ops", "monitoring", "alert_emailer.gs")).read()
+    block = re.search(r"ROSTER_NOTICE_CATEGORIES\s*=\s*\[(.*?)\]", gs, re.DOTALL)
+    assert block, "could not find ROSTER_NOTICE_CATEGORIES in alert_emailer.gs"
+    emailer = set(re.findall(r"'([a-z0-9_]+)'", block.group(1)))
+    assert set(ar.NO_PUSH_CATEGORIES) == emailer
+
+
+def test_relay_heartbeat_publishes_silently(monkeypatch):
+    # RULE 2, the literal all-clear case: this was a weekly "✓ channel alive, no action needed" buzz.
+    # It must still POST (that round-trip is the entire liveness proof) but must not notify.
+    calls = []
+    monkeypatch.setattr(ar, "post", lambda text, silent=False: calls.append((text, silent)) or 200)
+    ar.relay_heartbeat()
+    assert len(calls) == 1
+    text, silent = calls[0]
+    assert silent is True, "the weekly canary must publish silently"
+    assert "no action needed" in text.lower()
+
+
+def test_post_silent_sets_every_ntfy_suppression_header(monkeypatch):
+    # All three headers were probed live against ntfy.sh (2026-09-07) before being used. Priority:min
+    # is the documented "no vibration or sound, under the fold" level; Cache:no keeps the canary out of
+    # topic history (verified by a follow-up poll returning nothing); Firebase:no keeps it off the FCM
+    # Android delivery path.
+    monkeypatch.setattr(ar, "WEBHOOK_URL", "https://ntfy.sh/stock-trading-testtopic")
+    captured = {}
+    monkeypatch.setattr(ar.urllib.request, "urlopen", _capturing_urlopen(captured))
+    ar.post("canary", silent=True)
+    h = captured["headers"]
+    assert h.get("Priority") == "min"
+    assert h.get("Cache") == "no"
+    assert h.get("Firebase") == "no"
+    assert h.get("Tags") == "heartbeat"
+
+
+def test_post_default_is_loud_so_a_real_alert_still_notifies(monkeypatch):
+    # The inverse guard, and the one that actually matters for safety: `silent` must default to False
+    # so a drawdown-kill or missed-run alert can never inherit the canary's min priority. A regression
+    # here would be invisible — the POST still returns 200 and CI stays green while the phone goes
+    # quiet for real alerts.
+    monkeypatch.setattr(ar, "WEBHOOK_URL", "https://ntfy.sh/stock-trading-testtopic")
+    captured = {}
+    monkeypatch.setattr(ar.urllib.request, "urlopen", _capturing_urlopen(captured))
+    ar.post("a real alert")
+    h = captured["headers"]
+    assert "Priority" not in h
+    assert "Cache" not in h
+    assert "Firebase" not in h
+
+
+def test_post_never_sends_an_email_header(monkeypatch):
+    # ntfy.sh REJECTS the Email: forwarding header on this anonymous capability-URL topic — probed
+    # live 2026-09-07: HTTP 400 {"code":40053,"error":"anonymous email sending is not allowed"}. A
+    # future attempt to satisfy RULE 1 by adding it here would not merely fail to send mail, it would
+    # 400 the POST and take the whole push channel (and the liveness canary with it) permanently red.
+    # Email parity comes from ops.alerts -> alert_emailer.gs instead.
+    monkeypatch.setattr(ar, "WEBHOOK_URL", "https://ntfy.sh/stock-trading-testtopic")
+    for silent in (False, True):
+        captured = {}
+        monkeypatch.setattr(ar.urllib.request, "urlopen", _capturing_urlopen(captured))
+        ar.post("x", silent=silent)
+        assert not any(k.lower() in ("email", "e-mail", "mail") for k in captured["headers"])
+
+
+def test_silent_headers_are_ntfy_only_and_never_reach_a_generic_webhook(monkeypatch):
+    # A Slack/Discord/Pub-Sub endpoint has no notion of these headers; the JSON shape must stay
+    # byte-identical to what it has always been so a non-ntfy destination is unaffected by RULE 2.
+    monkeypatch.setattr(ar, "WEBHOOK_URL", "https://example.invalid/hook")
+    captured = {}
+    monkeypatch.setattr(ar.urllib.request, "urlopen", _capturing_urlopen(captured))
+    ar.post("hello", silent=True)
+    assert json.loads(captured["data"]) == {"text": "hello"}
+    assert captured["headers"]["Content-type"] == "application/json"
+    assert "Priority" not in captured["headers"]
+
+
+def test_suppression_clause_is_null_safe(monkeypatch):
+    # ops.alerts.category is nullable, and `NULL NOT IN (...)` evaluates to NULL, which WHERE treats
+    # as false — so a bare NOT IN would silently drop a NULL-category alert from the PUSH while it is
+    # still emailed. COALESCE(..., TRUE) points the unknown case at delivery. Suppression must be
+    # provably TRUE, never merely not-provably-false.
+    seen = {}
+    monkeypatch.setattr(ar, "bq", lambda sql: seen.setdefault("sql", sql) and [] or [])
+    monkeypatch.setattr(ar, "get_user_tz", lambda: "America/Denver")
+    ar.relay_alerts()
+    assert "COALESCE(category NOT IN (" in seen["sql"]
+    assert "), TRUE)" in seen["sql"]
+
+
+def test_empty_no_push_tuple_degrades_to_no_filter_not_a_syntax_error(monkeypatch):
+    # `category NOT IN ()` is a BigQuery SYNTAX ERROR, not an empty filter — and relay_alerts() runs
+    # inside main()'s best-effort except, so the failure would NOT go red. It would silently stop the
+    # ENTIRE alerts push (criticals included) forever, leaving one stderr line as the only evidence.
+    # An emptied list must degrade to "push everything".
+    seen = {}
+    monkeypatch.setattr(ar, "NO_PUSH_CATEGORIES", ())
+    monkeypatch.setattr(ar, "bq", lambda sql: seen.setdefault("sql", sql) and [] or [])
+    monkeypatch.setattr(ar, "get_user_tz", lambda: "America/Denver")
+    ar.relay_alerts()
+    assert "NOT IN ()" not in seen["sql"]
+    assert "category NOT IN" not in seen["sql"]
+    # the rest of the query must still be intact and well-formed
+    assert "NOT resolved" in seen["sql"]
+    assert "severity IN ('critical','warning')" in seen["sql"]

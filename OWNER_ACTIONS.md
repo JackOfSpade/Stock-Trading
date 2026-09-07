@@ -2123,6 +2123,33 @@ category='second_channel_ready'`) for the actual `https://ntfy.sh/<topic>` URL a
 (ntfy app, or open the URL in a browser). The literal topic is deliberately not repeated here or in
 any git-tracked file — treat it as a credential.
 
+**WHAT THIS TOPIC NOW DELIVERS (changed 2026-09-07, owner directive — no owner action required).**
+Two rules now bind the channel: every ntfy push is accompanied by an email, and ntfy carries only
+things needing your action. Since `ops.alerts` → `alert_emailer.gs` is the only email channel that
+exists (a GitHub Actions job has no mail path at all — no SMTP secret, no mail Action, and ntfy.sh
+rejects its own `Email:` forwarding header on an anonymous topic, HTTP 400, probed live), the rule is
+enforced structurally: **the relay only pushes rows of `ops.alerts`.** Concretely, on your phone:
+- **Gone:** the daily ~07:05 MT staged-order list (it had no email counterpart and re-listed orders
+  you had already confirmed in IBKR). The same fact now arrives as a normal alert — by EMAIL and push
+  — once per order, and clears itself when the order reconciles (`bigquery/229`).
+- **Gone:** the weekly `✓ … channel alive, no action needed` ping. The canary still runs and still
+  fails loudly on a dead webhook — it now publishes silently, because the proof was always the HTTP
+  round-trip, not the buzz.
+- **Gone from the phone, still emailed:** the six SISA roster-change notices (a strategy entered
+  SHADOW, took first capital, graduated, was proposed for retirement, was dropped, roster at floor).
+  They need no action from you, so they belong in the inbox, not on the lock screen.
+- **Unchanged:** every real `ops.alerts` critical/warning, and every CI-guard finding (those reach
+  email via `ops.ci_findings` → the daily `cadence_check` `ci_finding` alert → `alert_emailer.gs`).
+- **One email deliberately kept:** the weekly `🧪 [TEST] Stock-Trading alert-delivery self-test — no
+  action needed`. Sending it IS the delivery test, and its absence is itself the signal — per your
+  2026-06-29 preference it stays visible in the inbox. Say the word if you want it archived instead;
+  it cannot be stopped without blinding the check.
+
+**If you ever want push-and-email on ONE mechanism** (rather than the ops.alerts fan-out above), the
+only route is an authenticated ntfy account: create one, put the token in the topic URL/secret, and
+`Email:` starts working. Not done here because it adds an owner-provisioned credential and an
+external dependency to a path that already reaches your inbox for free.
+
 ```verify
 id: D
 type: gh
