@@ -12,6 +12,38 @@ Canonical reference for Strategy B criterion-4 NO-GO sub-patterns extracted from
 
 ---
 
+> **⚠ READ BEFORE ACTING ON ANY COUNTERFACTUAL TALLY BELOW — THE SCORING INSTRUMENT IS MEASURED WRONG (W5 2026-09-06).**
+> Every `n_correct` / `n_incorrect` figure in this file comes from `analytics.nogo_counterfactual` (`bigquery/152`), which
+> scores each avoided name against **SGOV**, hardcoded as `WHERE ticker = 'SGOV'`, and whose own comment calls it
+> "the SGOV park". **SGOV stopped being the park on 2026-07-15**, when the owner cut the shared idle-capital vehicle over
+> to VOO (Rev 38; `Operating_Protocols.md` §13). The view was authored **2026-08-09, three weeks after that cutover**, and
+> never became vehicle-aware, unlike its siblings `park_counterfactuals` / `strategy_vs_park` / `park_baseline`.
+> **35 of the 40 shadow rows post-date the cutover**, so this is not an edge case — it is nearly the whole table.
+>
+> **MEASURED IMPACT (W5 2026-09-06, recomputing every row against a VOO leg with the same as-of join):** SGOV returned
+> **~0.03%** across these windows while VOO returned **~3.0%** — a ~3-point difference in the opportunity-cost hurdle.
+> Re-scored against the instrument the capital was actually sitting in:
+>
+> | token | correct/n vs SGOV (as published below) | correct/n vs VOO | flips |
+> |---|---|---|---|
+> | **SP4** | **5/17** (29%) | **8/17** (47%) | 3 incorrect→correct |
+> | **SP1** | **3/9** (33%) | **4/9** (44%) | 1 incorrect→correct |
+> | SP6 | 1/4 | 3/4 | 2 incorrect→correct |
+> | PatternN | 4/7 | 4/7 | none |
+> | SP10 | 1/2 | 1/2 | none |
+> | SP5 | 0/1 | 0/1 | none |
+>
+> **Six rows flip incorrect→correct and ZERO flip the other way** — strictly one-directional, which is exactly what a
+> raised hurdle produces and is itself corroboration that the effect is the benchmark, not noise. **SP4 moves from clearly
+> below chance to essentially at chance.**
+>
+> **CONSEQUENCE, and this is why the warning sits at the top of the file rather than in a run-log entry:** the demotion loop
+> **SELF-APPLIES at N ≥ 20 with no human step**. If SP4 reaches 20 still scored against SGOV, it would auto-demote on what
+> is substantially a benchmark artifact. **Until `analytics.nogo_counterfactual` is made vehicle-aware, do NOT treat any
+> tally in this file as authoritative for a demotion, and do not let the N ≥ 20 self-apply fire on the SGOV-scored numbers.**
+> The tallies are left as published rather than silently restated, because the view is the system of record and this file
+> must not fork from it — the correction belongs in the SQL. Filed as `ops.alerts` `nogo_counterfactual_benchmark_stale`.
+
 ## Sub_pattern canonical vocabulary (controlled set — STANDARD going forward)
 
 **Established 2026-06-21** by the one-time `events.decision_log.sub_pattern` normalization (W5, note "sub_pattern normalization"; full old→new mapping in the W5 run log below). This block is the **authoritative controlled vocabulary** for the `events.decision_log.sub_pattern` field. **The routine that logs Strategy-B NO-GOs (D2) MUST emit these tokens** — no free-text, no casing variants (`sub-pattern 1` / `Sub-Pattern 1` → `SP1`), no composite blobs (`SP6-negative+SP4c+PatternN` → `SP6 [overlay: SP4c+PatternN]`). W5 conforms any drift.
