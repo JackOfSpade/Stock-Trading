@@ -79,9 +79,13 @@ WHAT THIS SCRIPT DOES NOT DO. It does not detect a MOVING VALUE embedded directl
 (a run date, a row count, a dollar figure) — that is bigquery/205's defect class, already swept by
 hand once and not re-checked here. It does not run any BigQuery query, and it makes no network
 call: pure text/token parsing over files already in the repo, safe for the sandboxed `checks` CI
-job. It is a PROTOTYPE: not wired into .github/workflows/ci.yml or the OPS0 adopt-gate coverage
-list (scripts/check_adopt_gate_coverage.py) — see this script's own delivery notes for what wiring
-either would require.
+job. WIRING (this paragraph used to say "It is a PROTOTYPE: not wired into ci.yml or the OPS0
+adopt-gate coverage list" — that went stale the day it landed and was corrected 2026-09-07): it IS
+wired, as a BLOCKING step in .github/workflows/ci.yml's `checks` job and in
+auto-merge-claude.yml's post-merge coverage mirror, and check_adopt_gate_coverage.py therefore
+derives it into OPS0 STEP 4d precondition 5 automatically. A new pass added to this file needs no
+further plumbing — which is exactly why the 2026-09-07 prose pass was added HERE rather than as a
+second script.
 
 Usage:  python scripts/check_alert_message_stability.py   # exit 0 = OK; 1 = new finding or stale allowlist
 """
@@ -424,8 +428,193 @@ def find_sites():
     return findings, anomalies
 
 
+
+# =============================================================================================
+# PROSE PASS (added 2026-09-07) — sp_raise_alert_once call sites that live in TASK-PLAN PROSE.
+#
+# WHY A SECOND PASS EXISTS. Everything above this line parses `bigquery/*.sql`. But most of this
+# fleet's alerts are not raised by SQL at all: they are raised by a ROUTINE — a memoryless Claude
+# session that reads a template out of Claude_Task_Plan.md and composes the CALL at run time. That
+# makes the prose templates the LEAST deterministic place a dedup key can live, and the one place
+# neither bigquery/205 (moving values) nor bigquery/227 (STRING_AGG ordering) nor the SQL pass above
+# can see. On 2026-09-07 a triage of two open W5 warnings found ELEVEN defective prose templates,
+# including three whose message literal could not even parse (rule 4 below).
+#
+# THE RULE THIS ENFORCES. Every `<...>` placeholder appearing inside the MESSAGE argument of a prose
+# `sp_raise_alert_once(...)` must be REGISTERED below with a one-line stability argument. This is a
+# "declare your placeholders" gate rather than a semantic judgement: a static checker cannot know
+# whether `<n>` is a stable cycle number or a drifting row count, but it CAN force whoever adds one
+# to say which, and it can catch the free-form shapes (`<object + error>`) mechanically by their
+# absence from the registry. ANTI-ROT, modeled on ALLOWLIST above and check_superseded_markers.py:
+# a registered placeholder that no longer appears anywhere is reported as STALE and fails the run,
+# so an entry cannot outlive its subject.
+#
+# IT ALSO ENFORCES RULE 4 (quote escaping), on BOTH `sp_raise_alert` and `sp_raise_alert_once`:
+# GoogleSQL rejects `''` as an apostrophe escape ("concatenated string literals must be separated by
+# whitespace or comments"), so a template carrying it does not raise a degraded alert — it raises
+# NOTHING, and the condition it was watching goes unannounced. Three sites carried it on 2026-09-07.
+#
+# SCOPE. Claude_Task_Plan.md ONLY. task_plan/*.md are GENERATED from it by scripts/split_task_plan.py
+# (CI enforces they are in sync via `--check`), so scanning both would double-report every finding.
+# =============================================================================================
+
+PROSE_SOURCE = "Claude_Task_Plan.md"
+
+# placeholder -> why substituting it cannot change the rendered string for an UNCHANGED condition.
+PROSE_PLACEHOLDERS = {
+    "<strategy-codes>": "regime_restore_shortfall / strategy_funds_deficit: the strategy codes, pinned at "
+                        "each site to DISTINCT, ASCENDING, comma-joined, no spaces. The SET is the identity.",
+    "<source-values>": "cash_flow_source_unknown: the offending events.cash_flows source values, pinned to "
+                       "DISTINCT, ASCENDING, comma-joined, no spaces.",
+    "<guard-reasons>": "order_guard_block: the guard's reason codes, pinned to DISTINCT, ASCENDING, "
+                       "comma-joined, no spaces.",
+    "<affected_review>": "prompt_injection_attempt: the review artifact the attempt targeted. One open row "
+                         "per affected review; the attacker text itself stays in the payload.",
+    "<the EXACT STABLE message below>": "regime_sweep_blocked / regime_restore_blocked / nomadic_sweep_blocked "
+                                        "/ rerisking_limb_fired: a POINTER, not a substitution -- each site "
+                                        "gives the full message as a verbatim literal immediately below with "
+                                        "'use verbatim, with no interpolation'. Pinned by construction.",
+    "<ticker + strategy-if-known + first-seen-in-connector date>":
+        "position_reconciliation_lag: pinned to the FIRST-SEEN date (not today's) by the 2026-07-20 root-cause "
+        "fix, precisely so it stays constant while the occurrence persists.",
+    "<Connector>": "connector_reauth_needed: the connector's own name (BigQuery, Gmail, ...). One open row per connector.",
+    "<as_of>": "catchup_refire_blocked: names WHICH scheduled slot was missed — part of the identity, not a measurement.",
+    "<branch>": "stranded_branch: the git branch name. One open row per stranded branch.",
+    "<dataset.object>": "live_sql_parity_*: the fully-qualified object name. One open row per object.",
+    "<dataset-tables>": "backup_per_table_row_drop: affected tables, pinned to DISTINCT, ASCENDING, comma-joined, no spaces.",
+    "<dropping file>": "live_sql_parity_missing_but_dropped: the bigquery/NN_*.sql filename that DROPs the object — a filename, constant for the condition.",
+    "<entry_id>": "go_without_order: the id of the specific GO decision. One open row per stranded GO.",
+    "<expected>": "upstream_marker_mismatch: the marker the current period expects — fixed for that period.",
+    "<found>": "upstream_marker_mismatch: the marker actually present. It changes only if the upstream rewrites the file, which IS a different condition.",
+    "<item_key>": "queue_item_stale / review_handoff_stuck: the queue item's own key.",
+    "<item_type>": "queue_item_stale: the item's type, constant for that item.",
+    "<n>": "review_handoff_stuck (AR_orc): the review CYCLE number. Cycle 3 is cycle 3 — an identifier of which cycle stuck, not a running count.",
+    "<park vehicle>": "connector (D2a): the park ETF symbol. A symbol, not a measurement.",
+    "<prevented|exit handed to D2>": "prefill_invalidation: a two-value enumerated alternation, both spellings fixed at the site.",
+    "<probe symbol>": "connector (D2a): the probe ticker. A symbol, not a measurement.",
+    "<queue>": "queue_item_stale: the queue's name.",
+    "<review id>": "echo_suspect_exhausted / review_handoff_stuck: the review artifact's id.",
+    "<review_type>": "echo_suspect_exhausted / review_handoff_stuck: the review class, constant for that review.",
+    "<routine>": "several: the routine's own id (D1, OPS0, ...). Constant for the life of the condition.",
+    "<run_date>": "unlanded_completed_run: names WHICH run failed to land — identity, not a measurement.",
+    "<strategies>": "wash_sale_exposure: the strategies involved, pinned at the site to DISTINCT, ASCENDING, comma-joined, no spaces.",
+    "<strategy>": "several: a single strategy code (A-E, PARK). Constant for the life of the condition.",
+    "<ticker>": "several: the instrument symbol.",
+    "<trigger_id>": "catchup_refire_blocked: the claude.ai trigger id, constant per routine.",
+    "<upstream>": "upstream_marker_mismatch: the upstream routine's id.",
+}
+
+_PROSE_CALL_RE = __import__("re").compile(r"sp_raise_alert(_once)?\s*\(")
+
+
+def _prose_call_args(text, open_paren):
+    """Split one prose CALL's argument list. Returns (args, closed) where each arg is
+    (raw_text, literal_value_or_None). Quote-aware: a `'` opens a literal, `\'` stays inside it,
+    and a `)` inside a literal does not close the call."""
+    args, buf, i = [], [], open_paren + 1
+    in_str, depth = False, 0
+    while i < len(text):
+        ch = text[i]
+        if in_str:
+            if ch == "\\" and i + 1 < len(text):
+                buf.append(text[i:i + 2]); i += 2; continue
+            if ch == "'":
+                in_str = False
+            buf.append(ch); i += 1; continue
+        if ch == "'":
+            in_str = True; buf.append(ch); i += 1; continue
+        if ch == "(":
+            depth += 1; buf.append(ch); i += 1; continue
+        if ch == ")":
+            if depth == 0:
+                args.append("".join(buf))
+                return args, True
+            depth -= 1; buf.append(ch); i += 1; continue
+        if ch == "," and depth == 0:
+            args.append("".join(buf)); buf = []; i += 1; continue
+        if ch == "`" and depth == 0:
+            # ran off the end of the markdown inline-code span without a closing paren
+            return args + ["".join(buf)], False
+        buf.append(ch); i += 1
+    return args + ["".join(buf)], False
+
+
+def _as_literal(raw):
+    """The single-quoted string literal in `raw`, with \' unescaped, or None if it is not one."""
+    s = raw.strip()
+    if len(s) < 2 or not s.startswith("'") or not s.endswith("'"):
+        return None
+    return s[1:-1].replace("\\'", "'")
+
+
+def find_prose_sites(text=None):
+    """(unregistered, quote_defects, used, sql_built, anomalies) over Claude_Task_Plan.md's prose CALL
+    sites. `text` overrides the file read -- used by the tests to drive a synthetic document, so the
+    regression suite never depends on the live plan's current contents (which change most days)."""
+    import os
+    import re as _re
+    if text is None:
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        path = os.path.join(root, PROSE_SOURCE)
+        text = open(path, encoding="utf-8").read()
+
+    unregistered, quote_defects, used, sql_built, anomalies = [], [], set(), [], []
+    for m in _PROSE_CALL_RE.finditer(text):
+        is_once = m.group(1) is not None
+        args, closed = _prose_call_args(text, m.end() - 1)
+        if not closed or len(args) < 4:
+            continue  # ran off the inline-code span: a narrative mention, not a template
+
+        # A NARRATIVE MENTION elides arguments with an ellipsis ("sp_raise_alert_once('critical', …,
+        # 'trading_halted', …)"). Those are prose ABOUT a call, not the call's own spec, and the real
+        # template for that category lives elsewhere in this file. Skipping them is what keeps this
+        # pass's output signal rather than noise -- 25 of the 29 sites on first run were these.
+        if any(("\u2026" in a) or ("..." in a) for a in args):
+            continue
+
+        category = _as_literal(args[2]) or "<non-literal category>"
+
+        # RULE 4 applies to BOTH sp_raise_alert and sp_raise_alert_once: an unparseable literal does
+        # not raise a degraded alert, it raises nothing.
+        for idx, raw in enumerate(args):
+            lit = _as_literal(raw)
+            if lit is not None and "''" in lit:
+                quote_defects.append((category, idx, lit[:90]))
+
+        if not is_once:
+            continue
+
+        raw_msg = args[3].strip()
+        message = _as_literal(raw_msg)
+        if message is None:
+            # An UNQUOTED bare placeholder as the whole message ("<reasons joined>") is the free-form
+            # shape rule 2 exists for -- hold it to the registry exactly as a quoted one.
+            if _re.fullmatch(r"<[^<>]*>", raw_msg):
+                message = raw_msg
+            elif raw_msg.upper().startswith(("CONCAT(", "FORMAT(")):
+                # DISCLOSED BLIND SPOT. The message is assembled by a SQL expression written inside
+                # prose. Judging its stability needs the same value-level reasoning bigquery/205 did
+                # by hand, which this static pass cannot do -- so these are LISTED, never silently
+                # dropped, and never counted as pass.
+                sql_built.append((category, raw_msg[:100]))
+                continue
+            else:
+                anomalies.append((category, "message argument is neither a literal, a bare "
+                                            "placeholder, nor a CONCAT/FORMAT expression"))
+                continue
+
+        for ph in _re.findall(r"<[^<>]*>", message):
+            if ph in PROSE_PLACEHOLDERS:
+                used.add(ph)
+            else:
+                unregistered.append((category, ph))
+    return unregistered, quote_defects, used, sql_built, anomalies
+
+
 def main():
     findings, anomalies = find_sites()
+    prose_unregistered, prose_quote, prose_used, prose_sql_built, prose_anomalies = find_prose_sites()
+    prose_stale = sorted(set(PROSE_PLACEHOLDERS) - prose_used)
 
     used_allowlist = set()
     new = []
@@ -441,6 +630,10 @@ def main():
     print(f"alert-message-stability check: {len(new)} new finding(s), {len(used_allowlist)} "
           f"allowlisted, {len(stale)} stale allowlist entry/entries, {len(anomalies)} call-site "
           f"anomal(y/ies).")
+    print(f"prose pass ({PROSE_SOURCE}): {len(prose_unregistered)} unregistered placeholder(s), "
+          f"{len(prose_quote)} quote-escape defect(s), {len(prose_used)} registered placeholder(s) in "
+          f"use, {len(prose_stale)} stale registry entry/entries, {len(prose_sql_built)} SQL-built "
+          f"message(s) (not analyzable here), {len(prose_anomalies)} anomal(y/ies).")
 
     if anomalies:
         print("\nCall sites with an unexpected argument count (not a stability finding on their "
@@ -470,11 +663,52 @@ def main():
         for dataset, name, category in stale:
             print(f"  - (\"{dataset}\", \"{name}\", \"{category}\")")
 
-    if new or stale:
+    if prose_quote:
+        print("\nFAIL — a prose alert message literal escapes an apostrophe as '' . GoogleSQL rejects "
+              "that outright (\"concatenated string literals must be separated by whitespace or "
+              "comments\"), so the CALL does not raise a degraded alert — it raises NOTHING, and the "
+              "condition it watches goes unannounced:")
+        for category, idx, snippet in sorted(prose_quote):
+            print(f"  \u2717 [{category}] argument {idx}: {snippet!r}")
+        print("\nFix: use \\' , or rewrite the sentence to avoid the apostrophe (preferred — one "
+              "less character for a routine to transcribe wrongly).")
+
+    if prose_unregistered:
+        print("\nFAIL — a placeholder in a prose sp_raise_alert_once MESSAGE is not registered in "
+              "PROSE_PLACEHOLDERS. The message is the dedup key and is rendered by a memoryless "
+              "routine at run time, so an unpinned placeholder re-renders differently every run and "
+              "_once degenerates into a fresh alert + email on an UNCHANGED condition:")
+        for category, ph in sorted(set(prose_unregistered)):
+            print(f"  \u2717 [{category}] {ph}")
+        print("\nFix: substitute a NAMED field into the fixed sentence (never a free-form "
+              "\"describe it\" placeholder), pin the rendering if it is multi-valued, and add the "
+              "placeholder to PROSE_PLACEHOLDERS with its one-line stability argument.")
+
+    if prose_sql_built:
+        print("\nNOT COVERED (disclosed blind spot) — prose templates whose message is assembled by a "
+              "CONCAT/FORMAT expression. Their stability has to be judged by reading the values they "
+              "interpolate, which this static pass cannot do. Listed so they are never mistaken for "
+              "checked:")
+        for category, snippet in sorted(prose_sql_built):
+            print(f"  ~ [{category}] {snippet}")
+
+    if prose_anomalies:
+        print("\nCall sites whose message argument this checker could not read as a literal:")
+        for category, why in sorted(prose_anomalies):
+            print(f"  ? [{category}]: {why}")
+
+    if prose_stale:
+        print("\nSTALE PROSE REGISTRY — these placeholders appear in no prose message any more. "
+              "Delete them from PROSE_PLACEHOLDERS so an entry cannot outlive its subject:")
+        for ph in prose_stale:
+            print(f"  - {ph}")
+
+    if new or stale or prose_unregistered or prose_quote or prose_stale:
         return 1
 
     print(f"OK: every STRING_AGG feeding a sp_raise_alert_once message is a total order over its "
-          f"rows ({len(ALLOWLIST)} documented exception(s)).")
+          f"rows ({len(ALLOWLIST)} documented exception(s)), and every prose message placeholder is "
+          f"registered ({len(PROSE_PLACEHOLDERS)} placeholder(s)).")
     return 0
 
 
