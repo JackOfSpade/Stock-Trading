@@ -1495,9 +1495,11 @@ END;
 -- ops.sp_sq_fire_drill_alert_lifecycle   (was bigquery/scheduled_queries/fire_drill_alert_lifecycle.sql; that file is now a frozen one-line
 -- CALL wrapper — full historical header/rationale comments remain there. SQ_VERSION v2 (bumped
 -- from v1 by this ARCH-1 wrapper migration, 2026-07-16 — no check logic changed).
--- SUPERSEDED LIVE by bigquery/134_roster_change_notifications.sql — current single source of truth
--- for this procedure. 134 bumps SQ_VERSION v2 -> v3 and adds a third drill call,
--- ops.sp_fire_drill_roster_notice. Kept here, unmodified, for DR-rebuild apply-in-order reference
+-- SUPERSEDED LIVE by bigquery/134_roster_change_notifications.sql (2026-08-04) — 134 bumps SQ_VERSION
+-- v2 -> v3 and adds a third drill call, ops.sp_fire_drill_roster_notice. 134 in turn by
+-- bigquery/231_run_outcome_notification_fire_drill.sql (2026-09-08) — 231 bumps SQ_VERSION v3 -> v4
+-- and adds a fourth drill call, ops.sp_fire_drill_run_outcome_notification — 231 is the CURRENT single
+-- source of truth for this procedure. Kept here, unmodified, for DR-rebuild apply-in-order reference
 -- only. DO NOT re-apply this CREATE OR REPLACE PROCEDURE statement live in isolation.
 -- =====================================================================================================
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_fire_drill_alert_lifecycle`()

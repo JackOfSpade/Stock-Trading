@@ -437,6 +437,17 @@ END;
 -- its alert ages out at 7 days. Matching on "ever raised, resolved or not" makes a genuinely
 -- successful P1/P2 raise permanently satisfy this anti-join regardless of what auto-age does to it
 -- afterward, so the ONLY way a row appears here is if no alert was ever recorded for it at all.
+--
+-- SUPERSEDED LIVE by bigquery/231_run_outcome_notification_fire_drill.sql — current single source of
+-- truth for state.run_log_unalerted_problems. 231 adds exactly ONE predicate (AND r.routine NOT LIKE
+-- 'FIRE_DRILL%') plus its own justification comment, so the new ops.sp_fire_drill_run_outcome_notification
+-- drill (231, same file) cannot make this backstop cry wolf about its own synthetic rows if it ever
+-- aborts before its unconditional cleanup runs — the same protection bigquery/172/186/205/227 already
+-- give state.run_log_unpaired_terminal. Nothing else about this view changes. The CREATE OR REPLACE
+-- VIEW statement immediately below is kept here, unmodified, for DR-rebuild apply-in-order reference
+-- only. DO NOT re-apply it live in isolation: it would revert 231's FIRE_DRILL% exclusion, and Part A
+-- of 231's own drill would then be its own false positive against this exact view. Marker added
+-- 2026-09-08.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.run_log_unalerted_problems` AS
 SELECT
   r.run_id,

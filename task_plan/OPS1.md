@@ -298,6 +298,15 @@ FROM `stock-trading-498512.state.staging_halt_disposition`;
 
 - **IN-RUN ISSUE REPORTING (a run that COMPLETES but hit a problem) — owner directive 2026-09-08.** The owner asked, verbatim: "for the remote routines, they have a pathway to send me an email for any incomplete runs or even if run is complete but there are warnings or errors? if not, we should add that feature rather than just having them paste those in chat (since chat won't be read or monitored)." The incomplete-run half is the Failure alerts bullet above (and, as of the same date, mechanically backstopped). This bullet is the other half: a run that finishes and logs `'completed'` but hit something along the way worth flagging. The sanctioned call: `CALL ops.sp_report_run_issue('<ID>', <today>, '<issue_key>', '<summary>', '<JSON>')` (bigquery/230_run_outcome_notification.sql). **Severity is FIXED at `'warning'` by the procedure itself — it is not a caller-supplied argument**, so no combination of arguments can turn an in-run observation into a trading halt. **This is NOT for hard-stops** — a genuine hard-stop still uses the Failure alerts bullet above with its OWN cause-specific category (`missing_dependency` / `trading_halted` / `connector` / `bq_quota_exhausted` / etc.), because that is what carries a diagnosis specific enough to act on; `sp_report_run_issue` exists only for a run that DID complete.
 
+  **BEST-EFFORT, NEVER GATES — same posture as Run logging and Alert auto-resolve above (fixed 2026-09-08; a real defect until now).** `sp_report_run_issue` `RAISE`s — a hard SQL error, not a return code — on a blank/whitespace or over-64-character `<issue_key>`, or a `<summary>` under 30 non-blank characters. An unwrapped `CALL` therefore aborts the whole script it sits in, which KILLS THE ROUTINE MID-RUN — at the exact moment it was trying to REPORT a problem, the worst possible time to lose the rest of the run. Wrap it exactly like every other best-effort observability call in this section, template copied verbatim:
+  ```
+  BEGIN
+    CALL ops.sp_report_run_issue('<ID>', <today>, '<issue_key>', '<summary>', '<JSON>');
+  EXCEPTION WHEN ERROR THEN SELECT @@error.message;  -- swallow: a REFUSED validation floor must never abort the routine
+  END;
+  ```
+  A REFUSED is NEVER a hard-stop: the run CONTINUES — the session re-words the `<summary>` (or the `<issue_key>`) so it clears the floor and calls again, exactly as it would re-attempt any other best-effort logging call, and if it never gets back to it the run still completes normally with nothing lost but the one report. **Do NOT "fix" a REFUSED by relaxing either floor** — the 30-char summary floor and the 64-char/non-blank issue_key floor exist for the reason stated below (a placeholder that only satisfies the call signature is worse than silence, because it looks like a report when it is not one); loosening them to make the call stop erroring would defeat the exact protection they were written to provide. The fix is always to write a better `<issue_key>`/`<summary>`, never to weaken the procedure.
+
   `<issue_key>` names the KIND of issue, never the instance — it IS the `sp_raise_alert_once` dedup key folded into the alert message (`'fmp_rate_limited'`, never `'fmp_rate_limited_at_14:32'`); an instance-keyed value re-mints a fresh alert, and a fresh email, on every occurrence — the identical defect class `item_key` in bigquery/229_staged_order_confirm_notice.sql was written to avoid. The procedure REFUSES (`RAISE`) a blank/whitespace `<issue_key>`, one over 64 characters, or a `<summary>` under 30 non-blank characters — a placeholder that only satisfies the call signature is worse than silence, because it looks like a report when it is not one.
 
   **WHEN to call it:** a sub-step the routine skipped or ran in degraded form; a data source that came back stale or partial; an external API call that errored — even if a retry recovered it and the run went on to complete normally; a check the routine ran that came back dirty on a surface it does not own; any judgement call the routine made that a human might reasonably have made differently. Anything that would previously have gone into `<note>` as "worth flagging" prose, or into a line of chat output for the owner to notice, goes here instead.
@@ -767,13 +776,19 @@ the retry is a distinct, action-relevant partial IBKR outage: `CALL ops.sp_raise
 history surfaces require independent checks — quote-dependent MARKET crafts will defer while this
 persists', '<JSON: connector="IBKR", surface="get_price_snapshot", probe_symbol="SPY", error_verbatim,
 probed_at>')`. A non-auth failure on every other probe (e.g. an FMP rate-limit on the `^VIX` probe —
-fired live 2026-07-26 and 2026-08-17): record in the run_log note AND `CALL ops.sp_report_run_issue(
-'OPS1', <today>, 'connector_probe_degraded', '<one-line summary naming the probe and the failure>',
-'<JSON: connector, probe, error_verbatim, probed_at>')` — this is deliberately NOT an
-`sp_raise_alert[_once]` call and must not use the `connector_reauth_needed` category above, which is
-reserved for AUTH failures; note-only used to reach nobody (chat is unmonitored), and this makes the
-degradation a durable, emailed fact instead, while the trading routines' own pre-flights keep hard-stop
-authority for these surfaces exactly as before.
+fired live 2026-07-26 and 2026-08-17): record in the run_log note AND, wrapped best-effort (IN-RUN
+ISSUE REPORTING bullet above, Observability § — a REFUSED here must never kill OPS1 mid-run):
+```
+BEGIN
+  CALL ops.sp_report_run_issue('OPS1', <today>, 'connector_probe_degraded', '<one-line summary naming the probe and the failure>', '<JSON: connector, probe, error_verbatim, probed_at>');
+EXCEPTION WHEN ERROR THEN SELECT @@error.message;  -- swallow: a REFUSED validation floor must never abort OPS1 mid-run
+END;
+```
+— this is deliberately NOT an `sp_raise_alert[_once]` call and must not use the `connector_reauth_needed`
+category above, which is reserved for AUTH failures; note-only used to reach nobody (chat is
+unmonitored), and this makes the degradation a durable, emailed fact instead, while the trading
+routines' own pre-flights keep hard-stop authority for these surfaces exactly as before (wrapped per
+FIX 1, 2026-09-08).
 
 SELF-HEAL. On a HEALTHY probe of connector X while an unresolved `connector_reauth_needed` alert for X
 is open: `UPDATE ops.alerts SET resolved = TRUE, resolved_ts = CURRENT_TIMESTAMP(), resolved_note =

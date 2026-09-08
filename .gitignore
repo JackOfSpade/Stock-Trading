@@ -1,4 +1,8 @@
 .claude/settings.local.json
+# ...and any backup of it. The permission-rule edit recipe in this repo copies the file to
+# .bak first; that copy is local machine config (it lists granted Bash/MCP permissions) and
+# must never land in the repo. The bare path above does not glob, so it did not cover it.
+.claude/settings.local.json.*
 .DS_Store
 
 # BigQuery migration intermediates (derived data, not source)

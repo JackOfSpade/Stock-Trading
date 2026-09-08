@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Apply ONE pre-extracted SQL statement file to live BigQuery, dry-run first, hash-reported.
+"""Apply ONE pre-extracted, REPO-CANONICAL SQL statement file to live BigQuery, dry-run first,
+hash-reported, provenance-gated.
 
 WHY THIS EXISTS. Landing a `bigquery/*.sql` object live is a recurring operation with, until now, no
 safe mechanical path for a LARGE statement:
@@ -20,24 +21,91 @@ retyped. It is deliberately NARROW so it can be granted a correspondingly narrow
 (`Bash(python3 scripts/apply_sql_file.py *)`) instead of a blanket `python3 -c` grant on a repo that
 trades real money.
 
+THE CANONICAL-PROVENANCE GATE (added 2026-09-08, DESIGN_followups.md FIX 4). Before this gate, the
+standing permission rule above meant "may run ARBITRARY SQL live" — the script applied whatever bytes
+sat at the given path, from ANY path, with zero check that those bytes were the repo's own bigquery/
+*.sql content. That is a wider grant than the script was ever meant to carry: it was written (see the
+WHY above) to move ALREADY-CANONICAL bytes without retyping them, not to be a general-purpose "run
+this SQL" tool that happens to dry-run first. This gate narrows the grant to what it was actually
+authorized for: "may apply REPO-CANONICAL SQL live". Mechanically, `check_canonical_provenance()`
+below runs BEFORE the dry run and BEFORE any apply, and reuses check_live_sql_parity.py's own
+machinery rather than reimplementing a second copy of it (the exact anti-duplication concern
+scripts/lib/sql_files.py's docstring raises about earlier near-identical parser forks in this repo):
+  1. `check_live_sql_parity.CREATE_STMT` finds the file's top-level `CREATE OR REPLACE` header(s).
+     The contract is ONE statement per file (see SAFETY PROPERTIES below) — 0 or >1 top-level matches
+     both refuse (2+ is always refused outright; 0 is the DML case, handled by point 3).
+  2. `check_live_sql_parity.extract_body()` (with `lib.sql_files.normalize_kind()` to canonicalize the
+     matched kind spelling) pulls the object's body exactly as check_live_sql_parity.py itself would.
+     `check_live_sql_parity.find_final_definitions()` gives the SAME repo's own apply-in-order "final
+     effective definition" for that same (dataset, name) — i.e. what check_live_sql_parity.py would
+     call correct if this object were live already. `check_live_sql_parity.canonicalize()` is applied
+     to BOTH sides (it already ran once inside extract_body() via its own normalize_tail() call, so
+     both bodies reach canonicalize() through the identical code path) and the two are compared byte
+     for byte. ANY mismatch — a hand-edit, a stale extraction, a copy from the wrong file version —
+     REFUSES, with a diff hint pointing at the first divergent offset, before dry-run and before apply.
+     An object absent from find_final_definitions() entirely (no bigquery/*.sql file's final state
+     defines it) also refuses: there is nothing canonical to match it against.
+  3. NON-CREATE STATEMENTS (a DML/MERGE/UPDATE file, e.g. bigquery/63's
+     `ops.scheduled_query_version_registry` MERGE) have no CREATE_STMT match at all and structurally
+     CANNOT be canonically matched this way — that is a legitimate, already-used path, not a defect,
+     so the gate does not block it outright. It requires the explicit, OFF-BY-DEFAULT
+     `--allow-noncanonical` flag: passed, it applies with a loud warning naming the file; omitted, it
+     REFUSES and names the exact flag to pass and why. This is deliberately an escape hatch the
+     operator must invoke by name, not a silent fallback — an unflagged non-CREATE file staying
+     refused is the point, not a bug to work around.
+  4. APPENDED-STATEMENT CHECK (added 2026-09-08, adversarial review of this same gate). Points 1-2
+     above compare only the ONE matched CREATE statement's body — bounded by
+     `check_live_sql_parity.NEXT_TOP_LEVEL`, the same boundary extract_body() itself uses internally
+     to slice that body out of the file — against repo canonical. But the script sends the WHOLE
+     FILE to BigQuery, not just the compared slice. Before this point, a file holding the genuine
+     canonical CREATE PROCEDURE body followed by, say, a free-standing `DELETE FROM ...;` had that
+     DELETE submitted right along with the verified CREATE, because nothing ever looked at the bytes
+     after the matched statement. The fix: locate the SAME NEXT_TOP_LEVEL boundary extract_body()
+     uses (the next top-level CREATE/DML/DDL keyword, or EOF), and require everything from there to
+     EOF to reduce to nothing once comments are stripped (`lib.sql_files.strip_sql_comments()` — the
+     same comment-aware stripper strip_sql_comments()'s own callers already trust, reused rather than
+     re-implemented). A leftover DELETE/MERGE/DROP/INSERT/etc. is real text after stripping and
+     REFUSES; trailing `--`/`/* */` comments and blank lines strip to nothing and PASS. The identical
+     check runs on the text BEFORE the matched CREATE: anything there that is not comment/whitespace
+     also REFUSES, closing the same hole from the other end (a statement prepended before a genuine
+     canonical CREATE would otherwise run first, unchecked).
+  5. PROJECT-ID CHECK (added 2026-09-08, same review). CREATE_STMT's match already captures the
+     target project id (group 2) — before this point nothing ever compared it to the module's own
+     `PROJECT` constant, so a CREATE whose header named a DIFFERENT GCP project, with a body that
+     otherwise matched some repo-canonical object byte-for-byte, passed the gate and would have been
+     applied against that other project. Now checked and refused before any dry run.
+`check_canonical_provenance()` takes no BigQuery client and does no network I/O — it is pure text
+matched against files already on disk — so tests/test_apply_sql_file.py exercises it directly, fully
+offline, with no warehouse credentials (see that file's own docstring).
+
 SAFETY PROPERTIES (all deliberate):
-  * DRY-RUN FIRST, ALWAYS. Every statement is submitted with dry_run=True and must succeed before the
-    real submission is even built. BigQuery's script dry-run does NOT semantically analyse anything
-    after the first DDL in a script (see scripts/check_sql_dryrun.py's docstring), which is exactly
-    why this script takes ONE statement per file rather than a whole bigquery/*.sql script — a missing
-    `WHERE` in a later statement of a multi-statement file is invisible to the dry run, and that class
-    of defect really did reach a file in this repo on 2026-09-08.
+  * CANONICAL-PROVENANCE GATED, FIRST. See above — a file whose bytes are not the repo's own current
+    canonical definition (or, for the non-CREATE escape hatch, not explicitly operator-flagged) never
+    reaches the dry run at all.
+  * DRY-RUN FIRST, ALWAYS. Every statement that passes the gate is submitted with dry_run=True and
+    must succeed before the real submission is even built. BigQuery's script dry-run does NOT
+    semantically analyse anything after the first DDL in a script (see scripts/check_sql_dryrun.py's
+    docstring), which is exactly why this script takes ONE statement per file rather than a whole
+    bigquery/*.sql script — a missing `WHERE` in a later statement of a multi-statement file is
+    invisible to the dry run, and that class of defect really did reach a file in this repo on
+    2026-09-08. The provenance gate's own "exactly one CREATE_STMT" refusal (point 1 above) is a
+    second, independent enforcement of that same one-statement-per-file contract.
   * REPORTS WHAT IT IS ABOUT TO RUN — path, line/char/byte counts, sha256, first and last line — so
     the caller can match it against the extraction it intended.
   * NEVER EDITS, NEVER EXTRACTS. It applies a file exactly as given. Extraction from a numbered
     bigquery/*.sql file is the caller's job (use check_live_sql_parity.sql_tokens /
-    find_procedure_body_end, never a hand-rolled splitter).
+    find_procedure_body_end, never a hand-rolled splitter) — the provenance gate above is what checks
+    that extraction was done correctly, not a substitute for doing it correctly.
   * VERIFY AFTERWARDS with `python3 scripts/check_live_sql_parity.py`, which compares the LIVE object
-    against the canonical repo body. That is the real gate; this script only moves bytes.
+    against the canonical repo body. That remains the real POST-apply gate (it can see things this
+    script's PRE-apply gate cannot, e.g. a live definition BigQuery re-serialized unexpectedly); this
+    script's own gate only proves what it is ABOUT to send matches the repo before sending it.
 
 USAGE:
     python3 scripts/apply_sql_file.py <file.sql> [<file2.sql> ...]     # dry-run each, then apply
     python3 scripts/apply_sql_file.py --dry-run <file.sql>             # validate only, apply nothing
+    python3 scripts/apply_sql_file.py --allow-noncanonical <file.sql>  # required for a non-CREATE
+                                                                        # (DML) file — see point 3 above
 
 Files are applied IN THE ORDER GIVEN, and the run STOPS at the first failure — dependency order
 matters (a view a procedure reads must exist before that procedure is created).
@@ -51,6 +119,20 @@ except ImportError:  # pragma: no cover - environment guard, same shape as the o
     print("google-cloud-bigquery required: pip install google-cloud-bigquery", file=sys.stderr)
     raise SystemExit(2) from None
 
+# Reused, not reimplemented (module docstring's CANONICAL-PROVENANCE GATE section) — these four names
+# are check_live_sql_parity.py's own repo-side extraction/comparison machinery, already regression-
+# tested by tests/test_check_live_sql_parity.py against the real bigquery/*.sql tree. None of them
+# touch BigQuery: CREATE_STMT is a compiled regex, the other three are pure-text functions over files
+# already on disk, which is exactly why check_canonical_provenance() below needs no client argument.
+from check_live_sql_parity import (
+    CREATE_STMT,
+    NEXT_TOP_LEVEL,
+    canonicalize,
+    extract_body,
+    find_final_definitions,
+)
+from lib.sql_files import normalize_kind, strip_sql_comments
+
 PROJECT = "stock-trading-498512"
 
 
@@ -63,14 +145,162 @@ def describe(path, sql):
     print(f"  last line : {lines[-1][:100]}")
 
 
+def _diff_hint(expected, actual, context=40):
+    """A short, human-scannable pointer at the first character where two CANONICALIZED (already
+    whitespace/comment/quote-normalized — see check_live_sql_parity.canonicalize()'s docstring)
+    strings diverge, for check_canonical_provenance()'s mismatch message. Both inputs are already
+    single-line (canonicalize() never emits a newline), so no line-splitting is needed here — just a
+    common-prefix scan and a bounded window around the first differing offset."""
+    n = min(len(expected), len(actual))
+    i = 0
+    while i < n and expected[i] == actual[i]:
+        i += 1
+    lo = max(0, i - context)
+    return ("    first divergence at canonicalized offset %d:\n"
+            "      repo canonical : ...%s...\n"
+            "      this file      : ...%s..."
+            % (i, expected[lo:i + context], actual[lo:i + context]))
+
+
+def _stray_snippet(text, limit=100):
+    """First non-blank line of `text` (already comment-stripped by the caller), truncated, for the
+    FIX A prepend/append refusal messages below -- names what was found rather than just that
+    something was found."""
+    for line in text.splitlines():
+        if line.strip():
+            return line.strip()[:limit]
+    return text.strip()[:limit]
+
+
+def check_canonical_provenance(path, sql, final=None):
+    """The FIX 4 gate (module docstring). Returns (ok, noncanonical, message):
+
+      ok            -- True iff the file's own single top-level CREATE body, canonicalized, matches
+                        find_final_definitions()'s current canonical body for the same (dataset, name),
+                        canonicalized the same way. False on every refusal (including the noncanonical-
+                        without-the-flag case main() itself turns into a refusal).
+      noncanonical  -- True iff the file has ZERO top-level CREATE_STMT matches — a DML/MERGE/UPDATE
+                        file (e.g. bigquery/63's ops.scheduled_query_version_registry MERGE) that
+                        structurally cannot be canonically matched this way (point 3, module
+                        docstring). This is NOT itself a pass/fail verdict — main() is the one that
+                        decides whether --allow-noncanonical was passed and turns this into an apply
+                        (with a loud warning) or a refusal.
+      message       -- always non-empty; on refusal, names exactly why and (for a body mismatch) a
+                        diff hint; on success, names the matched object and its source file.
+
+    `final` is find_final_definitions()'s return value, injectable so main() (or a test) computes it
+    ONCE per process rather than re-walking bigquery/*.sql per file when multiple files are given —
+    defaults to calling it fresh so a lone caller (or a test exercising a single scenario) does not
+    have to know that plumbing exists.
+
+    Takes NO BigQuery client and does NO network I/O — pure text matched against files already on
+    disk — which is what lets tests/test_apply_sql_file.py exercise every branch of this function with
+    no warehouse credentials (module docstring's CANONICAL-PROVENANCE GATE section)."""
+    if final is None:
+        final = find_final_definitions()
+
+    matches = list(CREATE_STMT.finditer(sql))
+    if len(matches) > 1:
+        return False, False, (
+            f"{len(matches)} top-level CREATE OR REPLACE statements found in {path} -- this script's "
+            "contract (module docstring SAFETY PROPERTIES) is exactly ONE statement per file. Split "
+            "the file into one statement each.")
+    if not matches:
+        return True, True, (
+            f"{path} has no top-level CREATE_STMT match (not a CREATE OR REPLACE VIEW / PROCEDURE / "
+            "TABLE FUNCTION / FUNCTION) -- e.g. a DML MERGE/UPDATE/INSERT file. It cannot be "
+            "canonically matched against find_final_definitions() by construction (module docstring "
+            "point 3); this is the --allow-noncanonical path.")
+
+    m = matches[0]
+    kind, project, dataset, name = m.groups()
+    obj_type = normalize_kind(kind)
+
+    # FIX B (module docstring point 5): the CREATE header's own project id must be THIS module's
+    # PROJECT -- a body that matches some repo-canonical object byte-for-byte but is headed at a
+    # different GCP project must never pass on that basis alone.
+    if project != PROJECT:
+        return False, False, (
+            f"{path}: CREATE header targets project `{project}`, not this script's own PROJECT "
+            f"(`{PROJECT}`) -- refusing rather than applying an object to a different GCP project, "
+            "even though the object name matches a repo-canonical one.")
+
+    # FIX A, prepend half (module docstring point 4): anything before the matched CREATE that is not
+    # comment/whitespace would run BEFORE the verified statement, completely unchecked.
+    prefix = sql[:m.start()]
+    stray_prefix = strip_sql_comments(prefix).strip()
+    if stray_prefix:
+        return False, False, (
+            f"{path}: non-comment text precedes the CREATE OR REPLACE statement -- this script sends "
+            "the WHOLE FILE to BigQuery, so text ahead of the verified statement would run "
+            f"unchecked. First stray line: {_stray_snippet(stray_prefix)!r}")
+
+    # FIX A, append half (module docstring point 4). Reuses the SAME boundary extract_body() computes
+    # internally (check_live_sql_parity.NEXT_TOP_LEVEL: the next top-level CREATE/DML/DDL keyword, or
+    # EOF) rather than a second, independently-derived boundary. Everything from there to EOF must
+    # reduce to nothing once comments are stripped -- a leftover DELETE/MERGE/DROP/etc. is real text
+    # after stripping and refuses; trailing comments and blank lines strip to nothing and pass.
+    next_m = NEXT_TOP_LEVEL.search(sql, m.start() + 1)
+    stmt_end = next_m.start() if next_m else len(sql)
+    tail = sql[stmt_end:]
+    stray_tail = strip_sql_comments(tail).strip()
+    if stray_tail:
+        return False, False, (
+            f"{path}: non-comment text follows the CREATE OR REPLACE statement -- this script sends "
+            "the WHOLE FILE to BigQuery, so a statement appended after the verified CREATE (e.g. a "
+            "DELETE/MERGE/DROP) would run right along with it, unchecked. First stray line: "
+            f"{_stray_snippet(stray_tail)!r}")
+
+    body = extract_body(sql, m.start(), obj_type)
+    if body is None:
+        return False, False, (
+            f"{path} matched a CREATE_STMT header for `{project}.{dataset}.{name}` but extract_body() "
+            "could not locate its body (no BEGIN found for a PROCEDURE, or no header AS for a "
+            "VIEW/FUNCTION/TABLE FUNCTION) -- refusing rather than applying an unverifiable statement.")
+
+    key = (dataset, name)
+    if key not in final:
+        return False, False, (
+            f"`{project}.{dataset}.{name}` ({obj_type}) is absent from find_final_definitions() -- no "
+            "bigquery/*.sql file's apply-in-order final definition names this object, so there is "
+            f"nothing canonical in the repo to match {path} against. Refusing: applying it would plant "
+            "a live object with no corresponding repo source of truth.")
+
+    _canon_obj_type, _canon_project, source_file, canon_body = final[key]
+    file_canon = canonicalize(body)
+    repo_canon = canonicalize(canon_body)
+    if file_canon != repo_canon:
+        return False, False, (
+            f"{path}: `{dataset}.{name}` body does NOT match the repo's own canonical (apply-in-order) "
+            f"definition in bigquery/{source_file} -- this is exactly the drift check_live_sql_parity.py "
+            "would flag if this were already live. Refusing to apply.\n" + _diff_hint(repo_canon, file_canon))
+
+    return True, False, (
+        f"{path}: canonical -- `{dataset}.{name}` ({obj_type}) matches bigquery/{source_file}'s "
+        "apply-in-order final definition.")
+
+
 def main(argv):
     args = [a for a in argv if not a.startswith("--")]
     dry_only = "--dry-run" in argv
+    allow_noncanonical = "--allow-noncanonical" in argv
     if not args:
         print(__doc__, file=sys.stderr)
         return 2
 
-    client = bigquery.Client(project=PROJECT)
+    # One repo-side walk of bigquery/*.sql for the whole run (not per-file) — pure disk I/O, no
+    # BigQuery client needed, same cost shape find_final_definitions()'s own callers (check_live_sql_
+    # parity.py's main()) already rely on.
+    final = find_final_definitions()
+
+    # Constructed LAZILY, on first actual use, not up front: a run whose every file gets refused by
+    # the canonical-provenance gate below should never touch BigQuery credentials at all -- the same
+    # "refuse before constructing a client" shape scripts/adversarial_review_storage.py's main()
+    # already follows for its own pre-apply validation (see tests/test_adversarial_review_storage.py::
+    # test_main_repair_rejects_multi_file_apply_before_bigquery_client), and it is what lets tests/
+    # test_apply_sql_file.py assert a refused file never reaches BigQuery without needing live
+    # credentials to do so.
+    client = None
     for path in args:
         try:
             sql = open(path, encoding="utf-8").read()
@@ -84,6 +314,33 @@ def main(argv):
         print(f"\n=== {path} ===")
         describe(path, sql)
 
+        ok, noncanonical, message = check_canonical_provenance(path, sql, final)
+        if noncanonical:
+            if not allow_noncanonical:
+                print(f"  REFUSED   : {message}", file=sys.stderr)
+                print(
+                    "  This is a non-CREATE (DML/MERGE/UPDATE) file, which cannot be canonically "
+                    "matched against find_final_definitions() by construction -- see module docstring "
+                    "point 3. If you have manually confirmed this file's bytes are what you intend to "
+                    "apply, re-run with --allow-noncanonical to apply it WITHOUT the canonical-"
+                    "provenance gate.", file=sys.stderr)
+                return 1
+            print("  " + "!" * 78)
+            print("  !! --allow-noncanonical set: applying a NON-CREATE statement with NO canonical")
+            print(f"  !! provenance check against find_final_definitions(). File: {path}")
+            print("  !! This flag exists ONLY for DML/MERGE/UPDATE files (e.g. bigquery/63's ops.")
+            print("  !! scheduled_query_version_registry MERGE) that structurally have no top-level")
+            print("  !! CREATE statement to canonically match. The operator passed this flag")
+            print("  !! deliberately -- see module docstring's CANONICAL-PROVENANCE GATE section.")
+            print("  " + "!" * 78)
+        elif not ok:
+            print(f"  REFUSED   : {message}", file=sys.stderr)
+            return 1
+        else:
+            print(f"  gate      : OK -- {message}")
+
+        if client is None:
+            client = bigquery.Client(project=PROJECT)
         try:
             client.query(sql, job_config=bigquery.QueryJobConfig(dry_run=True, use_query_cache=False))
         except Exception as exc:  # noqa: BLE001 — surface BigQuery's own message verbatim

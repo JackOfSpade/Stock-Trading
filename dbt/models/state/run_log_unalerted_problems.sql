@@ -1,4 +1,4 @@
--- Parallel-run dbt port of bigquery/230_run_outcome_notification.sql:state.run_log_unalerted_problems — canonical source is that file until
+-- Parallel-run dbt port of bigquery/231_run_outcome_notification_fire_drill.sql:state.run_log_unalerted_problems — canonical source is that file until
 -- owner cutover. Generated MECHANICALLY by scripts/gen_dbt_port.py from that canonical body — the
 -- only edit is ref()/source() substitution for fully-qualified names — and proved token-identical
 -- to it by scripts/verify_dbt_port.py. Do not hand-edit the BODY: re-generate, then re-verify.
@@ -14,6 +14,16 @@ SELECT
   CURRENT_TIMESTAMP() AS checked_at
 FROM {{ source('ops', 'run_log') }} r
 WHERE r.run_date >= DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 14 DAY)
+  -- FIX 3 addition (bigquery/231_run_outcome_notification_fire_drill.sql, 2026-09-08). FIRE_DRILL%
+  -- rows are EXCLUDED here, not merely cleaned up after the drill runs -- so
+  -- ops.sp_fire_drill_run_outcome_notification (bigquery/231) aborting BETWEEN inserting its
+  -- synthetic 'failed' row (P1 exercise) and its own unconditional cleanup cannot make this
+  -- backstop cry wolf about a stray drill row. Every other run_log-based check in this repo
+  -- already special-cases FIRE_DRILL% for the identical reason (state.run_log_unpaired_terminal's
+  -- chain: bigquery/172_run_log_unpaired_terminal.sql, 186_monitor_promoted_autoage.sql,
+  -- 205_alert_message_stability.sql, 227_alert_message_stability_ordering.sql) -- this view was the
+  -- one left unprotected, closed here.
+  AND r.routine NOT LIKE 'FIRE_DRILL%'
   AND (
     r.status IN ('failed', 'halted')
     OR (r.status = 'completed' AND TRIM(COALESCE(r.error_msg, '')) != '')
