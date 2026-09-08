@@ -118,6 +118,17 @@
 -- sets, duplicate rows and duplicate emails). No predicate, threshold, severity or control flow
 -- differs. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this
 -- CREATE live in isolation.
+-- SUPERSEDED (2026-09-08) by bigquery/230_run_outcome_notification.sql, the current canonical
+-- definition of this procedure. 230 makes exactly three changes against the v21 body: the heartbeat
+-- literal v21 -> v22; the number 14 auto-age allowlist gains 'routine_run_failed',
+-- 'routine_run_warning' and 'run_log_problem_unalerted' (receipts for a past run-outcome event, the
+-- same monitor_promoted shape -- no ops.alert_policy resolve_rule needed, C3); and a new record-only
+-- WARNING block, placed immediately before the consolidated RAISE, reading the new
+-- state.run_log_unalerted_problems view and raising run_log_problem_unalerted with a STRING_AGG
+-- ordered by (routine, run_date, status, run_id) -- a TOTAL order, per this file's own STRING_AGG-ordering
+-- rule (see the header above). No predicate, threshold, severity or control flow on any EXISTING
+-- check changes. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
+-- re-apply this CREATE live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';

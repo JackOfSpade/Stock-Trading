@@ -470,6 +470,10 @@ PROSE_PLACEHOLDERS = {
                        "comma-joined, no spaces.",
     "<affected_review>": "prompt_injection_attempt: the review artifact the attempt targeted. One open row "
                          "per affected review; the attacker text itself stays in the payload.",
+    "<alert_id>": "spec_defect_notice_stalled (W5 SPEC-DEFECT NOTICE INTAKE escalation, 2026-09-08): the "
+                  "underlying info-severity ops.alerts row's own alert_id -- an assigned identifier, stable "
+                  "for the life of that row, never a count or a date. One open escalation row per stalled "
+                  "alert_id.",
     "<the EXACT STABLE message below>": "regime_sweep_blocked / regime_restore_blocked / nomadic_sweep_blocked "
                                         "/ rerisking_limb_fired: a POINTER, not a substitution -- each site "
                                         "gives the full message as a verbatim literal immediately below with "

@@ -178,6 +178,34 @@ NO_PUSH_CATEGORIES = (
     "roster_below_floor",           # SL1: active roster is at the n_min=2 floor
 )
 
+# RULE 2 continued (2026-09-08, bigquery/230_run_outcome_notification.sql, spec P5/C4): categories
+# that are EMAILED but never PUSHED, kept in a SEPARATE tuple from NO_PUSH_CATEGORIES rather than
+# folded into it.
+#
+# WHY SEPARATE, NOT MERGED IN ABOVE: NO_PUSH_CATEGORIES is FROZEN to exactly the six SISA
+# roster-membership notices by scripts/check_roster_notice_lockstep.py (BLOCKING CI, exact-set
+# equality across four places: this file, ops/monitoring/alert_emailer.gs's ROSTER_NOTICE_CATEGORIES,
+# bigquery/134's Rule 5 IN list, and the Claude_Task_Plan.md preamble contract) and by
+# tests/test_alert_relay.py::test_no_push_categories_matches_alert_emailer_roster_lane. Adding a
+# seventh entry here would fail that lockstep check for a category that has no roster-notice contract
+# to satisfy in the other three places — it would need to be invented there for no reason, or the
+# checker would need loosening from exact-set equality, either of which weakens a guard that exists
+# specifically because this same category list drifted silently before it was machine-checked.
+#
+# WHY THIS ONE CATEGORY IS EMAIL-ONLY: 'routine_run_warning' (bigquery/230's P1/P2) fires when a
+# routine run COMPLETED and merely recorded a non-blank error_msg/note, or when it called
+# sp_report_run_issue to self-report an in-run issue on an otherwise-normal run. The run finished;
+# nothing is blocked; there is no operator action pending at the moment the alert is raised — exactly
+# the "reaches the inbox but does not buzz the phone" class the 2026-09-07 RULE 2 directive created
+# (see the roster-notice block above for the same reasoning applied to a different category class).
+# The other two categories bigquery/230 introduces — 'routine_run_failed' (the run did NOT complete)
+# and 'run_log_problem_unalerted' (the notification path itself dropped something) — both denote a
+# state the owner may need to act on, so they deliberately stay OUT of both suppression tuples and
+# keep pushing.
+EMAIL_ONLY_CATEGORIES = (
+    "routine_run_warning",   # bigquery/230 P1/P2: run completed with a non-blocking issue
+)
+
 
 def bq(sql):
     # 600s timeout: a stalled bq CLI call (network partition / hung query poll) would otherwise
@@ -273,24 +301,35 @@ def post(text, silent=False):
 
 def relay_alerts():
     tz = get_user_tz()
-    # The NOT IN filter is RULE 2's push-side suppression (see NO_PUSH_CATEGORIES). It is applied
-    # HERE, in the relay's own query, and deliberately NOWHERE ELSE: the rows still exist unresolved
-    # in ops.alerts, still flow to alert_emailer.gs, and still count toward every state.* view and
-    # trading gate that reads the alert board. This is a channel filter, not a severity change and
-    # not a resolve — the failure mode of "silence a verifier by editing its input" (and of an
-    # alert that is quietly never raised) is exactly what it must not become.
-    # Literals are interpolated from the Python tuple rather than retyped, so the constant above is
-    # the single source for this file; the category strings are code-owned identifiers, never user
+    # The NOT IN filter is RULE 2's push-side suppression (see NO_PUSH_CATEGORIES and, since
+    # 2026-09-08, EMAIL_ONLY_CATEGORIES). It is applied HERE, in the relay's own query, and
+    # deliberately NOWHERE ELSE: the rows still exist unresolved in ops.alerts, still flow to
+    # alert_emailer.gs, and still count toward every state.* view and trading gate that reads the
+    # alert board. This is a channel filter, not a severity change and not a resolve — the failure
+    # mode of "silence a verifier by editing its input" (and of an alert that is quietly never raised)
+    # is exactly what it must not become.
+    # Literals are interpolated from the Python tuples rather than retyped, so the two constants above
+    # are the single source for this file; the category strings are code-owned identifiers, never user
     # input, so there is no injection surface to parameterize away.
+    #
+    # SINGLE COMBINED SET feeding ONE NOT IN filter — not two separate NOT IN clauses — so both
+    # fail-safes below only ever have to reason about one set, and check_roster_notice_lockstep.py's
+    # regex (which matches only `NO_PUSH_CATEGORIES = (...)` verbatim) keeps seeing the exact frozen
+    # six-item tuple it was written against, byte-identical, undisturbed by this category's addition.
+    suppressed_categories = NO_PUSH_CATEGORIES + EMAIL_ONLY_CATEGORIES
     #
     # TWO FAIL-SAFE PROPERTIES, both deliberate, both pinned by tests — because EVERY failure mode of
     # this clause is silent. relay_alerts() runs inside main()'s best-effort `except`, so a broken
-    # query does not go red; it prints one stderr line and the phone simply stops ringing.
+    # query does not go red; it prints one stderr line and the phone simply stops ringing. Both now
+    # hold on the COMBINED set (suppressed_categories), not on NO_PUSH_CATEGORIES alone — an
+    # EMAIL_ONLY_CATEGORIES-only test (patching just NO_PUSH_CATEGORIES to empty, leaving
+    # EMAIL_ONLY_CATEGORIES populated) must NOT trip the empty-tuple guard, since the combined set is
+    # still non-empty and the filter is still syntactically valid.
     #   1. EMPTY-TUPLE GUARD. `category NOT IN ()` is a BigQuery SYNTAX ERROR, not an empty filter.
-    #      An accidentally-emptied NO_PUSH_CATEGORIES would therefore kill the ENTIRE alerts push —
+    #      An accidentally-emptied suppression set would therefore kill the ENTIRE alerts push —
     #      drawdown-kill and missed-run criticals included — permanently, rather than merely stopping
-    #      the six suppressions. Degrade to "no filter at all" instead: for a delivery channel, pushing
-    #      too much is a nuisance and pushing nothing is a safety failure.
+    #      the intended suppressions. Degrade to "no filter at all" instead: for a delivery channel,
+    #      pushing too much is a nuisance and pushing nothing is a safety failure.
     #   2. NULL-SAFE POLARITY. ops.alerts.category is nullable (no NOT NULL constraint, no dbt
     #      not_null test), and SQL three-valued logic makes `NULL NOT IN (...)` evaluate to NULL, which
     #      WHERE treats as false — silently dropping a NULL-category alert from the push while it is
@@ -300,8 +339,8 @@ def relay_alerts():
     #      delivery: suppression must be provably TRUE, never merely not-provably-false.
     no_push_clause = (
         "AND COALESCE(category NOT IN ({}), TRUE)".format(
-            ",".join(f"'{c}'" for c in NO_PUSH_CATEGORIES))
-        if NO_PUSH_CATEGORIES else ""
+            ",".join(f"'{c}'" for c in suppressed_categories))
+        if suppressed_categories else ""
     )
     rows = bq(f"""
         SELECT CAST(alert_ts AS STRING) AS alert_ts, severity, source, category, message

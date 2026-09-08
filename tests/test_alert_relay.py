@@ -352,6 +352,44 @@ def test_alerts_query_excludes_every_no_push_category(monkeypatch):
         assert f"'{cat}'" in sql, f"{cat} is in NO_PUSH_CATEGORIES but absent from the relay query"
 
 
+def test_alerts_query_excludes_every_email_only_category(monkeypatch):
+    # 2026-09-08, bigquery/230_run_outcome_notification.sql / spec P5 (C4). 'routine_run_warning' is
+    # EMAIL ONLY: the run completed, nothing is blocked, so it must be filtered out of the push while
+    # (per test_no_push_categories_does_not_touch_severity_or_resolved_filter's reasoning, which
+    # applies identically here) staying unresolved and still emailed. Mirrors
+    # test_alerts_query_excludes_every_no_push_category for the second suppression tuple.
+    seen = {}
+
+    def _bq(sql):
+        seen["sql"] = sql
+        return []
+    monkeypatch.setattr(ar, "bq", _bq)
+    monkeypatch.setattr(ar, "get_user_tz", lambda: "America/Denver")
+    ar.relay_alerts()
+    sql = seen["sql"]
+    assert "category NOT IN (" in sql
+    for cat in ar.EMAIL_ONLY_CATEGORIES:
+        assert f"'{cat}'" in sql, f"{cat} is in EMAIL_ONLY_CATEGORIES but absent from the relay query"
+
+
+def test_routine_run_failed_and_run_log_problem_unalerted_still_push(monkeypatch):
+    # The other two categories bigquery/230 introduces are NOT suppressed — they denote a state the
+    # owner may need to act on (a run that did not complete; the notification path itself dropping
+    # something) and must keep reaching the phone. Pinned as an explicit negative so a future reflexive
+    # "add the new run-outcome categories to the suppression list" edit fails a test instead of
+    # silently going unpushed.
+    seen = {}
+    monkeypatch.setattr(ar, "bq", lambda sql: seen.setdefault("sql", sql) and [] or [])
+    monkeypatch.setattr(ar, "get_user_tz", lambda: "America/Denver")
+    ar.relay_alerts()
+    sql = seen["sql"]
+    assert "'routine_run_failed'" not in sql
+    assert "'run_log_problem_unalerted'" not in sql
+    assert "routine_run_failed" not in ar.NO_PUSH_CATEGORIES and "routine_run_failed" not in ar.EMAIL_ONLY_CATEGORIES
+    assert ("run_log_problem_unalerted" not in ar.NO_PUSH_CATEGORIES
+            and "run_log_problem_unalerted" not in ar.EMAIL_ONLY_CATEGORIES)
+
+
 def test_no_push_categories_does_not_touch_severity_or_resolved_filter(monkeypatch):
     # The suppression is a CHANNEL filter and nothing else. It must never become a severity change or
     # a resolve — the rows stay unresolved criticals/warnings on the alert board, still emailed, still
@@ -465,8 +503,17 @@ def test_empty_no_push_tuple_degrades_to_no_filter_not_a_syntax_error(monkeypatc
     # inside main()'s best-effort except, so the failure would NOT go red. It would silently stop the
     # ENTIRE alerts push (criticals included) forever, leaving one stderr line as the only evidence.
     # An emptied list must degrade to "push everything".
+    #
+    # BOTH suppression tuples are patched empty here (2026-09-08, EMAIL_ONLY_CATEGORIES added
+    # alongside NO_PUSH_CATEGORIES): relay_alerts() builds ONE combined set from
+    # NO_PUSH_CATEGORIES + EMAIL_ONLY_CATEGORIES, so emptying only NO_PUSH_CATEGORIES no longer
+    # empties the combined set — EMAIL_ONLY_CATEGORIES's 'routine_run_warning' alone would still make
+    # `suppressed_categories` non-empty and this test would stop exercising the guard it exists to
+    # pin. See test_no_push_categories_alone_going_empty_does_not_empty_combined_set below for the
+    # complementary case (one tuple emptied, the other not) that this note warns about.
     seen = {}
     monkeypatch.setattr(ar, "NO_PUSH_CATEGORIES", ())
+    monkeypatch.setattr(ar, "EMAIL_ONLY_CATEGORIES", ())
     monkeypatch.setattr(ar, "bq", lambda sql: seen.setdefault("sql", sql) and [] or [])
     monkeypatch.setattr(ar, "get_user_tz", lambda: "America/Denver")
     ar.relay_alerts()
@@ -475,3 +522,21 @@ def test_empty_no_push_tuple_degrades_to_no_filter_not_a_syntax_error(monkeypatc
     # the rest of the query must still be intact and well-formed
     assert "NOT resolved" in seen["sql"]
     assert "severity IN ('critical','warning')" in seen["sql"]
+
+
+def test_no_push_categories_alone_going_empty_does_not_empty_combined_set(monkeypatch):
+    # The complementary case to the test above, and the one the spec explicitly calls out: patching
+    # only ONE of the two suppression tuples to empty must NOT trip the empty-tuple guard, because the
+    # combined set is still non-empty. If this regressed to "any single tuple going empty degrades to
+    # no filter", a future incident that zeroes out NO_PUSH_CATEGORIES alone (e.g. a bad roster-notice
+    # sweep) would silently ALSO stop suppressing routine_run_warning from the push — the opposite of
+    # what RULE 2 requires, and invisible until the phone starts buzzing for a category the owner was
+    # told stays email-only.
+    seen = {}
+    monkeypatch.setattr(ar, "NO_PUSH_CATEGORIES", ())
+    monkeypatch.setattr(ar, "bq", lambda sql: seen.setdefault("sql", sql) and [] or [])
+    monkeypatch.setattr(ar, "get_user_tz", lambda: "America/Denver")
+    ar.relay_alerts()
+    sql = seen["sql"]
+    assert "category NOT IN (" in sql, "combined set must still be non-empty and filtered"
+    assert "'routine_run_warning'" in sql

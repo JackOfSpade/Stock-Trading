@@ -3670,3 +3670,114 @@ un-versioned, success-only, identity-cutover-sensitive filter). The class is now
 mechanisms with the same symptom and the same triage starting point (check `JOBS_BY_PROJECT` for the
 real run, check the log-metric filter, check the time-series API for the actual sample) — verify all
 three independently rather than pattern-matching the symptom to the first documented cause.
+
+## 50. Run-outcome notification — mechanical alerting for a failed/halted or a warned-completed run *(observability, owner directive 2026-09-08)*
+
+**Why this section exists.** The owner asked, verbatim: *"for the remote routines, they have a
+pathway to send me an email for any incomplete runs or even if run is complete but there are warnings
+or errors? if not, we should add that feature rather than just having them paste those in chat (since
+chat won't be read or monitored)."* A 34-agent audit measured the actual state before answering:
+incomplete runs (`'failed'`/`'halted'`) were already 100% covered by email, but only BY CONSEQUENCE —
+no mechanism cross-referenced a bad `ops.run_log` row against an alert, `ops.run_log.error_msg` had no
+reader anywhere in the codebase, and a `'completed'` run carrying real problem language in its `<note>`
+had NO channel at all (476 of 765 `'completed'` rows in a trailing-90d scan contained words like
+error/failed/warning/skipped/stale/degraded with no alert ever raised). `bigquery/230_run_outcome_notification.sql`
+closes both gaps mechanically. This section is the triage reference for what it added; the file's own
+header carries the full measured audit and the design-constraint rationale and is not repeated here.
+
+**The three new categories, all severity `'warning'` — never `'critical'` (an open critical feeds
+`state.trading_enabled`'s `blocking_criticals` and halts order staging fleet-wide; a routine failing to
+complete is not on its own a capital-safety event, so none of these three can ever contribute to a
+trading halt):**
+
+- **`routine_run_failed`** — a terminal `ops.run_log` row logged `'failed'` or `'halted'`. Raised
+  MECHANICALLY, inside `ops.sp_log_run` itself, off the `in_status` argument every routine already
+  passes — no routine has to remember to call anything for this one. Message carries
+  `(routine, run_date, status)` plus a `<detail>` clause (the run's `error_msg`, falling back to
+  `<note>`, falling back to a fixed literal, truncated to 400 chars).
+- **`routine_run_warning`** — either (a) a terminal row logged `'completed'` with a non-blank
+  `error_msg` (also mechanical, same `sp_log_run` write-time block), or (b) a routine called the new
+  `ops.sp_report_run_issue(...)` procedure to report an in-run observation that did not block
+  completion — see its contract below. Both land in this ONE category, sharing one closure entry and
+  one mental model ("the run was fine but flag this").
+- **`run_log_problem_unalerted`** — the BACKSTOP, raised only by the nightly `cadence_check` sweep
+  (below), never by a routine directly. It exists because `sp_log_run`'s escalation block runs inside
+  its own `BEGIN...EXCEPTION WHEN ERROR THEN...END` (the terminal row must land unconditionally even if
+  alerting fails) — so a raise that itself throws is silent by design, and this is the independent
+  witness that re-checks, from outside that handler, whether every problem row in the trailing 14 days
+  ever got a matching alert AT ALL (keyed on "no alert ever raised," resolved or not — never "no open
+  alert," because the first two categories are designed to auto-age off the board on a healthy
+  schedule, and an open-only check would mistake that healthy aging for a dropped raise).
+
+**Which reach email, and which also push.** All three are `'warning'` severity, so all three reach
+email via `alert_emailer.gs`'s existing 2-hourly poll — nothing about email delivery changed. Push is
+selective, per the 2026-09-07 notification policy (§25 above: every push gets an email, but not every
+email needs a push):
+- **`routine_run_failed`** — PUSHED. A run that did not complete may need a re-fire or other owner
+  action.
+- **`run_log_problem_unalerted`** — PUSHED. Its very existence means the notification pipe itself
+  dropped something, which is the class of thing a push exists for.
+- **`routine_run_warning`** — EMAIL ONLY (`scripts/alert_relay.py`'s `EMAIL_ONLY_CATEGORIES`, a
+  SEPARATE tuple composed with the frozen `NO_PUSH_CATEGORIES` into one suppression set — see that
+  file's own header for why it could not simply be added to `NO_PUSH_CATEGORIES`, which CI pins to
+  exactly the six roster categories). The run completed and nothing is blocked; it reaches the inbox
+  without buzzing the phone.
+
+**Auto-age lifecycle — the closure path.** All three categories ride `ops.sp_sq_cadence_check`'s
+existing number 14 auto-age allowlist (7-day sweep, `warning`/`info` only, `critical` excluded by
+construction), the SAME mechanism `monitor_promoted` and several other categories already use, rather
+than an `ops.alert_policy` `resolve_rule`. This is deliberate, not an oversight: each of the three is a
+RECEIPT FOR A PAST EVENT — the run failed, or reported an issue, or a raise went missing — and that
+fact is permanent; there is no mechanically re-checkable "it healed" condition for `sp_auto_resolve_alerts`
+to verify, and the durable record of what actually happened lives in `ops.run_log` itself, not in
+whether the announcement row is still open. Do not "fix" a still-open one of these by writing a
+condition-based heal — there is no condition to check.
+
+**`ops.sp_report_run_issue(in_routine, in_run_date, in_issue_key, in_summary, in_payload_json)` — the
+contract, for any routine text (or triage session) that calls or reads it.** This is the actual
+replacement for "paste it in chat" the owner asked for — call it instead of leaving an observation in
+a `<note>` nobody reads for content, or in chat output nobody monitors.
+- Severity is FIXED at `'warning'` — not a parameter. No argument combination can turn this into a
+  halt; a genuine hard-stop still uses the routine's own cause-specific `sp_raise_alert_once` call.
+- `in_issue_key` REFUSES (raises) if blank/whitespace or over 64 characters. It is the
+  `sp_raise_alert_once` dedup key folded into the message, so it MUST name the KIND of issue
+  (`'fmp_rate_limited'`), never the instance (`'fmp_rate_limited_at_14:32'`) — an instance-keyed value
+  mints a fresh alert, and a fresh email, on every occurrence, the exact fatigue defect
+  `bigquery/229_staged_order_confirm_notice.sql`'s `item_key` convention exists to avoid.
+- `in_summary` REFUSES if under 30 non-blank characters — same reasoning as
+  `ops.sp_amend_run_note`'s 40-character floor: a placeholder that only satisfies the signature is
+  worse than silence, because it looks like a report.
+- Lands in category `routine_run_warning` (shared with the mechanical completed-with-error case above).
+  Message embeds `(routine, run_date, issue_key, summary)` — the summary text itself is IN the message,
+  not just the payload, because unlike the mechanical escalation this procedure's whole purpose is to
+  carry a human-written account to the inbox, and `alert_emailer.gs` only renders payload detail for
+  the six roster categories.
+
+**Triage, per category:**
+- **`routine_run_failed`** — read the alert's payload (`run_id`, `session_id`, `branch`,
+  `rows_written`, `error_msg`, `note`) or query `ops.run_log` directly for the named `(routine,
+  run_date)`. Decide whether the run needs a re-fire (check `ops/cadence.yaml`'s `catchup_safe` for
+  that routine) or whether the routine's OWN cause-specific alert (if any fired alongside this one)
+  already names the real diagnosis — this backstop carries only the FACT that the run failed, not the
+  diagnosis, so check for a sibling alert from the same routine/run before assuming this is the only
+  signal.
+- **`routine_run_warning`** — read the message for the reported issue (either the `error_msg` excerpt,
+  or an `sp_report_run_issue` `issue_key` + summary). Nothing is blocked; decide whether the underlying
+  condition needs a fix or is a known, accepted transient (e.g. an FMP rate-limit). This one is
+  email-only by design — do not expect a push, and do not add one (§25's notification-policy rules
+  above cover why).
+- **`run_log_problem_unalerted`** — this means the notification path itself may be broken: a
+  `routine_run_failed`/`routine_run_warning` raise that should have fired did not. Read
+  `state.run_log_unalerted_problems` (or the alert's `STRING_AGG`'d payload) for the named
+  `(routine, run_date, run_id)` rows, then go straight to `ops.run_log` for those rows' `error_msg`/
+  `<note>` directly — the alert layer is exactly what is suspect here, so trust the underlying log row
+  over any alert that may or may not exist for it.
+
+**What was deliberately NOT changed.** `missed_run` (critical) and `routine_stalled` (warning) —
+the two existing `cadence_check`-driven detectors — are untouched; neither gets `error_msg`/`<note>`
+detail spliced into its message, because both are dedup-stable today and splicing per-run prose in
+would defeat that, and for `missed_run` specifically (critical) would churn the trading gate. This
+run-outcome path delivers its own diagnostic in its OWN alert instead. No new `ops.run_log.status`
+value was added — `'completed with warnings'` as a status would silently change every existing
+`status='completed'` predicate across the ~30 views/gates that read it; a `'completed'` row that also
+carries a `routine_run_warning` alert is how that distinction is expressed instead.

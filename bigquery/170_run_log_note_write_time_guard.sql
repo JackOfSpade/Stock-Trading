@@ -69,6 +69,14 @@
 -- does today -- no sentinel string, no placeholder, nothing that would make the existing detector read
 -- green on a row that is still blank. The detector is not weakened, softened, or worked around.
 
+-- SUPERSEDED (2026-09-08) by bigquery/230_run_outcome_notification.sql, the current canonical
+-- definition of ops.sp_log_run. 230 leaves the unconditional INSERT (C8) and the existing blank-note
+-- guard byte-identical, and adds -- AFTER the guard, in its own BEGIN...EXCEPTION WHEN ERROR
+-- THEN...END best-effort block -- a write-time escalation: a terminal row logging failed/halted
+-- raises routine_run_failed, and a completed row carrying a non-blank error_msg raises
+-- routine_run_warning (both severity 'warning', never critical -- C1). See bigquery/230's header for
+-- the owner directive and the audit that motivated it. Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_log_run`(
   in_routine STRING, in_run_date DATE, in_status STRING, in_session STRING,
   in_branch STRING, in_rows INT64, in_error STRING, in_note STRING)
