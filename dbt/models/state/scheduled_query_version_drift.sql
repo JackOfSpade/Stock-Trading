@@ -1,9 +1,15 @@
--- Parallel-run dbt port of bigquery/63_scheduled_query_version_registry.sql:state.scheduled_query_version_drift — canonical source is that file until
--- owner cutover. Added 2026-09-01 (dbt view-coverage burn-down): this view had NO dbt presence,
--- so scripts/check_dbt_view_coverage.py reported it uncovered and it carried no port at all.
--- Generated MECHANICALLY by scripts/gen_dbt_port.py from the canonical body — the only edit is
--- ref()/source() substitution for fully-qualified names — and proved token-identical to that body
--- by scripts/verify_dbt_port.py. Do not hand-edit: re-generate, then re-verify.
+-- Parallel-run dbt port of bigquery/232_sq_version_drift_bootstrap_grace.sql:state.scheduled_query_version_drift — canonical source is that file until
+-- owner cutover. Generated MECHANICALLY by scripts/gen_dbt_port.py from that canonical body — the
+-- only edit is ref()/source() substitution for fully-qualified names — and proved token-identical
+-- to it by scripts/verify_dbt_port.py. Do not hand-edit the BODY: re-generate, then re-verify.
+-- Regenerating REPLACES this header, so any hand-written provenance above the body must be put
+-- back by the person who regenerates it.
+-- PROVENANCE (hand-written, restored after the 2026-09-09 regeneration per the line above):
+-- this port was added 2026-09-01 in the dbt view-coverage burn-down, when the view had NO dbt
+-- presence at all and scripts/check_dbt_view_coverage.py reported it uncovered. Its canonical
+-- source moved bigquery/63 -> bigquery/232 on 2026-09-09, when the `drift` term gained the
+-- cadence-aware bootstrap grace its two sibling terms already had; regenerating from the new
+-- canonical is what this file's 2026-09-09 change is.
 WITH latest_beat AS (
   SELECT
     SUBSTR(source, 4) AS sq_name,   -- strip the 'sq:' prefix
@@ -21,7 +27,21 @@ SELECT
   lb.last_reported_version,
   lb.last_beat_ts,
   COALESCE(lb.ever_reported_version, FALSE) AS monitored,
+  -- BOOTSTRAP GRACE (2026-09-09, bigquery/232): the `last_beat_ts >= updated_ts` conjunct. A version
+  -- mismatch is only EVIDENCE of drift once the query has beaten at least once since the registry row
+  -- was bumped; before that the reported version is stale by construction. Without it, bumping a
+  -- MONTHLY query (interval 744h) raised this warning every night for the ~23 days until its next
+  -- run -- and because the category is on cadence_check's #14 auto-age allowlist, that became a
+  -- weekly raise/age/re-raise email cycle rather than one open row. Measured on the live board
+  -- 2026-09-09: alert e0cb2898 for fire_drill_alert_lifecycle, registry v4 (2026-09-08 16:10:20),
+  -- live procedure DDL v4, heartbeat v3 from 2026-09-01 -- nothing drifted, the query simply had not
+  -- run yet. COALESCE guards a NULL updated_ts: without it the comparison would yield NULL and
+  -- silently disable drift detection for that row, which is the failure this term must never have.
+  -- The two sibling terms below already carry cadence-aware graces; this one did not, and that
+  -- asymmetry -- not the grace value -- was the defect. See this file's header for the measurement
+  -- showing all 11 other registered queries already satisfy this conjunct, so it costs no coverage.
   COALESCE(lb.ever_reported_version, FALSE)
+    AND lb.last_beat_ts >= COALESCE(e.updated_ts, TIMESTAMP '1970-01-01 00:00:00 UTC')
     AND (lb.last_reported_version IS NULL
          OR TRIM(lb.last_reported_version) = ''
          OR lb.last_reported_version != e.expected_version) AS drift,
