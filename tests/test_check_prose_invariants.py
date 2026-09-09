@@ -825,3 +825,110 @@ def test_nearest_heading_skips_fenced_code_comment():
 
 def test_nearest_heading_returns_empty_when_no_heading_precedes():
     assert cpi.nearest_heading(["plain", "text", "here"], 2) == ""
+
+
+# ---- Shallow-clone HISTORY-DEPTH PRECHECK rules (2026-09-08, shallow_clone_git_attribution) -----
+
+def test_history_depth_doctrine_rule_fails_when_the_shared_rule_is_removed(tmp_path, monkeypatch):
+    """OPS0 STEP 4(a) and SL2's pin were narrowed to POINTERS at the shared §Execution environment
+    rule, so deleting that rule dangles both and silently un-gates the whole fleet."""
+    (rule,) = _actual_rules("history_depth_precheck_doctrine_present")
+    assert _run(
+        tmp_path,
+        monkeypatch,
+        [rule],
+        {"Claude_Task_Plan.md": "Claude runs as scheduled routines connected to a GitHub repo.\n"},
+    ) == 1
+
+
+def test_history_depth_doctrine_rule_passes_on_the_real_plan(tmp_path, monkeypatch):
+    """The live Claude_Task_Plan.md must actually satisfy it — a require rule that no real file
+    satisfies would have been caught here rather than by a red CI nobody can fix after the fact."""
+    (rule,) = _actual_rules("history_depth_precheck_doctrine_present")
+    plan = (Path(__file__).resolve().parents[1] / "Claude_Task_Plan.md").read_text(encoding="utf-8")
+    assert _run(tmp_path, monkeypatch, [rule], {"Claude_Task_Plan.md": plan}) == 0
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "git log -S 'reject_cooldown_days' -- strategy/roster.yaml",
+        "git log -G 'spec_hash' -- Strategy.md",
+        "git log -L 620,630:Strategy.md",
+        "git blame -- ops/cadence.yaml",
+        "git log --follow -- Daily.md",
+        "git merge-base --is-ancestor abc123 origin/main",
+        "git rev-list --count origin/main",
+        "git describe --tags",
+        "git log origin/main --oneline --since=<last run> -- Watchlist.md",
+    ],
+)
+def test_git_history_reasoning_rule_catches_every_depth_sensitive_command(
+    tmp_path, monkeypatch, command
+):
+    """Each of these exits 0 on a SHALLOW clone and answers from the boundary commit instead of the
+    real one, so naming any of them without the precheck is the defect this rule exists to catch."""
+    (rule,) = _actual_rules("git_history_reasoning_carries_depth_precheck")
+    assert _run(
+        tmp_path,
+        monkeypatch,
+        [rule],
+        {"Claude_Task_Plan.md": f"To find who changed this, run `{command}` and record the author.\n"},
+    ) == 1
+
+
+def test_git_history_reasoning_rule_is_satisfied_by_naming_the_precheck(tmp_path, monkeypatch):
+    """The rule must be SATISFIABLE in the same paragraph — otherwise the only way to land a
+    legitimate history read would be to weaken or delete the rule."""
+    (rule,) = _actual_rules("git_history_reasoning_carries_depth_precheck")
+    assert _run(
+        tmp_path,
+        monkeypatch,
+        [rule],
+        {
+            "Claude_Task_Plan.md": (
+                "Run the HISTORY-DEPTH PRECHECK first, then `git blame -- ops/cadence.yaml` "
+                "to attribute the change.\n"
+            )
+        },
+    ) == 0
+
+
+def test_git_history_reasoning_rule_is_not_satisfied_from_a_neighbouring_paragraph(
+    tmp_path, monkeypatch
+):
+    """A blank line is a hard boundary: the precheck must sit in the SAME paragraph as the command,
+    because a session reading one bullet does not necessarily read its neighbour. This is why every
+    one of the six live sites was annotated individually instead of once at the top of the file."""
+    (rule,) = _actual_rules("git_history_reasoning_carries_depth_precheck")
+    assert _run(
+        tmp_path,
+        monkeypatch,
+        [rule],
+        {
+            "Claude_Task_Plan.md": (
+                "Run the HISTORY-DEPTH PRECHECK before reasoning about history.\n"
+                "\n"
+                "For each scenario, `git log --since=<last completed run> -- governing_files`; "
+                "if empty, skip it.\n"
+            )
+        },
+    ) == 1
+
+
+def test_git_history_reasoning_rule_ignores_depth_safe_git_commands(tmp_path, monkeypatch):
+    """Tightly scoped to the commands a truncated history actually corrupts. `git ls-remote`,
+    `git rev-parse HEAD`, `git push`/`git fetch` and a plain `git log -1` all answer identically on a
+    shallow clone, and a rule that flagged them would be noise the next author learns to suppress."""
+    (rule,) = _actual_rules("git_history_reasoning_carries_depth_precheck")
+    assert _run(
+        tmp_path,
+        monkeypatch,
+        [rule],
+        {
+            "Claude_Task_Plan.md": (
+                "Verify the push with `git ls-remote --exit-code origin <branch>`, read the tip with "
+                "`git rev-parse HEAD`, and show the newest commit with `git log -1 --format=%H`.\n"
+            )
+        },
+    ) == 0

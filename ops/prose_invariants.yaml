@@ -378,3 +378,41 @@ invariants:
     source_of_truth: bigquery/23_trading_control.sql header (asymmetric halt/resume) +
       bigquery/76_owner_confirmation_liveness.sql "ops.trading_control usage convention for this gate"
       (corrected 2026-08-28) + dbt/tests/assert_trading_control_no_automated_unhalt.sql
+
+  # ---- The routine container clones this repo SHALLOW, and on a shallow clone the history
+  # commands do not error — they return confidently WRONG answers shaped exactly like right ones
+  # (SL2's `shallow_clone_git_attribution` warning, 2026-09-08; OPS0's false `unlanded_completed_run`,
+  # 2026-08-03). Two rules: the fleet-wide doctrine must not vanish, and no NEW routine-executed
+  # paragraph may reason over history without naming the precheck. ----
+  - id: history_depth_precheck_doctrine_present
+    files: [Claude_Task_Plan.md]
+    require_regex: 'GIT HISTORY IS TRUNCATED IN THE ROUTINE CONTAINER — RUN THE HISTORY-DEPTH PRECHECK'
+    reason: >
+      The shared §Execution environment rule is the ONLY place the ASK / DEEPEN / RE-ASK procedure is
+      stated — OPS0 STEP 4(a) and SL2's pin were both narrowed to pointers on 2026-09-08 precisely so
+      the procedure has one home and cannot drift between copies. If this heading is removed or reworded,
+      those pointers dangle and every routine loses the rule at once, while the .claude/session-start.sh
+      deepen (best-effort, silently defeatable by a network blip) keeps the failure invisible.
+    source_of_truth: Claude_Task_Plan.md §Execution environment "GIT HISTORY IS TRUNCATED IN THE ROUTINE
+      CONTAINER" + .claude/session-start.sh + tests/test_session_start_hook.sh
+  - id: git_history_reasoning_carries_depth_precheck
+    files: [Claude_Task_Plan.md]
+    match_paragraph: true
+    forbid_regex: '^(?!.*HISTORY-DEPTH PRECHECK).*(?:git log -[SGL]\b|git blame|git log --follow|--is-ancestor|git rev-list --count|git describe|git log[^`]{0,120}--since)'
+    reason: >
+      A routine-executed paragraph that runs `git log -S/-G/-L`, `git blame`, `git log --follow`,
+      `git log --since`, `git rev-list --count`, `git describe` or `git merge-base --is-ancestor` must name
+      the HISTORY-DEPTH PRECHECK in the SAME paragraph, so the session reading the command also reads the
+      reason it may be lying. On a shallow clone every one of these exits 0 and resolves each pre-boundary
+      change onto the boundary commit; `log -L`/`blame` even print a `--- /dev/null` header, which is the
+      exact shape of a file genuinely created there. Six such sites existed on 2026-09-08 and only ONE
+      (OPS0 STEP 4a) was gated — the other five included D3's golden-scenario prose-regression check, whose
+      ENTIRE skip condition is an empty `git log --since` result and which, since golden-prose-daily.yml was
+      deleted on 2026-08-30, is the only surface that re-evaluates scenarios against changed prose at all.
+      A truncated history would not degrade it; it would switch it off silently while the run reported
+      success. Same two-layer shape as trading_control_insert_carries_halt_guard above: this rule catches
+      the defect where it is INTRODUCED, the session-start deepen repairs the STATE, and neither alone is
+      enough — prose binds only the routine that reads it, and a best-effort deepen can fail.
+    source_of_truth: Claude_Task_Plan.md §Execution environment "GIT HISTORY IS TRUNCATED IN THE ROUTINE
+      CONTAINER" (the canonical ASK / DEEPEN / RE-ASK procedure) + ops.alerts shallow_clone_git_attribution
+      (SL2, 2026-09-08) + ops0_landing_sweep_defect 843cf962 (OPS0, 2026-08-04)
