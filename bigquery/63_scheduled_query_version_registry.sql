@@ -78,6 +78,16 @@ WHEN NOT MATCHED THEN
   VALUES (S.sq_name, S.expected_version, S.git_note, S.expected_interval_hours);
 
 -- ===== state.scheduled_query_version_drift — latest reported version vs expected, per query =====
+-- SUPERSEDED LIVE by bigquery/232_sq_version_drift_bootstrap_grace.sql (2026-09-09) — current
+-- single source of truth for this VIEW. 232 adds ONE conjunct to the `drift` term
+-- (`last_beat_ts >= updated_ts`), the cadence-aware bootstrap grace its two sibling terms below
+-- already had: a version mismatch is only evidence of drift once the query has beaten at least
+-- once SINCE the registry row was bumped. Without it, bumping a MONTHLY query raised a nightly
+-- warning for the ~23 days until its next run (measured: alert e0cb2898,
+-- fire_drill_alert_lifecycle, 2026-09-09 — registry v4, live procedure DDL v4, heartbeat v3 from
+-- 2026-09-01; nothing drifted, it simply had not run). The TABLE and MERGE above are NOT
+-- superseded and remain canonical here. Kept unmodified for DR-rebuild apply-in-order reference
+-- only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.scheduled_query_version_drift` AS
 WITH latest_beat AS (
   SELECT
