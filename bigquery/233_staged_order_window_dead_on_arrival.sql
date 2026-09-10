@@ -1,77 +1,181 @@
--- Staged-order confirm notice -- give the one push that had no email an email (2026-09-07).
+-- Staged-order entry windows that were ALREADY CLOSED when the order was staged (2026-09-10).
 -- Project: stock-trading-498512.
 --
--- OWNER DIRECTIVE (2026-09-07), two rules, both about notification policy rather than trading:
---   1. every ntfy push must be accompanied by an email to the owner Gmail, if it is not already;
---   2. ntfy is for things that need the owner to DO something -- no "everything is fine" pings.
+-- THE DEFECT. `entry_window_close` (the ORDER_STAGED row's `due_date`, surfaced as
+-- `state.open_orders.entry_window_close`) is the field D2a STEP 0 branches on when it reconciles the
+-- staged-order registry each session -- Claude_Task_Plan.md / task_plan/D2a.md, "staged-order registry
+-- reconciliation":
+--     branch (b) window still open + unfilled (`entry_window_close >= today` MT)
+--                -> ORDER-GUARD CHECK, then RE-CRAFT under the SAME `item_key`.
+--     branch (c) window closed + unfilled     (`entry_window_close < today`)
+--                -> set terminal `expired` + log the conservative default.
+-- Branch (b) IS the persist-and-wait policy (Operating_Protocols.md 11): a Claude order is always
+-- DAY, so it dies at the close, and the INTENT to keep it working is carried by re-crafting it fresh
+-- each session under the same registry row. Branch (c) is how that intent is finally given up.
 --
--- This file is rule 1's only BigQuery-side piece. The audit behind it found exactly one push with no
--- email counterpart anywhere in the system: alert-relay.yml's daily 13:05 UTC `orders` mode, which
--- read state.open_orders and POSTed straight to ntfy. It could not be fixed on the push side. There
--- is precisely one email channel in this system -- ops.alerts -> ops/monitoring/alert_emailer.gs,
--- polling Gmail every 2h under the owner's own Google identity -- and a GitHub Actions job cannot
--- reach it or any other mail path:
---   * no SMTP/mail secret exists (repo secrets are ALERT_WEBHOOK_URL + OFFSITE_BACKUP_GCS, nothing else),
---   * no mail-sending Action is used by any workflow,
---   * ntfy.sh's own `Email:` forwarding header is REJECTED on this topic -- probed live 2026-09-07,
---     HTTP 400 {"code":40053,"error":"anonymous email sending is not allowed"}; it now requires an
---     authenticated ntfy account, which a capability-URL topic deliberately is not,
---   * and the relay runs as the READ-ONLY WIF SA, whose only ops write grant is table-scoped to
---     ops.ci_findings -- a CI-guard findings table drained by D3's CI-FINDINGS ADJUDICATION, which is
---     the wrong queue for a trading-order reminder and would mislead that consumer.
--- So the fix is structural, not cosmetic: stop pushing a bare view and make the fact an ALERT. An
--- ops.alerts row reaches email by construction, and alert_relay.py's `alerts` mode relays it to ntfy
--- for free -- one row, both channels, instead of one push and no email. The daily `orders` cron is
--- retired in the same change (see .github/workflows/alert-relay.yml and scripts/alert_relay.py).
+-- Nothing anywhere states what `entry_window_close` must be SET to. It is written by routine judgment
+-- from prose, and it is unvalidated -- so it drifts. D2a stages post-close (~16:5x MT / ~22:5x UTC),
+-- and a DAY instruction crafted after the close reaches the NEXT trading session; a window stamped
+-- with the CRAFT day therefore names a session that ended hours BEFORE the order existed. Such a row
+-- is born outside its own window. It can never trade inside it, and at the very next reconciliation
+-- it matches branch (c), not branch (b) -- so it is terminally expired after ONE session and the
+-- persist-and-wait re-craft is UNREACHABLE for it by construction.
 --
--- Rule 2 is served by the same design: the retired push re-listed EVERY unreconciled order EVERY day,
--- including craftable ones the owner had already confirmed in IBKR days earlier, because `pending` in
--- state.open_orders means "not yet filled AND reconciled" and never "not yet confirmed". The
--- replacement raises ONE alert per order, keyed on item_key alone, so a NEW order to confirm alerts
--- and an unchanged pile stays quiet. See the long comment on the new block inside the procedure.
+-- That is a silent downgrade of the registry's central guarantee. Operating_Protocols.md 11 states it
+-- outright -- "a staged order therefore cannot be silently dropped or de-funded; it leaves the registry
+-- only by filling or by an explicit terminal decision" -- and the terminal decision this produces is
+-- correctly formed, correctly logged, and reads exactly like a normal expiry. Nothing distinguishes
+-- "this order had its session and did not fill" from "this order never had a session at all".
+--
+-- MEASURED, live `events.queue_events`, read 2026-09-10 -- not hypothetical, and not new:
+--   8 of 67 post-close `pending` stagings carried a window that had already closed --
+--   cover-VOO-20260720, cover-VOO-20260721, sweep-SGOV-20260727, cover-SGOV-20260728,
+--   sweep-VOO-20260908, park-derisk-sell-VOO-20260908, park-derisk-buy-SGOV-20260908,
+--   sweep-VOO-20260909. A further 12 carried `entry_window_close` NULL, which is a DIFFERENT and
+--   deliberate convention ("NULL = no deadline (a resting exit)",
+--   dbt/tests/assert_open_orders_no_stale_pending.sql) and is NOT flagged here.
+--
+-- THE CASE THAT BIT, and the alert that surfaced it. sweep-VOO-20260908 (BUY 0.1393 VOO MARKET/DAY,
+-- staged 2026-09-08 22:53 UTC, window 2026-09-08) did not fill at the 09-09 open. D2a 2026-09-09
+-- reconciled it under branch (c) -- correctly, per the rule as written -- and terminally expired it
+-- instead of re-crafting it, then swept the released cash fresh as a NEW item_key,
+-- sweep-VOO-20260909. Because the park sweep names its `item_key` by DATE, that replacement is a new
+-- identity, so it minted a NEW `staged_order_awaiting_confirm` row, a NEW email and a NEW ntfy push
+-- for what is materially the same waiting sweep -- and would have done so again every session the
+-- sweep stayed unfilled. bigquery/229 built that notice specifically to avoid re-notifying on an
+-- unchanged pending order ("A genuinely NEW order gets a NEW item_key ... An unchanged pile stays
+-- silent"); a born-dead window defeats it by re-minting the identity itself rather than the message.
+-- The 2026-09-10 05:25 UTC alert the operator received for sweep-VOO-20260909 is that second push.
+--
+-- WHY A DETECTOR AND NOT ONLY A PROSE FIX. The prose fix is the real repair and lands in the same
+-- change (Operating_Protocols.md 11 now states the rule at the field's own definition site, and
+-- Claude_Task_Plan.md / task_plan/D2a.md STEP 0 branch (c) now repairs a mis-set window forward
+-- instead of expiring the row). But `entry_window_close` is written by an LLM routine from markdown,
+-- with no mechanical enforcement possible at write time -- exactly the situation ITEM 15
+-- (self-improvement audit 2026-07-11) faced for the order guard, and it was answered the same way:
+-- embed the fact and make the violation a QUERYABLE, DETECTABLE thing rather than a silent trust
+-- assumption. Eight occurrences across seven weeks is the measured base rate of trusting the prose
+-- alone.
 --
 -- WHAT THIS FILE CHANGES, precisely:
---   * CREATE OR REPLACE PROCEDURE ops.sp_sq_daily_staging_cap_check -- carried forward BYTE-IDENTICAL
---     from bigquery/75_scheduled_query_wrappers.sql except (a) the heartbeat literal v5 -> v6, and
---     (b) the new staged_order_awaiting_confirm block appended at the end. The two existing checks
---     (order_guard_omitted CRITICAL, order_guard_verdict_mismatch CRITICAL) are untouched -- no
---     predicate, threshold, exclusion or severity of either is altered by this file.
---   * ops.alert_policy -- registers the new category non-latching so it is allowed to auto-resolve.
+--   * NEW VIEW `state.staged_order_window_invalid` -- the predicate, defined ONCE. The procedure's
+--     RAISE and its RESOLVE both read it, so they cannot drift apart (the classic failure of a
+--     resolve written as a hand-maintained negation of its raise), and D2a STEP 0 reads it as a
+--     mechanical input instead of re-deriving the arithmetic in prose.
+--   * `ops.sp_sq_daily_staging_cap_check` -- carried forward BYTE-IDENTICAL from
+--     bigquery/229_staged_order_confirm_notice.sql except (a) the heartbeat literal v6 -> v7,
+--     (b) a second auto-resolve UPDATE beside the existing one, (c) a second FOR loop raising
+--     `staged_order_window_dead_on_arrival`, appended INSIDE the existing best-effort block, and
+--     (d) the shared `staged_order_notice_failed` message widened to name both notices it now
+--     guards. The two order-guard checks (order_guard_omitted CRITICAL,
+--     order_guard_verdict_mismatch CRITICAL) are untouched -- no predicate, threshold, exclusion or
+--     severity of either is altered by this file.
+--   * `ops.alert_policy` -- registers the new category non-latching so it is allowed to auto-resolve.
 --
--- NO TRADING BEHAVIOR CHANGES. Nothing here stages, cancels, sizes or gates an order. The new alert is
--- severity 'warning', and every trading gate (state.trading_enabled / _mechanical,
--- state.system_health.all_green, ops.sp_assert_trading_enabled*) counts severity = 'critical' ONLY
--- (bigquery/107_halt_echo_missed_run_gate.sql), so it cannot contribute to a halt.
+-- WHY IT SHARES THE EXISTING BEST-EFFORT BLOCK rather than opening a second one. bigquery/229's
+-- block already runs FIRST (ahead of the two CRITICAL order-guard checks, so a fault in either
+-- cannot swallow the notices) and is already wrapped so a fault in a mere notification cannot abort
+-- the procedure before the SAFETY checks run. Both properties are exactly what this notice needs, and
+-- a second wrapper would need a SECOND failure category with its OWN auto-resolve -- and two blocks
+-- each resolving the shared `staged_order_notice_failed` category unconditionally would let one
+-- block's clean pass silently close the other block's genuine failure. One block, one handler, one
+-- failure category, one resolve.
 --
--- APPLY ORDER: after bigquery/75_scheduled_query_wrappers.sql (defines the procedure this supersedes),
--- bigquery/34_alert_lifecycle.sql (ops.alert_policy), bigquery/10_observability.sql
--- (ops.sp_raise_alert_once) and bigquery/01_schema.sql (state.open_orders). Idempotent, safe to
--- re-apply: the CREATE OR REPLACE is total and the alert_policy INSERT is guarded on NOT EXISTS.
+-- NO TRADING BEHAVIOR CHANGES IN THIS FILE. Nothing here stages, cancels, sizes, repairs or gates an
+-- order; the new alert is severity 'warning', and every trading gate counts severity = 'critical'
+-- ONLY (bigquery/107_halt_echo_missed_run_gate.sql), so it cannot contribute to a halt. The branch-(c)
+-- repair that DOES change reconciliation behavior is prose, in Claude_Task_Plan.md and task_plan/D2a.md.
 --
--- LOCKSTEP: the heartbeat literal below is v6; bigquery/63_scheduled_query_version_registry.sql's
--- `daily_staging_cap_check` row is bumped to v6 in the same change. scripts/check_sq_version_registry.py
+-- NOT ADDED TO alert_relay.py's suppression tuples -- this one PUSHES. NO_PUSH_CATEGORIES is frozen
+-- to the six SISA roster notices by scripts/check_roster_notice_lockstep.py, and EMAIL_ONLY_CATEGORIES
+-- is for a run that COMPLETED with nothing pending. Neither describes this: a born-dead window means a
+-- staged order will be abandoned after one session instead of persisting, which is trading-affecting.
+-- alert_relay.py's own rule governs -- "mis-suppressing one is a silent safety failure while an extra
+-- push is only a nuisance" -- and the expected rate once the prose rule lands is ~0.
+--
+-- APPLY ORDER: after bigquery/229_staged_order_confirm_notice.sql (defines the procedure this
+-- supersedes), bigquery/09_market_calendar.sql (state.market_calendar), bigquery/01_schema.sql
+-- (state.open_orders), bigquery/34_alert_lifecycle.sql (ops.alert_policy) and
+-- bigquery/10_observability.sql (ops.sp_raise_alert_once). Idempotent, safe to re-apply: both CREATEs
+-- are total (OR REPLACE) and the alert_policy INSERT is guarded per-category on NOT EXISTS.
+--
+-- LOCKSTEP: the heartbeat literal below is v7; bigquery/63_scheduled_query_version_registry.sql's
+-- `daily_staging_cap_check` row is bumped to v7 in the same change. scripts/check_sq_version_registry.py
 -- fails CI if they disagree, and a landed mismatch raises a nightly scheduled_query_version_drift
--- WARNING that has no ops.alert_policy row and so can never auto-resolve (that exact bug already
--- happened once, 2026-08-04 commit 0b9fd49, and took two days to notice).
---
--- SUPERSEDED (2026-09-10) by bigquery/233_staged_order_window_dead_on_arrival.sql, the current
--- canonical definition of this procedure. 233 carries this body forward BYTE-IDENTICAL except:
--- the heartbeat literal v6 -> v7; a SECOND auto-resolve UPDATE beside the existing one; a SECOND
--- FOR loop, appended INSIDE this same best-effort block, raising a staged_order_window_dead_on_arrival
--- WARNING from the new state.staged_order_window_invalid view; and the shared
--- staged_order_notice_failed message widened to name both notices the block now guards. The new check
--- flags an ORDER_STAGED row staged at or after the close of the very session its entry_window_close
--- names -- a row born outside its own window, which D2a STEP 0 then matches on branch (c) TERMINAL
--- EXPIRED rather than branch (b) RE-CRAFT, silently skipping the persist-and-wait policy after one
--- session (measured: 8 of 67 post-close stagings, 2026-07-20..2026-09-09). Neither order-guard
--- CRITICAL check (order_guard_omitted / order_guard_verdict_mismatch) is altered by 233 -- no
--- predicate, threshold, exclusion or severity of either moves. Kept here, unmodified, for DR-rebuild
--- apply-in-order reference only. DO NOT re-apply this CREATE live in isolation.
+-- WARNING. (bigquery/229's header adds "that has no ops.alert_policy row and so can never auto-resolve";
+-- that half is STALE and is not repeated here -- the category has been on ops.sp_sq_cadence_check's #14
+-- auto-age allowlist since SQ_VERSION v9, 2026-07-27, so a live mismatch ages out within 7 days. It is
+-- still a landed defect worth not shipping, just not a permanently-latching one.)
 -- =====================================================================================================
 
+-- =====================================================================================================
+-- state.staged_order_window_invalid -- pending staged orders whose entry window had ALREADY CLOSED at
+-- the instant they were staged. THE predicate, defined once; see the file header for why it is a view.
+--
+-- window_close_instant is the LAST MOMENT the order could legally have traded inside its own declared
+-- window: 16:00 America/New_York on `entry_window_close`, or 13:00 on an early-close session.
+-- MARKET plane, not the OPERATING plane -- this is a fact about the exchange, not a preference
+-- (bigquery/20_user_prefs.sql).
+--
+-- COALESCE(mc.is_early_close, FALSE) is load-bearing polarity, not decoration. state.market_calendar
+-- covers 2023-01-01..2030-12-31 so mc is matched for every in-range date, but a date outside it (or a
+-- future narrowing of that range) would give a NULL close time, a NULL comparison, and a DROPPED row
+-- -- silently un-flagging the exact defect this view exists to catch. COALESCE keeps the close time
+-- defined and defaults to the regular 16:00 session.
+--
+-- The column list from state.open_orders is EXPLICIT and deliberately EXCLUDES convergence_target:
+-- that column is a hard CAST(... AS NUMERIC) in the view (bigquery/01_schema.sql), and on 2026-07-26 a
+-- ticker string written into that payload field made every SELECT * against it fail with "Invalid
+-- NUMERIC value". This view must not be takeable down by an unrelated malformed payload field, so it
+-- names its columns; the outer SELECT * is over the CTE, whose column list is already explicit.
+--
+-- entry_window_close IS NULL is NOT flagged and must not be. NULL means "no deadline" for a resting
+-- exit, a deliberate and documented convention (dbt/tests/assert_open_orders_no_stale_pending.sql:
+-- "entry_window_close NULL = no deadline (a resting exit)"), and 12 live rows use it. A NULL window
+-- fails branch (c) rather than matching it early, so it has the opposite failure mode from the one
+-- here and is out of scope for this view.
+--
+-- A NON-TRADING-DAY entry_window_close (a Saturday, or a full-close holiday) is likewise NOT flagged,
+-- and that is a deliberate scope decision rather than an oversight. Such a row is arguably dead on
+-- arrival too -- the market never opens on that date -- and generalizing window_close_instant to the
+-- close of the LAST TRADING DAY <= entry_window_close would catch it. It is left out because the case
+-- is not reachable by the documented craft path: the rule this file enforces says to set the window
+-- from state.trading_day_today.next_trading_day, which by construction never resolves to a
+-- non-trading day. Measured live 2026-09-10, ALL 78 ORDER_STAGED rows that carry a window at all name
+-- a trading day, and none names an early-close session -- 0 occurrences of either in the system's
+-- whole history. Adding the extra join would buy no coverage today and would make the ONE predicate
+-- every consumer trusts harder to read. If a non-trading-day window is ever observed, generalize it
+-- here rather than adding a second predicate somewhere else.
+-- =====================================================================================================
+CREATE OR REPLACE VIEW `stock-trading-498512.state.staged_order_window_invalid` AS
+WITH scoped AS (
+  SELECT
+    o.item_key,
+    o.item_type,
+    o.strategy,
+    o.ticker,
+    o.side,
+    o.qty,
+    o.limit_price,
+    o.instruction_id,
+    o.staged_ts,
+    o.entry_window_close,
+    TIMESTAMP(
+      DATETIME(o.entry_window_close,
+               IF(COALESCE(mc.is_early_close, FALSE), TIME '13:00:00', TIME '16:00:00')),
+      'America/New_York') AS window_close_instant
+  FROM `stock-trading-498512.state.open_orders` o
+  LEFT JOIN `stock-trading-498512.state.market_calendar` mc
+    ON mc.cal_date = o.entry_window_close
+  WHERE o.entry_window_close IS NOT NULL
+)
+SELECT * FROM scoped
+WHERE staged_ts >= window_close_instant;
+
+-- =====================================================================================================
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_daily_staging_cap_check`()
 BEGIN
-  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:daily_staging_cap_check', 'v6', 'daily_staging_cap_check.sql ran');
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:daily_staging_cap_check', 'v7', 'daily_staging_cap_check.sql ran');
 
   -- ===================================================================================================
   -- staged_order_awaiting_confirm (WARNING) -- added 2026-09-07, owner directive on notification policy.
@@ -202,6 +306,108 @@ BEGIN
           CAST(rec.staged_ts AS STRING) AS staged_ts)));
     END FOR;
 
+    -- staged_order_window_dead_on_arrival -- auto-resolve, same fail-closed shape and same
+    -- resolve-before-raise ordering as the sibling above.
+    --
+    -- POSITION IS LOAD-BEARING, DO NOT MOVE THIS ABOVE THE awaiting-confirm FOR LOOP (adversarial
+    -- self-review of this file, 2026-09-10 -- the first cut had it there and it was a real coverage
+    -- regression against bigquery/229). This is the FIRST statement in the block that reads the NEW
+    -- view. Everything belonging to staged_order_awaiting_confirm -- its resolve AND its raise --
+    -- now completes BEFORE it. In 229 that resolve and raise were adjacent with nothing between
+    -- them; splicing a new dependency in between would mean a fault reading
+    -- state.staged_order_window_invalid (the view absent, dropped, or unreadable -- and it is not
+    -- live until this very file is applied) throws into the shared handler BEFORE the
+    -- awaiting-confirm notice is raised, silently costing that day's notice for an order whose only
+    -- confirm surface may be a calendar tap. A NEW feature must not be able to take down the
+    -- OLDER notice it was merely appended beside; ordered this way it cannot. TWO distinct healings close this row and
+    -- the single NOT EXISTS covers both, because state.staged_order_window_invalid encodes the whole
+    -- predicate: (1) the row went terminal (filled / expired / abandoned) and left state.open_orders,
+    -- or (2) its entry_window_close was REPAIRED FORWARD to a session the order can still trade in
+    -- (Claude_Task_Plan.md STEP 0 branch (c), MIS-SET WINDOW REPAIR). Neither healing needs a human
+    -- UPDATE. Fail-closed: a row whose payload.item_key cannot be read stays OPEN rather than being
+    -- silently closed, and NOT EXISTS rather than NOT IN so a single NULL cannot make every row
+    -- evaluate NULL and resolve nothing.
+    UPDATE `stock-trading-498512.ops.alerts` a
+       SET resolved = TRUE,
+           resolved_ts = CURRENT_TIMESTAMP(),
+           resolved_note = CONCAT('auto-resolved: this staged order no longer has an entry window that closed before it was staged -- either the row went terminal and left state.open_orders, or its entry_window_close was repaired forward to a session it can still trade in (ops.sp_sq_daily_staging_cap_check). ', COALESCE(resolved_note, ''))
+     WHERE NOT a.resolved
+       AND a.category = 'staged_order_window_dead_on_arrival'
+       AND JSON_VALUE(a.payload, '$.item_key') IS NOT NULL
+       AND NOT EXISTS (
+         SELECT 1 FROM `stock-trading-498512.state.staged_order_window_invalid` w
+         WHERE w.item_key = JSON_VALUE(a.payload, '$.item_key'));
+
+    -- ===================================================================================================
+    -- staged_order_window_dead_on_arrival (WARNING) -- added 2026-09-10, bigquery/233.
+    --
+    -- WHAT IT CATCHES. An ORDER_STAGED row whose entry_window_close names a session that had ALREADY
+    -- CLOSED at the moment the order was staged -- overwhelmingly a post-close craft (D2a stages at
+    -- ~16:5x MT) that stamped the window with the CRAFT day instead of the session the DAY instruction
+    -- will actually reach. Such a row is born outside its own window and can never trade inside it.
+    --
+    -- WHY IT MATTERS, precisely -- this is NOT a cosmetic date. entry_window_close is the field D2a
+    -- STEP 0 branches on (Claude_Task_Plan.md / task_plan/D2a.md, "staged-order registry reconciliation"):
+    --   branch (b) window still open + unfilled (entry_window_close >= today) -> RE-CRAFT under the
+    --              SAME item_key -- the persist-and-wait policy (Operating_Protocols.md 11).
+    --   branch (c) window closed + unfilled (entry_window_close < today)      -> TERMINAL expired.
+    -- A born-dead window makes branch (b) UNREACHABLE for that row by construction: it is already in
+    -- the past at the next reconciliation, so the row is terminally expired after a single session
+    -- instead of persisting. The intent the staged-order registry exists to make durable -- "a staged
+    -- order leaves the registry only by filling or by a logged terminal decision, never by a silent
+    -- drop" -- is silently downgraded to abandon-after-one-session, with a correctly-formed decision
+    -- log entry that reads as a normal expiry. Nothing else in the system distinguishes the two.
+    --
+    -- MEASURED, not hypothetical (live queue_events, read 2026-09-10): EIGHT still-pending stagings
+    -- carried a window that had already closed -- cover-VOO-20260720, cover-VOO-20260721,
+    -- sweep-SGOV-20260727, cover-SGOV-20260728, sweep-VOO-20260908, park-derisk-sell-VOO-20260908,
+    -- park-derisk-buy-SGOV-20260908, sweep-VOO-20260909 -- 8 of 67 post-close stagings. The one that
+    -- bit: sweep-VOO-20260908 (BUY 0.1393 VOO, staged 2026-09-08 22:53 UTC, window 2026-09-08) did not
+    -- fill on the 09-09 open and was terminally expired by D2a 2026-09-09 under branch (c) rather than
+    -- re-crafted, and a fresh sweep-VOO-20260909 was minted in its place. Because the park sweep names
+    -- its item_key by DATE, the replacement is a NEW item_key -- so it minted a NEW
+    -- staged_order_awaiting_confirm row, a NEW email and a NEW ntfy push, for what is materially the
+    -- same waiting sweep. That is precisely the alert-fatigue defect the sibling block above was
+    -- designed to prevent, re-entering through the item_key channel instead of the message channel.
+    --
+    -- SEVERITY IS warning, NEVER critical -- same reasoning as the sibling above, verbatim: every
+    -- trading gate (state.trading_enabled / _mechanical, state.system_health.all_green,
+    -- ops.sp_assert_trading_enabled*) counts severity = 'critical' ONLY (bigquery/107), so a critical
+    -- here would HALT ALL ORDER STAGING over a mis-stamped date field on one order.
+    --
+    -- MESSAGE CARRIES item_key AND NOTHING ELSE, for the same dedup reason the sibling documents at
+    -- length: sp_raise_alert_once dedups on exact (category, message), and item_key is the only field
+    -- stable across a re-craft. The dates go in the payload, which is never compared. Apostrophes are
+    -- avoided throughout -- GoogleSQL rejects '' as an apostrophe escape and a template carrying one
+    -- raises NOTHING rather than a degraded alert.
+    --
+    -- THE PREDICATE LIVES IN A VIEW (state.staged_order_window_invalid, defined above), not inline
+    -- here, so the RAISE below and the RESOLVE above cannot drift apart -- the classic failure mode
+    -- of a resolve whose predicate is a hand-maintained negation of the raise. It is also what D2a
+    -- reads mechanically at STEP 0 to detect a mis-set window instead of re-deriving the arithmetic.
+    -- ===================================================================================================
+    FOR rec IN (
+      SELECT item_key, strategy, ticker, side, qty, limit_price, entry_window_close,
+             window_close_instant, instruction_id, staged_ts
+      FROM `stock-trading-498512.state.staged_order_window_invalid`
+      ORDER BY item_key
+    ) DO
+      CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+        'warning', 'scheduled.staging_cap', 'staged_order_window_dead_on_arrival',
+        FORMAT('Staged order was born outside its own entry window: %s. It was staged at or after the close of the very session its entry_window_close names, so it can never trade inside that window. At the next D2a STEP 0 staged-order registry reconciliation this row matches branch (c) WINDOW CLOSED plus UNFILLED instead of branch (b) WINDOW STILL OPEN, so it is terminally expired after a single session rather than re-crafted under the same item_key, and the persist-and-wait policy is skipped without anything else in the system recording that it was. A DAY instruction crafted after the close reaches the NEXT trading session, so a post-close craft must set entry_window_close to at least state.trading_day_today.next_trading_day, never the craft day. Repair the window forward or set the row terminal deliberately; see payload for the staged timestamp, the window, and the instant that window closed.', rec.item_key),
+        TO_JSON_STRING(STRUCT(
+          rec.item_key AS item_key,
+          rec.strategy AS strategy,
+          rec.ticker AS ticker,
+          rec.side AS side,
+          rec.qty AS qty,
+          rec.limit_price AS ref_price,
+          CAST(rec.entry_window_close AS STRING) AS window_close,
+          CAST(rec.window_close_instant AS STRING) AS window_close_instant,
+          CAST(rec.staged_ts AS STRING) AS staged_ts,
+          rec.instruction_id AS instruction_id)));
+    END FOR;
+
     EXCEPTION WHEN ERROR THEN
       SET v_notice_err = @@error.message;
     END;
@@ -212,7 +418,7 @@ BEGIN
       -- distinct error string. The error goes in the payload.
       CALL `stock-trading-498512.ops.sp_raise_alert_once`(
         'warning', 'scheduled.staging_cap', 'staged_order_notice_failed',
-        'The staged-order confirm notice block in ops.sp_sq_daily_staging_cap_check raised an error and did not run this pass, so no staged_order_awaiting_confirm alert was evaluated today and the operator got neither the email nor the push for any order waiting to fill. The two order-guard CRITICAL checks in the same procedure are unaffected (this block is best-effort by construction and runs before them). See payload for the error message.',
+        'The staged-order notice block in ops.sp_sq_daily_staging_cap_check raised an error and stopped part-way this pass, so ONE OR BOTH of the two notices it evaluates may not have been raised today -- staged_order_awaiting_confirm for an order waiting to fill, and staged_order_window_dead_on_arrival for an order staged outside its own entry window. The block runs the two in that order and each statement commits independently, so the first may have completed before the fault; treat both as unverified for today rather than assuming either ran. The two order-guard CRITICAL checks in the same procedure are unaffected (this block is best-effort by construction and runs before them). See payload for the error message.',
         TO_JSON_STRING(STRUCT(v_notice_err AS error_message)));
     ELSE
       -- Self-healing closure (reachable without a human UPDATE), matching the auto-resolve-then-raise
@@ -416,28 +622,27 @@ BEGIN
 END;
 
 -- =====================================================================================================
--- ops.alert_policy -- register staged_order_awaiting_confirm as NON-LATCHING.
+-- ops.alert_policy -- register staged_order_window_dead_on_arrival as NON-LATCHING.
 --
 -- ops.alert_policy is a FAIL-CLOSED allowlist: a category ABSENT from it is latching by construction
 -- and ops.sp_auto_resolve_alerts will never touch it. Registration here does not itself resolve
 -- anything -- every rule in sp_auto_resolve_alerts is hardcoded to a specific category and none of
 -- them covers this one. The actual resolve is the in-procedure UPDATE above, which runs each daily
 -- pass. This row is what SANCTIONS that mechanical close and documents it where an auditor reading
--- the alert board will look, exactly as bigquery/223 does for regime_restore_blocked.
+-- the alert board will look, exactly as bigquery/229 does for its own sibling category.
 --
--- Guarded on NOT EXISTS per-category (bigquery/223 / bigquery/204 shape), NOT on the whole-table
+-- Guarded on NOT EXISTS per-category (bigquery/229 / 223 / 204 shape), NOT on the whole-table
 -- emptiness guard bigquery/34's original seed used -- that one only ever fires once, on an empty
--- table, and would silently no-op here.
---
--- The SELECT ... FROM UNNEST([...]) shape is required rather than SELECT <literals> WHERE NOT EXISTS:
--- a WHERE with no FROM is illegal GoogleSQL, and is what broke bigquery/133 live.
+-- table, and would silently no-op here. The SELECT ... FROM UNNEST([...]) shape is required rather
+-- than SELECT <literals> WHERE NOT EXISTS: a WHERE with no FROM is illegal GoogleSQL, and is what
+-- broke bigquery/133 live.
 -- =====================================================================================================
 INSERT INTO `stock-trading-498512.ops.alert_policy` (category, latching, resolve_rule, note)
 SELECT p.category, p.latching, p.resolve_rule, p.note
 FROM UNNEST([
-  STRUCT('staged_order_awaiting_confirm' AS category, FALSE AS latching,
-         'Auto-resolves in-procedure: ops.sp_sq_daily_staging_cap_check (bigquery/229_staged_order_confirm_notice.sql) closes the row on its next daily pass once the item_key named in payload.item_key is no longer present in state.open_orders -- i.e. the order filled and reconciled, was cancelled, or expired. NOT covered by any ops.sp_auto_resolve_alerts rule (those are hardcoded to missing_dependency / missed_run / routine_stalled / catchup_refire_blocked / staleness / the six roster notices), and NOT on the cadence_check 7-day auto-age list; latching=FALSE only SANCTIONS the mechanical close. The resolve is fail-closed: a row whose payload.item_key cannot be read stays OPEN rather than being silently closed.' AS resolve_rule,
-         'STAGED-ORDER CONFIRM NOTICE, registered 2026-09-07 alongside the check that raises it. Notification-only: it reports that a staged order is waiting to fill and reconcile, which is the normal state of the book on any day D2 staged something -- it is NOT a fault and needs no human UPDATE. Deliberately warning, never critical: every trading gate counts criticals only, so a critical here would halt ALL order staging (exits included) over routine activity. Replaces the retired alert-relay.yml `orders` push (daily 13:05 UTC), which had no email counterpart at all; routing the fact through ops.alerts is what gives it one, via alert_emailer.gs. One alert per item_key, and the message carries the item_key and nothing else, so a persist-and-wait re-craft (same item_key, possibly new qty/ref price) does NOT mint a duplicate notice.' AS note)
+  STRUCT('staged_order_window_dead_on_arrival' AS category, FALSE AS latching,
+         'Auto-resolves in-procedure: ops.sp_sq_daily_staging_cap_check (bigquery/233_staged_order_window_dead_on_arrival.sql) closes the row on its next daily pass once the item_key named in payload.item_key is no longer present in state.staged_order_window_invalid -- which happens two ways, both mechanical: the row went terminal (filled / expired / abandoned) and left state.open_orders, or its entry_window_close was repaired forward to a session the order can still trade in by D2a STEP 0 branch (c) MIS-SET WINDOW REPAIR. NOT covered by any ops.sp_auto_resolve_alerts rule (those are hardcoded to missing_dependency / missed_run / routine_stalled / catchup_refire_blocked / staleness / the six roster notices), and NOT on the cadence_check 7-day auto-age list; latching=FALSE only SANCTIONS the mechanical close. The resolve is fail-closed: a row whose payload.item_key cannot be read stays OPEN rather than being silently closed.' AS resolve_rule,
+         'BORN-DEAD ENTRY WINDOW, registered 2026-09-10 alongside the check that raises it. Reports that an ORDER_STAGED row was staged at or after the close of the very session its entry_window_close names, so it can never trade inside its own window and D2a STEP 0 will match branch (c) TERMINAL EXPIRED instead of branch (b) RE-CRAFT -- silently skipping the persist-and-wait policy after a single session. Deliberately warning, never critical: every trading gate counts criticals only, so a critical here would halt ALL order staging (exits included) over a mis-stamped date field on one order. Measured base rate before the prose rule landed: 8 of 67 post-close stagings between 2026-07-20 and 2026-09-09; expected ~0 after. entry_window_close NULL is a DIFFERENT and deliberate convention (no deadline, a resting exit) and is NOT flagged. This category PUSHES as well as emails -- it is not in alert_relay.py NO_PUSH_CATEGORIES or EMAIL_ONLY_CATEGORIES, because a staged order about to be abandoned after one session is trading-affecting.' AS note)
 ]) AS p
 WHERE NOT EXISTS (
   SELECT 1 FROM `stock-trading-498512.ops.alert_policy` e WHERE e.category = p.category
