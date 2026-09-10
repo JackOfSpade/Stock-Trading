@@ -1095,6 +1095,20 @@ END;
 -- Kept here, unmodified, for DR-rebuild apply-in-order reference only.
 -- DO NOT re-apply this CREATE statement live in isolation — doing so reverts the staged-order notice
 -- and silently takes that email path back out, with nothing to detect it but the daily parity check.
+--
+-- SUPERSEDED (2026-09-10) by bigquery/233_staged_order_window_dead_on_arrival.sql, the current
+-- canonical definition of this procedure. 233 carries this body forward BYTE-IDENTICAL except:
+-- the heartbeat literal v6 -> v7; a SECOND auto-resolve UPDATE beside the existing one; a SECOND
+-- FOR loop, appended INSIDE this same best-effort block, raising a staged_order_window_dead_on_arrival
+-- WARNING from the new state.staged_order_window_invalid view; and the shared
+-- staged_order_notice_failed message widened to name both notices the block now guards. The new check
+-- flags an ORDER_STAGED row staged at or after the close of the very session its entry_window_close
+-- names -- a row born outside its own window, which D2a STEP 0 then matches on branch (c) TERMINAL
+-- EXPIRED rather than branch (b) RE-CRAFT, silently skipping the persist-and-wait policy after one
+-- session (measured: 8 of 67 post-close stagings, 2026-07-20..2026-09-09). Neither order-guard
+-- CRITICAL check (order_guard_omitted / order_guard_verdict_mismatch) is altered by 233 -- no
+-- predicate, threshold, exclusion or severity of either moves. Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only. DO NOT re-apply this CREATE live in isolation.
 -- =====================================================================================================
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_daily_staging_cap_check`()
 BEGIN
