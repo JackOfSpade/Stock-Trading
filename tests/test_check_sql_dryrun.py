@@ -70,6 +70,63 @@ def test_syntax_wins_over_tolerate_when_both_present():
     assert csd.classify(1, msg) == "syntax"
 
 
+# ==== ANALYSIS_MARKERS / classify() "analysis" kind (2026-09-11, bigquery/234's landing incident) ===
+#
+# Guards the new BLOCKING class: an unambiguous, permission-independent semantic rejection ("BigQuery
+# rejects a correlated subquery it cannot rewrite into an efficient join") that bigquery/233_staged_
+# order_window_dead_on_arrival.sql's CREATE VIEW; CREATE PROCEDURE script hid from the whole-file
+# pass and reached live apply. Order is load-bearing: SYNTAX -> TOLERATE -> ANALYSIS -> unknown, and
+# TOLERATE must win over ANALYSIS whenever both could apply -- see the fail-open guarantee test below.
+
+DECORRELATION_ERROR = (
+    "Query error: Correlated subqueries that reference other tables are not supported unless they "
+    "can be de-correlated, such as by transforming them into an efficient join.")
+
+# The REAL wrapper shape a `CREATE OR REPLACE PROCEDURE` dry-run produces (bigquery/234's header,
+# verbatim from the 2026-09-11 measurement): the outer "Error validating procedure body" always wraps
+# whatever the inner failure actually was.
+PROCEDURE_BODY_WRAPPER = (
+    "Error validating procedure body (add OPTIONS(strict_mode=false) to suppress): Query error: {inner}")
+
+
+def test_bare_decorrelation_error_is_analysis():
+    assert csd.classify(1, DECORRELATION_ERROR) == "analysis"
+
+
+def test_procedure_body_wrapped_decorrelation_error_is_still_analysis():
+    # The exact shape bigquery/234's header measured for the standalone-FAILS case.
+    msg = PROCEDURE_BODY_WRAPPER.format(inner=DECORRELATION_ERROR + " at [3:3]")
+    assert csd.classify(1, msg) == "analysis"
+
+
+def test_procedure_body_wrapped_not_found_inner_stays_tolerated_not_analysis():
+    # THE FAIL-OPEN ORDERING GUARANTEE the brief calls out: the SAME wrapper shape, but the inner
+    # failure is an ordinary not-yet-live-sibling reference -- must classify as "tolerated", never
+    # "analysis". This is why classify() checks TOLERATE_MARKERS BEFORE ANALYSIS_MARKERS.
+    msg = PROCEDURE_BODY_WRAPPER.format(
+        inner="Not found: Table stock-trading-498512:state.brand_new_view was not found in location US")
+    assert csd.classify(1, msg) == "tolerated"
+
+
+def test_tolerate_wins_over_analysis_when_both_markers_are_present():
+    # Direct pin of the required order, independent of the procedure-body wrapper shape above: a
+    # message carrying BOTH a TOLERATE marker and the ANALYSIS marker must classify as "tolerated".
+    msg = ("Not found: Table stock-trading-498512:state.brand_new_view was not found in location US; "
+           "also, correlated subqueries that reference other tables are not supported here")
+    assert csd.classify(1, msg) == "tolerated"
+
+
+def test_syntax_still_wins_over_analysis_when_both_markers_are_present():
+    msg = "Syntax error: unexpected keyword; also correlated subqueries that reference other tables"
+    assert csd.classify(1, msg) == "syntax"
+
+
+def test_analysis_error_is_not_misclassified_as_unknown():
+    # A transient/infra message must stay "unknown" (non-blocking) -- the analysis marker must not be
+    # so broad that it swallows unrelated errors, and an unrelated error must not accidentally trip it.
+    assert csd.classify(1, "harness-error: bq query timed out after 180s") == "unknown"
+
+
 # ---- is_template(): fill-in-the-blanks files are unparseable BY DESIGN --------------------------
 # 2026-07-18, first full-repo sweep (82 files): the ONLY "syntax error" was
 # bigquery/56_park_policy_voo_manual_cutover_TEMPLATE.sql, whose header says "TEMPLATE, NOT
@@ -675,3 +732,188 @@ def test_main_reads_missing_file_gracefully_instead_of_crashing(monkeypatch, cap
     out = capsys.readouterr().out
     assert rc == 0
     assert "static lint skipped" in out
+
+
+# ==== --per-statement (2026-09-11 re-scope) ==========================================================
+#
+# OFF BY DEFAULT — see check_sql_dryrun.py's module docstring PER-STATEMENT PASS section for why: the
+# CI identity gets "Access Denied" (tolerated) on ANY CREATE dry-run, whole-file or per-statement, so
+# the extra pass only has teeth under a PRIVILEGED identity and must never change ci.yml's or
+# sql-dryrun-sweep.yml's default-mode cost. These tests pin (1) the flag truly adds zero extra `bq`
+# calls when absent, (2) it dry-runs the SECOND+ top-level CREATE, skipping the first (already covered
+# by the whole-file pass), (3) it skips a superseded/non-final definition (the bigquery/233-vs-234
+# shape) so this gate can never go permanently red on landed, deliberately-frozen history, and (4)
+# main() blocks on an "analysis" result from either pass.
+
+MULTI_CREATE_FIXTURE = (
+    "CREATE OR REPLACE VIEW `stock-trading-498512.state.zz_first` AS\n"
+    "SELECT 1 AS x;\n"
+    "\n"
+    "CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.zz_second`()\n"
+    "BEGIN\n"
+    "  SELECT 1;\n"
+    "END;\n"
+)
+
+
+def _final_for_second_statement(text, source_file):
+    """Build the {(dataset, name): (obj_type, project, source_file, body)} find_final_definitions()
+    would produce if `source_file` is the apply-in-order FINAL definer of MULTI_CREATE_FIXTURE's
+    SECOND CREATE statement (ops.zz_second) -- computed via the SAME check_live_sql_parity functions
+    check_sql_dryrun.py itself calls (csd.CREATE_STMT / csd.normalize_kind / csd.extract_body), so the
+    body is guaranteed byte-identical to what _is_final_create() will recompute, exactly mirroring how
+    production code builds and compares this."""
+    matches = list(csd.CREATE_STMT.finditer(text))
+    assert len(matches) == 2, "fixture assumption changed -- re-check MULTI_CREATE_FIXTURE"
+    m = matches[1]
+    kind, project, dataset, name = m.groups()
+    obj_type = csd.normalize_kind(kind)
+    body = csd.extract_body(text, m.start(), obj_type)
+    return {(dataset, name): (obj_type, project, source_file, body)}
+
+
+def test_per_statement_pass_is_off_by_default_and_adds_no_extra_calls(tmp_path, monkeypatch, capsys):
+    fixture_path = tmp_path / "999_multi.sql"
+    fixture_path.write_text(MULTI_CREATE_FIXTURE, encoding="utf-8")
+    monkeypatch.setattr(csd, "canary_ok", lambda: True)
+    monkeypatch.setattr(csd, "find_final_definitions", lambda: (_ for _ in ()).throw(
+        AssertionError("find_final_definitions() must not be called without --per-statement")))
+    calls = []
+
+    def fake(sql_text=None, sql_path=None):
+        calls.append((sql_text, sql_path))
+        return (0, "Query successfully validated.")
+    monkeypatch.setattr(csd, "_bq_dry_run", fake)
+
+    rc = csd.main(["check_sql_dryrun.py", str(fixture_path)])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert calls == [(None, str(fixture_path))], "must be exactly the ONE whole-file call, nothing more"
+    assert "--per-statement not passed" in out
+    assert "per-statement pass:" not in out
+
+
+def test_per_statement_pass_dry_runs_second_create_and_skips_first(tmp_path, monkeypatch, capsys):
+    fixture_path = tmp_path / "999_multi.sql"
+    fixture_path.write_text(MULTI_CREATE_FIXTURE, encoding="utf-8")
+    final = _final_for_second_statement(MULTI_CREATE_FIXTURE, "999_multi.sql")
+    monkeypatch.setattr(csd, "find_final_definitions", lambda: final)
+    monkeypatch.setattr(csd, "canary_ok", lambda: True)
+    calls = []
+
+    def fake(sql_text=None, sql_path=None):
+        calls.append((sql_text, sql_path))
+        return (0, "Query successfully validated.")
+    monkeypatch.setattr(csd, "_bq_dry_run", fake)
+
+    rc = csd.main(["check_sql_dryrun.py", "--per-statement", str(fixture_path)])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert len(calls) == 2
+    assert calls[0] == (None, str(fixture_path)), "first call must be the whole-file pass, by path"
+    stmt_text, stmt_path = calls[1]
+    assert stmt_path is None, "the per-statement call must submit TEXT, not a path"
+    assert "zz_second" in stmt_text
+    assert "zz_first" not in stmt_text, "the FIRST statement must be skipped, not resubmitted"
+    assert "1 additional top-level CREATE statement(s)" in out
+
+
+def test_per_statement_pass_skips_a_superseded_non_final_definition(tmp_path, monkeypatch, capsys):
+    # Mirrors bigquery/233 (still contains the statement) vs bigquery/234 (now canonical): the second
+    # CREATE's own object is expected, but find_final_definitions() names a DIFFERENT source file as
+    # the apply-in-order final definer -- _is_final_create() must refuse to dry-run this occurrence.
+    fixture_path = tmp_path / "999_multi.sql"
+    fixture_path.write_text(MULTI_CREATE_FIXTURE, encoding="utf-8")
+    final = _final_for_second_statement(MULTI_CREATE_FIXTURE, "999_some_other_later_file.sql")
+    monkeypatch.setattr(csd, "find_final_definitions", lambda: final)
+    monkeypatch.setattr(csd, "canary_ok", lambda: True)
+    calls = []
+
+    def fake(sql_text=None, sql_path=None):
+        calls.append((sql_text, sql_path))
+        return (0, "Query successfully validated.")
+    monkeypatch.setattr(csd, "_bq_dry_run", fake)
+
+    rc = csd.main(["check_sql_dryrun.py", "--per-statement", str(fixture_path)])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert calls == [(None, str(fixture_path))], "the superseded 2nd statement must NOT be dry-run"
+    assert "per-statement pass:" not in out
+
+
+def test_per_statement_pass_skips_object_absent_from_final_definitions(tmp_path, monkeypatch, capsys):
+    # find_final_definitions() knowing NOTHING at all about this object (final={}) must be treated
+    # the same as "not final" -- never a KeyError, never a dry-run.
+    fixture_path = tmp_path / "999_multi.sql"
+    fixture_path.write_text(MULTI_CREATE_FIXTURE, encoding="utf-8")
+    monkeypatch.setattr(csd, "find_final_definitions", lambda: {})
+    monkeypatch.setattr(csd, "canary_ok", lambda: True)
+    calls = []
+
+    def fake(sql_text=None, sql_path=None):
+        calls.append((sql_text, sql_path))
+        return (0, "ok")
+    monkeypatch.setattr(csd, "_bq_dry_run", fake)
+
+    rc = csd.main(["check_sql_dryrun.py", "--per-statement", str(fixture_path)])
+    assert rc == 0
+    assert calls == [(None, str(fixture_path))]
+
+
+def test_main_returns_1_when_per_statement_pass_finds_an_analysis_error(tmp_path, monkeypatch, capsys):
+    fixture_path = tmp_path / "999_multi.sql"
+    fixture_path.write_text(MULTI_CREATE_FIXTURE, encoding="utf-8")
+    final = _final_for_second_statement(MULTI_CREATE_FIXTURE, "999_multi.sql")
+    monkeypatch.setattr(csd, "find_final_definitions", lambda: final)
+    monkeypatch.setattr(csd, "canary_ok", lambda: True)
+
+    def fake(sql_text=None, sql_path=None):
+        if sql_path is not None:
+            return (0, "Query successfully validated.")             # the whole-file pass: clean
+        return (1, PROCEDURE_BODY_WRAPPER.format(inner=DECORRELATION_ERROR + " at [3:3]"))
+    monkeypatch.setattr(csd, "_bq_dry_run", fake)
+
+    rc = csd.main(["check_sql_dryrun.py", "--per-statement", str(fixture_path)])
+    out = capsys.readouterr().out
+    assert rc == 1
+    assert "ANALYSIS ERROR" in out
+    assert "::error::" in out
+    assert "bigquery/234_staged_order_notice_resolve_decorrelated.sql" in out
+
+
+def test_main_returns_0_when_per_statement_pass_is_all_clean(tmp_path, monkeypatch, capsys):
+    fixture_path = tmp_path / "999_multi.sql"
+    fixture_path.write_text(MULTI_CREATE_FIXTURE, encoding="utf-8")
+    final = _final_for_second_statement(MULTI_CREATE_FIXTURE, "999_multi.sql")
+    monkeypatch.setattr(csd, "find_final_definitions", lambda: final)
+    monkeypatch.setattr(csd, "canary_ok", lambda: True)
+    monkeypatch.setattr(csd, "_bq_dry_run",
+                         lambda sql_text=None, sql_path=None: (0, "Query successfully validated."))
+
+    rc = csd.main(["check_sql_dryrun.py", "--per-statement", str(fixture_path)])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "0 ANALYSIS ERROR(S)" in out
+    assert "✗ ANALYSIS ERROR" not in out
+    assert "::error::" not in out
+
+
+def test_main_blocks_on_whole_file_pass_analysis_error_even_without_the_flag(tmp_path, monkeypatch, capsys):
+    # A single-CREATE-statement file needs no --per-statement at all: dry-run by a PRIVILEGED identity
+    # (no leading DDL to blind anything), the whole-file pass alone can hit the analysis-class
+    # rejection directly. classify()'s new "analysis" kind must be wired into the WHOLE-FILE loop too,
+    # not just the opt-in per-statement one.
+    single_path = tmp_path / "999_single.sql"
+    single_path.write_text(
+        "CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.zz_single`()\n"
+        "BEGIN\n  SELECT 1;\nEND;\n",
+        encoding="utf-8")
+    monkeypatch.setattr(csd, "canary_ok", lambda: True)
+    monkeypatch.setattr(csd, "find_final_definitions", lambda: (_ for _ in ()).throw(
+        AssertionError("must not be called without --per-statement")))
+    monkeypatch.setattr(csd, "_bq_dry_run", lambda sql_path: (1, DECORRELATION_ERROR))
+
+    rc = csd.main(["check_sql_dryrun.py", str(single_path)])
+    out = capsys.readouterr().out
+    assert rc == 1
+    assert "ANALYSIS ERROR" in out

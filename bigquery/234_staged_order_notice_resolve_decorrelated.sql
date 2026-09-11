@@ -1,86 +1,147 @@
--- Staged-order confirm notice -- give the one push that had no email an email (2026-09-07).
+-- Staged-order notice auto-resolve: de-correlate the read that made it fail every day (2026-09-11).
 -- Project: stock-trading-498512.
 --
--- OWNER DIRECTIVE (2026-09-07), two rules, both about notification policy rather than trading:
---   1. every ntfy push must be accompanied by an email to the owner Gmail, if it is not already;
---   2. ntfy is for things that need the owner to DO something -- no "everything is fine" pings.
+-- THE INCIDENT. bigquery/233_staged_order_window_dead_on_arrival.sql went live between the 2026-09-10
+-- and 2026-09-11 05:25 UTC runs of ops.sp_sq_daily_staging_cap_check (ops.heartbeat records the first
+-- 'v7' beat at 2026-09-11T05:25:04Z). On that FIRST run the new staged_order_window_dead_on_arrival
+-- AUTO-RESOLVE statement failed, verbatim:
+--     Query error: Correlated subqueries that reference other tables are not supported unless they can
+--     be de-correlated, such as by transforming them into an efficient JOIN.
+--     at [stock-trading-498512.ops.sp_sq_daily_staging_cap_check:154:5]
+-- and the block's best-effort handler turned that into the first-ever
+-- WARNING scheduled.staging_cap / staged_order_notice_failed (alert d0bf2568, 2026-09-11T05:25:18Z).
 --
--- This file is rule 1's only BigQuery-side piece. The audit behind it found exactly one push with no
--- email counterpart anywhere in the system: alert-relay.yml's daily 13:05 UTC `orders` mode, which
--- read state.open_orders and POSTed straight to ntfy. It could not be fixed on the push side. There
--- is precisely one email channel in this system -- ops.alerts -> ops/monitoring/alert_emailer.gs,
--- polling Gmail every 2h under the owner's own Google identity -- and a GitHub Actions job cannot
--- reach it or any other mail path:
---   * no SMTP/mail secret exists (repo secrets are ALERT_WEBHOOK_URL + OFFSITE_BACKUP_GCS, nothing else),
---   * no mail-sending Action is used by any workflow,
---   * ntfy.sh's own `Email:` forwarding header is REJECTED on this topic -- probed live 2026-09-07,
---     HTTP 400 {"code":40053,"error":"anonymous email sending is not allowed"}; it now requires an
---     authenticated ntfy account, which a capability-URL topic deliberately is not,
---   * and the relay runs as the READ-ONLY WIF SA, whose only ops write grant is table-scoped to
---     ops.ci_findings -- a CI-guard findings table drained by D3's CI-FINDINGS ADJUDICATION, which is
---     the wrong queue for a trading-order reminder and would mislead that consumer.
--- So the fix is structural, not cosmetic: stop pushing a bare view and make the fact an ALERT. An
--- ops.alerts row reaches email by construction, and alert_relay.py's `alerts` mode relays it to ntfy
--- for free -- one row, both channels, instead of one push and no email. The daily `orders` cron is
--- retired in the same change (see .github/workflows/alert-relay.yml and scripts/alert_relay.py).
+-- 233's OWN DESIGN HELD UP, and that is worth recording before the defect is described. The
+-- statement-level job trace for that run (INFORMATION_SCHEMA.JOBS_BY_PROJECT, child jobs of the
+-- 05:25 UTC script, read 2026-09-11) shows the block behaved exactly as 233's header said it would:
+--     _0  INSERT ops.heartbeat                                              DONE
+--     _1  UPDATE ops.alerts   -- staged_order_awaiting_confirm RESOLVE      DONE
+--     _2  SELECT state.open_orders -- awaiting-confirm FOR cursor           DONE
+--     _3.._6  sp_raise_alert_once x2 -- both awaiting-confirm notices RAISED DONE
+--     _7  UPDATE ops.alerts   -- window_dead_on_arrival RESOLVE   error_reason="invalidQuery"  <-- HERE
+--     _8/_9  sp_raise_alert_once -- staged_order_notice_failed RAISED        DONE
+--     _10.._13 order_guard_omitted predicate + verdict-mismatch recompute x2 DONE, clean
+-- So: (a) the OLDER notice -- staged_order_awaiting_confirm -- completed in full BEFORE the new
+-- statement ran and was not harmed, which is precisely the "POSITION IS LOAD-BEARING" ordering 233
+-- argued for; (b) the two order-guard CRITICAL checks both ran and evaluated cleanly, because the
+-- block is best-effort and runs ahead of them; and (c) the machinery going dark was itself reported
+-- within one day by a real, stable, dedup-safe alert. The only thing 233 got wrong was one SQL shape.
 --
--- Rule 2 is served by the same design: the retired push re-listed EVERY unreconciled order EVERY day,
--- including craftable ones the owner had already confirmed in IBKR days earlier, because `pending` in
--- state.open_orders means "not yet filled AND reconciled" and never "not yet confirmed". The
--- replacement raises ONE alert per order, keyed on item_key alone, so a NEW order to confirm alerts
--- and an unchanged pile stays quiet. See the long comment on the new block inside the procedure.
+-- THE DEFECT, precisely. The auto-resolve read its key set with a CORRELATED NOT EXISTS whose inner
+-- source is state.staged_order_window_invalid -- a VIEW CONTAINING A LEFT JOIN (to
+-- state.market_calendar, for the 13:00-vs-16:00 ET early-close instant). BigQuery can only admit a
+-- correlated subquery it can rewrite into a join, and it cannot do that through a joined view, so the
+-- statement is rejected at ANALYSIS time. That makes this a deterministic, data-independent failure:
+-- it did not depend on any row existing, it could never have "worked on a good day", and it re-fails
+-- identically on every future run. state.staged_order_window_invalid was EMPTY on 2026-09-11 and the
+-- statement still failed.
 --
--- WHAT THIS FILE CHANGES, precisely:
---   * CREATE OR REPLACE PROCEDURE ops.sp_sq_daily_staging_cap_check -- carried forward BYTE-IDENTICAL
---     from bigquery/75_scheduled_query_wrappers.sql except (a) the heartbeat literal v5 -> v6, and
---     (b) the new staged_order_awaiting_confirm block appended at the end. The two existing checks
---     (order_guard_omitted CRITICAL, order_guard_verdict_mismatch CRITICAL) are untouched -- no
---     predicate, threshold, exclusion or severity of either is altered by this file.
---   * ops.alert_policy -- registers the new category non-latching so it is allowed to auto-resolve.
+-- WHY THE SIBLING NEVER HAD THIS PROBLEM, and what the actual discriminator is. The
+-- staged_order_awaiting_confirm resolve directly above is the SAME statement shape -- correlated
+-- NOT EXISTS on JSON_VALUE(a.payload, '$.item_key') -- and has run cleanly since 2026-09-07. Measured
+-- by dry-run across every correlated subquery in the live substrate (2026-09-11, 9 found):
+--     state.open_orders            QUALIFY ROW_NUMBER() window function, NO join   -> PASSES
+--     state.connector_tool_drift   UNION ALL of two SELECTs, NO join               -> PASSES
+--     state.ci_findings_open       ROW_NUMBER() + LEFT JOIN + inner JOIN           -> PASSES, but its
+--                                  NOT EXISTS is UNcorrelated (a flat "is the view empty" test), so
+--                                  there is nothing to de-correlate in the first place
+--     state.staged_order_window_invalid  LEFT JOIN, correlated                     -> FAILS
+-- So neither a window function nor a UNION ALL defeats de-correlation, and a joined view is harmless
+-- as long as the subquery is NOT correlated. The failing combination is specifically
+-- CORRELATION + AN INNER SOURCE THAT CONTAINS A JOIN. Do not reduce this to "avoid correlated
+-- subqueries" -- that would be cargo cult, and eight of the nine are fine.
 --
--- NO TRADING BEHAVIOR CHANGES. Nothing here stages, cancels, sizes or gates an order. The new alert is
--- severity 'warning', and every trading gate (state.trading_enabled / _mechanical,
--- state.system_health.all_green, ops.sp_assert_trading_enabled*) counts severity = 'critical' ONLY
--- (bigquery/107_halt_echo_missed_run_gate.sql), so it cannot contribute to a halt.
+-- THE FIX. Read the view ONCE into an ARRAY<STRING> scripting variable, then test membership against
+-- UNNEST of that variable. UNNEST of a scripting variable is not a table reference at all, so the
+-- planner has nothing to de-correlate and the inner source's shape stops mattering permanently --
+-- state.staged_order_window_invalid can gain any join, CTE or window function later without
+-- re-breaking this statement. Verified by dry-run INSIDE a CREATE PROCEDURE body (strict_mode, which
+-- is the validation that actually runs at apply): accepted.
 --
--- APPLY ORDER: after bigquery/75_scheduled_query_wrappers.sql (defines the procedure this supersedes),
--- bigquery/34_alert_lifecycle.sql (ops.alert_policy), bigquery/10_observability.sql
--- (ops.sp_raise_alert_once) and bigquery/01_schema.sql (state.open_orders). Idempotent, safe to
--- re-apply: the CREATE OR REPLACE is total and the alert_policy INSERT is guarded on NOT EXISTS.
+-- PRIOR ART IN THIS REPO, and why this file does NOT copy it. This is the SECOND time this exact
+-- BigQuery limitation has bitten here. The first was state.catchup_refire_readiness (commit ff08a8b,
+-- 2026-07-17; the account survives in bigquery/59_catchup_autofire.sql's header): a correlated
+-- NOT EXISTS against a CTE stacked beside other correlated subqueries, same verbatim error, and it
+-- was "Rewritten as LEFT JOIN + IS NULL (the standard BigQuery workaround for this exact
+-- limitation)". That idiom is right THERE and wrong HERE, for a structural reason worth stating so
+-- the two do not get reconciled by someone later: 59's object is a VIEW -- a SELECT, where an
+-- anti-join is directly expressible. This one is a DML UPDATE, and GoogleSQL UPDATE has no FROM/JOIN
+-- clause to hang a LEFT JOIN off; the nearest translation is to move the anti-join into an
+-- UNcorrelated `item_key IN/NOT IN (SELECT ... LEFT JOIN ... WHERE ... IS NULL)`, which lands back on
+-- NOT IN and its NULL trap -- the thing 229 and 233 deliberately wrote around. Pre-materializing into
+-- an array is the DML-shaped form of the same anti-join. A THIRD working idiom also exists in the live
+-- substrate for reference -- ops.sp_sq_safety_critical_dml_watch splits one inequality-correlated
+-- EXISTS into two uncorrelated ones joined by AND. All three are legitimate; pick by statement kind.
+-- ALSO NOTE bigquery/59's other observation, which is exactly why this defect could land: that bug
+-- "only surfaces the first time anyone actually reads the view", i.e. at QUERY time, not at CREATE
+-- time. A PROCEDURE behaves differently and better -- CREATE OR REPLACE PROCEDURE validates its body
+-- in strict_mode and WOULD have rejected this statement at apply time, which is precisely the check
+-- the leading-DDL suppression described below disabled.
 --
--- LOCKSTEP: the heartbeat literal below is v6; bigquery/63_scheduled_query_version_registry.sql's
--- `daily_staging_cap_check` row is bumped to v6 in the same change. scripts/check_sq_version_registry.py
+-- WHY `NOT EXISTS (SELECT 1 FROM UNNEST(...))` AND NOT `NOT IN UNNEST(...)`. Both de-correlate and
+-- both were dry-run and accepted. NOT EXISTS is chosen because it keeps 233's and 229's documented
+-- NULL-safety idiom intact rather than arguing around it: those headers state, correctly, that "NOT IN
+-- against a subquery containing a single NULL evaluates to NULL for every row and would resolve
+-- nothing, silently", and NOT EXISTS is structurally two-valued -- it can never return NULL no matter
+-- what the array holds. The array is ALSO built NULL-free (WHERE item_key IS NOT NULL) so the property
+-- holds twice over, by construction and by value. Switching to NOT IN would have made a statement
+-- whose safety depends on an invariant maintained somewhere else; this one does not.
+--
+-- FAIL-CLOSED POLARITY IS PRESERVED EXACTLY, which is the property that matters for a resolve on a
+-- notice the operator may need to act on. A row is still closed ONLY when its item_key is BOTH
+-- readable (JSON_VALUE(...) IS NOT NULL, unchanged) AND positively absent from the key set. An
+-- unreadable payload still leaves the row OPEN and visible. And a FAULT reading the view still throws
+-- into the same best-effort handler it always did, because the SET sits INSIDE that block -- it does
+-- not quietly degrade to "resolve nothing" or, worse, "resolve everything". An empty view resolves
+-- every open row, which is correct and is the healthy steady state.
+--
+-- WHAT IS *NOT* CHANGED HERE, deliberately. The working staged_order_awaiting_confirm resolve keeps
+-- its correlated NOT EXISTS against state.open_orders, byte-identical. It is correct today (measured
+-- above, not assumed), and speculatively rewriting a working statement inside a procedure that also
+-- carries two CRITICAL order-guard checks buys nothing this file's real protection does not already
+-- buy. Its residual hazard is narrow and now written down: IF state.open_orders ever gains a JOIN,
+-- that statement will start failing exactly the way this one did, and because it is the FIRST
+-- statement in the best-effort block it would take BOTH notices down with it, not one. Anyone adding
+-- a join to state.open_orders should convert that resolve to the same pre-materialized shape in the
+-- same change. The durable, class-wide guard is scripts/check_sql_dryrun.py's new per-statement pass
+-- (landed with this file), which dry-runs each statement AFTER the first DDL individually and blocks
+-- on this exact analysis error -- so a future instance is caught mechanically rather than by anyone
+-- remembering this paragraph.
+--
+-- HOW THIS REACHED LIVE GREEN -- the landing-gate gap, measured and closed in this same change.
+-- bigquery/233 creates a VIEW and then a PROCEDURE in one file, and the whole file is applied and
+-- validated as ONE multi-statement script. BigQuery stops SEMANTICALLY analysing a script after its
+-- first DDL statement (this repo's own verified limitation, check_sql_dryrun.py's "KNOWN, VERIFIED
+-- LIMITATION" section, 2026-08-03), so the leading CREATE VIEW suppressed body validation of the
+-- CREATE PROCEDURE behind it. Reproduced both directions on 2026-09-11:
+--     CREATE PROCEDURE <bad body>                        alone  -> dry run FAILS, naming this error
+--                                                                  ("Error validating procedure body")
+--     CREATE VIEW ...; CREATE PROCEDURE <same bad body>  script -> dry run CLEAN
+-- That is why check_sql_dryrun.py passed, and it is also why BigQuery ACCEPTED the CREATE at apply
+-- time: an un-executable body was stored because nothing ever validated it on its own. The fix is to
+-- dry-run the blinded statements individually, which is what this change adds to that checker.
+--
+-- LOCKSTEP: the heartbeat literal below is v8; bigquery/63_scheduled_query_version_registry.sql's
+-- `daily_staging_cap_check` row is bumped to v8 in this same change. scripts/check_sq_version_registry.py
 -- fails CI if they disagree, and a landed mismatch raises a nightly scheduled_query_version_drift
--- WARNING that has no ops.alert_policy row and so can never auto-resolve (that exact bug already
--- happened once, 2026-08-04 commit 0b9fd49, and took two days to notice).
+-- WARNING that has no ops.alert_policy row and so can never auto-resolve.
 --
--- SUPERSEDED (2026-09-10) by bigquery/233_staged_order_window_dead_on_arrival.sql, the current
--- canonical definition of this procedure. 233 carries this body forward BYTE-IDENTICAL except:
--- the heartbeat literal v6 -> v7; a SECOND auto-resolve UPDATE beside the existing one; a SECOND
--- FOR loop, appended INSIDE this same best-effort block, raising a staged_order_window_dead_on_arrival
--- WARNING from the new state.staged_order_window_invalid view; and the shared
--- staged_order_notice_failed message widened to name both notices the block now guards. The new check
--- flags an ORDER_STAGED row staged at or after the close of the very session its entry_window_close
--- names -- a row born outside its own window, which D2a STEP 0 then matches on branch (c) TERMINAL
--- EXPIRED rather than branch (b) RE-CRAFT, silently skipping the persist-and-wait policy after one
--- session (measured: 8 of 67 post-close stagings, 2026-07-20..2026-09-09). Neither order-guard
--- CRITICAL check (order_guard_omitted / order_guard_verdict_mismatch) is altered by 233 -- no
--- predicate, threshold, exclusion or severity of either moves. Kept here, unmodified, for DR-rebuild
--- apply-in-order reference only. DO NOT re-apply this CREATE live in isolation.
+-- SCOPE: this file changes ONE statement's shape and the heartbeat literal. No predicate, threshold,
+-- exclusion, severity, message or payload anywhere in the procedure moves -- both notices keep their
+-- categories and their exact message templates (so sp_raise_alert_once dedup behaviour is unchanged,
+-- and the already-open alerts from 2026-09-11 are the same rows these statements will resolve), and
+-- the two order-guard CRITICAL checks (order_guard_omitted / order_guard_verdict_mismatch) are carried
+-- forward byte-identical. No trading behaviour changes. state.staged_order_window_invalid is NOT
+-- redefined here, so dbt/models/state/staged_order_window_invalid.sql stays valid as generated.
 --
--- RE-POINTED (2026-09-11): the CURRENT canonical definition of this procedure is now
--- bigquery/234_staged_order_notice_resolve_decorrelated.sql, NOT bigquery/233. 233 is itself
--- superseded -- its staged_order_window_dead_on_arrival auto-resolve used a correlated NOT EXISTS
--- against the joined view state.staged_order_window_invalid, which BigQuery rejects as
--- non-de-correlatable, so that statement failed on every run from 2026-09-11. 234 carries 233 body
--- forward byte-identical except the heartbeat literal v7 -> v8 and that one statement, which now
--- reads its key set into an ARRAY<STRING> and tests membership against UNNEST of it. The paragraph
--- above is kept as written for history; this paragraph is the live pointer.
+-- EXPECTED EFFECT ON APPLY: the next pass completes the whole block, so the ELSE branch auto-resolves
+-- staged_order_notice_failed (d0bf2568) with no human UPDATE, and staged_order_window_dead_on_arrival
+-- becomes able to both raise and resolve for the first time. Until then that WARNING re-opens daily --
+-- the root cause is a query-shape defect, not a transient, so it cannot self-heal on its own.
 -- =====================================================================================================
-
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_daily_staging_cap_check`()
 BEGIN
-  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:daily_staging_cap_check', 'v6', 'daily_staging_cap_check.sql ran');
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:daily_staging_cap_check', 'v8', 'daily_staging_cap_check.sql ran');
 
   -- ===================================================================================================
   -- staged_order_awaiting_confirm (WARNING) -- added 2026-09-07, owner directive on notification policy.
@@ -165,6 +226,21 @@ BEGIN
   -- write to the same ops.alerts table and would fail identically.
   BEGIN
     DECLARE v_notice_err STRING DEFAULT NULL;
+    -- PRE-MATERIALIZED KEY SET -- the fix this file exists for (2026-09-11). The
+    -- staged_order_window_dead_on_arrival auto-resolve below used to read its key set with a
+    -- CORRELATED `NOT EXISTS (SELECT 1 FROM state.staged_order_window_invalid w WHERE w.item_key =
+    -- JSON_VALUE(a.payload, '$.item_key'))`. BigQuery REJECTS that at query-analysis time:
+    --     Correlated subqueries that reference other tables are not supported unless they can be
+    --     de-correlated, such as by transforming them into an efficient JOIN.
+    -- The statement therefore failed on EVERY run, deterministically, from the moment bigquery/233
+    -- went live -- see this file's header for the full incident. Reading the view ONCE into an
+    -- ARRAY<STRING> and testing membership against UNNEST of that array removes the correlation
+    -- entirely: UNNEST of a scripting variable is not a table reference, so there is nothing left
+    -- for the planner to fail to de-correlate. Populated inside the best-effort block below (not
+    -- here), so a fault READING the view is still caught by that block's handler exactly as before.
+    -- Capacity is a non-issue: a BigQuery scripting variable holds up to 1 MB and state.open_orders
+    -- is the set of orders still PENDING -- single digits in this system's whole history.
+    DECLARE v_dead_window_keys ARRAY<STRING> DEFAULT [];
 
     BEGIN
     UPDATE `stock-trading-498512.ops.alerts` a
@@ -211,6 +287,122 @@ BEGIN
           CAST(rec.staged_ts AS STRING) AS staged_ts)));
     END FOR;
 
+    -- staged_order_window_dead_on_arrival -- auto-resolve, same fail-closed shape and same
+    -- resolve-before-raise ordering as the sibling above.
+    --
+    -- POSITION IS LOAD-BEARING, DO NOT MOVE THIS ABOVE THE awaiting-confirm FOR LOOP (adversarial
+    -- self-review of this file, 2026-09-10 -- the first cut had it there and it was a real coverage
+    -- regression against bigquery/229). This is the FIRST statement in the block that reads the NEW
+    -- view. Everything belonging to staged_order_awaiting_confirm -- its resolve AND its raise --
+    -- now completes BEFORE it. In 229 that resolve and raise were adjacent with nothing between
+    -- them; splicing a new dependency in between would mean a fault reading
+    -- state.staged_order_window_invalid (the view absent, dropped, or unreadable -- and it is not
+    -- live until this very file is applied) throws into the shared handler BEFORE the
+    -- awaiting-confirm notice is raised, silently costing that day's notice for an order whose only
+    -- confirm surface may be a calendar tap. A NEW feature must not be able to take down the
+    -- OLDER notice it was merely appended beside; ordered this way it cannot. TWO distinct healings close this row and
+    -- the single NOT EXISTS covers both, because state.staged_order_window_invalid encodes the whole
+    -- predicate: (1) the row went terminal (filled / expired / abandoned) and left state.open_orders,
+    -- or (2) its entry_window_close was REPAIRED FORWARD to a session the order can still trade in
+    -- (Claude_Task_Plan.md STEP 0 branch (c), MIS-SET WINDOW REPAIR). Neither healing needs a human
+    -- UPDATE. Fail-closed: a row whose payload.item_key cannot be read stays OPEN rather than being
+    -- silently closed, and NOT EXISTS rather than NOT IN so a single NULL cannot make every row
+    -- evaluate NULL and resolve nothing.
+    -- READ THE VIEW ONCE, HERE, into v_dead_window_keys -- then the UPDATE below tests membership
+    -- against UNNEST of that array instead of correlating a subquery into the view. This SET is the
+    -- FIRST statement in the block that touches state.staged_order_window_invalid, and it sits where
+    -- the old correlated UPDATE sat: AFTER the awaiting-confirm resolve AND its FOR loop, never
+    -- before them. That ordering is the load-bearing property the comment above restates -- a fault
+    -- reading this NEW view must not be able to cost the OLDER staged_order_awaiting_confirm notice
+    -- its day. Keep the SET and the UPDATE adjacent and in this order if either is ever edited.
+    -- DISTINCT because only membership is tested; WHERE item_key IS NOT NULL so the array can never
+    -- contain a NULL element, which is what keeps the NOT EXISTS below a strict two-valued test.
+    SET v_dead_window_keys = ARRAY(
+      SELECT DISTINCT item_key
+      FROM `stock-trading-498512.state.staged_order_window_invalid`
+      WHERE item_key IS NOT NULL);
+
+    UPDATE `stock-trading-498512.ops.alerts` a
+       SET resolved = TRUE,
+           resolved_ts = CURRENT_TIMESTAMP(),
+           resolved_note = CONCAT('auto-resolved: this staged order no longer has an entry window that closed before it was staged -- either the row went terminal and left state.open_orders, or its entry_window_close was repaired forward to a session it can still trade in (ops.sp_sq_daily_staging_cap_check). ', COALESCE(resolved_note, ''))
+     WHERE NOT a.resolved
+       AND a.category = 'staged_order_window_dead_on_arrival'
+       AND JSON_VALUE(a.payload, '$.item_key') IS NOT NULL
+       AND NOT EXISTS (
+         SELECT 1 FROM UNNEST(v_dead_window_keys) AS k
+         WHERE k = JSON_VALUE(a.payload, '$.item_key'));
+
+    -- ===================================================================================================
+    -- staged_order_window_dead_on_arrival (WARNING) -- added 2026-09-10, bigquery/233.
+    --
+    -- WHAT IT CATCHES. An ORDER_STAGED row whose entry_window_close names a session that had ALREADY
+    -- CLOSED at the moment the order was staged -- overwhelmingly a post-close craft (D2a stages at
+    -- ~16:5x MT) that stamped the window with the CRAFT day instead of the session the DAY instruction
+    -- will actually reach. Such a row is born outside its own window and can never trade inside it.
+    --
+    -- WHY IT MATTERS, precisely -- this is NOT a cosmetic date. entry_window_close is the field D2a
+    -- STEP 0 branches on (Claude_Task_Plan.md / task_plan/D2a.md, "staged-order registry reconciliation"):
+    --   branch (b) window still open + unfilled (entry_window_close >= today) -> RE-CRAFT under the
+    --              SAME item_key -- the persist-and-wait policy (Operating_Protocols.md 11).
+    --   branch (c) window closed + unfilled (entry_window_close < today)      -> TERMINAL expired.
+    -- A born-dead window makes branch (b) UNREACHABLE for that row by construction: it is already in
+    -- the past at the next reconciliation, so the row is terminally expired after a single session
+    -- instead of persisting. The intent the staged-order registry exists to make durable -- "a staged
+    -- order leaves the registry only by filling or by a logged terminal decision, never by a silent
+    -- drop" -- is silently downgraded to abandon-after-one-session, with a correctly-formed decision
+    -- log entry that reads as a normal expiry. Nothing else in the system distinguishes the two.
+    --
+    -- MEASURED, not hypothetical (live queue_events, read 2026-09-10): EIGHT still-pending stagings
+    -- carried a window that had already closed -- cover-VOO-20260720, cover-VOO-20260721,
+    -- sweep-SGOV-20260727, cover-SGOV-20260728, sweep-VOO-20260908, park-derisk-sell-VOO-20260908,
+    -- park-derisk-buy-SGOV-20260908, sweep-VOO-20260909 -- 8 of 67 post-close stagings. The one that
+    -- bit: sweep-VOO-20260908 (BUY 0.1393 VOO, staged 2026-09-08 22:53 UTC, window 2026-09-08) did not
+    -- fill on the 09-09 open and was terminally expired by D2a 2026-09-09 under branch (c) rather than
+    -- re-crafted, and a fresh sweep-VOO-20260909 was minted in its place. Because the park sweep names
+    -- its item_key by DATE, the replacement is a NEW item_key -- so it minted a NEW
+    -- staged_order_awaiting_confirm row, a NEW email and a NEW ntfy push, for what is materially the
+    -- same waiting sweep. That is precisely the alert-fatigue defect the sibling block above was
+    -- designed to prevent, re-entering through the item_key channel instead of the message channel.
+    --
+    -- SEVERITY IS warning, NEVER critical -- same reasoning as the sibling above, verbatim: every
+    -- trading gate (state.trading_enabled / _mechanical, state.system_health.all_green,
+    -- ops.sp_assert_trading_enabled*) counts severity = 'critical' ONLY (bigquery/107), so a critical
+    -- here would HALT ALL ORDER STAGING over a mis-stamped date field on one order.
+    --
+    -- MESSAGE CARRIES item_key AND NOTHING ELSE, for the same dedup reason the sibling documents at
+    -- length: sp_raise_alert_once dedups on exact (category, message), and item_key is the only field
+    -- stable across a re-craft. The dates go in the payload, which is never compared. Apostrophes are
+    -- avoided throughout -- GoogleSQL rejects '' as an apostrophe escape and a template carrying one
+    -- raises NOTHING rather than a degraded alert.
+    --
+    -- THE PREDICATE LIVES IN A VIEW (state.staged_order_window_invalid, defined above), not inline
+    -- here, so the RAISE below and the RESOLVE above cannot drift apart -- the classic failure mode
+    -- of a resolve whose predicate is a hand-maintained negation of the raise. It is also what D2a
+    -- reads mechanically at STEP 0 to detect a mis-set window instead of re-deriving the arithmetic.
+    -- ===================================================================================================
+    FOR rec IN (
+      SELECT item_key, strategy, ticker, side, qty, limit_price, entry_window_close,
+             window_close_instant, instruction_id, staged_ts
+      FROM `stock-trading-498512.state.staged_order_window_invalid`
+      ORDER BY item_key
+    ) DO
+      CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+        'warning', 'scheduled.staging_cap', 'staged_order_window_dead_on_arrival',
+        FORMAT('Staged order was born outside its own entry window: %s. It was staged at or after the close of the very session its entry_window_close names, so it can never trade inside that window. At the next D2a STEP 0 staged-order registry reconciliation this row matches branch (c) WINDOW CLOSED plus UNFILLED instead of branch (b) WINDOW STILL OPEN, so it is terminally expired after a single session rather than re-crafted under the same item_key, and the persist-and-wait policy is skipped without anything else in the system recording that it was. A DAY instruction crafted after the close reaches the NEXT trading session, so a post-close craft must set entry_window_close to at least state.trading_day_today.next_trading_day, never the craft day. Repair the window forward or set the row terminal deliberately; see payload for the staged timestamp, the window, and the instant that window closed.', rec.item_key),
+        TO_JSON_STRING(STRUCT(
+          rec.item_key AS item_key,
+          rec.strategy AS strategy,
+          rec.ticker AS ticker,
+          rec.side AS side,
+          rec.qty AS qty,
+          rec.limit_price AS ref_price,
+          CAST(rec.entry_window_close AS STRING) AS window_close,
+          CAST(rec.window_close_instant AS STRING) AS window_close_instant,
+          CAST(rec.staged_ts AS STRING) AS staged_ts,
+          rec.instruction_id AS instruction_id)));
+    END FOR;
+
     EXCEPTION WHEN ERROR THEN
       SET v_notice_err = @@error.message;
     END;
@@ -221,7 +413,7 @@ BEGIN
       -- distinct error string. The error goes in the payload.
       CALL `stock-trading-498512.ops.sp_raise_alert_once`(
         'warning', 'scheduled.staging_cap', 'staged_order_notice_failed',
-        'The staged-order confirm notice block in ops.sp_sq_daily_staging_cap_check raised an error and did not run this pass, so no staged_order_awaiting_confirm alert was evaluated today and the operator got neither the email nor the push for any order waiting to fill. The two order-guard CRITICAL checks in the same procedure are unaffected (this block is best-effort by construction and runs before them). See payload for the error message.',
+        'The staged-order notice block in ops.sp_sq_daily_staging_cap_check raised an error and stopped part-way this pass, so ONE OR BOTH of the two notices it evaluates may not have been raised today -- staged_order_awaiting_confirm for an order waiting to fill, and staged_order_window_dead_on_arrival for an order staged outside its own entry window. The block runs the two in that order and each statement commits independently, so the first may have completed before the fault; treat both as unverified for today rather than assuming either ran. The two order-guard CRITICAL checks in the same procedure are unaffected (this block is best-effort by construction and runs before them). See payload for the error message.',
         TO_JSON_STRING(STRUCT(v_notice_err AS error_message)));
     ELSE
       -- Self-healing closure (reachable without a human UPDATE), matching the auto-resolve-then-raise
@@ -423,31 +615,3 @@ BEGIN
   END;
 
 END;
-
--- =====================================================================================================
--- ops.alert_policy -- register staged_order_awaiting_confirm as NON-LATCHING.
---
--- ops.alert_policy is a FAIL-CLOSED allowlist: a category ABSENT from it is latching by construction
--- and ops.sp_auto_resolve_alerts will never touch it. Registration here does not itself resolve
--- anything -- every rule in sp_auto_resolve_alerts is hardcoded to a specific category and none of
--- them covers this one. The actual resolve is the in-procedure UPDATE above, which runs each daily
--- pass. This row is what SANCTIONS that mechanical close and documents it where an auditor reading
--- the alert board will look, exactly as bigquery/223 does for regime_restore_blocked.
---
--- Guarded on NOT EXISTS per-category (bigquery/223 / bigquery/204 shape), NOT on the whole-table
--- emptiness guard bigquery/34's original seed used -- that one only ever fires once, on an empty
--- table, and would silently no-op here.
---
--- The SELECT ... FROM UNNEST([...]) shape is required rather than SELECT <literals> WHERE NOT EXISTS:
--- a WHERE with no FROM is illegal GoogleSQL, and is what broke bigquery/133 live.
--- =====================================================================================================
-INSERT INTO `stock-trading-498512.ops.alert_policy` (category, latching, resolve_rule, note)
-SELECT p.category, p.latching, p.resolve_rule, p.note
-FROM UNNEST([
-  STRUCT('staged_order_awaiting_confirm' AS category, FALSE AS latching,
-         'Auto-resolves in-procedure: ops.sp_sq_daily_staging_cap_check (bigquery/229_staged_order_confirm_notice.sql) closes the row on its next daily pass once the item_key named in payload.item_key is no longer present in state.open_orders -- i.e. the order filled and reconciled, was cancelled, or expired. NOT covered by any ops.sp_auto_resolve_alerts rule (those are hardcoded to missing_dependency / missed_run / routine_stalled / catchup_refire_blocked / staleness / the six roster notices), and NOT on the cadence_check 7-day auto-age list; latching=FALSE only SANCTIONS the mechanical close. The resolve is fail-closed: a row whose payload.item_key cannot be read stays OPEN rather than being silently closed.' AS resolve_rule,
-         'STAGED-ORDER CONFIRM NOTICE, registered 2026-09-07 alongside the check that raises it. Notification-only: it reports that a staged order is waiting to fill and reconcile, which is the normal state of the book on any day D2 staged something -- it is NOT a fault and needs no human UPDATE. Deliberately warning, never critical: every trading gate counts criticals only, so a critical here would halt ALL order staging (exits included) over routine activity. Replaces the retired alert-relay.yml `orders` push (daily 13:05 UTC), which had no email counterpart at all; routing the fact through ops.alerts is what gives it one, via alert_emailer.gs. One alert per item_key, and the message carries the item_key and nothing else, so a persist-and-wait re-craft (same item_key, possibly new qty/ref price) does NOT mint a duplicate notice.' AS note)
-]) AS p
-WHERE NOT EXISTS (
-  SELECT 1 FROM `stock-trading-498512.ops.alert_policy` e WHERE e.category = p.category
-);

@@ -173,6 +173,26 @@ SELECT * FROM scoped
 WHERE staged_ts >= window_close_instant;
 
 -- =====================================================================================================
+-- SUPERSEDED (2026-09-11) by bigquery/234_staged_order_notice_resolve_decorrelated.sql, the current
+-- canonical definition of this procedure. 234 carries this body forward BYTE-IDENTICAL except: the
+-- heartbeat literal v7 -> v8; and the staged_order_window_dead_on_arrival AUTO-RESOLVE UPDATE below
+-- is DE-CORRELATED -- its key set is read once into an ARRAY<STRING> scripting variable and the
+-- UPDATE tests membership against UNNEST of that variable, instead of correlating a NOT EXISTS into
+-- state.staged_order_window_invalid. THE VERSION BELOW CANNOT RUN: state.staged_order_window_invalid
+-- contains a LEFT JOIN, and BigQuery rejects a correlated subquery whose inner source it cannot
+-- de-correlate into a join -- "Correlated subqueries that reference other tables are not supported
+-- unless they can be de-correlated, such as by transforming them into an efficient JOIN." It failed
+-- on this procedure FIRST live run (2026-09-11 05:25 UTC, error_reason invalidQuery) and raised the
+-- first-ever staged_order_notice_failed WARNING. The failure is deterministic and data-independent:
+-- the view was EMPTY that run and the statement still failed, so it can never self-heal.
+-- Everything else is unchanged -- both notice categories, both message templates, both payloads, the
+-- best-effort block and its handler, the resolve-before-raise ordering, and both order-guard CRITICAL
+-- checks (order_guard_omitted / order_guard_verdict_mismatch) are carried forward byte-identical.
+-- The VIEW state.staged_order_window_invalid defined ABOVE in this file is NOT superseded -- 234 does
+-- not redefine it, so this file remains its canonical definition.
+-- Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE
+-- live in isolation -- it would reinstate the broken statement.
+-- =====================================================================================================
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_daily_staging_cap_check`()
 BEGIN
   CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:daily_staging_cap_check', 'v7', 'daily_staging_cap_check.sql ran');
