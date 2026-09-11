@@ -3791,14 +3791,14 @@ so the request never reaches BigQuery. An immediate byte-identical re-issue clea
 2026-08-18 (D1); 21 distinct (routine, run_date) sightings in `ops.run_log` through 2026-09-10 across
 D1, D2, D2a, D3, M1R, OPS0, OPS1, OPS2, SL2, SL5, AR_att and AR_orc; still reproducing 2026-09-11.
 
-**Localisation (measured 2026-09-11, 272 calls).** The fault is downstream of the model and upstream of
+**Localisation (measured 2026-09-11, 284 calls).** The fault is downstream of the model and upstream of
 BigQuery, and is **specific to the `query` argument of the two SQL-executing tools**:
 
-- SQL tools **25 / 192 failed (13.0%)**; sibling tools on the same connector — `list_table_ids`,
+- SQL tools **28 / 204 failed (13.7%)**; sibling tools on the same connector — `list_table_ids`,
   `list_dataset_ids` — **0 / 80**, including 20 interleaved call-for-call with failing
-  `execute_sql_readonly` calls in the same window (Fisher exact p ≈ 1.3e-4). The interleave is what
+  `execute_sql_readonly` calls in the same window (Fisher exact p ≈ 8.2e-5). The interleave is what
   rules out "the bug is bursty and the control ran during a quiet period".
-- `projectId` was supplied in all 272 calls and reported missing **zero** times.
+- `projectId` was supplied in all 284 calls and reported missing **zero** times.
 - Not the model's emission: 30 byte-identical `tool_use` blocks in ONE assistant message → 25 serviced,
   5 rejected.
 - Not positional: emitting `query` FIRST and `projectId` SECOND across 60 calls still produced 10

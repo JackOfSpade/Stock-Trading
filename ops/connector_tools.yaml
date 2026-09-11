@@ -491,13 +491,13 @@ connectors:
         use: required
         note: >-
           all routine DML/DDL (RUNBOOK §15a canonical matrix). KNOWN DEFECT (RUNBOOK §51): drops the
-          `query` argument on ~13% of calls, returning `Required parameter is missing: query` with no
+          `query` argument on ~14% of calls, returning `Required parameter is missing: query` with no
           BigQuery job created. One immediate verbatim re-issue clears it; never shorten the payload.
       - name: execute_sql_readonly
         use: required
         note: >-
-          every routine's pre-flight liveness read (RUNBOOK §15a canonical matrix). Same ~13% `query`
-          arg-drop defect as execute_sql (RUNBOOK §51) — measured 25/192 on 2026-09-11 while
+          every routine's pre-flight liveness read (RUNBOOK §15a canonical matrix). Same ~14% `query`
+          arg-drop defect as execute_sql (RUNBOOK §51) — measured 28/204 on 2026-09-11 while
           list_table_ids/list_dataset_ids were 0/80 in the same windows.
       - name: get_dataset_info
         use: required

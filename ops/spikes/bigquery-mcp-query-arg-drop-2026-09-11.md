@@ -65,9 +65,10 @@ Arm H alternated the two tools call-for-call in one window, so both experienced 
 That eliminates the "the bug is bursty and the control ran during a quiet period" confound: in the same
 interleaved window the SQL tool dropped arguments and the sibling tool did not.
 
-Pooling the interleaved arm in, the SQL-executing tools fail **25 / 192 (13.0%)** and the controls
-**0 / 80 (0.0%)**. Against a common rate, `0 / 80` is **p ≈ 1.4e-5**; Fisher exact on the pooled
-counts gives **p ≈ 1.3e-4** (on the non-interleaved arms alone, 24/172 vs 0/60, p ≈ 8.5e-4).
+Pooling every SQL-tool arm, including the large-payload arm I, the SQL-executing tools fail
+**28 / 204 (13.7%)** and the controls **0 / 80 (0.0%)**. Against a common rate, `0 / 80` is
+**p ≈ 7.4e-6**; Fisher exact on the pooled counts gives **p ≈ 8.2e-5** (on the non-interleaved
+arms alone, 24/172 vs 0/60, p ≈ 8.5e-4).
 
 ### 2c. Facts the arms establish
 
@@ -77,9 +78,9 @@ counts gives **p ≈ 1.3e-4** (on the non-interleaved arms alone, 24/172 vs 0/60
 2. **It is not positional.** Arms E1/E2 reversed the emission order so `query` was written FIRST and
    `projectId` SECOND. All 10 failures still named `query`. Zero named `projectId`. A "trailing field
    lost during streaming JSON assembly" mechanism is ruled out.
-3. **It is specific to the `query` argument.** `projectId` was supplied in all 272 calls of this
-   investigation — 192 SQL and 80 control — and was reported missing **zero** times. `query` was
-   supplied in all 192 SQL calls and reported missing 25 times.
+3. **It is specific to the `query` argument.** `projectId` was supplied in all 284 calls of this
+   investigation — 204 SQL and 80 control — and was reported missing **zero** times. `query` was
+   supplied in all 204 SQL calls and reported missing 28 times.
 4. **It is not confined to one model or host.** Opus 5 and Sonnet 5 reproduce it at comparable rates,
    in a Claude Code remote session, and (per `ops.run_log`) in cloud scheduled agent sessions.
 5. **It is not request size.** See §4.
@@ -140,8 +141,9 @@ It is false, on three independent grounds:
    `Required parameter is missing: query`; **no response at any size mentioned size, length, or a limit.**
    This agrees with the previously established successes at **27,415 / 29,824 / 44,387 characters**, also
    recorded in the `ops.alerts` resolution note quoted in (2).
-   *Do not read the large-payload arm's 3/12 as a size correlation:* against the 13.0% baseline that is
-   p = 0.20, nowhere near significant at n = 12. The claim refuted here is a deterministic ceiling; no
+   *Do not read the large-payload arm's 3/12 as a size correlation:* against the 13.0% trivial-payload
+   baseline (arms A–H, excluding this arm itself, so the test is not circular) that is p = 0.20,
+   nowhere near significant at n = 12. The claim refuted here is a deterministic ceiling; no
    rate-vs-size relationship is asserted in either direction.
 2. **The warehouse already retracted it.** `ops.alerts` `5d971f00` (`mcp_query_size_ceiling_measured`,
    D2 2026-09-10) was resolved on 2026-09-11 09:19:06 UTC as **wrong**, on exactly those counter-
@@ -194,7 +196,7 @@ true count is higher, because the `kind` slug drifted (`mcp_payload_rejected`,
 
 **Is retry-on-this-error sanctioned client behaviour? Yes — exactly once, verbatim, with no wait,
 before any other branch.** That is already the fleet rule (`Claude_Task_Plan.md` §Observability →
-MCP-TRANSPORT REJECTION) and this investigation confirms it is correct: all 25 observed drops were
+MCP-TRANSPORT REJECTION) and this investigation confirms it is correct: all 28 observed drops were
 transient, and `state.retry_telemetry` shows every recorded retry recovered and none exhausted. The
 rule is unchanged by this work. What changed is its *failure* branch: a second identical failure is
 the same bug again, not a size problem (§4), so it falls through to THE LADDER rather than triggering
@@ -317,13 +319,26 @@ theory that survived in binding operating guidance for a day.
 
 ---
 
-## Appendix — ready-to-run `events.decision_log` record (NOT executed)
+## Appendix — the `events.decision_log` record (EXECUTED 2026-09-11)
 
-RUNBOOK §51 is the durable in-repo record and is committed. This is its in-warehouse counterpart, left
-**unexecuted deliberately**: `events.decision_log` is append-only production state, and CLAUDE.md's
-2026-07-21 rule is that an interactive session asks before taking an autonomous live action even when a
-scheduled routine would take the same one unattended. Signature verified live against
-`ops.INFORMATION_SCHEMA.PARAMETERS` (16 parameters) on 2026-09-11. Run as-is to record it.
+RUNBOOK §51 is the durable in-repo record; this is its in-warehouse counterpart. It was initially left
+unexecuted — `events.decision_log` is append-only production state, and CLAUDE.md's 2026-07-21 rule is
+that an interactive session asks before taking an autonomous live action even when a scheduled routine
+would take the same one unattended — and was then **run on the owner's explicit instruction** the same
+day. Signature verified live against `ops.INFORMATION_SCHEMA.PARAMETERS` (16 parameters) first.
+
+**Landed:** `entry_id 86d94574-a2f4-4bc8-a684-b4ec65c043a1`, job `job_1Fk3yH8-9EjIgSj_p5YvE5YbymCu`,
+`body_md` 1,867 bytes, `fields` JSON intact. Verified exactly one row; a pre-write read confirmed no
+prior entry, so there is no duplicate. **Do not re-run this block** — it would append a second copy.
+
+*One imprecision in the row as written, recorded here rather than corrected:* its body quotes
+`Fisher exact p ~ 1.3e-4`, which was computed on the 25/192-vs-0/80 comparison before the large-payload
+arm was folded in; against the final 28/204 the figure is 8.2e-5. The counts in the row (28/204, 284,
+0/80) are correct and the conclusion is unchanged — both are far below any sane threshold — so an
+append-only correction row would add noise for no decision-relevant gain. The reconciled figure is the
+one in §2b and RUNBOOK §51.
+
+The block below is preserved verbatim **as executed**, not as a template to re-run:
 
 ```sql
 CALL `stock-trading-498512.ops.sp_log_decision`(
