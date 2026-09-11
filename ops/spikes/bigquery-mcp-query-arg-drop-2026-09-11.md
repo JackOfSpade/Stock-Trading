@@ -117,6 +117,10 @@ layers are in it:
   `#49910` (~25% of brokered remote MCP calls fail while the server answers in milliseconds),
   `claude-ai-mcp#154`/`#394`.
 
+**Verified directly against Google's server (2026-09-11).** Its endpoint resolves and answers `tools/list` unauthenticated: `GET https://bigquery.googleapis.com/mcp` returns HTTP 405 (correct for a POST-only JSON-RPC endpoint) and a `tools/list` POST returns the full tool listing. **The server declares `required: ["projectId", "query"]` for both `execute_sql` and `execute_sql_readonly` — identical to what the claude.ai broker presents to the model.** So the schema is mirrored faithfully and schema translation is not the lossy step; whatever goes wrong happens to the ARGUMENTS, not to the contract describing them.
+
+*An experiment that did NOT work, recorded so the next holder does not repeat it:* I tried to settle whose validator emits the string by calling `tools/call` against Google's endpoint with `projectId` and no `query`. It is inconclusive — Google's server checks authentication BEFORE validating arguments, so that probe and a well-formed control both return an identical 401, and the argument-validation wording is never reached. Settling it needs an authenticated call to the endpoint, or the server-side logs requested in the issue.
+
 **Weighing it:** the broker-side precedent is a strong behavioural match, but it does not explain
 fact (3) on its own — a generic client serialization fault should not spare `datasetId` and
 `projectId` across 80 control calls while hitting `query` 24 times in 172. Either the broker's
@@ -221,19 +225,11 @@ use in this repo.
 
 ## 7. The vendor report — paste-ready
 
-**Not yet filed.** This session could not open the issue: attaching an external repository is denied by
-this environment's permission classifier, so `anthropics/claude-ai-mcp` is unreachable from here, and
-Google's Issue Tracker requires an interactive signed-in session. **What is needed to finish:** someone
-with a browser session as the project owner posts §7a to
-**https://github.com/anthropics/claude-ai-mcp/issues/new/choose** (primary — this is the repo Anthropic
-designates for "issues related to MCP integration with Claude"), and, if Google-side correlation is
-wanted, to the BigQuery component of Google Issue Tracker,
-**https://issuetracker.google.com/issues/new?component=187149&template=0**. Project
-`stock-trading-498512` is shareable with either owner; it is what lets them correlate server-side logs.
+**FILED 2026-09-11 as [anthropics/claude-ai-mcp#1022](https://github.com/anthropics/claude-ai-mcp/issues/1022).** This session could not submit it itself — attaching an external repository is refused by the execution environment's permission classifier — so the body below was filed through a browser session instead, under the repo's Bug Report template (Area: *Tool Discovery / Invocation*; `bug` label applied by the template). Filed verbatim: 162-char title, 4,944-char body, all nine blocks, every figure intact.
 
-Severity to claim: **medium-high**. The drop is recoverable, but the message is not: it caused silent
-record corruption in a production trading system and sent two independent investigations down a false
-theory that survived in binding operating guidance for a day.
+Three template fields required text not in the body — expected-behaviour, steps-to-reproduce (the Reproduction paragraph duplicated, not moved, so the body stayed whole), and the MCP Server field. That last one initially read *"first-party connector"*, which is wrong and was corrected before submission: the server is Google-built and Google-hosted; only the broker is Anthropic's, and that distinction is the central unresolved question. **The GCP project ID was withheld** from the public body — a public issue is permanent and indexed — and offered on request so a maintainer can still correlate server-side logs.
+
+**Status: filed, NOT acknowledged.** No maintainer has responded. Google's tracker (https://issuetracker.google.com/issues/new?component=187149&template=0) was not used; the evidence points first at the broker, and a single well-evidenced report is better than two half-duplicated ones. If #1022 is triaged to Google, file there with the same body.
 
 ### 7a. Issue body
 
@@ -314,8 +310,11 @@ theory that survived in binding operating guidance for a day.
 * **Retry semantics settled and documented** at the point of use (§6).
 * **The refuted size ceiling is out of binding guidance** (§4) — the highest-value fix here, because
   that rule, not the drop, is what corrupted a record.
-* **Residual:** the report is not yet submitted (§7), and until a vendor fixes the message, any new
-  consumer of this connector that has not read `Claude_Task_Plan.md` can make the same misdiagnosis.
+* **Filed** as anthropics/claude-ai-mcp#1022 (§7), with the project ID withheld from the public body.
+* **Residual:** no maintainer has responded, so this is filed rather than acknowledged; the
+  Google-vs-broker boundary still needs server-side logs or an authenticated endpoint call (§3);
+  and until a vendor fixes the message, any new consumer of this connector that has not read
+  `Claude_Task_Plan.md` can make the same misdiagnosis.
 
 ---
 

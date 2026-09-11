@@ -3842,9 +3842,4 @@ no wait, before any other branch — `Claude_Task_Plan.md` §Observability → M
 and none exhausted. A second identical failure is the same bug again: re-issue and work THE LADDER.
 **Never shorten a record to make a write succeed.**
 
-**Status: reported, not yet filed.** A complete, paste-ready vendor report — including the
-misleading-message defect and the retry-semantics question — is at
-`ops/spikes/bigquery-mcp-query-arg-drop-2026-09-11.md` §7. Filing needs a signed-in browser session:
-https://github.com/anthropics/claude-ai-mcp/issues/new/choose (primary), optionally the BigQuery
-component of Google Issue Tracker. This session could not submit it — attaching an external repository
-is refused by the execution environment's permission classifier. **That is the one open action.**
+**Status: FILED 2026-09-11 — awaiting maintainer response.** [anthropics/claude-ai-mcp#1022](https://github.com/anthropics/claude-ai-mcp/issues/1022), submitted under the repo's Bug Report template (Area: Tool Discovery / Invocation). It carries all three asks: the drop itself, the misleading message as an independent defect, and the retry-semantics question. The GCP project ID was deliberately withheld from the public body and offered on request instead. **No maintainer has responded yet**, so this is filed, not acknowledged — if it is closed as a duplicate of the `claude-ai-mcp#628` brokered-argument-loss family, that is a legitimate outcome and should be recorded here as such. Full measurements and the submitted body: `ops/spikes/bigquery-mcp-query-arg-drop-2026-09-11.md`.
