@@ -235,7 +235,7 @@ theory that survived in binding operating guidance for a day.
 
 ### 7a. Issue body
 
-> **Title:** BigQuery connector intermittently returns "Required parameter is missing: query" for calls that supplied `query` (~13%, `execute_sql`/`execute_sql_readonly` only)
+> **Title:** BigQuery connector intermittently returns "Required parameter is missing: query" for calls that supplied `query` (~14%, `execute_sql`/`execute_sql_readonly` only)
 >
 > **Summary.** The Google Cloud BigQuery connector's `execute_sql` and `execute_sql_readonly` tools
 > intermittently return `Required parameter is missing: query` to the model for well-formed calls in
@@ -243,11 +243,12 @@ theory that survived in binding operating guidance for a day.
 > nothing in `INFORMATION_SCHEMA.JOBS_BY_PROJECT`), so the request never reaches BigQuery. An immediate
 > byte-identical re-issue succeeds. First seen 2026-08-18; still reproducing 2026-09-11.
 >
-> **Environment.** GCP project `stock-trading-498512`, location US. Connector authorised under the
-> project owner's own Google identity (OAuth), not a service account. Reproduces from both cloud
+> **Environment.** GCP project ID available on request (happy to share privately so you can correlate
+> server-side logs), location US. Connector authorised under the project owner's own Google identity
+> (OAuth), not a service account. Reproduces from both cloud
 > scheduled Claude agent sessions and interactive Claude Code sessions, on Opus 5 and Sonnet 5.
 >
-> **Rate.** 25 failures in 192 calls (13.0%) measured 2026-09-11 across seven arms, never retrying
+> **Rate.** 28 failures in 204 calls (13.7%) measured 2026-09-11 across eight arms, never retrying
 > inside an arm. Independently, 21 distinct (routine, date) sightings in our operational logs 2026-08-18 to
 > 2026-09-10.
 >
@@ -259,14 +260,14 @@ theory that survived in binding operating guidance for a day.
 >   message: 25 serviced, 5 rejected as missing `query`.
 > * *Not positional.* Reversing emission order (`query` first, `projectId` second) across 60 calls: all
 >   10 failures still named `query`, none named `projectId`.
-> * *Specific to the `query` argument.* `projectId` was supplied in 272 calls and reported missing zero
+> * *Specific to the `query` argument.* `projectId` was supplied in 284 calls and reported missing zero
 >   times.
 > * *Specific to the SQL-executing tools.* `list_table_ids` (2 required params) and `list_dataset_ids`
 >   (1 required param) on the same connector: **0 failures in 80 calls**, including 20 interleaved
 >   call-for-call with `execute_sql_readonly` in the same window (which failed 1/20 there), ruling out a bursty
->   quiet period. Fisher exact vs the SQL tools: p ≈ 1.3e-4.
+>   quiet period. Fisher exact vs the SQL tools: p ≈ 8.2e-5.
 > * *Not request size.* Single-call requests carrying string arguments of 27,415 / 29,824 / 44,387
->   characters all succeeded first try. An earlier theory of a ~13KB ceiling was withdrawn: at a 13%
+>   characters all succeeded first try. An earlier theory of a ~13KB ceiling was withdrawn: at a ~14%
 >   per-call drop rate, the "fails twice in a row" observation behind it has ~1.7% probability per
 >   pair and ~39% odds of appearing at least once in a 30-call session.
 > * *Not auth, quota, permission, or SQL.* No 401/403, no `accessDenied`, no quota wording, no
@@ -299,8 +300,8 @@ theory that survived in binding operating guidance for a day.
 >
 > **What we cannot see.** Whether the argument is absent from what the MCP server received (transport)
 > or present-but-rejected by server-side validation. Connector/gateway logs for tool invocations against
-> `stock-trading-498512` in the windows above would close it: the failures appear as invocations with no
-> corresponding BigQuery job. Project ID shareable on request.
+> our project in the windows above would close it: the failures appear as invocations with no
+> corresponding BigQuery job. Project ID shareable on request — just ask in the thread.
 
 ## 8. Outcome and residual risk
 
