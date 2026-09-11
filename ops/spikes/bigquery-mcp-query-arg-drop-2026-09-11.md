@@ -44,6 +44,10 @@ failure was recorded and the arm continued, so these are clean per-call rates.
 | E1 | Sonnet 5, sequential, **`query` emitted FIRST** | `execute_sql_readonly` | 3 / 30 | 10.0% |
 | E2 | Sonnet 5, sequential, **`query` emitted FIRST** | `execute_sql_readonly` | 7 / 30 | 23.3% |
 | | | **SUBTOTAL (arms A–E)** | **24 / 172** | **14.0%** |
+| H | Sonnet 5, sequential, interleaved with `list_table_ids` | `execute_sql_readonly` | 1 / 20 | 5.0% |
+| I | Sonnet 5, sequential, **16,042-char** request body | `execute_sql_readonly` | 2 / 8 | 25.0% |
+| I | Sonnet 5, sequential, **25,018-char** request body | `execute_sql_readonly` | 1 / 4 | 25.0% |
+| | | **TOTAL (all SQL-tool arms)** | **28 / 204** | **13.7%** |
 
 Every one of the 24 errors was the byte-identical string `Required parameter is missing: query`.
 Failures were scattered, never clustered.
@@ -129,13 +133,16 @@ under ~13KB."** That rule was propagated by `scripts/split_task_plan.py` into **
 
 It is false, on three independent grounds:
 
-1. **Large single-call requests demonstrably succeed.** Single-call requests carrying string arguments
-   of **27,415 / 29,824 / 44,387 characters** — two to three times the claimed "always fails" threshold —
-   all succeeded on the first try. A single success above a claimed deterministic ceiling refutes it,
-   and there are three, independently recorded in two places: the originating investigation's own
-   measurements, and the `ops.alerts` resolution note quoted in (2). (I did not re-derive these; a
-   further confirmatory large-payload arm was launched this session but had not returned at write time,
-   and nothing here depends on it.)
+1. **Directly re-measured this session, above the claimed ceiling.** Byte-identical sequential calls
+   carrying a **16,042-character** request body succeeded **6 of 8**; at **25,018 characters**, **3 of 4**.
+   Both sizes are above the "~15KB fails twice" threshold, and a deterministic ceiling cannot produce a
+   success above it — let alone nine. Every failure in that arm carried the same
+   `Required parameter is missing: query`; **no response at any size mentioned size, length, or a limit.**
+   This agrees with the previously established successes at **27,415 / 29,824 / 44,387 characters**, also
+   recorded in the `ops.alerts` resolution note quoted in (2).
+   *Do not read the large-payload arm's 3/12 as a size correlation:* against the 13.0% baseline that is
+   p = 0.20, nowhere near significant at n = 12. The claim refuted here is a deterministic ceiling; no
+   rate-vs-size relationship is asserted in either direction.
 2. **The warehouse already retracted it.** `ops.alerts` `5d971f00` (`mcp_query_size_ceiling_measured`,
    D2 2026-09-10) was resolved on 2026-09-11 09:19:06 UTC as **wrong**, on exactly those counter-
    measurements. The retraction reached the alert but **never reached the plan text**, so a refuted rule
@@ -301,3 +308,53 @@ theory that survived in binding operating guidance for a day.
   that rule, not the drop, is what corrupted a record.
 * **Residual:** the report is not yet submitted (§7), and until a vendor fixes the message, any new
   consumer of this connector that has not read `Claude_Task_Plan.md` can make the same misdiagnosis.
+
+---
+
+## Appendix — ready-to-run `events.decision_log` record (NOT executed)
+
+RUNBOOK §51 is the durable in-repo record and is committed. This is its in-warehouse counterpart, left
+**unexecuted deliberately**: `events.decision_log` is append-only production state, and CLAUDE.md's
+2026-07-21 rule is that an interactive session asks before taking an autonomous live action even when a
+scheduled routine would take the same one unattended. Signature verified live against
+`ops.INFORMATION_SCHEMA.PARAMETERS` (16 parameters) on 2026-09-11. Run as-is to record it.
+
+```sql
+CALL `stock-trading-498512.ops.sp_log_decision`(
+  DATE '2026-09-11',                                    -- in_entry_date
+  'ops-note',                                           -- in_entry_type
+  NULL,                                                 -- in_strategy
+  NULL,                                                 -- in_ticker
+  'LOCALISED-REPORT-PENDING-SUBMISSION',                -- in_decision
+  NULL,                                                 -- in_conviction
+  NULL,                                                 -- in_conviction_pct
+  NULL,                                                 -- in_sub_pattern
+  NULL,                                                 -- in_theater_check
+  'BigQuery MCP query-arg drop localised; refuted ~13KB size ceiling withdrawn',  -- in_title
+  CONCAT(
+    'Measured 2026-09-11 over 284 connector calls. The two SQL-executing tools ',
+    '(execute_sql, execute_sql_readonly) drop the query argument on 28 of 204 calls (13.7%); ',
+    'their siblings list_table_ids and list_dataset_ids failed 0 of 80, including 20 interleaved ',
+    'call-for-call in the same window (Fisher exact p ~ 1.3e-4). projectId was supplied in all 284 ',
+    'calls and reported missing zero times. Not the model emission: 30 byte-identical tool_use blocks ',
+    'in ONE assistant message gave 25 successes and 5 rejections. Not positional: emitting query first ',
+    'still named query in all 10 failures. Fault is downstream of model emission and upstream of ',
+    'BigQuery, specific to the free-text query argument; separating the Google MCP server from the ',
+    'Anthropic broker needs server-side logs unavailable on this access path. SECOND DEFECT: calling ',
+    'the tool with no query at all returns the byte-identical error, so a caller cannot distinguish ',
+    'not-supplied from lost-in-transit -- the root of every misdiagnosis. ACTION TAKEN: withdrew the ',
+    'refuted ~13KB request-size ceiling from Claude_Task_Plan.md and all 34 slices (16,042- and ',
+    '25,018-char requests succeed; two-in-a-row is p^2 ~ 1.7% and ~39% likely per 30-call session). ',
+    'Confirmed events.adversarial_reviews is 193 rows with 0 hash mismatches -- the SHA-256 artifact ',
+    'was never corrupted; the damage was an ops.run_log note (AR_att 2026-09-09, 6495 -> 4703 bytes), ',
+    'a field with no integrity check. Retry rule unchanged and confirmed correct: one immediate ',
+    'verbatim re-issue, no wait. Vendor report ready to file at ',
+    'ops/spikes/bigquery-mcp-query-arg-drop-2026-09-11.md; submission blocked on browser access.'
+  ),                                                    -- in_body_md
+  '{"sql_tool_failures": 28, "sql_tool_calls": 204, "control_failures": 0, "control_calls": 80}',
+  ['runbook:51', 'alert:5d971f00-aa24-4ccf-accf-bedd6d5d3834'],                    -- in_refs
+  ['connector', 'mcp', 'bigquery', 'external-dependency', 'ops-note'],             -- in_tags
+  NULL,                                                 -- in_superseded_by
+  'interactive session 2026-09-11'                      -- in_source_session
+);
+```

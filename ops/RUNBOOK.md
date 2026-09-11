@@ -3822,8 +3822,11 @@ caused follows from that ambiguity, not from the drop:
   ("~12.6KB succeeds, ~15KB fails twice"), and that conclusion became **binding guidance in
   `Claude_Task_Plan.md` and all 34 slices**. It is false: at a 13% per-call drop rate two consecutive
   drops is p² ≈ 1.7%, and across a 30-call session at least one back-to-back double is ~39% — expected,
-  not deterministic. `ops.alerts` `5d971f00` was resolved WRONG on 2026-09-11, but the retraction never
-  reached the plan text, so the refuted rule stayed binding for a day. **Withdrawn in this changeset.**
+  not deterministic. Re-measured directly 2026-09-11: byte-identical requests of **16,042** characters
+  succeeded 6/8 and of **25,018** characters 3/4, both above the claimed ceiling, and no response at any
+  size mentioned size, length or a limit. `ops.alerts` `5d971f00` was resolved WRONG on 2026-09-11, but
+  the retraction never reached the plan text, so the refuted rule stayed binding for a day.
+  **Withdrawn in this changeset.**
 
 **The checksum does not protect you from this.** `ops.sp_write_adversarial_review` asserts the body
 SHA-256 at write time, but it hashes whatever the session supplies — text shortened *before* the digest
