@@ -154,8 +154,13 @@ It is false, on three independent grounds:
    independent routines (D2 and M1R) reached the same wrong conclusion the same day for exactly this
    reason.
 
-Corrected in this changeset at both sites (`Claude_Task_Plan.md` §Observability and the `<note>` rule)
-and re-sliced.
+**Resolution.** The withdrawal landed on `main` in commit `8c1f780`, written independently and
+concurrently with this investigation — two sessions reached the same conclusion from different
+evidence, which is itself corroboration. This changeset does not re-litigate that wording: it keeps
+main's text (whose provenance argument — that each large `sp_write_adversarial_review` call takes
+`p_body_md` as a single STRING parameter with no chunking, so each was necessarily ONE request — is
+stronger than mine) and adds on top the localisation in §3, the direct 16,042/25,018-character
+re-measurement, the indistinguishable-error finding, and the arithmetic above.
 
 ## 5. Impact — and one correction to the received account
 
