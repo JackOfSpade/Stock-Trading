@@ -44,13 +44,14 @@ written as `INSERT INTO t (cols) SELECT <bare literals> WHERE NOT EXISTS (...)` 
 ("Query without FROM clause cannot have a WHERE clause") — and this gate reported the file as "0 SYNTAX
 ERRORS" anyway, because the file's own leading `CREATE TABLE IF NOT EXISTS` suppressed analysis of
 every statement after it. The real apply failed partway through and left a partially-applied, empty
-table live. A per-statement splitter is NOT the fix: 37 bigquery/*.sql files contain `BEGIN`, 36
-contain `CREATE OR REPLACE PROCEDURE`, and 29 contain `DECLARE`, so a splitter is fragile against this
-repo's actual SQL shapes — and it would not even have caught THIS bug, because the INSERT targeted a
-table that did not exist yet, which returns "Not found ..." -> already TOLERATED by design, splitter or
-not. Instead, `no_from_where_violations()` below is a small, credential-free STATIC lint for this exact
-illegal shape, run BEFORE any `bq` call — so it still protects when the dry-run job is skipped, `bq` is
-unavailable, or (as happened here) a leading DDL blinds the dry-run to everything after it. It is
+table live. A per-statement splitter is NOT the fix FOR THIS CLASS: 37 bigquery/*.sql files contain
+`BEGIN`, 36 contain `CREATE OR REPLACE PROCEDURE`, and 29 contain `DECLARE`, so a general splitter is
+fragile against this repo's actual SQL shapes — and it would not even have caught THIS bug, because the
+INSERT targeted a table that did not exist yet, which returns "Not found ..." -> already TOLERATED by
+design, splitter or not. That reasoning is UNCHANGED and still holds for the no-FROM-WHERE class: this
+module still fixes it with `no_from_where_violations()` below, a small, credential-free STATIC lint for
+this exact illegal shape, run BEFORE any `bq` call — so it still protects when the dry-run job is
+skipped, `bq` is unavailable, or a leading DDL blinds the dry-run to everything after it. It is
 deliberately narrow (this one illegal shape only), not a general semantic-analysis replacement, which
 is why a clean dry-run result for a file containing a DDL statement is reported below as
 "parse-validated" (proves the script PARSES) rather than "validated" (would wrongly imply it will
@@ -69,17 +70,96 @@ error. `no_from_where_violations()` now scans from EVERY top-level `SELECT` keyw
 nesting level, and the original `INSERT INTO ... SELECT` case, all through one code path (see
 `_scan_select_clause`'s docstring for how each SELECT's own clause boundary is determined).
 
+PER-STATEMENT PASS FOR A DIFFERENT CLASS, OPT-IN ONLY, BECAUSE CI CANNOT USE IT (2026-09-11,
+bigquery/234_staged_order_notice_resolve_decorrelated.sql's landing incident — see that file's header
+for the full account). bigquery/233_staged_order_window_dead_on_arrival.sql landed a
+`CREATE VIEW ...; CREATE PROCEDURE ...` script whose PROCEDURE body contained a CORRELATED
+`NOT EXISTS` against a VIEW that itself contains a LEFT JOIN — an unambiguous ANALYSIS rejection
+("Correlated subqueries that reference other tables are not supported unless they can be
+de-correlated, such as by transforming them into an efficient JOIN"), deterministic and
+data-independent (it failed on an EMPTY view — it never depended on any row existing).
+
+FIRST-ORDER VS SECOND-ORDER REASON THIS REACHED LIVE, and why that distinction changes the fix. The
+KNOWN, VERIFIED LIMITATION above (a leading DDL suppresses semantic analysis of everything after it)
+is only the SECOND-order reason 233 passed CI green — it explains why, IF the CI identity could
+otherwise have reached semantic analysis of the CREATE PROCEDURE, the leading CREATE VIEW would have
+blinded it. But the FIRST-order reason is simpler and was verified directly against the ACTUAL CI run
+that landed 233 (`gh run view 34508595794 --log`, ci.yml, the dbt-parity/SQL-syntax job, keyless WIF),
+verbatim:
+    SQL dry-run: 4 file(s) — 0 parse-validated, 4 tolerated (permission/reference), 0 inconclusive,
+    0 SYNTAX ERROR(S).
+      - tolerated (...): bigquery/229_staged_order_confirm_notice.sql
+      - tolerated (...): bigquery/233_staged_order_window_dead_on_arrival.sql
+      - tolerated (...): bigquery/63_scheduled_query_version_registry.sql
+      - tolerated (...): bigquery/75_scheduled_query_wrappers.sql
+ZERO parse-validated, FOUR tolerated — EVERY DDL-bearing file that push touched, not just 233. The
+keyless WIF SA (roles/bigquery.dataViewer + jobUser, see the NO DDL GRANT section above) gets
+"Access Denied" on the CREATE itself before BigQuery ever reaches body validation, so `classify()`
+returns "tolerated" regardless of statement position, leading DDL or none. This means: IN CI, this
+gate's dry-run is PARSE-CLASS ONLY, full stop — it can catch a syntax error (parsing happens before
+authorization, see the NO DDL GRANT section) but can NEVER catch a semantic/analysis-class defect,
+because it never gets far enough to be denied selectively; splitting the script into per-statement
+pieces would not have changed this outcome even one bit, since EVERY one of those pieces is still a
+CREATE the SA cannot perform. Granting the CI SA create/alter permission is not on the table (IAM
+grants are owner-only in this repo, and the read-only CI posture is deliberate) — so semantic
+validation of a CREATE structurally REQUIRES a privileged identity, which CI structurally does not
+have. `--per-statement` (below) is built for that privileged-identity case, not for CI.
+
+Measured, LOCALLY, under the project OWNER's own privileged `bq` credentials (2026-09-11, NOT the CI
+SA — this is the identity difference the paragraph above exists to name):
+  * `CREATE PROCEDURE <bad body>` alone -> dry run FAILS: "Error validating procedure body (add
+    OPTIONS(strict_mode=false) to suppress): Query error: Query error: Correlated subqueries that
+    reference other tables are not supported unless they can be de-correlated, such as by
+    transforming them into an efficient JOIN. at [3:3]"
+  * `CREATE VIEW ...; CREATE PROCEDURE <same bad body>` as a script -> dry run CLEAN (the KNOWN,
+    VERIFIED LIMITATION above, now confirmed to matter only once an identity is actually privileged
+    enough to reach semantic analysis at all).
+So a CREATE PROCEDURE's body IS validated in strict_mode the instant a privileged identity dry-runs it
+ALONE — isolating it produces a decisive answer whenever the caller can actually perform the create.
+`per_statement_dryrun_targets()` below adds exactly that, GATED BEHIND THE `--per-statement` FLAG
+(OFF BY DEFAULT): for each file, every top-level CREATE statement AFTER the first (the first is
+already covered by the whole-file pass) is dry-run on its own — but ONLY when it is ALSO the
+apply-in-order FINAL definition of its object per `check_live_sql_parity.find_final_definitions()`.
+That scoping is CORRECTNESS, not an optimisation: this repo's supersede-only discipline
+(bigquery/README.md's "Supersede discipline" section) keeps a superseded object's CREATE statement in
+its original file FOREVER, unmodified, as the DR-rebuild apply-in-order record — bigquery/233 still
+contains the broken procedure body today, on purpose, and bigquery/234 now supersedes it. Dry-running
+233's copy individually would fail forever on landed, deliberately-frozen history, turning this gate
+permanently red. See `classify()`'s new "analysis" kind (ANALYSIS_MARKERS) for how a result from
+either pass — whole-file OR per-statement — gets to BLOCK, and `main()` for how `--per-statement` is
+wired in as an explicit, off-by-default opt-in that never runs in CI or the scheduled sweep (neither
+workflow passes it, so both see byte-identical behavior and cost to before this change) and is meant
+to be run manually, by a privileged identity, before applying a multi-CREATE file live — exactly the
+gap `scripts/apply_sql_file.py`'s own ">1 top-level CREATE" refusal message now names (see that
+script's `check_canonical_provenance()`).
+
 Usage:  python scripts/check_sql_dryrun.py <file.sql> [<file.sql> ...]
-Requires the `bq` CLI authed (WIF in CI; local gcloud otherwise). Exit 0 = no syntax errors and no
-static-lint violations (or nothing to check); exit 1 = at least one file has a syntax error, a
-no-FROM-WHERE static-lint violation, or the canary self-check failed.
+        python scripts/check_sql_dryrun.py --per-statement <file.sql> [<file.sql> ...]   # opt-in;
+            see PER-STATEMENT PASS above — only useful run by a PRIVILEGED identity (never in CI)
+Requires the `bq` CLI authed (WIF in CI; local gcloud otherwise). Exit 0 = no syntax errors, no
+analysis-class errors, and no static-lint violations (or nothing to check); exit 1 = at least one file
+has a syntax error, an analysis-class error (only reachable in practice under a privileged identity —
+see above), a no-FROM-WHERE static-lint violation, or the canary self-check failed.
 """
 import os
 import re
 import subprocess
 import sys
 
-from lib.sql_files import _string_literal_end, strip_sql_comments
+# Reused, not reimplemented (see module docstring's PER-STATEMENT PASS section) — the same repo-side
+# parsing machinery scripts/apply_sql_file.py already imports from this module for its own canonical-
+# provenance gate, an established, tested import direction (both are pure-text functions over files
+# already on disk; neither needs a BigQuery client).
+from check_live_sql_parity import (
+    CREATE_STMT,
+    NEXT_TOP_LEVEL,
+    canonicalize,
+    extract_body,
+    find_final_definitions,
+    find_procedure_body_end,
+    sql_tokens,
+)
+from lib.sql_files import _string_literal_end, normalize_kind, strip_sql_comments
 
 PROJECT = "stock-trading-498512"
 
@@ -106,17 +186,47 @@ TOLERATE_MARKERS = (
     "already exists",
     "billing",
 )
+# ANALYSIS-class marker (2026-09-11, bigquery/234's landing incident — see module docstring's
+# PER-STATEMENT PASS section) — an unambiguous, permission- and reference-INDEPENDENT semantic
+# rejection: BigQuery refusing a correlated subquery it cannot rewrite into a join. Deliberately a
+# single, narrow, VERBATIM marker (BigQuery's own wording, observed live) rather than a broader
+# "correlated subqueries" substring, so this can never accidentally swallow a message this gate
+# should keep tolerating. Checked AFTER TOLERATE_MARKERS in classify() — never before — because a
+# CREATE PROCEDURE dry-run wraps its inner failure as "Error validating procedure body (...): Query
+# error: <inner>", and for a brand-new sibling object not yet live the inner error is a completely
+# ordinary "Not found: Table ..." that must stay TOLERATED exactly as it already is for the
+# whole-file pass; this marker only ever matches the one specific de-correlation rejection, which
+# TOLERATE_MARKERS' substrings never do, so the ordering is belt-and-suspenders rather than
+# load-bearing today — but it is the CORRECT order to state, since a future, broader ANALYSIS
+# marker could otherwise start shadowing a legitimate permission/reference tolerate case.
+ANALYSIS_MARKERS = (
+    "correlated subqueries that reference other tables",
+)
 
 
 def classify(exit_code, output):
-    """'ok' | 'syntax' (BLOCK) | 'tolerated' (perm/ref) | 'unknown' (transient, non-blocking)."""
+    """'ok' | 'syntax' (BLOCK) | 'tolerated' (perm/ref) | 'analysis' (BLOCK) | 'unknown' (transient,
+    non-blocking). Order is load-bearing: SYNTAX -> TOLERATE -> ANALYSIS -> unknown — see
+    ANALYSIS_MARKERS' own comment for why TOLERATE must be checked first.
+
+    WHITESPACE-COLLAPSED BEFORE MATCHING (2026-09-11, live probe during the ANALYSIS_MARKERS
+    addition). The `bq` CLI hard-wraps a long error message across multiple lines at some column
+    width even when stdout is not a real terminal — reproduced live: the exact de-correlation error
+    came back as "...Query error: Correlated\\nsubqueries that reference other tables are not
+    supported...", splitting the multi-word ANALYSIS_MARKERS phrase across a newline and defeating a
+    naive substring match on the raw text. SYNTAX_MARKERS/TOLERATE_MARKERS happened to survive this
+    unnoticed only because every existing marker there is short enough (1-2 words) that this repo's
+    observed wrap points had not yet split one — this fix protects all three marker tuples the same
+    way, not just the new one, rather than leaving that as a latent, width-dependent flake."""
     if exit_code == 0:
         return "ok"
-    low = (output or "").lower()
+    low = re.sub(r"\s+", " ", output or "").lower()
     if any(m in low for m in SYNTAX_MARKERS):
         return "syntax"
     if any(m in low for m in TOLERATE_MARKERS):
         return "tolerated"
+    if any(m in low for m in ANALYSIS_MARKERS):
+        return "analysis"
     return "unknown"
 
 
@@ -160,6 +270,115 @@ def is_template(path):
     breakage.
     """
     return os.path.basename(path).upper().endswith("_TEMPLATE.SQL")
+
+
+# ==== PER-STATEMENT PASS: statements the whole-file pass structurally cannot analyse ================
+#
+# See the module docstring's PER-STATEMENT PASS section for WHY this exists and why it does not
+# contradict the 2026-08-03 "a per-statement splitter is NOT the fix" argument made about the
+# no-FROM-WHERE class. Short version: a CREATE PROCEDURE dry-run VALIDATES ITS OWN BODY in
+# strict_mode the instant it is submitted alone, so isolating a SECOND-or-later top-level CREATE
+# statement (the ones a leading DDL earlier in the same script blinds the whole-file pass to)
+# produces a decisive, permission-independent answer for exactly the class documented there.
+
+
+def _extract_statement_text(txt, m, obj_type):
+    """The complete, standalone text (header through its TRUE end, always terminated with a literal
+    ';') of the top-level CREATE statement whose check_live_sql_parity.CREATE_STMT match is `m` in
+    file text `txt` — what per_statement_dryrun_targets() submits to `bq query --dry_run` alone.
+
+    Mirrors check_live_sql_parity.extract_body()'s own boundary-finding exactly (same NEXT_TOP_LEVEL
+    boundary; same find_procedure_body_end() nesting-aware scan for a PROCEDURE — see that function's
+    docstring for why naive BEGIN/END counting is wrong) but KEEPS the CREATE header extract_body()
+    strips off: a standalone dry-run needs a complete, self-contained statement, where extract_body()
+    only ever needed the body half for a text comparison against a live INFORMATION_SCHEMA definition.
+
+    For a PROCEDURE, the end is find_procedure_body_end()'s matching END — deliberately NOT the wider
+    NEXT_TOP_LEVEL boundary, which can include a trailing, unrelated free-standing BEGIN...END block
+    appended after the procedure's own END in the same file (the exact bigquery/146 shape
+    find_procedure_body_end()'s docstring describes): submitting that trailing block along with this
+    CREATE would dry-run something this statement never claimed to contain. Falls back to the wider
+    NEXT_TOP_LEVEL-bounded text only if no BEGIN, or no matching END, can be found at all — "should
+    never happen against well-formed DDL", extract_body()'s own words for the identical fallback.
+
+    For a VIEW / TABLE FUNCTION / scalar FUNCTION there is no inner BEGIN...END to bound more tightly
+    than NEXT_TOP_LEVEL's own boundary (the next top-level CREATE/DML/DDL keyword, or EOF).
+    """
+    start = m.start()
+    next_m = NEXT_TOP_LEVEL.search(txt, start + 1)
+    end = next_m.start() if next_m else len(txt)
+    stmt = txt[start:end]
+    if obj_type == "PROCEDURE":
+        begin_at = next(
+            (tstart for kind, val, tstart, _tend in sql_tokens(stmt)
+             if kind == "T" and val.upper() == "BEGIN"),
+            None)
+        if begin_at is not None:
+            end_m = find_procedure_body_end(stmt, begin_at)
+            if end_m is not None:
+                stmt = stmt[:end_m]
+    stmt = stmt.rstrip()
+    if not stmt.endswith(";"):
+        stmt += ";"
+    return stmt
+
+
+def _is_final_create(path, txt, m, obj_type, dataset, name, final):
+    """True iff the CREATE_STMT match `m` in file `path` is the apply-in-order FINAL definition of
+    `(dataset, name)`, per check_live_sql_parity.find_final_definitions()'s own resolution — the same
+    question that script asks to decide what live BigQuery currently should hold.
+
+    THIS IS A CORRECTNESS GATE, NOT AN OPTIMISATION (module docstring's PER-STATEMENT PASS section).
+    bigquery/*.sql's supersede-only discipline (bigquery/README.md "Supersede discipline") keeps a
+    superseded object's CREATE statement live in its original file FOREVER, unmodified, as the
+    DR-rebuild apply-in-order record. bigquery/233_staged_order_window_dead_on_arrival.sql is the
+    concrete case this closes: it still contains the broken ops.sp_sq_daily_staging_cap_check body,
+    on purpose, and bigquery/234_staged_order_notice_resolve_decorrelated.sql now supersedes it.
+    Dry-running 233's copy individually would fail FOREVER on landed, deliberately-frozen history —
+    turning this gate permanently red on a file nobody is going to (or should) touch again.
+
+    Checking (dataset, name) membership in `final` alone is not enough — it would still fire on a
+    superseded occurrence that merely shares its object's name with the real final one — so this also
+    requires the SOURCE FILE to match (ruling out 233 once 234 exists) and the extracted body to
+    canonicalize identically to find_final_definitions()'s own stored body (ruling out an EARLIER,
+    superseded occurrence of the same object inside the SAME file, and confirming this really is the
+    occurrence that walk selected, not merely one sharing its filename)."""
+    entry = final.get((dataset, name))
+    if entry is None:
+        return False
+    entry_obj_type, _entry_project, entry_source_file, entry_body = entry
+    if entry_obj_type != obj_type or entry_source_file != os.path.basename(path):
+        return False
+    body = extract_body(txt, m.start(), obj_type)
+    if body is None:
+        return False
+    return canonicalize(body) == canonicalize(entry_body)
+
+
+def per_statement_dryrun_targets(path, txt, final):
+    """[(dataset, name, obj_type, statement_text), ...] for every SUBSEQUENT top-level CREATE
+    statement in `txt` (skipping the FIRST — the whole-file pass in main() already semantically
+    analyses it; see the module docstring's PER-STATEMENT PASS section) that is ALSO the apply-in-
+    order FINAL definition of its object (_is_final_create()).
+
+    A superseded occurrence, a free-standing DML/DDL statement (CREATE_STMT only ever matches
+    CREATE OR REPLACE VIEW/PROCEDURE/TABLE FUNCTION/FUNCTION — a MERGE/INSERT/UPDATE/DROP is never
+    returned here, by construction, the same "skip non-CREATE statements" scoping check_live_sql_
+    parity.py's own comparison already applies), or a statement for an object no bigquery/*.sql
+    file's final state defines, is never returned: dry-running any of those individually would either
+    be meaningless (superseded, deliberately-frozen history) or is legitimately out of this pass's
+    scope (a free-standing DML/DDL statement can depend on live data state in a way a credential-free,
+    per-statement re-submission cannot honestly evaluate any better than the whole-file pass already
+    does — noise, not signal)."""
+    matches = list(CREATE_STMT.finditer(txt))
+    targets = []
+    for m in matches[1:]:
+        kind, _project, dataset, name = m.groups()
+        obj_type = normalize_kind(kind)
+        if not _is_final_create(path, txt, m, obj_type, dataset, name, final):
+            continue
+        targets.append((dataset, name, obj_type, _extract_statement_text(txt, m, obj_type)))
+    return targets
 
 
 # ==== STATIC, CREDENTIAL-FREE LINT: a SELECT expression-list reaching WHERE with no FROM ============
@@ -371,6 +590,14 @@ def _contains_ddl(sql_text):
 
 
 def main(argv):
+    # --per-statement is OFF BY DEFAULT (2026-09-11 re-scope — see module docstring's PER-STATEMENT
+    # PASS section for why): it adds real `bq` dry-run cost and is only load-bearing when run by a
+    # PRIVILEGED identity (a local operator/agent session with actual create/alter permission on the
+    # target datasets), never in CI (the keyless WIF SA is read-only and TOLERATEs every CREATE
+    # outright — see that section for the measured CI run proving this). Passing it here changes
+    # nothing about ci.yml or sql-dryrun-sweep.yml, which never pass it and so see byte-identical
+    # behavior and cost to before this change.
+    per_statement = "--per-statement" in argv[1:]
     files = [a for a in argv[1:] if not a.startswith("-")]
     templates = [f for f in files if is_template(f)]
     files = [f for f in files if not is_template(f)]
@@ -422,7 +649,15 @@ def main(argv):
               "BigQuery behavior change) and re-run.")
         return 1
 
-    syntax_errs, tolerated, unknown, ok = [], [], [], 0
+    # find_final_definitions() is a pure repo-side text walk (no `bq`, no network — see its own
+    # docstring) so it costs nothing to compute even when --per-statement ends up finding no
+    # multi-CREATE file to use it against — but it is still gated on the flag below (not called at
+    # all when --per-statement is absent), so a default-mode run touches exactly the files it always
+    # did and nothing more.
+    final_definitions = find_final_definitions() if per_statement else None
+
+    syntax_errs, tolerated, unknown, analysis_errs, ok = [], [], [], [], 0
+    per_statement_checked = 0
     for f in files:
         rc, out = _bq_dry_run(sql_path=f)
         kind = classify(rc, out)
@@ -433,11 +668,57 @@ def main(argv):
             syntax_errs.append((f, first))
         elif kind == "tolerated":
             tolerated.append(f)
+        elif kind == "analysis":
+            # Reachable from the WHOLE-FILE pass too (not only --per-statement below): a single-
+            # CREATE-statement file dry-run by a PRIVILEGED identity (no leading DDL to blind
+            # anything) can hit this directly, e.g. bigquery/234_staged_order_notice_resolve_
+            # decorrelated.sql's own procedure body if it still carried the bug. classify()'s new
+            # "analysis" kind must be handled here unconditionally, or a privileged local run would
+            # silently fall through to the `else` (non-blocking "unknown") branch below instead of
+            # blocking. See module docstring's PER-STATEMENT PASS section.
+            analysis_errs.append((f, first))
         else:
             unknown.append((f, first))
 
+        # ---- PER-STATEMENT PASS, OPT-IN ONLY (--per-statement) ------------------------------------
+        # See module docstring's PER-STATEMENT PASS section: default-off because the CI identity
+        # cannot benefit from it (every CREATE it dry-runs TOLERATEs on Access Denied, whole-file or
+        # per-statement, before semantic analysis is ever reached) — this is for a privileged local
+        # run only. Only runs against files this loop was ALREADY ABLE TO READ (file_texts, built
+        # above for the static lint) — a file that couldn't be opened degrades the same way it
+        # already does for the lint and the DDL caveat: silently excluded, never crashing main().
+        if not per_statement:
+            continue
+        text = file_texts.get(f)
+        if text is None:
+            continue
+        for dataset, name, obj_type, stmt_text in per_statement_dryrun_targets(f, text, final_definitions):
+            per_statement_checked += 1
+            rc2, out2 = _bq_dry_run(sql_text=stmt_text)
+            kind2 = classify(rc2, out2)
+            first2 = out2.splitlines()[0][:220] if out2 else ""
+            label = f"{f} :: {dataset}.{name} ({obj_type}, per-statement pass)"
+            if kind2 == "ok":
+                pass                                    # nothing further to report for this statement
+            elif kind2 == "syntax":
+                syntax_errs.append((label, first2))
+            elif kind2 == "tolerated":
+                tolerated.append(label)
+            elif kind2 == "analysis":
+                analysis_errs.append((label, first2))
+            else:
+                unknown.append((label, first2))
+
     print(f"SQL dry-run: {len(files)} file(s) — {ok} parse-validated, {len(tolerated)} tolerated "
-          f"(permission/reference), {len(unknown)} inconclusive, {len(syntax_errs)} SYNTAX ERROR(S).")
+          f"(permission/reference), {len(unknown)} inconclusive, {len(syntax_errs)} SYNTAX ERROR(S), "
+          f"{len(analysis_errs)} ANALYSIS ERROR(S).")
+    if not per_statement:
+        print("  (--per-statement not passed: only the whole-file pass ran — see module docstring's "
+              "PER-STATEMENT PASS section for when to add it.)")
+    if per_statement_checked:
+        print(f"  per-statement pass: {per_statement_checked} additional top-level CREATE statement(s) "
+              f"dry-run individually (scoped to apply-in-order FINAL definitions only — see module "
+              f"docstring's PER-STATEMENT PASS section).")
     ddl_files = [f for f in files if f in file_texts and _contains_ddl(file_texts[f])]
     if ddl_files:
         print(f"NOTE: {len(ddl_files)} of {len(files)} file(s) contain a DDL statement (CREATE/ALTER/"
@@ -456,10 +737,34 @@ def main(argv):
         print(f"  - inconclusive / non-blocking: {f} :: {e}")
     for f, e in syntax_errs:
         print(f"  ✗ SYNTAX ERROR (blocks merge): {f} :: {e}")
+    for f, e in analysis_errs:
+        print(f"  ✗ ANALYSIS ERROR (blocks merge): {f} :: {e}")
 
     if syntax_errs:
         print("\nPARSE FAILURE — a bigquery/*.sql file would abort at parse time on apply (the exact class "
               "that reached live apply 2026-07-17). Fix the syntax before merge.")
+    if analysis_errs:
+        surfaced_by = ("this file's PER-STATEMENT PASS (--per-statement)" if per_statement
+                       else "the whole-file dry-run pass directly (no --per-statement needed here — "
+                            "this file has no leading DDL blinding it)")
+        print("\n::error::check_sql_dryrun ANALYSIS ERROR — BigQuery rejected a correlated "
+              "subquery whose inner source it cannot de-correlate into an efficient JOIN (in practice: "
+              f"the inner source is itself a VIEW/SELECT that contains a JOIN). This was surfaced by "
+              f"{surfaced_by}. When it takes a leading DDL in the SAME script to hide this (the KNOWN, "
+              "VERIFIED LIMITATION above: a leading DDL statement suppresses semantic analysis of every "
+              "statement after it), that is exactly how bigquery/233_staged_order_window_dead_on_"
+              "arrival.sql's CREATE VIEW; CREATE PROCEDURE script hid this same rejection and reached live "
+              "apply, where it failed on every run — re-run this checker with --per-statement (as a "
+              "PRIVILEGED identity; CI's read-only SA cannot use it, see module docstring) on a multi-"
+              "CREATE file to catch that shape too. See bigquery/234_staged_order_notice_resolve_"
+              "decorrelated.sql's header for the full incident and the three sanctioned fixes, by "
+              "statement kind: (1) DML — pre-materialise the inner source into an ARRAY<STRING> "
+              "scripting variable, then rewrite as NOT EXISTS (SELECT 1 FROM UNNEST(...)); (2) a "
+              "VIEW/SELECT — rewrite as LEFT JOIN + IS NULL, the idiom bigquery/59_catchup_autofire.sql "
+              "records (commit ff08a8b); (3) split one inequality-correlated EXISTS into two uncorrelated "
+              "ones joined by AND, as ops.sp_sq_safety_critical_dml_watch "
+              "(bigquery/75_scheduled_query_wrappers.sql) does. Pick by statement kind, not by habit.")
+    if syntax_errs or analysis_errs:
         return 1
     return 0
 

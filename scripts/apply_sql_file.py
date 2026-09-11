@@ -204,7 +204,16 @@ def check_canonical_provenance(path, sql, final=None):
         return False, False, (
             f"{len(matches)} top-level CREATE OR REPLACE statements found in {path} -- this script's "
             "contract (module docstring SAFETY PROPERTIES) is exactly ONE statement per file. Split "
-            "the file into one statement each.")
+            "the file into one statement each. Before splitting, VALIDATE each statement individually "
+            "(a privileged identity is required -- CI's read-only WIF SA cannot do this at all, see "
+            "scripts/check_sql_dryrun.py's PER-STATEMENT PASS docstring section for the measured CI "
+            "run proving it): run "
+            f"`python3 scripts/check_sql_dryrun.py --per-statement {path}`, which dry-runs every "
+            "top-level CREATE after the first on its own (skipping any that is a superseded, non-final "
+            "definition) and blocks on a genuine semantic defect -- e.g. the correlated-subquery-"
+            "cannot-de-correlate class that reached live apply via bigquery/233_staged_order_window_"
+            "dead_on_arrival.sql's CREATE VIEW; CREATE PROCEDURE script, exactly the shape this refusal "
+            "exists to stop you from applying unvalidated.")
     if not matches:
         return True, True, (
             f"{path} has no top-level CREATE_STMT match (not a CREATE OR REPLACE VIEW / PROCEDURE / "

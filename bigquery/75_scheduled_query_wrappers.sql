@@ -1109,6 +1109,15 @@ END;
 -- CRITICAL check (order_guard_omitted / order_guard_verdict_mismatch) is altered by 233 -- no
 -- predicate, threshold, exclusion or severity of either moves. Kept here, unmodified, for DR-rebuild
 -- apply-in-order reference only. DO NOT re-apply this CREATE live in isolation.
+--
+-- RE-POINTED (2026-09-11): the CURRENT canonical definition of this procedure is now
+-- bigquery/234_staged_order_notice_resolve_decorrelated.sql, NOT bigquery/233. 233 is itself
+-- superseded -- its staged_order_window_dead_on_arrival auto-resolve used a correlated NOT EXISTS
+-- against the joined view state.staged_order_window_invalid, which BigQuery rejects as
+-- non-de-correlatable, so that statement failed on every run from 2026-09-11. 234 carries 233 body
+-- forward byte-identical except the heartbeat literal v7 -> v8 and that one statement, which now
+-- reads its key set into an ARRAY<STRING> and tests membership against UNNEST of it. The paragraph
+-- above is kept as written for history; this paragraph is the live pointer.
 -- =====================================================================================================
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_daily_staging_cap_check`()
 BEGIN
