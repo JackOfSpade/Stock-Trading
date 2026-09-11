@@ -3781,3 +3781,65 @@ run-outcome path delivers its own diagnostic in its OWN alert instead. No new `o
 value was added — `'completed with warnings'` as a status would silently change every existing
 `status='completed'` predicate across the ~30 views/gates that read it; a `'completed'` row that also
 carries a `routine_run_warning` alert is how that distinction is expressed instead.
+
+## 51. The BigQuery MCP connector drops the `query` argument — and the *message* is the damaging part *(external dependency, 2026-08-18 → open)*
+
+**The defect.** `mcp__Google_Cloud_BigQuery__execute_sql` and `..._execute_sql_readonly` intermittently
+return `Required parameter is missing: query` for a well-formed call in which `query` WAS supplied. No
+BigQuery job is created (no `queryId`, zero bytes billed, nothing in `INFORMATION_SCHEMA.JOBS_BY_PROJECT`),
+so the request never reaches BigQuery. An immediate byte-identical re-issue clears it. First seen
+2026-08-18 (D1); 21 distinct (routine, run_date) sightings in `ops.run_log` through 2026-09-10 across
+D1, D2, D2a, D3, M1R, OPS0, OPS1, OPS2, SL2, SL5, AR_att and AR_orc; still reproducing 2026-09-11.
+
+**Localisation (measured 2026-09-11, 272 calls).** The fault is downstream of the model and upstream of
+BigQuery, and is **specific to the `query` argument of the two SQL-executing tools**:
+
+- SQL tools **25 / 192 failed (13.0%)**; sibling tools on the same connector — `list_table_ids`,
+  `list_dataset_ids` — **0 / 80**, including 20 interleaved call-for-call with failing
+  `execute_sql_readonly` calls in the same window (Fisher exact p ≈ 1.3e-4). The interleave is what
+  rules out "the bug is bursty and the control ran during a quiet period".
+- `projectId` was supplied in all 272 calls and reported missing **zero** times.
+- Not the model's emission: 30 byte-identical `tool_use` blocks in ONE assistant message → 25 serviced,
+  5 rejected.
+- Not positional: emitting `query` FIRST and `projectId` SECOND across 60 calls still produced 10
+  failures, all naming `query`.
+
+The MCP server is Google's (fully managed, closed-source, `bigquery.googleapis.com/mcp`); the claude.ai
+broker relaying the call is Anthropic's, and this failure shape is a known family there
+(`anthropics/claude-ai-mcp#628`, `claude-code#36518`/`#3966`/`#49910`). Which of the two owns it needs
+server-side logs we cannot see.
+
+**Why this has its own section rather than a line in the retry policy: the ERROR TEXT is a second,
+independent defect.** Calling `execute_sql_readonly` with `projectId` and deliberately NO `query`
+returns the **byte-identical** string. A caller therefore cannot distinguish *"you did not supply
+`query`"* from *"`query` was supplied and was lost in transit"* — and every misdiagnosis this bug has
+caused follows from that ambiguity, not from the drop:
+
+- **2026-09-09, AR_att** — read the error on a 6,495-byte `ops.run_log` note, inferred a size limit, and
+  rewrote the note down to **4,703 bytes**. ~2,291 bytes of audit prose lost. The run re-measured the
+  identical payload afterwards: it succeeded first try.
+- **2026-09-10, D2 and M1R independently** — both concluded a deterministic request-size ceiling existed
+  ("~12.6KB succeeds, ~15KB fails twice"), and that conclusion became **binding guidance in
+  `Claude_Task_Plan.md` and all 34 slices**. It is false: at a 13% per-call drop rate two consecutive
+  drops is p² ≈ 1.7%, and across a 30-call session at least one back-to-back double is ~39% — expected,
+  not deterministic. `ops.alerts` `5d971f00` was resolved WRONG on 2026-09-11, but the retraction never
+  reached the plan text, so the refuted rule stayed binding for a day. **Withdrawn in this changeset.**
+
+**The checksum does not protect you from this.** `ops.sp_write_adversarial_review` asserts the body
+SHA-256 at write time, but it hashes whatever the session supplies — text shortened *before* the digest
+is computed yields a self-consistent row that passes every assertion. Verified 2026-09-11:
+`events.adversarial_reviews` is 193 rows with **0** hash mismatches, i.e. that table is intact *and* the
+check could never have revealed this damage class. The defence is not making the misdiagnosis.
+
+**Standing rule (unchanged, and confirmed correct by this work).** One immediate verbatim re-issue,
+no wait, before any other branch — `Claude_Task_Plan.md` §Observability → MCP-TRANSPORT REJECTION. All
+25 observed drops were transient; `state.retry_telemetry` shows every recorded arg-drop retry recovered
+and none exhausted. A second identical failure is the same bug again: re-issue and work THE LADDER.
+**Never shorten a record to make a write succeed.**
+
+**Status: reported, not yet filed.** A complete, paste-ready vendor report — including the
+misleading-message defect and the retry-semantics question — is at
+`ops/spikes/bigquery-mcp-query-arg-drop-2026-09-11.md` §7. Filing needs a signed-in browser session:
+https://github.com/anthropics/claude-ai-mcp/issues/new/choose (primary), optionally the BigQuery
+component of Google Issue Tracker. This session could not submit it — attaching an external repository
+is refused by the execution environment's permission classifier. **That is the one open action.**
