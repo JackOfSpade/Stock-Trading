@@ -48,6 +48,14 @@ breadth AS (
   FROM {{ source('events', 'regime_events') }}
   WHERE key = 'EQUITY_BREADTH_PCT' AND numeric_value IS NOT NULL
 ),
+-- RATES (landed 2026-09-13, bigquery/236). Deliberately the SAME shape as `breadth` above — the other
+-- non-price axis — so both non-price axes read events.regime_events through one idiom. numeric_value
+-- is NUMERIC, so the >= 4.90 test below is exact decimal comparison, not float.
+rates AS (
+  SELECT as_of_date AS mark_date, numeric_value AS y10_pct
+  FROM {{ source('events', 'regime_events') }}
+  WHERE key = 'TREASURY_10Y' AND numeric_value IS NOT NULL
+),
 -- One row per session per axis, carrying the RAW (possibly NULL) reading for that session.
 raw AS (
   SELECT s.as_of_date, axis,
@@ -65,12 +73,17 @@ raw AS (
            -- Shock needs BOTH limbs: the standing overlay alone is never a defensive level.
            WHEN 'shock'      THEN IF(p.brent IS NOT NULL AND g.shock_overlay IS NOT NULL,
                                      CAST(g.shock_overlay = 'acute' AND p.brent > 95 AS INT64), NULL)
-           WHEN 'rates'      THEN NULL   -- no daily 10Y series reachable; see header
+           -- Single-limb by design: the hike-odds limb launches OFF (§2.2), so the LEVEL is the
+           -- 10Y alone. NULL on a session with no Treasury quote (bond holidays with equities open)
+           -- so the axis goes unmeasured and FREEZES, rather than reading as "not defensive".
+           WHEN 'rates'      THEN IF(rt.y10_pct IS NOT NULL,
+                                     CAST(rt.y10_pct >= NUMERIC '4.90' AS INT64), NULL)
          END AS raw_level
   FROM sessions s
   CROSS JOIN UNNEST(['volatility','breadth','index','credit','shock','rates']) AS axis
   LEFT JOIN px_w p ON p.mark_date = s.as_of_date
   LEFT JOIN breadth b ON b.mark_date = s.as_of_date
+  LEFT JOIN rates rt ON rt.mark_date = s.as_of_date
   LEFT JOIN {{ ref('park_signal_daily') }} g ON g.mark_date = s.as_of_date
 ),
 -- Session index per axis, and last-measured carry-forward.

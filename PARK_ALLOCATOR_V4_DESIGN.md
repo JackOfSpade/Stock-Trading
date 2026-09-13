@@ -126,7 +126,7 @@ pinned in the view header; these exact forms):
 | volatility | VIX > 20d SMA **and** VIX > 15 | SMA built from `events.signal_marks` (park_signal_daily has `vix_med3`, NOT a 20d SMA — the SMA must be built; convention: includes current close) |
 | breadth | `EQUITY_BREADTH_PCT` < 66 | `events.regime_events`; carry-forward ≤ 2 sessions, then UNTESTABLE |
 | index | SPY < 50dma **or** `dd_from_252d_high` **< −0.03** | `state.park_signal_daily` (dd is stored NEGATIVE — trap #9) |
-| rates | 10Y ≥ 4.90 | NO daily in-house series today — see Phase-1 data decision. Hike-odds limb launches data-permitting-OFF (no series exists) |
+| rates | 10Y ≥ 4.90 | **LIVE since 2026-09-13.** `events.regime_events` TREASURY_10Y (`numeric_value`), backfilled 2025-07-18.. by bigquery/236, written daily by D2a STEP 1e. Hike-odds limb stays OFF — a deliberate single-limb spec, not a data gap. **Threshold provenance: 4.90 was set with NO firing-rate evidence** (see the note under this table) |
 | credit | hy_oas fresh and above bar | UNTESTABLE today (FRED dark, month-old aggregate). HYG/IEF ratio proxy from signal_marks is the candidate feed |
 | shock | `shock_overlay='acute'` **and** a commodity/geopolitical PRICE limb confirms (Brent > 95) | NO Brent series exists anywhere in the stack today — the axis CANNOT fire until the feed lands. The overlay alone standing for weeks is a LEVEL, never an EVENT |
 
@@ -150,33 +150,46 @@ this session against live sources, not assumed:
   cross-validates against the primary record: BZUSD prints 94.65 on 2026-09-01, exactly the figure
   D1's own 09-01 de-risk record cites. Ingest it into `state.signal_marks_curated` on D2a's existing
   STEP 1d pass — no new routine, no new cron (§0.4).
-- **rates → not landed YET, for a plumbing reason — NOT a vendor constraint (corrected 2026-09-13).**
-  The rates axis launches UNTESTABLE, contributing to NEITHER firing counts NOR the standing cap, and
-  the hike-odds limb launches OFF. The reason is narrow: the daily 10Y **is** fetched successfully on
-  every trading day, but it is recorded only as **free text inside `events.regime_events.rationale`**
-  (scope `TECHNICAL_SIGNAL`, key `SUSTAINED_INVERSION`) — there is no numeric column
-  `state.park_axis_daily` can join against.
+- **rates → LANDED 2026-09-13.** The daily 10Y now lands STRUCTURALLY as
+  `events.regime_events` scope `TECHNICAL_INPUT`, key `TREASURY_10Y`, `numeric_value` — the same
+  shape `EQUITY_BREADTH_PCT` uses, so `state.park_axis_daily`'s rates CTE is the breadth CTE with one
+  literal changed. History 2025-07-18..2026-09-11 backfilled by `bigquery/236_treasury_10y_signal_feed.sql`
+  (287 rows from 288 quotes); D2a STEP 1e writes the row each trading day thereafter.
 
   **This bullet previously asserted that FMP `economics` returns ACCESS DENIED on the current plan
   tier (verified 2026-09-04), and instructed readers not to re-raise `fmp_quote_plan_gated` for it.
   That was FALSE, and the do-not-re-investigate clause made it self-sealing for nine days.** Re-probed
   live 2026-09-13 against the exact date cited as the denial, `economics`/`treasury-rates` returned a
   full payload for 2026-09-04 (`year10` 4.78, `year2` 4.37). D2a's own `events.regime_events`
-  `SUSTAINED_INVERSION` row for 2026-09-04 records that same successful call with those same two
-  figures — the routine was demonstrably using the endpoint on the day it was written down as denied —
-  and `ops/connector_tools.yaml`'s `economics` entry (`use: required`) never recorded a denial either.
-  This is the same "endpoint-level gate wears tool-level wording" trap the FMP tier matrix already
-  documents having caused one prior incident (commit d020e50, the 2026-08-26 `quote`/`batch-quote`
-  case), repeated here for `economics` and not caught by the same-day review pass (4011a28) that
-  edited text directly beside it.
+  `SUSTAINED_INVERSION` row for that date records the same successful call with the same two figures —
+  the routine was demonstrably using the endpoint on the day it was written down as denied — and
+  `ops/connector_tools.yaml`'s `economics` entry (`use: required`) never recorded a denial either.
+  The real gap was only ever that the 10Y was captured as free text in `rationale`, with no numeric
+  column to join on. This is the same "endpoint-level gate wears tool-level wording" trap the FMP tier
+  matrix already documents having caused one prior incident (commit d020e50, the 2026-08-26
+  `quote`/`batch-quote` case), repeated for `economics` and not caught by the same-day review pass
+  (4011a28) that edited text directly beside it.
 
-  **To land it** (deliberately NOT done in the 2026-09-13 correction pass, which was factual only):
-  capture the 10Y structurally — cheapest form is a `TECHNICAL_INPUT` / `TREASURY_10Y` row written to
-  the existing `events.regime_events` numeric column alongside D2a's existing STEP 1e call — then
-  point `bigquery/216`'s `'rates'` CASE branch at it and apply the `10Y >= 4.90` threshold specified
-  below. **§2.7's re-pin rule binds:** re-run the Phase-1 shadow with six axes live and re-pin the
-  acceptance f-path/cap arithmetic **in the same commit** that lands the feed, exactly as Brent/shock
-  did in c0a6c61. Do NOT tune the threshold to reproduce the old numbers. Only then flip to LIVE.
+  **WHAT LANDING IT MOVED — nothing, and that is a measured result rather than an assumption.** The
+  §2.7 acceptance f-path is **byte-identical** six-axis vs five-axis (09-01 f=25; 09-02/03/04 f=50),
+  and so is the four-arm AI-era aggregate. The reason is arithmetic, not luck: across the 288
+  backfilled quotes the 10Y clears 4.90 on exactly **two** sessions — 2026-09-10 (4.95) and 2026-09-11
+  (4.96) — and on both of those `cap_pct` was **already clamped at 100** by four other standing axes,
+  so `LEAST(100, 25 × standing)` is unchanged when standing goes 4 → 5. The visible deltas are
+  confined to `standing_defensive_count` (4 → 5) and `firing_count` (1 → 2) on those two dates,
+  `testable_axes` (5 → 6) throughout, and `axis_set_fingerprint`, which now reads
+  `breadth+credit+index+rates+shock+volatility`. `ladder_start_date` stays 2026-06-01 because the
+  backfill reaches back to the `sessions` CTE's own lower bound.
+
+  **THRESHOLD PROVENANCE — flagged, deliberately not corrected.** On those 288 quotes the axis fires
+  **0.69 %** of sessions, against volatility 44.4 %, index 21.1 % and credit 14.3 %. Credit's −50bp
+  level came from an explicit REJECTED/ADOPTED firing-rate sweep recorded in bigquery/216's header;
+  **10Y ≥ 4.90 had no such study** — it was written while the series was believed unreachable, so no
+  firing rate could be computed for it. An axis that fires on 0.69 % of sessions carries very little
+  information, and at that rarity it will essentially only ever add standing on days when other axes
+  have already engaged the ladder. That is a SPEC question, and §2.2's re-pin rule forbids tuning an
+  axis definition to move the numbers — so the threshold is landed **as specified** and the rarity is
+  recorded here for the owner to rule on separately. Changing 4.90 means changing this table first.
 
 **Consequence, which the implementer must carry into the acceptance numbers:** the live axis set is
 **five** (volatility, breadth, index, credit, shock), not three and not six. `cap = min(100, 25 ×
@@ -342,19 +355,40 @@ across qualifying closes oldest-close-first, replacing bigquery/178's per-close 
   bigquery/179's prev-lag idiom, strict `>` on DATE joins; columns include `ladder_start_date` (first
   date all live axes measurable) and `ladder_index_ai_era` (NULL before
   `GREATEST(ladder_start_date, ai_era_start_date)`); never coalesce an unmeasured axis to "not
-  defensive". **ACCEPTANCE RE-PINNED 2026-09-04 TO THE FIVE-AXIS SET NOW LIVE** (the three-axis path below is
-  SUPERSEDED; kept only to show what moved and why). Phase 1 landed the Brent feed (bigquery/217), so
-  the shock axis is testable and the replay changed exactly as the re-pin rule anticipated:
+  defensive". **ACCEPTANCE RE-PINNED 2026-09-13 TO THE SIX-AXIS SET NOW LIVE** (the three-axis path below is
+  SUPERSEDED; kept only to show what moved and why. The 2026-09-04 five-axis re-pin it replaced is
+  folded in here rather than kept separately, because landing rates did not move the f-path at all —
+  see the next paragraph.) Phase 1 landed the Brent feed (bigquery/217), making the shock axis
+  testable, and the 10Y feed (bigquery/236), making rates testable. `axis_set_fingerprint` now reads
+  `breadth+credit+index+rates+shock+volatility`. The replay:
   **09-01 standing 2 (breadth, volatility) → cap 50 → f=25; 09-02 standing 3 (shock ENTERS as Brent
   crosses 95) → cap 75 → f=50; 09-03 and 09-04 standing 1 but STRICT confirmation holds the cap at
-  75, so f stays 50.** Measured four-arm result over the AI era (31 sessions), all on one
+  75, so f stays 50.**
+
+  **THE SIXTH AXIS CHANGED NO NUMBER IN THIS PATH, and that was verified rather than assumed** — the
+  f-path above is byte-identical measured against the five-axis and six-axis views on the same tape.
+  The 10Y clears its 4.90 limb on exactly two sessions in the whole backfilled record (2026-09-10
+  4.95, 2026-09-11 4.96), and on both `cap_pct` was already clamped at 100 by four other standing
+  axes, so `LEAST(100, 25 × standing)` is unmoved by standing going 4 → 5. What did change:
+  `testable_axes` 5 → 6, the fingerprint, and `standing_defensive_count` / `firing_count` on those two
+  dates only. `ladder_start_date` holds at 2026-06-01.
+
+  Measured four-arm result over the AI era (**34 sessions, 2026-07-24..2026-09-10**), all on one
   close-to-close TOTAL-return ruler inside `analytics.park_ladder_shadow`: never-switch VOO
-  **+4.732%** | graded ladder **+2.995%** (3 f-changes, engaged 35.5% of sessions) | actual binary
-  allocator **+0.758%** | always-SGOV **+0.432%**. The ladder recovers **+2.237pp** of the
-  allocator's shortfall — ~57% of the 3.974pp gap to never switching — while still trailing
-  never-switching by 1.737pp. Read in both directions: real evidence that GRADING beats the binary
-  switch (the owner's thesis), and NOT evidence the allocator should de-risk at all. n=31 and ONE
-  episode: a direction, not a verdict.
+  **+2.658%** | graded ladder **+2.007%** (3 f-changes, engaged 41.2% of sessions) | actual binary
+  allocator **−0.970%** | always-SGOV **+0.502%**. The ladder recovers **+2.977pp** of the allocator's
+  shortfall — ~82% of the 3.628pp gap to never switching — while still trailing never-switching by
+  0.651pp, and beating always-SGOV by 1.505pp.
+
+  **Note what moved here versus the 2026-09-04 pinning (31 sessions: VOO +4.732% | ladder +2.995% |
+  actual +0.758% | SGOV +0.432%), because it is NOT the axis change.** Those figures went stale from
+  elapsed tape alone — three more sessions and a market that gave back ground — and the axis-independent
+  never-switch arm moved most of all. This is the hazard §2.2's re-pin rule is really guarding against:
+  an acceptance table restated only when someone remembers will drift on time even if the machine never
+  changes. Read the direction, not the decimals: grading still beats the binary switch (the owner's
+  thesis) by a wide margin, and still does NOT establish that the allocator should de-risk at all —
+  never-switching remains ahead of every alternative on this tape. n=34 and ONE episode: a direction,
+  not a verdict.
   Superseded three-axis acceptance: reproduce the replay table (f=25 only on 09-01/09-02; the 09-02 vol margin
   of 0.04; the 08-11 breadth carry-forward) with these conventions pinned in the header: 20d SMA
   includes current close **and is computed from `state.signal_marks_curated`, NEVER
@@ -401,11 +435,32 @@ across qualifying closes oldest-close-first, replacing bigquery/178's per-close 
 
 ## 3. The replay's verdict (and its honest limits)
 
-- **08-05..09-03:** ladder path f=0 every day except 25 on 09-01/09-02, decayed to 0 on 09-03.
-  Close-to-close: ladder +0.076% | actual binary −1.015% | never-switch VOO +0.441%. Ladder vs actual
-  **+1.091pp ≈ +$167**; ladder vs never-switch −0.365pp ≈ −$56.
-- **The 09-01 episode:** actual cost −$225 close-to-close ($214.32 on real fills). Ladder at f=25:
-  −$56 (**74% cost reduction**). The landed binary rule's KEEP: $0 — best of all variants, but only
+> **RE-PINNED 2026-09-13 against the SIX-AXIS set now live.** Until that date this section had **never
+> been re-pinned at all** — not even by the 2026-09-04 five-axis pass (commit d5b4668), which touched
+> only §2.7 despite §2.2's rule naming §3's cost-reduction figures explicitly. Its lead bullet had
+> consequently gone factually wrong: it described an f-path the machine stopped producing when the
+> Brent feed landed. Bullets 1–2 below are re-measured; bullets 3–6 are flagged in place, since they
+> rest on reconstructions and base rates rather than on the shadow's current output.
+
+- **08-05..09-03 (22 sessions), re-measured 2026-09-13:** ladder path f=0 through 08-31, then
+  **09-01: 25 → 09-02: 50 → 09-03: 50**. Close-to-close: ladder **−0.374%** | actual binary
+  **−1.207%** | never-switch VOO **+0.245%** | always-SGOV **+0.306%**. Ladder vs actual
+  **+0.833pp ≈ +$127**; ladder vs never-switch **−0.619pp ≈ −$95**.
+
+  *What this bullet used to say, and why it was wrong:* "f=0 every day except 25 on 09-01/09-02,
+  decayed to 0 on 09-03. ladder +0.076% | actual binary −1.015% | never-switch VOO +0.441%. Ladder vs
+  actual +1.091pp ≈ +$167; ladder vs never-switch −0.365pp ≈ −$56." Two independent drifts are folded
+  into that gap and should not be confused. **(a) The axis set richened.** Landing Brent (c0a6c61)
+  gave 09-02 a third standing axis → cap 75 → f=50, and the STRICT three-reading decay confirmation
+  then HOLDS 50 on 09-03 instead of decaying to 0 — so the ladder now carries defensive weight through
+  a session it used to exit. **(b) The tape itself was restated**: even never-switch VOO, which no
+  axis can touch, moved +0.441% → +0.245% on the same dates. Landing the rates axis contributed
+  **nothing** to either — the 10Y is below 4.90 on every session in this window.
+- **The 09-01 episode (re-checked 2026-09-13, still valid):** actual cost −$225 close-to-close
+  ($214.32 on real fills). Ladder at f=25: −$56 (**74% cost reduction**). This survives both re-pins
+  unchanged because f on 09-01 is still 25 under the six-axis machine — 09-01 has two standing axes
+  (breadth, volatility), neither Brent nor the 10Y is defensive that day, so cap 50 and conviction 60
+  still round to the 25 step. The landed binary rule's KEEP: $0 — best of all variants, but only
   because the AI hand-counted one axis; MECHANICALLY 09-01 was a 2-axis day (VIX 16.34 > 20d 15.19
   and > 15; breadth 62.62 first sub-66 print), so a mechanical binary rule converts at full size
   (−$225). **The ladder's value is capping mechanically-legitimate conversions at quarter cost, not
@@ -426,6 +481,18 @@ across qualifying closes oldest-close-first, replacing bigquery/178's per-close 
 - **Sample honesty:** the live quantification rests on ONE de-risk episode and 21 breadth
   observations, and in that one episode the landed binary rule beat the ladder. The case for the
   ladder is the July reconstruction, the asymmetric-cost logic, and the base rates — not September.
+
+- **Status of the three bullets above (flagged 2026-09-13, NOT re-measured).** The July
+  reconstruction, the oscillation base rates and the tap-load projection were computed at design time
+  against the then-current machine and are NOT outputs of `analytics.park_ladder_shadow`, so a shadow
+  re-run does not refresh them and this pass did not silently restate them. Two are known to be
+  axis-set-sensitive and should be re-derived before they are leaned on again: the July
+  reconstruction's noise-exit/re-engage dates assume the three-axis standing counts, and the
+  oscillation count is a vol-axis-only statistic that says nothing about how six axes interact. The
+  tap-load figure is the one most likely to have moved in the WRONG direction — every axis added is
+  another way for standing to change, hence another potential step-pair — and adding rates did not
+  change it here only because rates is defensive on 0.69% of sessions. Re-deriving all three is its
+  own task; flagging them beats leaving them looking freshly measured.
 
 ---
 

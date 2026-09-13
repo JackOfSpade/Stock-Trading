@@ -68,13 +68,27 @@
 --  1. The shadow computes from the SAME axis view the ladder would consume, so it is blind to
 --     frozen-axis stuck states — it cannot tell you that an axis stopped updating, only what the
 --     rules do given the axis states it sees. 216's sessions_since_measured is where that lives.
---  2. It validates only the TESTABLE axis subset. rates is UNTESTABLE by documented property
---     (FMP economics is plan-gated), so this is a five-axis shadow of a six-axis design, and
---     axis_set_fingerprint on 216 records which set produced any given row.
---  3. VINTAGE. This shadow scores each session with all five axes MEASURED, because it runs
+--  2. It validates only the TESTABLE axis subset. As of 2026-09-13 that is ALL SIX — the rates axis
+--     landed (bigquery/236 backfill + 216's CASE arm), so axis_set_fingerprint now reads
+--     'breadth+credit+index+rates+shock+volatility' and this is a six-axis shadow of a six-axis
+--     design. It previously read "rates is UNTESTABLE by documented property (FMP economics is
+--     plan-gated)"; that premise was FALSE and is corrected at length in 216's header. The
+--     fingerprint on 216 still records which set produced any given row, which is what makes a
+--     stale acceptance table self-evident.
+--     WHAT LANDING RATES ACTUALLY MOVED, measured the same day: NOTHING in the replay. f_pct is
+--     byte-identical on every session, and the four-arm AI-era aggregate is unchanged, because the
+--     only two sessions on which rates is defensive (2026-09-10 4.95, 2026-09-11 4.96 vs the >= 4.90
+--     limb) are sessions where cap_pct was ALREADY clamped at 100 by four other standing axes. The
+--     visible deltas are confined to standing_defensive_count (4 -> 5) and firing_count (1 -> 2) on
+--     those two dates, testable_axes (5 -> 6) throughout, and the fingerprint.
+--  3. VINTAGE. This shadow scores each session with all six axes MEASURED, because it runs
 --     retrospectively. The LIVE path structurally cannot: D1 reads at 16:12-16:36 MT and D2a does
---     not write signal_marks until 16:41 MT, so four of the five axes are always one session stale
---     at the moment the call is made (216's axes_measured_today counts the fresh ones). Every
+--     not write signal_marks until 16:41 MT, so FIVE of the SIX axes are always one session stale
+--     at the moment the call is made — volatility/credit/index/shock via signal_marks, and now rates
+--     too, since D2a STEP 1e writes TREASURY_10Y in that same post-D1 window; only breadth is
+--     same-session, because D1 writes EQUITY_BREADTH_PCT itself mid-run. (Was "four of the five"
+--     until rates landed 2026-09-13; adding an axis fed by D2a widened the stale set, it did not
+--     narrow it.) 216's axes_measured_today counts the fresh ones. Every
 --     episode delta reported below is therefore an UPPER BOUND on what the live ladder can
 --     achieve, and the Phase-3 re-evaluation must discount it rather than compare like for like.
 --

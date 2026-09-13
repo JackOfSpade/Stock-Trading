@@ -25,50 +25,53 @@
 --   breadth     LIVE   events.regime_events EQUITY_BREADTH_PCT < 66. Series starts 2026-08-05.
 --   index       LIVE   SPY < 50dma OR dd_from_252d_high < -0.03.
 --   credit      LIVE   HYG/IEF ratio >= 50bp BELOW its own 20d SMA (calibration below).
---   shock       PENDING FEED  shock_overlay='acute' AND Brent > 95. Brent (FMP commodity 'BZUSD')
---                             is verified reachable on the current plan and cross-validates against
---                             D1's own 09-01 record (94.65), but is NOT yet ingested. Until a
---                             BZUSD row exists in state.signal_marks_curated this axis reports
---                             testable=FALSE and contributes to NEITHER count — it activates
---                             automatically when the feed lands, with no change to this file.
---   rates       UNTESTABLE    The daily 10Y IS fetched successfully every trading day, but only ever
---                             lands as FREE TEXT inside events.regime_events.rationale (scope
---                             TECHNICAL_SIGNAL, key SUSTAINED_INVERSION) — there is no numeric column
---                             this view can join against. That, and only that, is why the axis is
---                             stood down. The hike-odds limb launches OFF.
+--   shock       LIVE   shock_overlay='acute' AND Brent > 95. Brent (FMP commodity 'BZUSD') was
+--                      ingested by bigquery/217 and D2a STEP 1d writes it each trading day.
+--                      (This line read "PENDING FEED ... is NOT yet ingested" until 2026-09-13; that
+--                      was stale, not wrong-at-the-time — the feed landed in c0a6c61 and the axis has
+--                      been in state.park_axis_daily's axis_set_fingerprint ever since. Corrected in
+--                      the same pass that landed rates, since a "which axes are live" block that
+--                      misreports a live axis is the same defect class twice over.)
+--   rates       LIVE          10Y >= 4.90, from events.regime_events (scope TECHNICAL_INPUT, key
+--                             TREASURY_10Y, numeric_value). History backfilled 2025-07-18..2026-09-11
+--                             by bigquery/236; D2a STEP 1e writes the row each trading day. The
+--                             hike-odds limb stays OFF (design doc S2.2) so this axis is single-limb.
 --
---                             CORRECTED 2026-09-13 — this block previously read "FMP economics is
---                             plan-gated (ACCESS DENIED, verified 2026-09-04)", and told future
---                             sessions not to re-raise fmp_quote_plan_gated for it. THAT PREMISE WAS
---                             FALSE and the do-not-re-investigate note made it self-sealing. FMP
---                             economics/treasury-rates is NOT gated on this tier: re-probed live
---                             2026-09-13 for the exact date cited as the denial, it returned a full
---                             payload (2026-09-04: year10 4.78, year2 4.37) — and D2a's OWN
---                             events.regime_events SUSTAINED_INVERSION row for 2026-09-04 records
---                             that same successful call with those same two figures, i.e. the
---                             routine was demonstrably using the endpoint on the day it was written
---                             down as denied. ops/connector_tools.yaml's economics entry (use:
---                             required) never recorded a denial either. Nine days of the RATES axis
---                             contributing to neither the firing count nor the standing cap rest on
---                             this error, not on a vendor constraint.
+--                             LANDED 2026-09-13, closing a nine-day stand-down that rested on a FALSE
+--                             premise. This block previously read "FMP economics is plan-gated (ACCESS
+--                             DENIED, verified 2026-09-04)" and instructed future sessions not to
+--                             re-raise fmp_quote_plan_gated for it -- a do-not-re-investigate note that
+--                             made the error self-sealing. FMP economics/treasury-rates was never
+--                             gated: re-probed live 2026-09-13 for the very date cited as the denial,
+--                             it returned a full payload (2026-09-04: year10 4.78, year2 4.37), and
+--                             D2a's OWN events.regime_events SUSTAINED_INVERSION row for 2026-09-04
+--                             records that same successful call with those same two figures. The real
+--                             gap was only that the 10Y landed as free text in `rationale` with no
+--                             numeric column to join on. See PARK_ALLOCATOR_V4_DESIGN.md's
+--                             "rates -> not landed YET" bullet (corrected) and RUNBOOK notes.
 --
---                             TO ACTUALLY LAND THIS AXIS (deliberately NOT done in the 2026-09-13
---                             correction pass, which was factual only): capture the 10Y structurally
---                             — cheapest form is a TECHNICAL_INPUT / TREASURY_10Y row written into
---                             the existing events.regime_events numeric column alongside D2a's
---                             STEP 1e call — then point the 'rates' CASE branch below at it and
---                             apply the design's 10Y >= 4.90 threshold. Design doc §2.7's re-pin
---                             rule binds: re-run the Phase-1 shadow with six axes live and re-pin
---                             the acceptance f-path/cap arithmetic IN THE SAME COMMIT that lands the
---                             feed (the discipline Brent/shock followed in c0a6c61). Do NOT tune the
---                             threshold to reproduce the old numbers. Only then flip to LIVE.
+--                             CALENDAR ASYMMETRY -- the Treasury and equity calendars disagree BOTH
+--                             ways over the backfilled window. Three equity sessions have NO Treasury
+--                             quote (2025-10-13 Columbus Day, 2025-11-11 Veterans Day -- bond market
+--                             shut, equities open -- plus a 2025-10-16 vendor gap): the axis reads NULL
+--                             and FREEZES on those, well inside the >20-session backstop. And
+--                             2026-04-03 (Good Friday) is a Treasury date that is NOT an equity
+--                             session; bigquery/236's `JOIN state.market_calendar ... is_trading_day`
+--                             drops it, which is why 288 quotes became 287 rows. This is the same trap
+--                             the SESSION-ANCHORED note below describes for price marks -- and the
+--                             reason the rates CTE is joined FROM `sessions`, never driven by its own
+--                             date set.
 --
---                             NOTE the inline comment on the 'rates' CASE branch in the view body
---                             below still reads "no daily 10Y series reachable" — imprecise for the
---                             same reason. It is deliberately left byte-identical: it sits INSIDE the
---                             object body, so editing it would drift check_live_sql_parity.py against
---                             the deployed view for a pure comment change. It points here; this is
---                             the corrected account.
+--                             THRESHOLD PROVENANCE -- read before "tuning" this. Unlike credit (whose
+--                             -50bp level came from the explicit REJECTED/ADOPTED firing-rate sweep
+--                             recorded below), 10Y >= 4.90 was specified in S2.2 with NO firing-rate or
+--                             distributional evidence, while the series was believed unreachable. On
+--                             the 288 quotes backfilled it fires on just 2 sessions -- 2026-09-10
+--                             (4.95) and 2026-09-11 (4.96) -- i.e. 0.69%, against volatility 44.4%,
+--                             index 21.1% and credit 14.3%. That rarity is FLAGGED, deliberately NOT
+--                             corrected here: the threshold is a SPEC decision and S2.7's re-pin rule
+--                             forbids tuning an axis definition to move the numbers. Changing 4.90 is
+--                             an owner call, made in the design doc first.
 --
 -- SIGN TRAP (design doc §0.9): dd_from_252d_high is stored NEGATIVE. The index limb is dd < -0.03,
 -- never "drawdown > 3%". A wrong sign yields a plausible-looking inverted axis.
@@ -158,6 +161,14 @@ breadth AS (
   FROM `stock-trading-498512.events.regime_events`
   WHERE key = 'EQUITY_BREADTH_PCT' AND numeric_value IS NOT NULL
 ),
+-- RATES (landed 2026-09-13, bigquery/236). Deliberately the SAME shape as `breadth` above — the other
+-- non-price axis — so both non-price axes read events.regime_events through one idiom. numeric_value
+-- is NUMERIC, so the >= 4.90 test below is exact decimal comparison, not float.
+rates AS (
+  SELECT as_of_date AS mark_date, numeric_value AS y10_pct
+  FROM `stock-trading-498512.events.regime_events`
+  WHERE key = 'TREASURY_10Y' AND numeric_value IS NOT NULL
+),
 -- One row per session per axis, carrying the RAW (possibly NULL) reading for that session.
 raw AS (
   SELECT s.as_of_date, axis,
@@ -175,12 +186,17 @@ raw AS (
            -- Shock needs BOTH limbs: the standing overlay alone is never a defensive level.
            WHEN 'shock'      THEN IF(p.brent IS NOT NULL AND g.shock_overlay IS NOT NULL,
                                      CAST(g.shock_overlay = 'acute' AND p.brent > 95 AS INT64), NULL)
-           WHEN 'rates'      THEN NULL   -- no daily 10Y series reachable; see header
+           -- Single-limb by design: the hike-odds limb launches OFF (§2.2), so the LEVEL is the
+           -- 10Y alone. NULL on a session with no Treasury quote (bond holidays with equities open)
+           -- so the axis goes unmeasured and FREEZES, rather than reading as "not defensive".
+           WHEN 'rates'      THEN IF(rt.y10_pct IS NOT NULL,
+                                     CAST(rt.y10_pct >= NUMERIC '4.90' AS INT64), NULL)
          END AS raw_level
   FROM sessions s
   CROSS JOIN UNNEST(['volatility','breadth','index','credit','shock','rates']) AS axis
   LEFT JOIN px_w p ON p.mark_date = s.as_of_date
   LEFT JOIN breadth b ON b.mark_date = s.as_of_date
+  LEFT JOIN rates rt ON rt.mark_date = s.as_of_date
   LEFT JOIN `stock-trading-498512.state.park_signal_daily` g ON g.mark_date = s.as_of_date
 ),
 -- Session index per axis, and last-measured carry-forward.
