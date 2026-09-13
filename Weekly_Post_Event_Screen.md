@@ -4,6 +4,7 @@
 
 **Run date:** 2026-09-13 (Sunday) · **Routine:** W2, deep research · **Marker:** 2026-W37
 **Intake watermark:** 2026-09-06T08:44:25Z (this routine's own prior completion) · **Catch-up window:** 6.97 days = 1.00x the weekly norm, so no `CATCHUP` token is owed.
+**Durable record:** `events.decision_log` `4d6a3ff8-41a7-4136-9e77-aa72a21f9aa6` (`entry_type='post-event-enrichment'`, strategy B) · one `ops.alerts` info row, `e1ff0ebc-c2fd-4249-8dbd-e50555b6b1c9`.
 
 **SCREEN MODE: INDEX (B router DO-NOT-ACTIVATE as of 2026-09-03).**
 
@@ -329,7 +330,7 @@ This is the **sixth consecutive router-gated cycle** and the **third consecutive
 - the **2026-09-09** screen: **3 of 8 passed** rows and **7 of 9 rejected** rows carry `market_cap_usd = NULL` (the three passed ones disclosed via a `market_cap_note` string, which is honest but is still a NULL on the numeric field);
 - the **2026-09-10** screen: clean at item level, but the top-level `degraded` key is **absent** where the other four rows carry it explicitly.
 
-Two things make this worth filing rather than absorbing. First, it is **structurally different from the closed defect** — missing keys and nulled dates rather than drifted spellings — so a check written against the old shape would pass. Second, it is concentrated almost entirely in `rejected_notable`, which W2 does not rank from; the consumer it actually reaches is **W5's RESEARCH-SCREEN SCORECARD** via `state.research_screen_calls`, whose agreement counts are computed over both arms. Filed as an `ops.alerts` info row naming D1 as owner. **Not fixed here** — D1's screen-record schema is D1's surface, and this run has no authority over it.
+Two things make this worth filing rather than absorbing. First, it is **structurally different from the closed defect** — missing keys and nulled dates rather than drifted spellings — so a check written against the old shape would pass. Second, it is concentrated almost entirely in `rejected_notable`, which W2 does not rank from; the consumer it actually reaches is **W5's RESEARCH-SCREEN SCORECARD** via `state.research_screen_calls`, whose agreement counts are computed over both arms. Filed as `ops.alerts` info row **`e1ff0ebc-c2fd-4249-8dbd-e50555b6b1c9`** (`screen_fields_schema_drift`, source W2, owner D1). **Not fixed here** — D1's screen-record schema is D1's surface, and this run has no authority over it.
 
 The previous cycle's second D1 finding, `screen_move_no_disposition` (`ed5e2e24`, the BMNR 09-03 case), is **still open** and is not re-raised. Nothing in this intake bears on it either way.
 
