@@ -1,28 +1,30 @@
-2026-09-10
-<!-- d1_scan_through_utc: 2026-09-10T22:30:10Z -->
+2026-09-13
+<!-- d1_scan_through_utc: 2026-09-13T22:34:33Z -->
 
-# Daily Market Development Scan — 2026-09-10 (Thu, MT)
+# Daily Market Development Scan — 2026-09-13 (Sun, MT)
 
-**Scan window: 2026-09-09 16:40 MT → 2026-09-10 16:30 MT** (23.8h — an ordinary single-cycle window, no gap. Resolved from the prior `Daily.md`'s `<!-- d1_scan_through_utc: 2026-09-09T22:40:27Z -->` marker, cross-checked against that file's own commit at 2026-09-09T22:44:24Z; the two agree to within four minutes. `state.routine_catchup_window` independently returns `window_start_ts = 2026-09-09T22:47:37Z`, `window_days = 0.97`, `never_completed = false` — the same boundary, so no catch-up widening applies and no `CATCHUP[...]` token is owed. The git history is **not** shallow at this fire (1,402 commits, `is-shallow-repository = false`), so the HISTORY-DEPTH PRECHECK passes and the git leg of the window resolution is sound rather than merely silent.)
+**Scan window: 2026-09-10 16:30 MT → 2026-09-13 16:34 MT** (72.1h — a **MULTI-SESSION GAP, stated explicitly because it exceeds the ~50h threshold**. This is not a missed run: D1's cadence is Sun–Thu, so Friday's session is covered by the following **Sunday** fire by design. Resolved from the prior `Daily.md`'s `<!-- d1_scan_through_utc: 2026-09-10T22:30:10Z -->` marker, cross-checked against that file's own commit at 2026-09-10T22:36:08Z — the two agree to within six minutes. `state.routine_catchup_window` independently returns `window_start_ts ≈ 2026-09-10T13:36:55Z`, `window_days = 2.98`, `never_completed = false`, against a `fallback_days = 3` bar — cadence-normal for a Sun–Thu routine crossing a weekend, so **no `CATCHUP[...]` token is owed**. The git history is **not** shallow (1,430 commits), so the HISTORY-DEPTH PRECHECK passes and the git leg of the window resolution is sound rather than merely silent.)
 
-**ONE completed US trading session inside this window: Thursday 2026-09-10.** `state.trading_day_today` gives `is_trading_day = true`, `last_trading_day = 2026-09-10`. Every close-to-close figure in this file is measured 2026-09-09 → 2026-09-10.
+**ONE completed US trading session inside this window: Friday 2026-09-11.** `state.trading_day_today` gives `is_trading_day = false` (Sunday), `last_trading_day = 2026-09-11`, `next_trading_day = 2026-09-14`. Every close-to-close figure in this file is measured **2026-09-10 → 2026-09-11**. Saturday and Sunday were closed; the weekend is scanned for *developments*, not for prices.
 
-**Tape.** SPY 762.40 → 757.83 (**−0.5994%**), VOO 700.87 → 696.65 (−0.6021%), QQQ **−1.0638%**, DIA −0.6335%, IWM −1.0116%, SGOV +0.0100%. VIX 16.46 → **17.84** (+8.3840%). Brent 101.21 → **107.63** (+6.3433%), USO **+5.6078%**. GLD −1.7330%, TLT −1.1624%, UUP +0.1787%, BITO −1.3321%. Equity breadth ($S5TH) 56.85 → **54.67**. Nine of eleven GICS sectors lower; the cross-sector spread was only 2.02pp (XLC +0.6045% to XLK −1.4105%).
+**Tape — a broad risk-on reversal, and the mirror image of the previous session.** SPY 757.83 → 764.29 (**+0.8524%**), VOO 696.65 → 702.56 (+0.8483%), QQQ **+0.8734%**, DIA +0.9678%, IWM +0.4136%, SGOV +0.0199%. VIX 17.84 → **15.84** (**−11.2108%**). Brent (BZX6 front month) 107.63 → **104.61** (−2.8059%), USO −2.1972%. GLD +0.6080%, TLT +0.1114%, UUP +0.1427%, BITO **0.0000%** (exactly flat). Equity breadth ($S5TH) 54.67 → **56.46**. **Nine of eleven GICS sectors higher** — the previous session had nine of eleven *lower* — and the cross-sector spread **narrowed** to 1.6285pp (XLK +1.3228% to XLU −0.3057%) from 2.02pp.
 
-All equity/ETF figures are IBKR regular-session daily bars (`get_price_history`, `step='ONE_DAY'`, `outside_rth=false`), each verified carrying a 2026-09-10 bar stamped `13:30:00Z`. **One documented exception, stated rather than hidden:** the ^VIX bar (contract 13455763, `IND`/CBOE) is stamped `07:15:00Z`, not the RTH `13:30:00Z` — an index-feed property, not an equity RTH bar. It is used anyway because the same series cross-validates exactly: its 2026-09-09 bar reads 16.46, which equals the value already stored in `state.signal_marks_curated` for that session. No new alert is raised for this; a standing feed property re-alerted each session is the alarm fatigue this fleet's alert discipline exists to prevent.
+All equity/ETF figures are IBKR regular-session daily bars (`get_price_history`, `step='ONE_DAY'`, `outside_rth=false`), each verified carrying a 2026-09-11 bar stamped `13:30:00Z`. **Two documented exceptions, stated rather than hidden:** the ^VIX bar (contract 13455763, `IND`/CBOE) stamps `07:15:00Z`, an index-feed property rather than an equity RTH bar; and the Brent bar is a NYMEX future (BZX6, contract 339981284, `contract_month` 202611, last trading date 2026-09-30 — a legitimate front month with ~19 days to expiry, not a stale about-to-roll contract).
 
-**Nothing about this run is degraded, and that is measured rather than claimed.** 33 distinct single names and 25 index/ETF instruments were put to IBKR for confirmation; **all 58 resolved with a genuine 2026-09-10 regular-session bar. Zero symbol-level denials, zero unresolved.** So every `surfaced_count` below is an affirmatively established figure, never a reported zero standing in for an unmeasured population.
+**This run is NOT degraded, and that is measured rather than claimed.** 117 single names and 24 index/ETF/future instruments were put to IBKR for confirmation; **140 of 141 returned a genuine 2026-09-11 regular-session bar. Zero symbol-level denials. Zero FMP `ACCESS DENIED` responses across 44 calls.** The one failure is named in full below. So every `surfaced_count` in this file is an affirmatively established figure, never a reported zero standing in for an unmeasured population.
+
+**The one measurement failure, named individually with its reason, per the REPORTING RULE.** **SRRK** (Scholar Rock, contract 319099330) resolved cleanly via `search_contracts` but `get_price_history` returned `-32400 "An error occurred. Please try again later."` on **14 attempts** interleaved with unrelated successful calls across the session. No price was obtained and **no substitute source was used**. This matters more than a single missing row would normally: SRRK is the one name with a confirmed in-window FDA approval (Isembyld / apitegromab-mstn for spinal muscular atrophy, FDA "Novel Drug Approvals for 2026" #39, dated 2026-09-11), and its reported ~+12% reaction was an **after-hours** move — so its close-to-close reaction day is **2026-09-14** regardless, and it is owed a measure on the next run either way.
 
 ---
 
 ## TL;DR
 
-- **Exits triggered: none.** No mechanical trigger exists to fire (all 12 open tranches carry NULL `convergence_target` and NULL `time_exit_date`), and no Development breaches any thesis-invalidation criterion.
-- **New entry candidates: 4** — all Strategy B: **COO, AEO, NAVN** (all three on 2026-09-09 after-close prints) and **RDDT** (2026-09-10). No A, no C, no E.
-- **Add candidates: none.** 12 open Strategy-D tranches evaluated, 0 flagged, 3 declined at the HARD GATE (ISRG, RTX, UBER — breach status never assessed and no covering tranche).
-- **Watchlist changes:** the 4 Strategy-B names above enter the B new-entry-candidate index; no removes and no demotions.
-- **Regime review: no review.** Default-NO on ambiguity holds; nothing today plausibly flips a router state.
-- **Park: BOUND DE-RISK, `target_f_pct` 25 → 50** (VOO 50% / SGOV 50%), MEDIUM 55 — a fourth defensive axis (index) ENTERED on live measurement while the three already standing all deepened.
+- **Exits triggered: none.** No mechanical trigger exists that could fire — all 12 open tranches carry NULL `convergence_target` and NULL `time_exit_date` — and no Development breaches any thesis-invalidation criterion.
+- **New entry candidates: 3** — **HPE** and **DELL** (Strategy B, `qualifying_event_date` 2026-09-10) and **DELL/STX** (Strategy E pair). No A, no C.
+- **Add candidates: none.** 12 open Strategy-D tranches evaluated, 0 flagged, 3 declined at the HARD GATE (ISRG, RTX, UBER). **The gate cost a real flag today** — UBER was the one textbook dip in the book.
+- **Watchlist changes:** HPE and DELL enter the Strategy B new-entry-candidate index. No removes, no demotions.
+- **Regime review: no review.** Default-NO on ambiguity holds.
+- **Park: BOUND KEEP at `target_f_pct` 50** (VOO 50% / SGOV 50%), MEDIUM **48** — the index axis EXITED exactly as Thursday predicted, but the rates axis entered and the weekend escalated.
 
 ---
 
@@ -30,107 +32,104 @@ All equity/ETF figures are IBKR regular-session daily bars (`get_price_history`,
 
 ### 1. Market-wide breaking events
 
-**US–Iran escalation broadens to shipping on both sides; Brent settles 107.63.** Following the US destruction of five Iranian tankers, Iran retaliated against roughly ten vessels near the Strait of Hormuz (two US vessels and eight oil tankers by Iran's own claim) — the largest wave of shipping attacks by either side since the war began. At least one seafarer was killed and one is missing aboard the tanker *Hercules Star* off Dubai; the Iraqi tanker *New Andros*, carrying ~2M barrels of fuel oil, caught fire after a drone strike in Iraqi waters (22 crew, no casualties reported). Iran fired ballistic missiles at a US base in Jordan, most intercepted, and the IRGC said it would announce an enlarged maritime exclusion zone extending toward Chabahar.
+**Both of Saudi Arabia's main crude export outlets came under simultaneous pressure — and the confirmations landed AFTER Friday's close.** This is the single most important framing fact in this file: Friday's tape had not seen most of it.
 
-- Sources: France 24, https://www.france24.com/en/middle-east/20260909-iran-and-us-strike-tankers-in-biggest-shipping-attack-since-war-began (published 2026-09-09 22:31); Reuters wire via Club of Mozambique, https://clubofmozambique.com/news/iran-and-us-hit-tankers-in-biggest-wave-of-attacks-on-shipping-since-war-began (2026-09-10); CNBC, https://www.cnbc.com/2026/09/10/iran-us-oil-hormuz-supply-trump-military-brent-wti.html (2026-09-10).
-- **Timing caveat, stated rather than resolved:** outlets differ on tanker-strike counts and on whether the first wave landed Tuesday or overnight into Wednesday. All agree the retaliation and the market reaction fall inside this scan window. The exact strike minute is **not established**.
-- **Observable reaction (each figure below measured from IBKR bars unless attributed):** Brent +6.3433% to 107.63, USO +5.6078% — the clear mover. Equities lower and broad: SPY −0.5994%, QQQ −1.0638%, IWM −1.0116%, 9 of 11 sectors down. **The energy complex is the tell and it points the other way** — XLE **fell 0.5818%** on the day crude rose 6.3%. Rates higher (10Y at its highest since November 2023, press-sourced). **No flight to safety:** gold −1.7330%, long Treasuries −1.1624%, dollar +0.1787%. Crypto lower, BITO −1.3321%.
-- **What the cross-asset reaction shows:** a discount-rate and input-cost repricing, not a systemic risk event. Gold, Treasuries and the dollar all failed to catch a safety bid, and the only two green sectors were idiosyncratic (XLC) and staples (XLP +0.0482%).
+**(a) The East-West pipeline — the Hormuz bypass — was struck and shut.** Drone strikes launched from Iraq hit pumping stations on Saudi Arabia's 1,200km East-West Crude Oil Pipeline in the Riyadh and Medina regions on 2026-09-10/11, causing fires and several injuries (no deaths reported). Saudi Arabia shut the pipeline as a precaution. The pipeline normally moves 4–7M bpd and exists precisely to route crude around the Strait of Hormuz.
+- Sources: Reuters, 2026-09-12; CNN, 2026-09-11; Al Jazeera, 2026-09-11 (citing a Saudi Foreign Ministry statement and AFP satellite imagery); New York Times, 2026-09-12.
+- Context from the same reporting: Saudi crude output fell in August to its lowest since 1990 (reported to OPEC); Saudi exports to Asia collapsed from ~3.4M bpd in June to ~128,000 bpd in August, recovering to ~700,000 bpd this month (Kpler data via AP/PBS). Saudi Arabia has asked Washington for military help against the Houthis (Reuters, 09-12).
 
-**ECB raised its deposit rate 25bp to 2.50%** (Thursday, second hike of 2026), explicitly citing Iran-war-driven energy inflation; Lagarde said headline inflation will stay "well above target" into H1 2027 while calling the eurozone economy "resilient despite the energy shock." Recorded here rather than under §2 because, although scheduled, it is a war-driven policy response rather than a routine print. It was ~98–100% priced beforehand, so it is **not** a central-bank surprise. Sources: Bloomberg, https://www.bloomberg.com/news/videos/2026-09-10/ecb-s-lagarde-inflation-to-stay-above-target-into-2027-video ; Reuters, https://www.reuters.com/world/china/global-markets-view-europe-2026-09-10.
+**(b) Houthi forces took the Bab al-Mandeb chokepoint.** Houthi forces captured the port city of **Mocha on Thursday 09-10**, then took the strategic **Perim (Mayun) Island on Friday 09-11**, giving them effective control of Yemen's entire Red Sea coast and, per cited security analysis, the capability to close Bab al-Mandeb at will.
+- Sources: Reuters (two separate wire pieces, 09-11 and 09-12); CNN, 09-10 and 09-11; Al Jazeera, 09-11 and 09-12; AP via PBS NewsHour, 09-12.
 
-**No other market-wide breaking event surfaced in the window** — no material bankruptcy, disaster, unscheduled enforcement action or central-bank surprise. Stated as a measured absence over the scan performed, not as a claim of exhaustiveness.
+**And yet Brent FELL 2.8059% on Friday, to 104.61.** The two facts are in tension and the resolution is simply chronological: the pipeline-strike severity was confirmed over Saturday and Sunday. Barron's reported that Saudi's flow-suspension announcement left oil futures "roughly unchanged" in the moment on Friday — i.e. the market had not priced what the following two days established.
 
-### 2. Scheduled events that resolved today
+**Recorded but NOT used as fact — two single-source claims.** (i) A claim that the US Treasury imposed new sanctions on Iran's airlines ("Operation Economic Outcast") appears only in one newsletter and could not be corroborated by any wire service. (ii) The BRICS 18th Summit (New Delhi, 09-12/13) is confirmed to have occurred, but the characterisation of a "New Delhi Declaration" calling for maximum restraint on the Iran war rests only on a Substack, a trading-desk note and an exam-prep aggregator. Both are flagged, neither is relied on.
 
-**EVENT-IDENTITY GATE applied.** Each result below was verified against reporting that names the fiscal period and release date, and each price reaction was independently confirmed from IBKR regular-session bars rather than taken from the reporting.
+**No other market-wide breaking event surfaced** — no material bankruptcy, disaster, or unscheduled enforcement action. Stated as a measured absence over the scan performed, not as a claim of exhaustiveness.
 
-**Macro (both released Thursday 2026-09-10, 08:30 ET):**
+### 2. Scheduled events that resolved in the window
 
-- **August PPI.** Headline final demand **+0.4% MoM**, in line with consensus (July revised to +0.1%); headline **+5.4% YoY** against ~5.3% consensus — a modest upside surprise; core ex-food-and-energy **+0.2% MoM** against +0.3% expected, i.e. *below* consensus; core **+4.6% YoY**, in line. Primary source: BLS, https://www.bls.gov/news.release/archives/ppi_09102026.htm ; consensus comparison, Yahoo Finance, https://finance.yahoo.com/economy/article/ppi-data-shows-wholesale-prices-advancing-in-line-with-expectations-124319008.html. The split matters: the *headline* beat is the oil pass-through, the *core* miss is not, so this is a less hawkish print than the 5.4% number alone implies.
-- **Weekly initial jobless claims**, week ended 2026-09-05: **206,000**, down 1,000 from a revised 207,000, against a 205,000 consensus. Continuing claims 1.774M (week ended 08-29), below the 1.780M consensus. Source: Reuters, https://www.reuters.com/world/us/us-weekly-jobless-claims-edge-down-layoffs-remain-low-2026-09-10.
+**EVENT-IDENTITY GATE applied throughout.** Each item below was verified against reporting naming the release date, and every price reaction was independently confirmed from IBKR regular-session bars rather than taken from the reporting.
 
-**Earnings prints that resolved inside the window** (fiscal period as the source states it; reaction independently measured from IBKR):
+**August CPI (released Friday 2026-09-11, 08:30 ET) — the session's central catalyst, and it was not a dovish print.**
+- Headline **+0.4% m/m, +3.4% y/y** — matched consensus.
+- Core (ex food and energy) **+0.3% m/m against ~0.2% expected — HOTTER than forecast**; +2.4% y/y, in line.
+- Sources: Yahoo Finance, Barron's, MarketWatch, TheStreet, all citing the same figures.
+- **The market read is the point:** this was not taken as inflation cooling. It *raised* the implied probability of a **rate HIKE** at the 2026-09-15/16 FOMC. Equities rallied because a binary uncertainty resolved, not because the data was friendly.
 
-- **Macy's (M) — Q2 FY2026, reported before Thursday's open: −4.6955%.** Adjusted EPS $0.63 vs $0.37 consensus, net sales $4.87B vs $4.81B estimate (+1.1% YoY), comparable sales +2.7%, Bloomingdale's +11.3%. FY guidance **raised** to $2.15–$2.35 adjusted EPS and $21.68–21.83B revenue, including a $116M tariff-refund benefit. A beat-and-raise met with a −4.7% session. (TheStreet, https://www.thestreet.com/stock-market-today/stock-market-today-dow-jones-sp-500-nasdaq-updates-sept-10-2026)
-- **Adobe (ADBE) — Q3 FY2026 (quarter ended 2026-08-28), reported AFTER Thursday's close: −2.3660% on the session.** Revenue $6.76B vs ~$6.70B consensus (+13% YoY), non-GAAP EPS $6.13 vs $6.09; FY2026 revenue target raised to $26.576–26.626B; AI-first ARR +150% YoY; CEO transition announced (Anil Chakravarthy to President/CEO effective 2026-12-01, Shantanu Narayen to Executive Chair). **The −2.3660% is PRE-print drift, not the reaction** — the reaction session is 2026-09-11. (Business Wire, https://www.businesswire.com/news/home/20260910832552/en/Adobe-Reports-Record-Q3-Results)
+**August PPI (released Thursday 09-10, the lead-in):** headline **+0.4% m/m, +5.4% y/y**, up from 4.7% in July, with energy, transport/warehousing, hospital services and airfares re-accelerating. Sources: Reuters, the BLS release page, Investing.com. This is what pushed hike odds up *before* Friday's CPI.
 
-**Reaction sessions for prints that landed after Wednesday's close** — these resolved in the prior window but their price reaction is today's, which is why they carry `qualifying_event_date` 2026-09-09:
+**Fed-hike odds — restated because the direction is easy to misread: this is a HIKE cycle.** CME FedWatch odds of a 25bp hike at the 09-15/16 meeting moved from roughly 56–71% across the week to **~85–90%** after Friday's CPI (Kiplinger 85%, Yahoo Finance 87%, a 09-13 recap ~90%). Reuters' 09-11 "Wall St Week Ahead" dissents, calling it "a razor's edge." **The spread across sources is recorded rather than collapsed into one number.** A hike would be the Fed's first since July 2023.
 
-- **Cooper Companies (COO) — FQ3: −14.6660%.** Revenue $1.066B vs ~$1.098B consensus (miss), FY guidance cut, CooperVision channel destocking named as the mechanism.
-- **American Eagle (AEO) — Q2: −13.9728%.** EPS and revenue **beat**, guidance **raised** (tariff-refund-boosted), comparable-sales miss overwhelmed both. (StockStory, https://stockstory.org/us/stocks/nyse/aeo/news/why-up-down/why-american-eagle-aeo-shares-are-plunging-today-2)
-- **Navan (NAVN) — FQ2 FY2027: −21.7458%.** Beat and raised outlook; widening GAAP operating and net loss overshadowed headline growth.
-- **AeroVironment (AVAV) — FQ1: +4.4460%.** Revenue $480.5M vs $455.8M consensus, record backlog. (Barchart, https://www.barchart.com/story/news/4538530/stocks-slump-as-crude-prices-soar-and-bond-yields-surge)
+**Treasury yields.** The 10Y closed **4.96%** on 09-11 (`events.regime_events` `TECHNICAL_INPUT`/`TREASURY_10Y`, FMP treasury-rates), after 4.95% on 09-10 and 4.83% on 09-09 — approaching 5% and at multi-year highs. The 30Y is ~5.27–5.31%. **One source rejected:** FirstMetroSec's 09-11 wrap cites a 10Y of "4.17%", inconsistent with every other source and with our own stored series; treated as a data error and not used.
 
-**Pending, not resolved — recorded with confirmed scheduled dates and NO outcome figures populated:**
+**Treasury buyback.** Treasury announced on 09-09 it would buy back up to $6B of 10–20yr debt; the Thursday operation closed at **$5.19B**, under the maximum, only the third such shortfall since the programme restarted in 2024. Yields rose anyway. Sources: NYT 09-09, WSJ, The Guardian 09-09.
 
-- **August CPI — Friday 2026-09-11, 08:30 ET (BLS).**
-- **September FOMC — 2026-09-15/16**; decision and SEP Wednesday 2026-09-16 14:00 ET, press conference 14:30 ET.
-- **Oracle (ORCL) FQ1 FY2027** — reported after today's close; reaction session 2026-09-11.
-- **Telix Pharmaceuticals (TLX)** PDUFA on TLX101-Px — 2026-09-11. **Scholar Rock (SRRK)** PDUFA on apitegromab — 2026-09-30. Neither resolved in this window.
+**Earnings: the window is EMPTY, and that is a confirmed emptiness rather than an unsearched one.** FMP's `earnings-calendar` returned an empty result set for 2026-09-11 through 2026-09-13. No US-listed company with market cap ≥$2B published a print inside this window. The next notable reports are **PENDING** and outside it — Dave & Buster's (PLAY) Mon 09-14 after close, Trip.com (TCOM) Wed 09-16 after close, Carnival (CCL) Thu 09-17 before open — and **no outcome figures are populated for any of them**, per the gate.
+
+**Oracle's FQ1 print is the event that drove this session, and it sits on the window boundary.** It was released after the **2026-09-10** close — i.e. its *reaction day* is 2026-09-11 and therefore inside this window, while the release itself is dated to the prior session. Its $95B capex plan is the qualifying event behind most of §3 below. Its own price action is extraordinary and is recorded in §3.
+
+**FDA — one confirmed approval, one decision whose OUTCOME IS NOT ESTABLISHED.**
+- **SRRK — Isembyld (apitegromab-mstn) APPROVED for spinal muscular atrophy, 2026-09-11.** Confirmed on the FDA's own "Novel Drug Approvals for 2026" page (approval #39) and by Seeking Alpha (09-13). The ~+12% reaction was **after-hours**, so the close-to-close reaction day is 2026-09-14. **No IBKR price could be obtained for SRRK at all** (see the header). Nothing is routed on it today.
+- **TLX (Telix) — PDUFA goal date 2026-09-11 for Pixclara / TLX101-Px.** The **date is confirmed; the OUTCOME is not.** No post-decision primary source was obtained. TLX closed **−5.1261%**, which is suggestive of an adverse outcome — and that is precisely why it is **not written down as one**. Per the gate: no outcome figure populated, no event-dependent criterion assessed, re-assessment queued after publication. Its 10-day window runs to roughly 2026-09-25, so nothing is lost by waiting.
+
+**M&A: nothing newly resolved inside the window.** The Skyworks/Qorvo $22B merger clearing HSR/SAMR review moved SWKS +10% and QRVO +6% — but **both the event and that reaction are dated 2026-09-10**, outside this window and already covered by the prior run. Explicitly flagged as out of scope rather than re-reported as a fresh Friday finding. The 09-11 moves in both names are second-day continuation (§3).
 
 ### 3. Large single-name moves — AI-SIGNIFICANCE SCREEN (`screen='single-name-move'`)
 
-Logged as one `entry_type='research-screen'` row, `events.decision_log` entry_id **`7d717e9f-c609-4166-8487-e965a2faff13`**. `surfaced_count = 16` (= `ARRAY_LENGTH(passed)`, per the 2026-08-30 pin), `rail_tally = 22`, `universe_measured = 33`. Agreement: `both` 10, `ai_only` 6, `rule_only` 0.
+Logged as `events.decision_log` `entry_type='research-screen'`. **`surfaced_count` = 14 = `ARRAY_LENGTH(passed)`** per the 2026-08-30 pin; `fields.rail_tally` = **30** (names clearing ≥2% AND cap ≥$2B); `fields.universe_measured` = **116**. Agreement **7 both / 7 ai_only / 2 rule_only**, written under the **nested** `"agreement": {...}` object.
 
-Layer-1 rail: US-listed, market cap ≥ $2B, close-to-close ≥ 2% attributable to an identifiable public driver. Caps from FMP `company/profile-symbol`, which returned for **all 25** discovery candidates; the documented sibling denials (`batch-market-cap`, `market-cap`, `shares-float`, `batch-quote`, `chart`) were hit and are the **standing** plan-tier limit — no fresh vendor-tier alert is owed and none is raised.
+**On this tape a +2.5% move in a high-beta name is BETA, not information**, and Layer 2 has been applied with that in mind — which is why several names clearing the rail were rejected and two sub-rail names were surfaced at the *highest* conviction in the screen.
 
-| Ticker | Move | Event | Conviction | `legacy_rule_pass` (≥5%) |
+**The information-dense fact is a discrimination WITHIN a theme, not the theme.** The Oracle capex read-through re-rated **compute and networking** hard — HPE **+12.4411%**, DELL **+11.9776%**, SMCI +7.2766%, ANET +5.6087%, JBL +5.0462%, CIEN +4.4766%, CSCO +4.3663%, MRVL +4.0271%, IBM +3.9612%, GEV +3.6106%, VRT +3.5989% — while the **storage leg FELL: STX −3.7297% and WDC −2.9835%**. The market did not buy "AI" indiscriminately; it picked a side inside one sub-industry, and it sold two $150B+ names on the session their own complex ripped. That is why STX and WDC carry conviction 75 despite clearing neither the 5% legacy bar nor the spec floor.
+
+**ORCL itself — the company whose print caused all of it — CLOSED DOWN 1.7393%,** after opening at 163.34 and trading to a high of 165.98 before a low of 149.84. That is a ~9.5% intraday round trip from high to close. ORCL does **not** clear the 2% close-to-close rail and is therefore not in the population, but it is recorded here because **a small close-to-close number is concealing a very large session** — the market rewarded the suppliers of Oracle's spend and charged Oracle for it.
+
+| Ticker | Move | Cap | Conviction | Judgment |
 |---|---|---|---|---|
-| NAVN | **−21.7458%** | FQ2 FY27 beat-and-raise met with a widening GAAP loss | 60 | true |
-| COO | **−14.6660%** | FQ3 revenue miss + FY guide cut, CooperVision destocking | 75 | true |
-| AEO | **−13.9728%** | Comp-sales miss overwhelmed an EPS/revenue beat and a raised guide | 75 | true |
-| SCCO | **−7.2255%** | Copper off record highs on White House refined-copper tariff indecision | 60 | true |
-| FCX | **−6.5853%** | Same copper-tariff channel (counted as one driver, not two) | 60 | true |
-| RDDT | **+6.0776%** | Piper Sandler data: +8% MoM August user growth | 60 | true |
-| CIFR | **−5.6805%** | Bitcoin-miner / AI-data-centre complex on a higher-rates risk-off session | 45 | true |
-| LRCX | **−5.6453%** | Semi-cap equipment on the duration repricing | 45 | true |
-| INTC | **−5.5723%** | Profit-taking after a multi-session rally, inside the chip selloff | 45 | true |
-| ORCL | **−5.3764%** | Pre-earnings de-risking; the print landed AFTER the close | 45 | true |
-| CHTR | **+4.9817%** | Rebound plus reception to management's growth plans | 45 | false |
-| ELV | **+4.9483%** | FY2026 earnings and benefit-expense guidance **reaffirmed** | 60 | false |
-| M | **−4.6955%** | Q2 beat-and-raise met with a −4.7% session | 60 | false |
-| AVAV | **+4.4460%** | FQ1 revenue beat, record backlog | 45 | false |
-| AAPL | **+3.5612%** | Foldable "iPhone Duo" launch enthusiasm | 60 | false |
-| AGNC | **−3.0447%** | 10Y at its highest since November 2023 | 45 | false |
+| **HPE** | **+12.4411%** | $82.2B | 75 | Largest large-cap move of the session; an $82B incumbent re-rated on *another* company's capex disclosure |
+| **DELL** | **+11.9776%** | $376.7B | 75 | More striking on size — a $377B company moving +12% on a read-through is a far larger anomaly per unit of market value |
+| **STX** | −3.7297% | $186.1B | 75 | FELL while its own complex ripped — the within-sub-industry discrimination |
+| **WDC** | −2.9835% | $154.1B | 75 | The second storage decliner; two $150B+ names down together is a pattern, not two idiosyncratic prints |
+| SMCI | +7.2766% | $25.9B | 60 | Same read-through, but a +7% day is ordinary in its volatility regime |
+| ANET | +5.6087% | $251.3B | 60 | The networking leg; evidence the bid extended past servers |
+| **TLX** | −5.1261% | $3.8B | 60 | On its confirmed PDUFA date — **outcome NOT established, not routed** |
+| **SMR** | **−15.6709%** | $2.56B | 45 | Largest decliner in the population and **no identifiable event found** — escape-valve surfacing, recorded as UNEXPLAINED |
+| SWKS | +5.1410% | $13.3B | 45 | Second-day merger continuation; event day was 09-10, so not an event-day reaction |
+| MARA | +4.8118% | $4.6B | 45 | Miners up (RIOT +2.4821%) while BITO closed **exactly flat** — a datacenter-pivot decoupling, not a crypto move |
+| HAL | −4.4267% | $29.9B | 45 | Cleanest crude-beta name, ~1.6× Brent's −2.8059%, no name event |
+| QRVO | +3.8180% | $10.3B | 45 | Trailed SWKS by 1.32pp on the continuation day |
+| UNH | −2.3670% | $344.3B | 45 | Largest mega-cap decliner on a rising tape, no catalyst found |
+| GEV | +3.6106% | $255.0B | 45 | Held D name; feeds this run's own add sweep |
 
-**`rejected_notable` (7)** — rail-clearing or near-rail names judged not significant, each recorded in the decision-log row with its reason: NVDA −2.3740%, ADBE −2.3660% (pre-print drift), MARA −4.1107% and IREN −3.8131% (same crypto-miner driver as CIFR, counted once), AA −4.7901% (second-order to the copper channel; aluminium is not the commodity under review), FOXA +2.0670%, GEV −2.8527% (held D position; **no identifiable public event found**, so it does not clear the rail).
+**Rejected, with the two legacy-rule-passing rejections named as the contract requires:** **SLS** −14.4181% (a 14% session in a ~$2.15B clinical-stage biotech is its ordinary volatility regime, no event found, and its cap sits inside the unreliable band — three reasons, none of them the size of the move) and **JBL** +5.0462% (the same Oracle factor already carried by four names; one factor across many tickers is approximately one observation). Also recorded as informative double-rejects: AMD +2.4881%, ISRG +2.4107%, TMUS +2.9183%, SNAP +2.8986%.
 
-**Two open-position names cleared magnitude and cap but are excluded from the rail for want of an identified driver: ISRG +2.0439% and UBER +2.0822%.** Stated as a found-nothing, not as an absence of news.
-
-**What confirmation caught, and why the discovery leg is never the source of record.** Two names arrived from discovery with large reported moves and were **refuted by measurement**: **CC** reported +6.6% on a $455M PFAS settlement, measured **+0.1995%**; **SSNC** reported +5.0% on a UBS target raise, measured **−0.5294%**. Both were dropped. A third contamination class was caught inside discovery itself — FICO, LULU, ADBE, EFX, ADSK and PTC surfaced with large moves that on inspection were dated **2026-09-04**, not 09-10. IBKR governed in every case per Operating_Protocols.md §19 PRICE BASIS.
-
-**Cap-rail caveat that is NOT resolved.** Two names sit inside the ~30% band around $2B where FMP's implied share count is not trustworthy: **AEO $2.44B** and **CC $2.27B**. CC is moot (it failed the 2% limb). **AEO is not moot** — it is written up *and* routed as a Strategy-B candidate on a −13.97% move, so its rail clearance rests on a figure this run flags as needing a second source. Recorded rather than resolved.
-
-**ORCL and ADBE are deliberately NOT Strategy-B candidates** despite ORCL clearing the 5% floor: both reported after today's close, so today's moves contain positioning and no resolved information. Their reaction sessions are 2026-09-11 and the next D1 owns them. Recorded here so tomorrow's run does not mistake today's drift for the event move.
+**Market-cap rail.** Sourced from FMP `company/profile-symbol` per the pinned finding that it answers where `batch-market-cap`, `market-cap` and `shares-float` deny. All 40 movers ≥2% returned; **zero ACCESS DENIED**. Four sit inside the ~30% band where FMP's implied share count is unreliable and need a second source before the rail call is trusted: **SMR ~$2.56B** and **SLS ~$2.15B** (above), **ACVA ~$1.82B** and **ATEC ~$1.63B** (below). SMR is carried *with* that caveat; ACVA (+44.1828%) and ATEC (+19.6833%) are excluded as sub-rail — **flagged here so the exclusion is visible rather than silent**. Six further large movers were excluded on cap with no ambiguity: FEIM +42.4105% ($872M), CRMT +19.4969% ($15.8M), VERI +18.1549% ($96.7M), PMTS −16.4810% ($258M), ZUMZ −12.9264% ($245M), RENT −13.1206% ($82.3M), TLS −15.5983% ($296M), EQ −12.8099% ($133M).
 
 ### 4. Sector-level moves — AI-SIGNIFICANCE SCREEN (`screen='sector-move'`)
 
-Logged as one `entry_type='research-screen'` row, entry_id **`37a595df-af23-4b3e-97ef-689e99e29f96`**. `surfaced_count = 6`, `rail_tally = 2`, `universe_measured = 11`. Agreement: `both` 0, `ai_only` 6, `rule_only` 0 — **no sector moved ≥2%, so every write-up here is an AI-only surfacing by construction.**
+Logged as a second `research-screen` row. `surfaced_count` = **4**; `rail_tally` = **2** (only XLK and XLI cleared the ≥1% net); `universe_measured` = **11**. **No sector moved ≥2%, so the legacy rule caught nothing** — `rejected_notable` carries no legacy-rule-passing item and the contract's MUST is satisfied vacuously rather than by omission. Every passed item is consequently `ai_only`; agreement **0 / 4 / 0**.
 
-| Sector ETF | Move | Conviction | Read |
-|---|---|---|---|
-| XLE | **−0.5818%** | **75** | Energy equities FELL on the day Brent rose 6.34% and USO rose 5.61% |
-| XLK | **−1.4105%** | 60 | Largest decline; long-duration rate channel via ORCL/INTC/LRCX/NVDA |
-| XLB | **−1.2259%** | 60 | Single policy driver: copper-tariff indecision (FCX, SCCO, AA) |
-| XLU | −0.9781% | 45 | Bond proxy sold with the 10Y move |
-| XLRE | −0.8293% | 45 | Second rates limb; corroborates XLU rather than adding information |
-| XLC | **+0.6045%** | 45 | Only meaningful gainer, and idiosyncratic (RDDT, CHTR, FOXA) |
+Full panel: XLK +1.3228, XLI +1.0671, XLC +0.9865, XLY +0.8932, XLRE +0.8595, XLF +0.6682, XLB +0.3743, XLP +0.3490, XLE +0.3234, XLV −0.1811, XLU −0.3057.
 
-Full measured panel, descending: XLC +0.6045, XLP +0.0482, XLF −0.3330, XLY −0.4446, XLV −0.5523, XLE −0.5818, XLI −0.7218, XLRE −0.8293, XLU −0.9781, XLB −1.2259, XLK −1.4105.
+**The primary reading is the LOW dispersion.** At 1.6285pp, narrower than the previous session's 2.02pp, this was index-level repricing of the rate path, not sector rotation. Which is exactly why **the two red sectors carry more information than the two that cleared the net** — and why the highest convictions here sit on sub-net items.
 
-**The headline finding is the one the mechanical ≥1% rail would have discarded.** XLE fails the net and is ranked *above* the two sectors that clear it. A 6.2pp gap between crude and its own producers, on the day crude spiked, is a market statement: this oil move is being priced as a demand-destroying, short-half-life supply shock rather than as a producer earnings windfall. No magnitude-ranked screen could surface that.
+- **Energy (XLE) +0.3234% — the session's cleanest tell, and the second consecutive one with the sign flipped both times.** XLE *rose* while front-month Brent *fell* 2.8059%. The previous session was the exact inverse: XLE −0.5818% on Brent +6.3433%. Two sessions, two opposite crude moves, and energy equities declined to follow on both. Read together, the equity market is **not pricing the war premium in crude in either direction** — it is treating the disruption as a commodity event with a finite horizon rather than a durable repricing of energy earnings. **That reading reaches beyond this screen: the park allocator's shock axis tests Brent > 95, and the equity market is implicitly disputing that the level is load-bearing.** Conviction 60.
+- **Utilities (XLU) −0.3057%** — the most negative sector on a +0.85% tape, and the most rate-sensitive one, on the session the 10Y printed 4.96%. The rates channel surfacing in equities precisely where it should rather than at random. Conviction 60.
+- **Information Technology (XLK) +1.3228%** — led the tape, but the headline is roughly beta. What is significant is the composition: the bid came from second-tier suppliers while the **mega-cap platforms sat flat** (NVDA −0.0321%, AVGO +0.3215%, MSFT +0.6478%, META +0.5664%) and storage was sold. Conviction 60.
+- **Industrials (XLI) +1.0671%** — carried by the electrical-equipment and power complex on the same read-through (GEV +3.6106%). Conviction 45.
 
-**Two third-party sector sources were obtained and DISCARDED, on evidence.** A Zacks/Yahoo recap carried XLE **+1.1%**, XLI −1.5%, XLY −1.2%, XLU −1.1% for what it labelled the session — figures that disagree **in sign** with the IBKR measurement for XLE. The same article carried "VIX +4.7% to 16.46" and "Brent settled 101.21", both of which are the **2026-09-09** session: it is a prior-day recap published on 09-10 and its sector line is the wrong day. FMP `sector-performance-snapshot` was also discarded — it returns equal-weighted NASDAQ-listed averages, not the cap-weighted SPDRs, and its Energy −0.81 / Industrials +0.82 likewise contradict the ETF signs. Recorded rather than silently dropped, because a session that took either at face value would have written up an energy-sector *rally* on the day energy equities fell.
+**Health Care (XLV −0.1811%)** was considered and rejected as a double-reject: ordinary defensive rotation on a risk-on day, no threshold crossed.
 
 ### 5. Notable commentary
 
-- **Goldman Sachs** (Daan Struyven, co-head of global commodities research) put the tail risk at **oil above $120/barrel** if shipping attacks intensify. (CNBC, https://www.cnbc.com/2026/09/10/iran-us-oil-hormuz-supply-trump-military-brent-wti.html)
-- **Oxford Economics** (Ben May) now sees the base case as "simmering tensions … and lower-than-normal traffic in the Strait of Hormuz until at least the end of 2027," with oil averaging ~$85 for the rest of 2026 and falling to ~$65 by end-2027. (ABC45/Nexstar, https://abc45.com/news/nation-world/100-oil-returns-as-renewed-iran-fighting-threatens-inflation-progress-strait-of-hormuz-tankers-gasoline-diesel-economy — **publish timestamp not confirmed**; content is consistent with the window but the date could not be pinned.)
-- **BOJ board member Kazuyuki Masu**, ahead of next week's BOJ meeting, said underlying inflation is "very close" to the 2% target, hinting at faster hikes; cited as a driver of yen strength (~153.4–153.6/USD, +4% in September). (Reuters, https://www.reuters.com/world/china/global-markets-view-europe-2026-09-10)
-- **Bank of America** raised its H2 oil forecast to $83/barrel with a $95–120 scenario if shipping attacks continue and up to $150 if major energy infrastructure is hit. **Flagged as out-of-window:** the note is dated Tuesday 2026-09-08, before this scan window opened. Listed only because Goldman's newer and higher call above is inside the window and directionally consistent.
+- **Treasury Secretary Scott Bessent**, defending the undersubscribed buyback: *"if some of the Bloomberg Terminal bros are unhappy with what I'm doing, well, that's too bad"*; *"I try to slow things down, to get people to get out of their fever dream and look at the facts."* (NYT, WSJ.)
+- **Fed Chair Kevin Warsh**, from the late-August Jackson Hole speech repeatedly cited as the week's overhang: the Fed has *"work to do"* if officials cannot be confident the underlying inflation trend is meaningfully improving. (CNBC, Reuters, WSJ, Kiplinger.)
+- **Alicia Levine (CIO, BNY Wealth)** on the FOMC: *"It's kind of a razor's edge... This is the first meeting in a long time where it's felt, wow, it really could go either way."* (Reuters, 09-11.)
+- **Will Rhind (CEO, GraniteShares)** on the rally: *"We've seen this trend multiple times where macro factors will induce a selloff, but it's typically bought back pretty quickly."* (Barron's.)
+- A Reuters poll of 93 economists (09-04/09) had ~70% expecting a hold, down from ~90% in August — the economist consensus moved toward "hike is plausible" but stayed well short of market-implied pricing.
 
-No sell-side report, regulator action or senior corporate commentary beyond the above rose to notable within the window.
+**No discrete flagship sell-side note was itself a market driver this window.** The CPI/PPI data and the geopolitical/oil shock were the drivers; sell-side commentary reacted rather than led. Stated rather than padded.
 
 ---
 
@@ -140,99 +139,107 @@ No sell-side report, regulator action or senior corporate commentary beyond the 
 
 **Result: no exit triggered, and no mechanical trigger exists that could fire.**
 
-The book is **12 open tranches across 8 names, all Strategy D**. Strategies A, B, C and E hold no open position. Every one of the 12 carries **NULL `convergence_target` and NULL `time_exit_date`** in `state.current_positions`, so both mechanical limbs are structurally inert for the whole book — stated as a property of the record, not as a passed test.
+The book is **12 open tranches across 8 names, all Strategy D**. Strategies A, B, C and E hold no open position. Re-read live this run, every one of the 12 carries **NULL `convergence_target` and NULL `time_exit_date`**, so both mechanical limbs are structurally inert for the whole book — stated as a property of the record, not as a passed test.
 
-**UNION SWEEP against the live connector: clean, no reconciliation lag.** `get_account_positions` returns ten lines — the eight held names plus the two park sleeves (VOO 16.2575, SGOV 37.4175). Every share count reconciles exactly against the BigQuery tranches: AMZN 0.1554 + 0.1910 = 0.3464 ✓, DIS 0.2822 + 0.4422 = 0.7244 ✓, GOOGL 0.1534 + 0.1043 = 0.2577 ✓, TSM 0.0891 + 0.0659 = 0.1550 ✓, and GEV / ISRG / RTX / UBER single-tranche exact. **No position exists in the connector that is absent from `state.current_positions`**, so no `position_reconciliation_lag` alert is owed and none is raised.
+**UNION SWEEP against the live connector: clean, no reconciliation lag.** `get_account_positions` returns ten lines — the eight held names plus the two park sleeves. Every share count reconciles exactly: AMZN 0.1554 + 0.1910 = 0.3464 ✓, DIS 0.2822 + 0.4422 = 0.7244 ✓, GOOGL 0.1534 + 0.1043 = 0.2577 ✓, TSM 0.0891 + 0.0659 = 0.1550 ✓, and GEV / ISRG / RTX / UBER single-tranche exact. **No position exists in the connector that is absent from `state.current_positions`**, so no `position_reconciliation_lag` alert is owed and none is raised.
+
+**The park sleeves changed, and that is the 09-10 de-risk having FILLED:** SGOV 37.4175 → **74.8667** and VOO 16.2575 → **10.8278**. Valued at the 2026-09-11 closes that is SGOV $7,525.60 against VOO $7,607.18, an **actual f of 49.7305%** against the policy 50. So today's park call is made from a book that is genuinely half defensive, not from a staged intention.
 
 ### PER-STRATEGY KILL-TRIGGER SWEEP
 
-`perf.kill_flags` carries two rows. **Strategy D** (as of 2026-09-09): `deployed_unit_value` 1.05306816, `peak_unit_value` 1.098110312, `current_drawdown` −4.1018%, `excess_vs_sgov` +3.8952%, `deployed_days` 94, `gate_n` 29 (gate not reached), all four flags FALSE. **Strategy B** (as of **2026-08-18**, its last marked session): `deployed_days` 79, `closed_trades` 13, `gate_n` 17, all four flags FALSE — the row is legitimately stale, not missing, because B has held no position since that date.
+`perf.kill_flags` carries two rows. **Strategy D** (as of 2026-09-10): `deployed_unit_value` 1.050429, `peak_unit_value` 1.098110312, `current_drawdown` −4.3421%, `excess_vs_sgov` +3.6245%, `deployed_days` 95, `closed_trades` 1, `gate_n` 29 (gate not reached), `beta_hat` 0.93334, all four flags FALSE. **Strategy B** (as of **2026-08-18**, its last marked session): `deployed_days` 79, `closed_trades` 13, `gate_n` 17, all four flags FALSE — legitimately stale rather than missing, because B has held no position since that date.
 
-**Unconditional drawdown refresh against today's marks, as required.** Refreshed on the 2026-09-10 IBKR RTH daily-bar closes rather than `get_price_snapshot`, which is the better basis under §19 PRICE BASIS and the 2026-09-07 pin. The D book moved 540.7131 → 539.3579, **−0.2506%** on the session, carrying the deployed unit value to ≈1.050429 and the drawdown to **−4.3421%**. The kill threshold is −50%. **No drawdown kill.**
+**Unconditional drawdown refresh against today's marks, as required — no judgment predicate applied.** Refreshed on the 2026-09-11 IBKR RTH daily-bar closes rather than `get_price_snapshot`. The D book moved 539.3579 → **548.4773, +1.6908%** on the session, carrying the deployed unit value to ≈**1.068190** and the drawdown to **−2.7247%**, from −4.3421%. The kill threshold is −50%. **No drawdown kill.**
 
-- **Drawdown kill (#1):** NO — −4.3421% against a −50% bar.
-- **Runaway-success (#3):** NO — deployed TWR has not doubled (unit value 1.05).
+- **Drawdown kill (#1):** NO — −2.7247% against a −50% bar.
+- **Runaway-success (#3):** NO — deployed TWR has not doubled (unit value 1.07).
 - **Interim underperformance warning:** `interim_underperf_warning` is FALSE for both strategies. There is **no open `ops.alerts` row in that category**, so no heal-resolution `UPDATE` is owed either.
-- **B open-book pairwise correlation:** `analytics.b_pairwise_correlation` returns `n_positions = 0` (B holds nothing today), with `avg_offdiagonal_corr` and `min_overlap_days` both NULL. The `n_positions >= 2` term fails, so the check is a no-op and no `b_pairwise_corr_high` alert is raised. Note this is a stricter zero than the standing plan text, which describes B as holding a single position (MDT) — **B's open book is now empty, not one name.**
+- **B open-book pairwise correlation:** `analytics.b_pairwise_correlation` returns `n_positions = 0` with `avg_offdiagonal_corr` and `min_overlap_days` both NULL. The `n_positions >= 2` term fails, so the check is a no-op and no `b_pairwise_corr_high` alert is raised. Note again that this is a stricter zero than the standing plan text, which describes B as holding a single position (MDT) — **B's open book is empty, not one name.**
 
 ### JUDGMENT-LADEN THESIS-INVALIDATION CHECK
 
 **Result: no invalidation criterion is met on any of the 12 tranches.**
 
-No Development in this scan touched any of the eight held names with new information. The session was a rates-and-oil repricing and every held name moved inside that channel: AMZN −0.2021%, DIS +1.5742%, GEV −2.8527%, GOOGL +0.5897%, ISRG +2.0439%, RTX +0.2885%, TSM −1.6837%, UBER +2.0822%.
+No Development in this scan touched any of the eight held names with adverse new information. Ten of twelve tranches rose; the session was a broad risk-on reversal and every held name moved inside it: AMZN +1.9414%, DIS +0.6898%, GEV +3.6106%, GOOGL +1.7740%, ISRG +2.4107%, RTX −0.2221%, TSM +1.2172%, UBER −1.2266%.
 
-Criterion-by-criterion, the invalidation sets are all fundamental-metric or event-triggered, and none has a test that this session's data could move:
+Criterion by criterion, the invalidation sets are all fundamental-metric or discrete-event, and none has a test this session's data could move:
 
-- **AMZN** (both tranches) — AWS revenue YoY, AWS operating margin, AWS backlog, hyperscaler commitments, metric immutability. All quarterly-reported; next test is the Q3 print. Unbreached.
-- **DIS** (both) — Entertainment SVOD operating margin, FY26 EPS guide, buyback pace, metric immutability, FCC escalation. The 08-05 tranche records all five affirmatively re-verified at the Q3 FY26 checkpoint (SVOD margin ~13%, third consecutive quarter of expansion; FY26 ~12% adjusted EPS growth reiterated; buyback target *raised* to ≥$9B). Unbreached.
-- **GEV** — total-company organic orders growth YoY, entry-quarter reading 88% against a 15% two-consecutive-quarter invalidation floor. Unbreached with a wide margin.
-- **GOOGL** (both) — Cloud revenue YoY, Cloud operating margin, Cloud RPO, adverse structural remedy. The 07-26 tranche records all four `unbreached`, with the EU DMA 07-23 ruling noted as behavioral (i.e. not the adverse structural remedy the criterion names). Unbreached.
+- **AMZN** (both tranches) — AWS revenue YoY, AWS operating margin, AWS backlog, hyperscaler commitments, metric immutability. All quarterly; next test is the Q3 print. Unbreached. *Note the cross-current, recorded because it is genuinely two-sided:* the Oracle capex plan is corroborating evidence for hyperscaler commitment generally, which is an AMZN criterion — but it is a competitor's disclosure and reinforces rather than tests the criterion.
+- **DIS** (both) — Entertainment SVOD operating margin, FY26 EPS guide, buyback pace, metric immutability, FCC escalation. The 08-05 tranche records all five affirmatively re-verified at the Q3 FY26 checkpoint. Unbreached.
+- **GEV** — total-company organic orders growth YoY, entry-quarter reading 88% against a 15% two-consecutive-quarter invalidation floor. Unbreached with a very wide margin; Friday's move was reinforcing, not testing.
+- **GOOGL** (both) — Cloud revenue YoY, Cloud operating margin, Cloud RPO, adverse structural remedy. All four recorded `unbreached` on the 07-26 tranche. Unbreached.
 - **ISRG** — procedure growth, placements, recurring revenue decoupling, competitor displacement at named IDNs. Quarterly. No breach evidence.
 - **RTX** — Airbus damages ruling >$2B, a new powder-metal-class quality event >$1B, GTF Advantage EIS slipping past Q1'27, two-quarter backlog decline, FY26 FCF guide below $7.5B, FY27 defence procurement cut ≥10%. None engaged.
-- **TSM** (both) — gross margin <55% or USD revenue YoY <15% for two quarters, N2/A16 pushout or sub-7nm share decline, structural AI-capex reset. The 07-29 tranche measured GM 67.7%, USD revenue +33.7% YoY, sub-7nm mix 77% and rising, FY26 capex guide raised to $60–64B. Unbreached.
-- **UBER** — gross bookings cc YoY, adjusted-EBITDA margin as a share of GB, Uber One membership, metric immutability. Quarterly. No breach evidence.
+- **TSM** — gross margin <55% or USD revenue YoY <15% for two quarters, N2/A16 pushout or sub-7nm share decline, structural AI-capex reset. **The Oracle $95B capex plan is evidence directly AGAINST the structural-AI-capex-reset criterion**, i.e. it strengthens the thesis rather than threatening it. Unbreached.
+- **UBER** — gross bookings cc YoY, adjusted-EBITDA margin as a share of gross bookings, Uber One membership, metric immutability. Quarterly. No breach evidence; Friday's −1.2266% is price action, not information.
 
-**DIVIDEND NETTING: not engaged this session.** The rule binds only where an invalidation criterion names a **price level**. None of the twelve tranches carries a price-level criterion — every criterion above is a fundamental metric or a discrete event, and Strategy D is explicitly a no-stop design (the RTX record even documents that a draft "breaks $130 on heavy volume" criterion was *dropped at entry* as contradicting that design). So `state.price_level_criterion_drift` was not consulted, and that is a scope finding, not an omission.
+**DIVIDEND NETTING: not engaged this session, and this is a scope finding rather than an omission.** The rule binds only where an invalidation criterion names a **price level**. `state.price_level_criterion_drift` returns exactly one row — `D:DIS:2026-08-05` — and that row's own flags settle it: `is_exit_criterion = false`, `actionable_price_level = false`, `likely_fundamental_context = true`, with criterion text reading *"NOT exit-triggering: ordinary adverse mark-to-market… No price-based stop (long-only, open-ended downside per Strategy D)."* The 45.00 figure is the CaR notional, not a stop. So no price test was reported as met anywhere in this file, and the netting rule had nothing to bind on. (`marks_cover_reference = true` and `has_dividend_drift = false` on that row in any case.)
 
 ### WATCHLIST CANDIDATE STATUS
 
-No Development materially changes the candidacy status of any queued name. The Strategy A queue carries `A:FSLR:2026-09-06` as pending; nothing today touches it. The Strategy B new-entry index gains four names (below) and loses none — no window closed today that this run is responsible for.
+No Development materially changes the candidacy status of any queued name. The Strategy A queue gained MRK, JPM, CVX and XOM earlier today from W1/W4 — none is touched by this scan; `A:FSLR:2026-09-06` remains pending. The four B index candidates from 2026-09-10 (COO, AEO, NAVN, RDDT) were verified landed by D2 in `Watchlist.md`'s B new-entry index — **the handoff completed correctly**; their windows (09-23 / 09-24) remain open and nothing this session closes or invalidates one. The B index gains two names below and loses none.
 
 ---
 
 ## ANALYSIS — OPPORTUNITY CHECK
 
-Scoped to roster-active strategies with `review_cadence: reactive` in `strategy/roster.yaml` — verified live this run as **A, B, C, E** (D carries `long_horizon` and is excluded here; all five are `roster_state: adopted`).
+Scoped to roster-active strategies with `review_cadence: reactive` — verified live as **A, B, C, E** (D carries `long_horizon`; `state.strategy_roster` shows A–E `ADOPTED`, F/G/H `REJECTED`).
 
-**Strategy B — 4 candidates.** B's frozen Entry criterion 1 requires **≥5% close-to-close on the event day** plus a resolved qualifying public event.
+**Strategy B — 2 candidates.** B's frozen Entry criterion 1 requires **≥5% close-to-close on the event day** plus a resolved qualifying public event.
 
 | Ticker | Move | `qualifying_event_date` | Why it creates the opportunity |
 |---|---|---|---|
-| **COO** | −14.6660% | 2026-09-09 | FQ3 revenue miss and FY guide cut with a *named, bounded* mechanism (CooperVision channel destocking) — the cleanest information event of the session |
-| **AEO** | −13.9728% | 2026-09-09 | EPS **and** revenue beat with guidance **raised**, yet −14% on a comp-sales miss: the sentiment-vs-information divergence B exists to exploit |
-| **NAVN** | −21.7458% | 2026-09-09 | Beat-and-raise met with −21.7% on a widening GAAP loss. **Weakest mechanism fit of the four** — Navan is a recent IPO with no established volatility regime, so float and lockup mechanics are not separable from information here |
-| **RDDT** | +6.0776% | 2026-09-10 | Piper Sandler +8% MoM August user-growth data — a discrete, dated, external datapoint rather than a re-rating |
+| **HPE** | **+12.4411%** | 2026-09-10 | An $82B hardware incumbent re-rated +12.4% on **another company's** capex disclosure — a second-order repricing of an unquantified share of a third party's spend, which is the over-sized-reaction shape B exists to test |
+| **DELL** | **+11.9776%** | 2026-09-10 | The same event, and a larger anomaly per unit of market value: a **$377B** company moving +12% in one session on a read-through rather than on its own disclosure |
 
-**RDDT identity check, done on the FIELDS and not on the key string.** RDDT already sits in the B new-entry index from **2026-08-25** (+6.3851%, The Information report), a window that has since closed. The four-part identity here is `(thesis-construction, B, RDDT, 2026-09-10)`, which differs from `(…, RDDT, 2026-08-25)` in its `qualifying_event_date`. Per the shared rule, a later **distinct** event in the same ticker must not be suppressed. Not a duplicate.
+**The qualifying event is Oracle's FQ1 print and $95B capex plan, released after the 2026-09-10 close.** It is discrete, dated, public and resolved — which is what distinguishes it from the prior run's SCCO/FCX rejections, where "continued White House indecision" was a non-announcement with nothing to date a thesis from. The event does not have to be the company's own; criterion 1 requires only a public event producing an immediate ≥5% reaction.
 
-**Names that cleared 5% and were deliberately NOT routed to B, each with its reason:** ORCL −5.3764% and ADBE −2.3660% (their prints landed after today's close; no resolved information in today's move); INTC −5.5723% (profit-taking is not an event); LRCX −5.6453% and CIFR −5.6805% (sector/complex sympathy with no name-specific event); SCCO −7.2255% and FCX −6.5853% (**continued White House *indecision* on refined-copper tariffs is a non-announcement — there is no discrete resolved event to date the thesis from**, which is what B's four-part identity requires).
+**Identity checks, done on the FIELDS and not on the key string.** HPE carries a **completed** `thesis-HPE-B-20260602` (`due_date` 2026-06-02) — a different `qualifying_event_date`, so `(thesis-construction, B, HPE, 2026-09-10)` is a distinct identity and is not suppressed. DELL has no prior B record of any kind. Both appear in the **A watchlist queue** (`A:HPE:2026-05-29`, `A:DELL:2026-05-17`, both pending) — but a queue entry is not an open position, and **Strategy A holds nothing**, so B's criterion 5 (no open A position in the same name) clears for both.
 
-**Strategy A — none.** No development in the window named a dated qualifying catalyst within six months on an A-eligible name.
+**SMCI (+7.2766%) and ANET (+5.6087%) also clear criterion 1 on the same event and are deliberately NOT routed as separate candidates.** They are the same single factor, and this file's own cohort discipline treats one factor across many tickers as approximately one observation. HPE and DELL are routed as the two cleanest and largest instances; SMCI and ANET are recorded here so a thesis session can widen the cohort from this record if it judges that worthwhile. **This is a judgment, stated so it is reviewable, not a measurement.**
 
-**Strategy C — none, and this is a deliberate suppression rather than an absence.** The 2026-09-15/16 FOMC is inside C's 45-day window and C's router reads `HYBRID ACTIVATE (FOMC-only)`. But the identity check finds `events.queue_events` item **`thesis-FOMC-C-20260908`** (`item_type='thesis-construction'`, `strategy='C'`, `ticker='FOMC'`, `due_date=2026-09-08`) already in terminal status **`complete`**. Re-flagging the same FOMC would duplicate a finished item. Independently, W5's open `strategy_c_criterion2_unreached_pattern` alert records that C has now failed FOMC entry criterion 2 on **five consecutive drains** — so a sixth identical flag would be adding queue traffic to a pattern already under review. **Recorded because the 2026-09-09 run flagged this same FOMC as a new C candidate one day *after* the item completed;** D2 correctly de-duplicated it, so nothing was lost, but the flag should not have been raised and is not raised again here.
+**Names clearing 5% and deliberately NOT routed, each with its reason:** **SWKS** +5.1410% (the merger-clearance **event day was 09-10**, so the 09-11 move is second-day continuation and not an event-day reaction; a regulatory clearance is also about as information-driven as an event gets, which is what criterion 4 rejects); **TLX** −5.1261% (**outcome not established** — the PDUFA date is confirmed but no decision was published, so the gate forbids assessing it; queued for re-assessment, window open to ~09-25); **SMR** −15.6709% (**no identifiable public event**, so no four-part identity is constructible, and its ~$2.56B cap is inside the band needing a second source); **SLS** −14.4181% (rejected at Layer 2, same cap caveat); **JBL** +5.0462% (same factor as HPE/DELL, one observation).
 
-**Strategy E — none.** The session's most striking divergence is XLE −0.58% against Brent +6.34%, but that is commodity-versus-equity, not the **intra-industry-group** pair divergence E requires. Within the copper complex FCX −6.59% and SCCO −7.23% moved together, which is convergence, not divergence. AAPL +3.56% against the semiconductor complex is a real divergence but spans different GICS industry groups. No clean E pair surfaced.
+**Strategy A — none.** No development in the window named a dated qualifying catalyst within six months on an A-eligible name. The Oracle capex plan is a demand datapoint, not a dated catalyst on any specific name.
 
-**Router activation context, stated so the candidates are not misread as entries.** `state.current_regime` (as of 2026-09-03) carries A, B, D and E at **DO-NOT-ACTIVATE** and C at HYBRID ACTIVATE (FOMC-only). The four B candidates above therefore queue for thesis construction; the activation gate is D2's to apply and is not relaxed by anything in this file.
+**Strategy C — none, and this is a deliberate suppression rather than an absence.** The 2026-09-15/16 FOMC sits inside C's 45-day window and C's router reads `HYBRID ACTIVATE (FOMC-only)`. But the identity check finds **both** FOMCs in the window already covered: `thesis-FOMC-C-20260908` is in terminal status **`complete`**, and W4 **earlier today** enqueued `thesis-FOMC-C-20261020` (`pending`, due 2026-10-20) for the October meeting. Flagging either would duplicate a live or finished item. Independently, W5's open `strategy_c_criterion2_unreached_pattern` alert records C failing FOMC entry criterion 2 on five consecutive drains.
+
+**Strategy E — 1 candidate, surfaced with a caveat that may well kill it.** **DELL / STX.** Both are conventionally classified in the same GICS sub-industry (Technology Hardware, Storage & Peripherals), and they split by **15.7073pp in a single session** — DELL +11.9776% against STX −3.7297%, with WDC −2.9835% alongside. That is the intra-industry-group divergence E's opportunity bullet asks D1 to surface. **Two things are stated rather than glossed:** (i) the 252-day correlation test (E's frozen Entry criterion 3, corr ≥ 0.5) was **not measured by this run** — that is M2's population screen, not D1's, and this is a surfacing, not a qualification; and (ii) the divergence has a **named fundamental mechanism** — hyperscaler capex accrues to compute and networking, not to commodity storage — which is exactly the "information-driven, not sentiment-driven" finding that would foreclose it at thesis construction. It is surfaced anyway because a 15.7pp one-session same-sub-industry split is the strongest E-shaped observation in weeks, and recording it with its own likely refutation is more useful than not recording it.
+
+**Router activation context, stated so the candidates are not misread as entries.** `state.current_regime` (as of 2026-09-03) carries **A, B, D and E at DO-NOT-ACTIVATE** and C at HYBRID ACTIVATE (FOMC-only); E's flip to DO-NOT-ACTIVATE on 2026-09-03 was a STATE CHANGE and E became capital-disabled from 09-04, leaving **C as the sole capital-enabled strategy**. B is capital-disabled with NAV $0.00. The candidates above therefore go to the **index**, not to thesis construction; the activation gate is D2's to apply and nothing in this file relaxes it.
 
 ---
 
 ## ANALYSIS — ADD-CANDIDATE CHECK (Strategies A, B, D only)
 
-**Result: 12 tranches evaluated, 0 flagged, 3 declined at the HARD GATE.** Logged in full — including every decline — as `events.decision_log` entry_id **`7c37f5c2-ec5f-462f-8ac9-c938116250fa`** (`entry_type='add-candidate-review'`).
+**Result: 12 tranches evaluated, 0 flagged, 3 declined at the HARD GATE.** Logged in full — including every decline — as an `events.decision_log` `entry_type='add-candidate-review'` row.
 
 All 12 open tranches are Strategy D; A and B hold nothing, so the A/B/D scope reduces to D.
 
-**Price basis, per the 2026-09-07 pin.** Each `mark_vs_cost_pct` below uses the 2026-09-10 IBKR **regular-session** daily-bar close over that **tranche's own** `cost_basis / shares` — never the account-level blended `average_price`. That matters again today: `get_account_positions` served **AMZN at 252.20** and **GOOGL at 331.80** against true 09-10 closes of **251.89** and **332.60** — wrong in *both directions* on the same account read. A fresh instance of exactly the defect the pin records.
+**Price basis, per the 2026-09-07 pin, both halves.** Numerator: the 2026-09-11 IBKR **regular-session** daily-bar close. Denominator: that **tranche's own** `cost_basis / shares`, never the account-level blended `average_price`. **The pin was validated rather than assumed:** recomputing every tranche against the 2026-09-10 closes reproduced the previous run's twelve published figures **exactly on all twelve** — an independent cross-run check on the arithmetic. And the connector mark was again wrong in both directions, with the worst instance yet: `get_account_positions` served **TSM at 417.39** against a true 09-11 close of **433.24** (**3.66% stale**, and stale even against the 09-10 close of 428.03), AMZN at 252.98 against 256.78, GOOGL at 335.00 against 338.50, VOO at 699.00 against 702.56 — while DIS, ISRG, SGOV and UBER matched.
 
-| Tranche | `mark_vs_cost_pct` | Session | Disposition | Evaluable |
-|---|---|---|---|---|
-| D:RTX:2026-04-27 | **+11.9962%** | +0.2885% | `declined_hard_gate` | false |
-| D:TSM:2026-07-29 | +8.9459% | −1.6837% | declined | true |
-| D:AMZN:2026-07-09 | +4.4129% | −0.2021% | declined | false |
-| D:ISRG:2026-07-20 | +3.1328% | +2.0439% | `declined_hard_gate` | false |
-| D:DIS:2026-08-05 | +1.9604% | +1.5742% | declined | true |
-| D:GOOGL:2026-07-26 | +1.4508% | +0.5897% | declined | true |
-| D:TSM:2026-07-21 | +0.0394% | −1.6837% | declined | false |
-| D:UBER:2026-07-09 | −0.8842% | +2.0822% | `declined_hard_gate` | false |
-| D:GEV:2026-08-03 | −4.7423% | **−2.8527%** | declined | true |
-| D:DIS:2026-05-07 | −4.9399% | +1.5742% | declined | false |
-| D:AMZN:2026-07-30 | −5.1951% | −0.2021% | declined | true |
-| D:GOOGL:2026-07-09 | **−7.5722%** | +0.5897% | declined | false |
+| Tranche | `mark_vs_cost_pct` | Session | Trigger | Disposition | Evaluable |
+|---|---|---|---|---|---|
+| D:RTX:2026-04-27 | **+11.7475%** | −0.2221% | none | `declined_hard_gate` | false |
+| D:TSM:2026-07-29 | +10.2720% | +1.2172% | none | declined | true |
+| D:AMZN:2026-07-09 | +6.4399% | +1.9414% | none | declined | false |
+| D:ISRG:2026-07-20 | +5.6191% | +2.4107% | none | `declined_hard_gate` | false |
+| D:GOOGL:2026-07-26 | +3.2505% | +1.7740% | none | declined | true |
+| D:DIS:2026-08-05 | +2.6638% | +0.6898% | none | declined | true |
+| D:TSM:2026-07-21 | +1.2571% | +1.2172% | none | declined | false |
+| D:GEV:2026-08-03 | −1.3028% | **+3.6106%** | **strengthened-conviction** | declined | true |
+| D:UBER:2026-07-09 | −2.1000% | **−1.2266%** | **dip-with-intact-thesis** | `declined_hard_gate` | false |
+| D:AMZN:2026-07-30 | −3.3546% | +1.9414% | none | declined | true |
+| D:DIS:2026-05-07 | −4.2841% | +0.6898% | none | declined | false |
+| D:GOOGL:2026-07-09 | **−5.9326%** | +1.7740% | none | declined | false |
 
-**HARD GATE.** Seven tranches carry `$.breach_status = 'NOT_ASSESSED_BY_THIS_BACKFILL'` and therefore report `invalidation_criteria_evaluable = false` under the **third disjunct** (added 2026-09-06): D:AMZN:2026-07-09, D:DIS:2026-05-07, D:GOOGL:2026-07-09, D:ISRG:2026-07-20, D:RTX:2026-04-27, D:TSM:2026-07-21, D:UBER:2026-07-09. Not one of the twelve carries a `$.status` key at all, so the two-disjunct form would have returned `true` for every position — the inversion that bullet exists to prevent. **Four** of the seven are covered at NAME level by a later tranche carrying a fresh assessment (AMZN by 07-30, DIS by 08-05, GOOGL by the 07-26 tranche whose `a_`/`b_`/`c_`/`d_` keys all read `unbreached`, TSM by 07-29), so the gate *can* affirmatively confirm unbreached for the name and these are ordinary declines. **Three are covered nowhere in the record — ISRG, RTX, UBER — and are structurally ineligible for an add.** This is the third consecutive sweep to record the same three; it is now a standing condition of the record rather than a finding of this run.
+**Why zero flagged, and it is structural to the session rather than a shrug.** Ten of twelve tranches ROSE. Only UBER and RTX fell, and both are hard-gated. A dip trigger requires a dip; on this tape there were almost none to have.
 
-**Why zero flagged.** No Development touched any held name with new information, so neither add trigger is available. The two deepest tranche drawdowns, D:GOOGL:2026-07-09 (−7.5722%) and D:AMZN:2026-07-30 (−5.1951%), both saw their underlying **rise or barely move** today — a carried drawdown is not a dip-with-intact-thesis. **GEV is the only genuine same-session dip of size** (−2.8527%, −4.7423% against cost, thesis reading 88% against a 15% floor) and it is declined for the reason that actually applies: **no driver was identified**, so "dip against an intact thesis" and "the market knows something" are indistinguishable from the evidence in hand. Adding equity risk in the strategy book on the same evening the park de-risks would also need a reason, and there is not one.
+**The one genuine trigger available was GEV, and it is declined on the MERITS, not on the gate.** GEV rose 3.6106% on the Oracle-capex read-through into electrical equipment, and that *is* new, public, dated information bearing on data-centre electrical demand — the position's own core driver — so `trigger_type` is recorded as `strengthened-conviction` rather than `none`, because saying otherwise would understate the record. It is declined for three compounding reasons: the information is not GEV-specific and reaches it only as a third-party read-through; it is already paid for in a +3.61% same-session move; and GEV's thesis has **no conviction gap for new evidence to close** — 88% organic orders growth against a 15% two-consecutive-quarter invalidation floor is a margin so wide that reinforcing evidence changes no decision. Adding to a name up 3.6% on someone else's capex line, two sessions before an FOMC carrying an ~85–90% implied hike, is momentum wearing conviction's clothing.
+
+**THE HARD GATE COST A REAL FLAG TODAY, and this is the second time.** `D:UBER:2026-07-09` is the one textbook dip-with-intact-thesis in the book: **−1.2266% on a session the tape rose +0.8524%** — a 2.08pp relative decline — sitting −2.1000% against its own tranche cost, with no adverse UBER news in the window and every invalidation criterion quarterly-reported and untested by this session. It cannot be flagged, because its `invalidation_status` carries `$.breach_status = 'NOT_ASSESSED_BY_THIS_BACKFILL'` and no later UBER tranche exists to cover the name. The 2026-09-08 sweep recorded the same of ISRG and UBER. **This has stopped being a record-legibility defect and is now measurably costing candidate flags** — raised this run as an `ops.alerts` info row naming its owning surface (see PROCESS NOTES), rather than absorbed silently for a fourth sweep.
+
+**HARD GATE, computed with all three disjuncts and the NULL-safety wrapper.** Seven tranches report `invalidation_criteria_evaluable = false` on the **third** disjunct: D:AMZN:2026-07-09, D:DIS:2026-05-07, D:GOOGL:2026-07-09, D:ISRG:2026-07-20, D:RTX:2026-04-27, D:TSM:2026-07-21, D:UBER:2026-07-09. **Measured live this run and worth restating, because it is the exact trap that bullet exists to close: ZERO of the twelve carry a `$.status` key and ZERO carry a NULL `invalidation_status`** — so the two-disjunct form would have returned `true` for every single position, reporting as evaluable precisely the seven whose breach status was never assessed. **Four** of the seven are covered at NAME level by a later tranche (AMZN by 07-30, DIS by 08-05, GOOGL by 07-26, TSM by 07-29) and are ordinary declines. **Three are covered nowhere — ISRG, RTX, UBER.**
 
 ---
 
@@ -240,61 +247,67 @@ All 12 open tranches are Strategy D; A and B hold nothing, so the A/B/D scope re
 
 **No inter-monthly router review recommended.** High bar; default-NO on ambiguity holds.
 
-A single session of SPY −0.60% with oil and yields higher does not plausibly shift any strategy's activation state. The `FUNDAMENTAL_AXIS` already carries `shock_overlay: acute`, so today's escalation deepens a condition the router has already priced rather than introducing a new one, and the other four axes (decelerating growth, disinflating, hawkish, risk-on) are untouched by one session.
+A single risk-on session does not plausibly shift any activation state, and the two macro facts that moved are both *deepenings of conditions the router has already priced* rather than new ones: `policy_stance` already reads **hawkish**, so an ~85–90% hike probability confirms the axis rather than turning it; `shock_overlay` already reads **acute**, so the weekend chokepoint escalation deepens a condition already in force. The other three axes (decelerating growth, disinflating, risk-on) are untouched by one session.
 
-**One watch item, recorded and explicitly not escalated:** equity breadth has fallen **60.63 → 56.85 → 54.67** in three sessions, −5.96pp. The `TECHNICAL_SIGNAL` `EQUITY_BREADTH` still read HEALTHY at 56.85. Applying the HEALTHY/WEAK threshold is **D2a's** job, not D1's — D1 observes, D2a classifies — so this file records the observation and the trajectory and leaves the classification alone. If D2a flips that key, the router review question belongs to that flip, not to this scan.
+**Two watch items, recorded and explicitly NOT escalated.**
+1. **Breadth turned UP** — 54.67 → **56.46**, +1.79pp, the first increase in five recorded sessions, breaking a 66.40 → 64.01 → 60.63 → 56.85 → 54.67 run of −11.73pp. It remains 9.54pp below the 66 park-axis threshold. Applying the HEALTHY/WEAK `TECHNICAL_SIGNAL` threshold is **D2a's** job, not D1's — D1 observes, D2a classifies.
+2. **`SPY_TREND` flipped to NEUTRAL on 09-10** when SPY closed 0.4158pts below its 50dma; on 09-11 SPY reclaimed it decisively, closing 5.6736pts (+0.7479%) **above**. D2a will likely flip that key back to UP. Again: D1 observes.
 
 ---
 
 ## EQUITY-BREADTH OBSERVATION
 
-**Written: `events.regime_events`, `as_of_date = 2026-09-10`, `scope='TECHNICAL_INPUT'`, `key='EQUITY_BREADTH_PCT'`, `numeric_value = 54.67`, `value='Barchart $S5TH'`.** Idempotency verified before the write (no prior row on that key for this date).
+**Written: `events.regime_events`, `as_of_date = 2026-09-11`, `scope='TECHNICAL_INPUT'`, `key='EQUITY_BREADTH_PCT'`, `numeric_value = 56.46`, `value='Barchart $S5TH'`.** Idempotency verified before the write — no prior row existed on that key for that date.
 
-- **Primary: Barchart `$S5TH`**, https://www.barchart.com/stocks/quotes/$S5TH?cb=20260910 via `tavily_extract` (advanced, cache-busted). Page header verbatim: *"Quote Overview for Thu, Sep 10th, 2026"*; quote line `54.67 −2.18 (−3.83%) 17:05 ET [INDEX]`; Previous Close 56.85. **Source-dated, not inferred** — the page names its own session and the 17:05 ET stamp is post-close, so the `date_attribution=inferred_post_close` fallback was not used and is not claimed.
-- **Second independent source obtained — EODData, exact agreement.** https://www.eoddata.com/stockquote/INDEX/S5TH.htm?cb=20260910, historical table row "10 Sep 26": Open 55.66, High 55.86, Low 52.88, **Close 54.67**, PREV 56.85. A **0.00pp** match on both the close and the prior reading. This run has **two** usable sources, not one, so no single-source disclosure is owed. The >5pp disagreement rule is not engaged.
-- **The EODData unsettled-value tell was observed and correctly rejected.** That page's *header quote block* separately showed `LAST 53.47` stamped `10 Sep 26 15:55` — pre-16:00 ET, and disagreeing with the page's own settled table row for the same date. The 53.47 was discarded and the dated end-of-day row used.
-- **No overnight settlement revision this session.** Barchart's Previous Close reads 56.85, which equals exactly the value D1 stored for 2026-09-09. Nothing is owed to today's rationale on that account, and no prior row was retroactively corrected (the idempotency rule is unchanged and was not touched).
-- **MacroMicro deliberately not attempted.** Under the 2026-09-06 W5 ruling it is a **weekly, Sunday-anchored** re-probe, not a per-run first attempt. Today is Thursday, so no probe was due and skipping it is compliance, not a missed source. Barchart is the declared primary and answered on the first call.
+- **Primary: Barchart `$S5TH`**, https://www.barchart.com/stocks/quotes/$S5TH via `tavily_extract` (advanced). Page header verbatim: *"Quote Overview for Fri, Sep 11th, 2026"*; published figure `56.46 +1.79 (+3.27%)` dated `09/11/26`; Open 57.05, Day High 57.05, Day Low 54.87, Previous Close 54.67. **Source-dated, not inferred** — `date_attribution=inferred_post_close` was not used and is not claimed.
+- **Previous-Close self-check passes EXACTLY.** Barchart's Previous Close of 54.67 equals the value this key already carries for 2026-09-10, and 54.67 + 1.79 = 56.46 reconciles internally. No overnight settlement revision this session, and no prior row was retroactively corrected (the idempotency rule is unchanged and was not touched).
+- **Second independent source obtained — EODData, exact agreement.** https://www.eoddata.com/stockquote/INDEX/S5TH.htm?cb=20260913, end-of-day row "11 Sep 26": Open 57.05, High 57.05, Low 54.87, **Close 56.46**, PREV 54.67 — a **0.00pp** match on the close, the prior reading, and the full OHLC. **Two usable sources**, so no single-source disclosure is owed and the >5pp no-write rule is not engaged. The unsettled tell was checked and is clear on both: Low 54.87 ≠ Close 56.46, and the page stamp is `11 Sep 26 16:26`, post-close — and this is additionally a Sunday fetch sitting ~48h after Friday's close.
+- **A STALE-VINTAGE TRAP WAS HIT AND REJECTED — recorded because it is the dangerous shape.** The *same site's* `/quotes/$S5TH/overview` path returned, to the *same* `tavily_extract` call, a header reading *"Quote Overview for Wed, Sep 9th, 2026"* carrying 56.85 with Previous Close 60.63 — a genuinely older cached page, not a data error (both figures match this table's own 09-09 and 09-08 rows). **The on-page date is what caught it.** The bare `/quotes/$S5TH` path served the current vintage and is what produced the figure kept. Fetch path is recorded as part of the provenance.
+- **MACROMICRO WEEKLY RE-PROBE WAS DUE TODAY AND WAS SPENT.** Today is Sunday, which anchors the week under the 2026-09-06 W5 ruling, so this run owed exactly one probe. It **FAILED on both sanctioned paths**: `tavily_extract` (advanced, `?cb=20260913`) returned `Failed to fetch url` and a direct `WebFetch` of the same URL returned **HTTP 403**. Not retried beyond those two attempts, per the ruling. The streak since 2026-08-19 is unbroken. `ops.alerts` **`b4fe8d88`** (`breadth_primary_source_persistently_unreachable`) is already OPEN and names this exact mechanism, so it is deliberately **NOT re-raised**.
 
 ---
 
 ## PARK ALLOCATION CALL
 
-Logged as `events.decision_log` entry_id **`a383d21d-f59a-4798-a3ae-3a571aff49c4`** (`entry_type='park-allocation'`); heartbeat written to `ops.heartbeat` (`loop:park_allocator`). `state.park_allocation_latest` confirms the row surfaces to D2 with `status='BOUND'`, `target_f_pct=50`, `is_call=true`.
+Logged as `events.decision_log` entry_id **`831ce6cf-cb83-4b2a-8794-71615c881cff`** (`entry_type='park-allocation'`); heartbeat written to `ops.heartbeat` (`loop:park_allocator`). `state.park_allocation_latest` confirms the row surfaces to D2 with `status='BOUND'`, `direction='keep'`, `is_call=true`.
 
 - **`vehicle`** — **VOO** (the majority sleeve; at f=50 the tie resolves to the **risk** sleeve. This is *not* a claim that the book is single-vehicle).
-- **`target_f_pct`** — **50** (risk sleeve VOO 50% / defensive sleeve SGOV 50%), up from a policy 25 and an actual 24.9264%. **Direction: de-risk. Status: BOUND.**
-- **`conviction`** — **MEDIUM**, `conviction_pct` **55**.
-- **`rationale`** — The runner-up is KEEP at 25, and it has real arguments: the index crossing is only 0.0548% deep, credit is actively risk-**on**, the drawdown is an ordinary −2.58%, and this allocator's measured record is bad (0-for-2 on AI-era defensive excursions at −2.841pp and −1.019pp; −0.638pp mean forward edge across 15 historical episodes, 4 wins in 15; the 2026-09-01 single-axis de-risk cost a measured $214.32 round trip). KEEP loses on one point, and it is decisive: **the direction of travel is unambiguous, and answering that proportionately is the whole reason this ladder replaced the binary switch.** Since f went 0 → 25 on 09-08, every axis then standing has *deepened* — VIX 15.72 → 17.84, breadth 60.63 → 54.67, Brent 99.39 → 107.63 — and a **fourth has joined**. Holding at 25 through a strictly worse reading on every input would make the ladder a one-step switch again. One step to 50 is what its own arithmetic returns without being pushed.
-- **`invalidation`** — **Symmetric by construction, and deliberately single-limb because the increase was carried by a single-limb case.** A step back toward f=25 or lower needs evidence of the same *kind* and *weight* in the other direction, and **any one** of these, judged in the round, is enough — do **not** require a conjunction: (a) SPY reclaims and holds its 50-day SMA with breadth turning up off 54.67; **or** (b) the Hormuz supply channel visibly de-escalates with Brent retreating under 95; **or** (c) the 09-11 CPI and the 09-15/16 FOMC resolve benignly enough to take the rate channel off the table, with VIX falling back through its own 20d SMA. Equally, the increase should be re-examined on its own terms next session: it rests on a 0.0548% index crossing, and if SPY closes back above its 50dma with nothing else changed, the fourth axis is gone and 25 is again the ladder's answer. No later session is bound by any of this.
-- **`theater_check`** — The rationale names the axis that **refuses to confirm** (credit, +0.5561% *above* its 20d SMA) and states that the axis carrying the entire increase crosses by 0.0548%. It also states the record that argues against the action taken. The conviction is 55 **because** of those two, and 55 is what produced 50 rather than 75 — if the number had been reverse-engineered from a desired f, 0.75 × 100 would have been the easier arithmetic to write.
+- **`target_f_pct`** — **50** (risk sleeve VOO 50% / defensive sleeve SGOV 50%), unchanged from a policy 50 and an actual 49.7305%. **Direction: KEEP. Status: BOUND.**
+- **`conviction`** — **MEDIUM**, `conviction_pct` **48** (down from 55).
+- **`rationale`** — **This is not the same KEEP as Thursday's de-risk; two axes changed places.** The **index** axis, which single-handedly carried Thursday's step from 25 to 50 on a 0.0548% crossing *below* the 50dma, has **EXITED** — SPY closed 764.29 against a 50dma of 758.6164, now **0.7479% above** it, a reversal an order of magnitude deeper than the crossing that created it, with drawdown from the 252-session closing high at only −1.7471% against a −3% limb. Thursday's record pre-registered this almost exactly: *"if SPY closes back above its 50dma with nothing else changed, the fourth axis is gone and 25 is again the ladder's answer."* The index axis **is** gone, as predicted. But something else did change, so that sentence's antecedent fails. **The rates axis landed and is genuinely defensive** — and I checked whether that is a real entry or an artifact of the measurement arriving, because those are very different things: the stored 10Y series reads 4.83 (09-09) → 4.95 (09-10) → 4.96 (09-11), so it crossed 4.90 on its **own**, two sessions ago. **And that is exactly why it is not counted as fresh evidence for an increase:** Thursday's call already carried this fact narratively (*"the session's dominant macro fact… lives on precisely the axis the panel cannot see"*), so scoring it again today would be double-counting one fact. Run the arithmetic both ways and it is stable — had Thursday scored rates, its standing count would have been 5, cap 100, 0.55 × 100 = 55 → step **50**, the same f it reached; today index drops out (5 → 4), the cap stays 100, and 0.48 × 100 = 48 → step **50**. The ladder returns 50 from both directions, which is the check that this is arithmetic and not narration. **The runner-up is a step down to 25** and it has real arguments — volatility is hanging on by 0.4435, breadth turned up, credit is actively risk-on and moving further away, and this allocator's live record is bad. It loses on one point: a near-certain policy hike two sessions out, plus a weekend escalation on two chokepoints that Friday's tape never saw, is not an evidence set that supports halving defensive exposure. Reaching 25 requires conviction below 37.5 — barely above a third — with 4 of 6 axes standing. I do not hold that.
+- **`invalidation`** — **Symmetric by construction and deliberately DISJUNCTIVE; do not require a conjunction.** A step **down** toward f=25 needs **any one** of these, judged in the round (each takes standing to 3 and the cap to 75, whereupon 0.48 × 75 = 36 → step 25): **(a)** VIX closes below its 20d SMA — the margin is only **0.4435**, so one quiet session does it; **or (b)** the 10Y closes below 4.90, most plausibly on a dovish-surprise FOMC on 09-16; **or (c)** Brent retreats below 95, or `shock_overlay` leaves acute; **or (d)** breadth reclaims 66. A step **up** to 75 needs the increase gate (≥1 axis ENTERED within 2 sessions **and** standing ≥ 2) together with conviction above 62.5 — credit finally confirming (which from +0.6688% requires a ~1.17% swing), the index axis re-entering on a decisive break of 758.6164, or a hawkish FOMC surprise. **The asymmetry is deliberate and is the correct direction:** the step-down bar is any one of four axis exits, several within one session's reach, while the step-up bar needs a firing *event* plus higher conviction — cheap to return to risk, dear to leave it, for a park whose default vehicle is the risk asset. No later session is bound by any of this.
+- **`theater_check`** — The rationale names the axis that **refuses to confirm** (credit, which moved *further* risk-on to +0.6688% against a −0.50% bar and has now declined to confirm on every session of this episode), names the axis that **exited exactly as Thursday predicted** (index), and names the measured record that argues against any defensive posture at all. Conviction **fell 55 → 48 while f is unchanged**, purely because the ladder's step spacing is 25 and 48 sits 2 points from 50 — if the number had been reverse-engineered to defend the position, keeping 55 would have been the easier arithmetic; if reverse-engineered to look decisive, 37 would have bought a headline re-risk. Neither was done.
 
 ### Ladder arithmetic (stated, as required)
 
-Hand-scored `standing_defensive_count` = **4** → raw cap = `LEAST(100, 25 × 4)` = **100**. **Decay:** the confirmed cap steps down only on the first session at which a *lower* standing count has already held on the two preceding measured sessions; the count **rose** this session (3 → 4), so no step-down is pending and the confirmed cap equals the raw cap at **100**. The clamp is therefore non-binding (50 ≤ 100). **Conviction sizes it:** 0.55 × 100 = 55; the nearest step in {0, 25, 50, 75, 100} is **50** (|55−50| = 5 against |55−75| = 20). No ±1-step deviation taken. **Crisis override not engaged:** session index move −0.5994% (bar −2.5%), VIX 17.84 (bar 28).
+Hand-scored `standing_defensive_count` = **4** → raw cap = `LEAST(100, 25 × 4)` = **100**. **Decay:** the confirmed cap steps down only on the first session at which a *lower* standing count has already held on the two preceding measured sessions; the counts run **3 (09-09) → 4 (09-10) → 4 (09-11)**, so no lower count has held and no step-down is due — the confirmed cap equals the raw cap at **100**. The clamp is therefore non-binding (50 ≤ 100). **Conviction sizes it:** 0.48 × 100 = 48; the nearest step in {0, 25, 50, 75, 100} is **50** (|48−50| = 2 against |48−25| = 23). **No ±1-step deviation taken** — see below. **Crisis override not engaged:** session index move **+0.8524%** (bar −2.5%), VIX **15.84** (bar 28).
 
-### The five testable axes, measured this session
+### The six axes, measured live this session
 
 | Axis | Verdict | Reading |
 |---|---|---|
-| **index** | **DEFENSIVE — ENTERED TODAY** | SPY 757.83 < 50dma **758.2458** (by 0.4158pts, **0.0548%**); dd −2.5775% does **not** clear the −3% limb |
-| volatility | defensive, standing, deepening | VIX **17.84** > 20d SMA **15.3360** and > 15; entered 09-09 at 16.46 |
-| breadth | defensive, standing, deteriorating fastest | **54.67** < 66; −5.96pp over three sessions; entered 09-08 |
-| shock | defensive, standing, both limbs | `shock_overlay='acute'` **and** Brent **107.63** > 95 |
-| **credit** | **NOT defensive — the honest counterweight** | HYG/IEF **0.8622505** vs 20d SMA **0.8574818** = **+0.5561%**; the test needs **−0.50%** |
-| rates | untestable by construction | No daily 10Y series reachable (FMP economics plan-gated) |
+| **index** | **NOT defensive — EXITED TODAY** | SPY **764.29** > 50dma **758.6164** by 5.6736pts (**+0.7479%**); dd **−1.7471%** does not clear the −3% limb |
+| **rates** | **DEFENSIVE — entered 09-10, firing** | 10Y **4.96** ≥ 4.90; crossed on its own two sessions ago (4.83 → 4.95 → 4.96) |
+| volatility | defensive, standing, **margin collapsing** | VIX **15.84** > 20d SMA **15.3965** and > 15 — margin **+0.4435**, down from **+2.4655** |
+| breadth | defensive, standing, **improving** | **56.46** < 66, but **+1.79pp**, the first rise in five sessions |
+| shock | defensive, standing, both limbs | `shock_overlay='acute'` **and** Brent **104.61** > 95 |
+| **credit** | **NOT defensive — the honest counterweight, and it widened** | HYG/IEF **0.863641** vs 20d SMA **0.857904** = **+0.6688%**; the test needs **−0.50%** |
 
-Credit did not merely fail to confirm — it **improved**, because IEF (−0.77%) fell harder than HYG (−0.46%) on the rate move. In a genuine risk event credit leads, and it is not leading. That, plus the absence of any safety bid (gold −1.73%, TLT −1.16%, dollar +0.18%) and a cross-sector spread of only 2.02pp, is why this is MEDIUM 55 and not HIGH. The **rates** axis is worth naming twice: the session's dominant macro fact — the 10Y at its highest since November 2023 — lives on precisely the axis the panel cannot see.
+Credit did not merely fail to confirm again — it moved **further away**, from +0.5561% to +0.6688%. **Credit has now declined to confirm on every single session of this defensive episode.** In a genuine risk event credit leads; it is not leading, and it is now leading the other way. That, plus a VIX margin of 0.4435 and a cross-sector spread of only 1.6285pp, is why this is MEDIUM **48** and not Thursday's 55.
 
-### Axis overrides — the mechanical panel disagrees, and this is the case the rule anticipates
+**A note on the VIX 20d SMA, because one input bar is corrupt.** The 2026-09-04 ^VIX bar carries close 15.30 *above* its own high of 14.58 — the known defect class, already documented in the 2026-09-08 park record. Per `bigquery/216`'s SOURCE TRAP, the axis reads `state.signal_marks_curated`, which carries **14.53** for that session; substituting it gives a 20d SMA of **15.3965**. On the raw bars the SMA is 15.4350. **The axis verdict is unchanged either way** (15.84 exceeds both), and both figures are recorded in `fields.readings` rather than one being quietly chosen.
 
-`state.park_axis_daily` for 2026-09-10 reports `standing_defensive_count = 3`, `firing_count = 0`, `cap_pct = 75`, `increase_gate_open = FALSE`. Its four price-derived axes all carry `measured_on = 2026-09-09` (`sessions_since_measured = 1`), because D2a — which writes `events.signal_marks` — does not run until after D1; only `breadth` is same-session, and only because D1 wrote it minutes earlier.
+### Axis overrides — the mechanical panel disagrees, and the override is a DEMOTION
 
-Per the **MIXED VINTAGE** rule, the mechanical count may **not** block or demote a de-risk on an axis whose `measured_on` is not today; a stale quiet must not veto observed deterioration. The **ratchet holds the other way and is respected**: no carried axis is counted as FIRING here — the single firing axis is `index`, measured live today. Recorded in `fields.axis_overrides`: index (mechanical *not defensive* @09-09 vs live **DEFENSIVE and ENTERING** @09-10), standing count 3 → 4, firing count 0 → 1, gate FALSE → TRUE, cap 75 → 100. **Credit is recorded as an explicit non-disagreement** — re-measured live, and it agrees with the mechanical panel.
+`state.park_axis_daily` for 2026-09-11 reports `standing_defensive_count = 5`, `firing_count = 2`, `cap_pct = 100`, `increase_gate_open = TRUE`. Its four price-derived axes still carry `measured_on = 2026-09-10` (`sessions_since_measured = 1`), because D2a — which writes `events.signal_marks` — does not run on Friday or Saturday; only `rates` carries a same-session 09-11 reading, via the `bigquery/236` backfill.
 
-**Cardinality floor: satisfied.** The 2026-09-03 DE-RISK EVIDENCE CARDINALITY rule is superseded as the *sizing* rule by the graded ladder and retained as its **floor** — a single *standing* axis licenses no increase. Standing count is 4, so the floor clears with room, and the ladder's own gate (≥1 axis entered within 2 sessions **and** standing ≥ 2) is the operative test.
+Recorded in `fields.axis_overrides`: **index** (mechanical *DEFENSIVE and FIRING* @09-10 vs live **NOT defensive** @09-11), taking standing 5 → **4** and firing 2 → **1**, cap unchanged at 100. **Note the direction: this override DEMOTES the mechanical count, which the one-way ratchet expressly permits** — the ratchet's prohibition is on the panel *upgrading* a call, and it is not engaged here. **Credit and rates are both recorded as explicit non-disagreements** — each re-measured live, each agreeing with the panel.
 
-**Forward test context, stated because it does not flatter this call.** The ladder is a running forward test, not a settled system: over 15 historical episodes the defensive signal had mean forward edge −0.638pp and won 4 of 15, and both AI-era defensive excursions lost. Read as: grading beats the all-or-nothing switch, and de-risking at all still costs against simply holding VOO. That is the reason for MEDIUM 55, and W5's PARK FORWARD-TEST COUNTDOWN forces the re-evaluation after three post-activation episodes.
+### Why no ±1-step deviation down to 25
+
+The tempting deviation is to override the ladder downward because defensive positioning has destroyed value on this tape — and the record supports the premise: segment-scored on `analytics.park_counterfactuals` as of 2026-09-10, the AI era (anchor 2026-07-24) reads **ai_index −0.5684%** against never-switching **VOO +2.5783%**, and against even the record-only rule shadow at **+2.9370%**; both closed defensive excursions lost. **But that is precisely the intervention that would make the forward test unmeasurable.** The ladder was activated on live capital by owner directive on 2026-09-04 specifically *to measure this*, and an allocator that overrides its own arithmetic whenever the arithmetic says "defensive" is running the counterfactual rather than the system. W5's PARK FORWARD-TEST COUNTDOWN forces the re-evaluation after three post-activation episodes; that is the sanctioned venue for this argument, not here.
+
+**An honest limitation, recorded because it is invisible in the output.** This call is **less defensive than Thursday's and the ladder cannot express it**. Conviction moved 55 → 48 and f did not, because both map to the same step on a 25-point grid. A reader seeing two consecutive f=50 rows should not read them as two identical assessments.
 
 ---
 
@@ -302,53 +315,47 @@ Per the **MIXED VINTAGE** rule, the mechanical count may **not** block or demote
 
 - **Exits triggered:** none.
 - **New entry candidates (full thesis construction required in separate sessions per Strategy.md):**
-  - **COO — Strategy B.** −14.6660% close-to-close (63.48 → 54.17, IBKR RTH daily bars, contract 685217803) on the FQ3 print released 2026-09-09 after the close: revenue $1.066B vs ~$1.098B consensus with FY guidance cut on CooperVision channel destocking. Clears B Entry criterion 1. `qualifying_event_date` **2026-09-09**.
-  - **AEO — Strategy B.** −13.9728% close-to-close (16.89 → 14.53, IBKR RTH daily bars, contract 4725951) on the Q2 print released 2026-09-09 after the close: EPS **and** revenue beat with FY guidance **raised**, met with −14% on a comparable-sales miss. Clears B Entry criterion 1. `qualifying_event_date` **2026-09-09**. **Cap caveat:** FMP `profile-symbol` returns $2.44B, inside the ~30% band where the implied share count is unreliable — second-source the cap during thesis construction.
-  - **NAVN — Strategy B.** −21.7458% close-to-close (25.89 → 20.26, IBKR RTH daily bars, contract 827263725) on the FQ2 FY2027 print released 2026-09-09: beat and raised outlook met with −21.7% on a widening GAAP operating and net loss. Clears B Entry criterion 1. `qualifying_event_date` **2026-09-09**. **Weakest mechanism fit of the four** — recent IPO, no established volatility regime, float and lockup mechanics not separable from information.
-  - **RDDT — Strategy B.** +6.0776% close-to-close (146.44 → 155.34, IBKR RTH daily bars, contract 692025016) on Piper Sandler data showing +8% MoM August user growth. Clears B Entry criterion 1. `qualifying_event_date` **2026-09-10**. Distinct from the 2026-08-25 RDDT event (window closed); identity checked on the fields, not the key string.
+  - **HPE — Strategy B.** +12.4411% close-to-close (55.22 → 62.09, IBKR RTH daily bars, contract 209411798) on Oracle's FQ1 print and $95B capex plan released after the 2026-09-10 close. Clears B Entry criterion 1 by ~2.5×. `qualifying_event_date` **2026-09-10**. Prior `thesis-HPE-B-20260602` is complete on a different qualifying event — distinct identity, checked on the fields. No open A position (A holds nothing), so criterion 5 clears.
+  - **DELL — Strategy B.** +11.9776% close-to-close (506.62 → 567.29, IBKR RTH daily bars, contract 346218218) on the same event. Clears criterion 1 by ~2.4×. `qualifying_event_date` **2026-09-10**. No prior B record of any kind — the four-part identity is new outright. No open A position, so criterion 5 clears.
+  - **DELL/STX — Strategy E (pair).** A 15.7073pp one-session divergence inside one GICS sub-industry (DELL +11.9776% against STX −3.7297%, WDC −2.9835% alongside). **Surfacing only, not a qualification:** E's frozen Entry criterion 3 (252-day correlation ≥ 0.5) was not measured by this run — that is M2's screen — and the divergence carries a named fundamental mechanism that may foreclose it at criterion 4.
 - **Add candidates:** none. 12 open Strategy-D tranches evaluated, 0 flagged, 3 declined at the HARD GATE (ISRG, RTX, UBER).
-- **Watchlist updates:** ADD COO, AEO, NAVN, RDDT to the Strategy B new-entry-candidate index. No removes, no demotions.
+- **Watchlist updates:** ADD **HPE** and **DELL** to the Strategy B new-entry-candidate index. No removes, no demotions.
 - **Router reviews recommended:** none.
 
 ```yaml d1_actions
 - action: thesis
-  ticker: COO
-  strategy: B
-  qualifying_event_date: 2026-09-09
-  source_research_screen_id: 7d717e9f-c609-4166-8487-e965a2faff13
-  detail: -14.6660% close-to-close (63.48 -> 54.17, IBKR RTH daily bars, contract 685217803) on the 2026-09-09 after-close FQ3 print - revenue $1.066B vs ~$1.098B consensus, FY guidance cut, CooperVision channel destocking. Clears B Entry criterion 1.
-- action: thesis
-  ticker: AEO
-  strategy: B
-  qualifying_event_date: 2026-09-09
-  source_research_screen_id: 7d717e9f-c609-4166-8487-e965a2faff13
-  detail: -13.9728% close-to-close (16.89 -> 14.53, IBKR RTH daily bars, contract 4725951) on the 2026-09-09 after-close Q2 print - EPS and revenue beat with FY guidance raised, met with -14% on a comp-sales miss. Clears B Entry criterion 1. CAP CAVEAT - FMP profile-symbol $2.44B is inside the ~30% band; second-source the cap.
-- action: thesis
-  ticker: NAVN
-  strategy: B
-  qualifying_event_date: 2026-09-09
-  source_research_screen_id: 7d717e9f-c609-4166-8487-e965a2faff13
-  detail: -21.7458% close-to-close (25.89 -> 20.26, IBKR RTH daily bars, contract 827263725) on the 2026-09-09 FQ2 FY2027 print - beat and raised outlook met with -21.7% on a widening GAAP loss. Clears B Entry criterion 1. Weakest mechanism fit of the four - recent IPO, no established volatility regime.
-- action: thesis
-  ticker: RDDT
+  ticker: HPE
   strategy: B
   qualifying_event_date: 2026-09-10
-  source_research_screen_id: 7d717e9f-c609-4166-8487-e965a2faff13
-  detail: +6.0776% close-to-close (146.44 -> 155.34, IBKR RTH daily bars, contract 692025016) on Piper Sandler data showing +8% MoM August user growth. Clears B Entry criterion 1. Distinct from the 2026-08-25 RDDT event whose window has closed - identity checked on the fields, not the key string.
+  source_research_screen_id: single-name-move screen, D1 2026-09-13
+  detail: +12.4411% close-to-close (55.22 -> 62.09, IBKR RTH daily bars, contract 209411798) on Oracle's FQ1 print and $95B capex plan released after the 2026-09-10 close. Clears B Entry criterion 1 by ~2.5x. An $82.2B incumbent re-rated on another company's capex disclosure - the over-sized-reaction shape B tests. Prior thesis-HPE-B-20260602 is complete on a different qualifying event, so the identity is distinct (matched on fields, not the key string). A holds no position, so criterion 5 clears.
+- action: thesis
+  ticker: DELL
+  strategy: B
+  qualifying_event_date: 2026-09-10
+  source_research_screen_id: single-name-move screen, D1 2026-09-13
+  detail: +11.9776% close-to-close (506.62 -> 567.29, IBKR RTH daily bars, contract 346218218) on the same Oracle capex event. Clears criterion 1 by ~2.4x. At $376.7B this is the larger anomaly per unit of market value. No prior B record of any kind - four-part identity new outright. A holds no position, so criterion 5 clears.
+- action: thesis
+  ticker: DELL/STX
+  strategy: E
+  qualifying_event_date: 2026-09-11
+  source_research_screen_id: single-name-move screen, D1 2026-09-13
+  detail: 15.7073pp one-session divergence inside one GICS sub-industry - DELL +11.9776% against STX -3.7297%, with WDC -2.9835% alongside. SURFACING ONLY, not a qualification - E's frozen Entry criterion 3 (252-day correlation >= 0.5) was NOT measured by this run, that is M2's population screen. The divergence has a named fundamental mechanism (hyperscaler capex accrues to compute and networking, not commodity storage) which may foreclose it at criterion 4.
 - action: watchlist
   ticker: n/a
   strategy: B
   qualifying_event_date: n/a
-  source_research_screen_id: 7d717e9f-c609-4166-8487-e965a2faff13
-  detail: ADD COO, AEO, NAVN and RDDT to the Strategy B new-entry-candidate index. No removes and no demotions this session.
+  source_research_screen_id: single-name-move screen, D1 2026-09-13
+  detail: ADD HPE and DELL to the Strategy B new-entry-candidate index. No removes and no demotions this session. SMCI (+7.2766%) and ANET (+5.6087%) also clear criterion 1 on the same event and are deliberately NOT routed as separate candidates - one factor across many tickers is approximately one observation; recorded so a thesis session can widen the cohort from this record if it judges that worthwhile.
 ```
 
 ---
 
 ## PROCESS NOTES
 
-- **Frontier-LLM capability check: run, silent, no capture.** One Hugging Face `hf_fs` paper search on the Thursday battery (sycophancy / anchoring). All five results published between 2024-12 and 2025-11 — none since the scan-window start — so nothing qualified for the abstract skim, no `[HF Frontier-LLM Capture]` entry was written and no `state.strategy_candidates` row was emitted. Default-silent on ambiguity, as specified.
-- **Two out-of-scope findings recorded rather than fixed**, each naming its owning surface, per this run's standing rule:
-  1. `ops.alerts` info, category **`screen_surfaced_count_header_contradicts_pin`** — `bigquery/96_research_screener.sql`'s fields-JSON schema comment still documents `surfaced_count` as the Layer-1 population size, the exact reading the 2026-08-30 pin overturned. Comment-only divergence; no view logic is wrong and no landed row is affected. Both of this run's screens were written to the **pin**, and `state.research_screen_calls` confirms `surfaced_count == ARRAY_LENGTH(passed)` on both.
-  2. `ops.alerts` info, category **`hy_oas_not_refreshed_by_last_m1a`** — the 2026-09-01 M1a run completed and refreshed 12 of the 15 metrics in `state.macro_fred_latest`, but **`hy_oas` was not among them** (newest `fetched_ts` 2026-08-05; `fed_funds` 2026-08-03), leaving `hy_oas` at `ref_month` 2026-07-01. Consistent with the already-documented Tavily-extract timeouts against both sanctioned FRED paths. It matters because `hy_oas` is a *named* evidence input in this section's own step; it is **not** a park defect today, because the credit axis reads HYG/IEF and this run's park record labels `hy_oas` STALE and excludes it from the decision.
-- **FIELDS-JSON KEY CONTRACT verified after writing, not assumed.** `state.research_screen_calls` for 2026-09-10 returns 16 `passed` + 7 `rejected_notable` single-name item rows and 6 sector item rows, with `name`, `metric_pct` and `conviction_pct` populated on **100%** of them, and the agreement columns populated from the **nested** `"agreement": {...}` object (10 / 6 / 0 and 0 / 6 / 0). The W2 `screen_fields_schema_drift` failure mode is closed for this run.
+- **Frontier-LLM capability check: run, silent, no capture.** One Hugging Face `hf_fs` paper search on the Sunday battery (long-context / lost-in-the-middle). The five results published 2025-02 through 2026-01 — none since the scan-window start — so nothing qualified for the abstract skim, no `[HF Frontier-LLM Capture]` entry was written and no `state.strategy_candidates` row was emitted. Default-silent on ambiguity, as specified.
+- **MCP-TRANSPORT REJECTION encountered and handled correctly, recorded because the wrong response is the damaging one.** The single-name `sp_log_decision` call returned `Required parameter is missing: query`. Per the §Observability rule the identical call was **re-issued verbatim and landed on the first retry**. The note was **not** trimmed — trimming is the one response explicitly forbidden here, and the 2026-09-09 incident it exists to prevent produced a permanently abbreviated record for a size limit that does not exist.
+- **Fields-JSON key contract VERIFIED after writing, not assumed.** `state.research_screen_calls` for 2026-09-13 returns **14 passed + 6 rejected_notable** single-name item rows and **4 + 1** sector item rows, with `name`, `metric_pct` and `conviction_pct` populated on **100%** of all 25, `surfaced_count` equal to `ARRAY_LENGTH(passed)` on both screens (14 and 4), and the agreement columns populated from the **nested** `"agreement": {…}` object (7/7/2 and 0/4/0). `state.add_candidate_reviews` returns 12 item rows with 7 `invalidation_criteria_evaluable = false`. The W2 `screen_fields_schema_drift` failure mode is closed for this run.
+- **One out-of-scope finding raised rather than absorbed**, naming its owning surface per this run's standing rule: `ops.alerts` **info**, category **`add_gate_uncovered_breach_status`** — ISRG, RTX and UBER carry `$.breach_status = 'NOT_ASSESSED_BY_THIS_BACKFILL'` with no later tranche in the same name carrying a fresh assessment, so the ADD hard gate can never affirmatively confirm "unbreached" for them and they are structurally ineligible regardless of merit. **Owner: M3** (the routine that already re-reads each Strategy-D thesis monthly and is the only one positioned to assess breach status), with spec adjudication to **W5 SPEC-DEFECT NOTICE INTAKE**. Raised now because it stopped being cosmetic: this run had a genuine dip-with-intact-thesis in `D:UBER:2026-07-09` that the gate blocked. D1 cannot fix it — D1 does not write `state.current_positions`. The message is a fixed string with all varying detail in the payload, per the message-stability rule, and `sp_raise_alert_once` dedups it against re-raising each sweep.
+- **Two pre-existing open alerts deliberately NOT re-raised:** `b4fe8d88` (`breadth_primary_source_persistently_unreachable`, MacroMicro — probe due, spent, failed again) and `hy_oas_not_refreshed_by_last_m1a` (`hy_oas` still at `ref_month` 2026-07-01, `fetched_ts` 2026-08-05). The latter is again **not** a park defect: the credit axis reads HYG/IEF, and `hy_oas` is labelled STALE in `fields.readings` and excluded from the decision.
+- **Four data-quality flags found and recorded rather than smoothed:** the ^VIX 2026-09-04 bar (close 15.30 above its own high 14.58 — handled via the curated substitution above); SPY 2025-10-30 (close 679.83 below its own low 679.86, inside the 252-session window but nowhere near the high, so the drawdown is unaffected); IEF 2026-08-10 and HYG 2026-09-11 (1-cent close-below-low violations, immaterial to a credit verdict sitting +0.6688% against a −0.50% bar).
