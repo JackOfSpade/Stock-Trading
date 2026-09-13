@@ -62,16 +62,35 @@
 --                             reason the rates CTE is joined FROM `sessions`, never driven by its own
 --                             date set.
 --
---                             THRESHOLD PROVENANCE -- read before "tuning" this. Unlike credit (whose
---                             -50bp level came from the explicit REJECTED/ADOPTED firing-rate sweep
---                             recorded below), 10Y >= 4.90 was specified in S2.2 with NO firing-rate or
---                             distributional evidence, while the series was believed unreachable. On
---                             the 288 quotes backfilled it fires on just 2 sessions -- 2026-09-10
---                             (4.95) and 2026-09-11 (4.96) -- i.e. 0.69%, against volatility 44.4%,
---                             index 21.1% and credit 14.3%. That rarity is FLAGGED, deliberately NOT
---                             corrected here: the threshold is a SPEC decision and S2.7's re-pin rule
---                             forbids tuning an axis definition to move the numbers. Changing 4.90 is
---                             an owner call, made in the design doc first.
+--                             THRESHOLD STUDIED AND KEPT 2026-09-13 -- read before "tuning" this.
+--                             4.90 never had the firing-rate treatment credit got (see the CREDIT
+--                             AXIS CALIBRATION block below), so it got one. Over the 288 backfilled
+--                             quotes the 10Y runs 3.97-4.96, mean 4.316, SD 0.220: 4.90 is a
+--                             2.65-SIGMA level, versus credit's ~1 SD, and fires 0.69% of sessions
+--                             against volatility 44.4% / index 21.1% / credit 14.3%.
+--
+--                             The natural repair -- the STATIONARY form every other continuous axis
+--                             uses, 10Y >= its own 20d SMA + 10bp (12.6%, ~1.2 SD) with a
+--                             non-binding 10Y >= 3.50 floor mirroring volatility's two-limb shape --
+--                             was replayed through bigquery/218's full ladder recursion (validated
+--                             to ZERO mismatches against the deployed shadow first) and came out
+--                             0.921pp WORSE over the AI era: ladder +2.007% -> +1.086%, engagement
+--                             41.2% -> 47.1%, f more defensive on 13 of 71 sessions. The differing
+--                             block is 07-23..08-05 -- it doubles f from 25 to 50 straight through
+--                             the 07-27..08-04 SGOV excursion that is the worst measured defensive
+--                             episode on this tape (-2.841pp). On a record where defensive
+--                             positioning has destroyed value, a MORE sensitive defensive axis is a
+--                             cost, not an improvement. So 4.90 stays: not because it was right, but
+--                             because it is measurably the cheaper error.
+--
+--                             THE RESIDUAL RISK IS NON-STATIONARITY, AND IT HAS A DETECTOR NOW. An
+--                             absolute level on an unbounded series tracks the RATE REGIME, not
+--                             stress: at a 3% 10Y it can never fire, at 6% never stop, both silently.
+--                             state.park_axis_calibration (bigquery/237) reports each axis's
+--                             trailing-252-session firing rate and flags `degenerate` ONLY at the
+--                             extremes (fired on none, or on all, of its testable sessions). rates at
+--                             0.69% deliberately does NOT trip it. W5's PARK SCORECARD reads it
+--                             weekly. Full study: PARK_ALLOCATOR_V4_DESIGN.md S2.2 THRESHOLD STUDY.
 --
 -- SIGN TRAP (design doc §0.9): dd_from_252d_high is stored NEGATIVE. The index limb is dd < -0.03,
 -- never "drawdown > 3%". A wrong sign yields a plausible-looking inverted axis.

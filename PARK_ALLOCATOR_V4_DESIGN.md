@@ -181,15 +181,45 @@ this session against live sources, not assumed:
   `breadth+credit+index+rates+shock+volatility`. `ladder_start_date` stays 2026-06-01 because the
   backfill reaches back to the `sessions` CTE's own lower bound.
 
-  **THRESHOLD PROVENANCE — flagged, deliberately not corrected.** On those 288 quotes the axis fires
-  **0.69 %** of sessions, against volatility 44.4 %, index 21.1 % and credit 14.3 %. Credit's −50bp
-  level came from an explicit REJECTED/ADOPTED firing-rate sweep recorded in bigquery/216's header;
-  **10Y ≥ 4.90 had no such study** — it was written while the series was believed unreachable, so no
-  firing rate could be computed for it. An axis that fires on 0.69 % of sessions carries very little
-  information, and at that rarity it will essentially only ever add standing on days when other axes
-  have already engaged the ladder. That is a SPEC question, and §2.2's re-pin rule forbids tuning an
-  axis definition to move the numbers — so the threshold is landed **as specified** and the rarity is
-  recorded here for the owner to rule on separately. Changing 4.90 means changing this table first.
+  **THRESHOLD STUDY — run 2026-09-13, decision: KEEP 4.90.** The threshold never had the
+  firing-rate treatment credit got, so it got one. Over the 288 backfilled quotes the 10Y runs
+  3.97–4.96, mean 4.316, SD 0.220 — so **4.90 is a 2.65-sigma level** where credit's −50bp was ~1 SD,
+  and it fires **0.69%** of sessions against volatility 44.4%, index 21.1%, credit 14.3%. On
+  calibration grounds alone it is indefensible, and the natural repair is the *stationary* form every
+  other continuous axis uses: `10Y ≥ its own 20d SMA + 10bp` (12.6% firing, ~1.2 SD, just under
+  credit) paired with a non-binding regime floor `10Y ≥ 3.50`, mirroring volatility's
+  `VIX > SMA20 AND VIX > 15` two-limb shape (that floor fires 86.4% alone — it is a safety catch, not
+  the signal).
+
+  **That repair was replayed through the full ladder and it LOSES MONEY.** Replaying 218's own
+  recursion — cap_walk, conviction step, entry gate, one-step clamp — validated to **zero mismatches**
+  against the deployed shadow, then re-run on the recalibrated axis: over the AI era the ladder goes
+  **+2.007% → +1.086%, i.e. −0.921pp**, with engagement 41.2% → 47.1% and f differing on 13 of 71
+  sessions, every one of them MORE defensive. And the dates are damning rather than incidental: the
+  block runs 07-23..08-05, doubling f from 25 to 50 straight through the **07-27..08-04 SGOV
+  excursion §1 records as −2.841pp — the worst defensive episode on the measured tape.** The
+  better-calibrated axis is worse precisely because this record says defensive positioning has
+  destroyed value, so *any* increase in defensive sensitivity is a cost until the shadow shows
+  otherwise. §2.2's rule is that acceptance numbers follow the axis set, not that a tidier statistic
+  wins; here the tidier statistic is measurably the worse machine.
+
+  **So 4.90 stays — not because it was right, but because it is measurably the cheaper error on the
+  only tape that exists.** What was genuinely missing is now supplied: this study, and an instrument.
+
+  **THE REAL RESIDUAL RISK IS NON-STATIONARITY, AND IT NOW HAS A DETECTOR.** An absolute level on an
+  unbounded series is the one axis definition here whose firing rate tracks the RATE REGIME rather
+  than market stress: at a 3% 10Y it can never fire, at 6% it can never stop, and both states are
+  silent. `state.park_axis_calibration` (`bigquery/237`) reports every axis's trailing-252-session
+  firing rate and flags `degenerate` at the extremes only — fired on NONE of its testable sessions, or
+  on ALL of them. It is deliberately NOT a "this looks rare" warning, so rates at 0.69% does not trip
+  it: a detector that ships red is a detector nobody reads. W5's PARK SCORECARD reads it weekly.
+  Measured at landing: volatility 46.8%, index 23.0%, credit 13.5%, shock 9.7%, rates 0.79%, breadth
+  insufficient-sample — none degenerate.
+
+  **If a future session wants to revisit 4.90, the bar is now explicit:** re-run the ladder replay and
+  show the recalibration is not simply buying more of a trade this record says loses money. Do not
+  change it on the firing-rate statistic alone — that is the argument this study already ran and
+  rejected.
 
 **Consequence, which the implementer must carry into the acceptance numbers:** the live axis set is
 **five** (volatility, breadth, index, credit, shock), not three and not six. `cap = min(100, 25 ×
