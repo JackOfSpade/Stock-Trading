@@ -1,729 +1,646 @@
-2026-W36
+2026-W37
 
 # Weekly Catalyst Calendar — Strategies A and C
 
-Run date **2026-09-06** (Sunday, the `weekly_sun` slot). Windows measured from the run date: **Strategy A = 6 months (2026-09-06 → 2027-03-06); Strategy C = 45 days (2026-09-06 → 2026-10-21).**
+Run date **2026-09-13** (Sunday, the `weekly_sun` slot). Windows measured from the run date: **Strategy A = 6 months (2026-09-13 → 2027-03-13); Strategy C = 45 days (2026-09-13 → 2026-10-28).**
 
-**EFFECTIVE CONFIRMED-EARNINGS HORIZON: ~12.6 weeks, to 2026-12-03 — the "6 months" above describes the window this file *searches*, not the horizon its bulk source *reaches*.** Beyond that cliff this file carries only per-name dates obtained from company IR pages and cadence projections, at `(C)`/`(2S)`/`(E)` provenance, for shortlisted names. See the COVERAGE STATEMENT before 1A.1 — **the constraint is materially wider than prior cycles recorded.** The horizon itself is a standing vendor-plan limit already logged in `Claude_Task_Plan.md` PART 1A, `ops/connector_tools.yaml` and `OWNER_ACTIONS.md` item `FMP-earn-horizon`; **no fresh alert is raised for it and none should be.**
+**EFFECTIVE CONFIRMED-EARNINGS HORIZON: ~12.4 weeks, to 2026-12-09 — the "6 months" above describes the window this file *searches*, not the horizon its bulk source *reaches*.** Beyond that cliff this file carries only per-name dates obtained from company IR pages, prior-cycle research and cadence projections, at `(C)`/`(E)`/`(T)` provenance, for shortlisted names. The horizon is a standing vendor-plan limit already logged in `Claude_Task_Plan.md` PART 1A, `ops/connector_tools.yaml` and `OWNER_ACTIONS.md` item `FMP-earn-horizon`; **no fresh alert is raised for it and none should be.** **The horizon did NOT move this cycle:** 2026-12-09 is 87 days out, against 2026-12-03 at 88 days last cycle — the same rolling ~13-week window, advanced by the seven days between runs. A probe inside the window returning zero, or the window lengthening, would be new information; neither happened.
 
-**Marker.** `2026-W36` is the ISO week of this run date (Sun 2026-09-06 is weekday 7 of the Mon 08-31 → Sun 09-06 week) — the same week W2/W3 stamp this cycle, and the plain ISO week of today, which is what W4's upstream-freshness gate computes.
+**Marker.** `2026-W37` is the ISO week of this run date (Sun 2026-09-13 is weekday 7 of the Mon 09-07 → Sun 09-13 week) — the same week W2/W3 stamp this cycle, and the plain ISO week of today, which is what W4's upstream-freshness gate computes. The upcoming trading week (Mon 2026-09-14 →) is `2026-W38`; that is said here in prose, deliberately not in the marker.
 
-**Catch-up window.** `state.routine_catchup_window` for W1: `never_completed = false`, `window_days = 6.98` — below the weekly 1.5× threshold (10.5 days), so **no `CATCHUP[]` token is owed**. Evidence window: **2026-08-30 → 2026-09-06**.
+**Catch-up window.** `state.routine_catchup_window` for W1: `never_completed = false`, `window_days = 6.98` — below the weekly 1.5x threshold (10.5 days), so **no `CATCHUP[]` token is owed**. Evidence window: **2026-09-06 → 2026-09-13**.
 
-**Trading-day context.** `state.trading_day_today`: today `2026-09-06`, `is_trading_day = false`, last trading day **2026-09-04**, next trading day **2026-09-08** — Mon 2026-09-07 is Labor Day. Every price, volatility and volume figure here is measured against the **2026-09-04** regular-session close unless stated otherwise.
+**Trading-day context, and a split this file has to keep straight throughout.** `state.trading_day_today`: today `2026-09-13`, `is_trading_day = false`, **last trading day 2026-09-11**, next trading day **2026-09-14**.
 
-> ### THE FIVE THINGS IN THIS FILE A READER SHOULD NOT MISS
+But the **warehouse stops a session earlier than the tape does.** D1 and D2a run `daily_sun_thu` and last fired Thursday evening, so every `events.regime_events` / `state.signal_marks_curated` figure available to this run is stamped **2026-09-10**, while IBKR — the authority named by `Operating_Protocols.md` §19 PRICE BASIS — has the **2026-09-11** bar for every name this run measured. So:
+
+- **Anything sourced to a `state.*` / `events.*` view here is as of 2026-09-10** and is labelled so.
+- **Anything measured off an IBKR regular-session bar here is as of 2026-09-11** and is labelled so.
+
+They are never silently mixed, and where the two disagree the IBKR bar is the one that governs a price. One conclusion in this file was drafted off the warehouse alone and then **walked back** when the 09-11 bar contradicted it — see the SPY_TREND note in the next section.
+
+> ### THE SIX THINGS IN THIS FILE A READER SHOULD NOT MISS
 >
-> 1. **The Strategy C thesis's premium leg has TURNED, and it is the reverse of last cycle's read.** Last cycle the case for the 09-16 FOMC rested on cheap volatility: IV near the 0th percentile and an IV/HV ratio bracketing 1.0 tightly (0.914–1.006). Measured now, SPY ATM IV on the 09-18 expiry is **10.525% against HV10 of 8.578% and HV20 of 8.101% — ratios of 1.227 and 1.299.** For a 12-day structure those are the windows that matter, and implied is now clearly *richer* than realized. Absolute IV is still near its historical floor; realized has simply collapsed faster. **The premium metric now favours a defined-risk credit structure, not a long-premium one.** With the directional leg already having weakened last cycle, both legs have now moved against the original framing.
-> 2. **And the compression that looks like the biggest signal is not one.** The ATM straddle fell from ±2.20% to ±1.796% week-over-week on the *same* 09-18 contract. But √(12/19) × 2.20% = **1.75%**. Essentially the entire move is the square-root-of-time term; the IV itself went 10.86% → 10.525%, about −3%. A thesis citing the shrinking straddle as evidence of under-priced risk is reading a calendar effect as an information effect.
-> 3. **Every catalyst in September is unreachable for Strategy A — about a third of this file's dated content.** A is DO-NOT-ACTIVATE and nothing before the **2026-10-01** M1a/M1b re-score can change that, so any catalyst before ~2026-10-05 is SPENT-BY-GATE. **ORCL is the sharpest case:** its earnings date has been this file's flagship carry-forward for four cycles, was resolved this run to first-party certainty (**2026-09-10**, from Oracle's own "Sets the Date" release of 2026-09-02) — and lands **six days before the earliest epoch A could open.**
-> 4. **A third phantom catalyst was struck, and this one was never scheduled at all.** **MRK's Winrevair HYPERION sBLA "PDUFA 2026-09-21" does not exist** — no such filing was found; the only sotatercept sBLA on record is a different, already-past one (ZENITH, PDUFA 2025-10-25). After META's "UTECA trial October 2026" (a one-year mis-projection) and "QCOM v. Arm 2026-10-05" (uncorroborated) last cycle, that is three consecutive cycles. The mechanical lesson: **a row that has sat at (2S) or below for two consecutive cycles is a claim to falsify, not a fact to re-carry.** Separately, three PDUFAs resolved as approvals — rusfertide 08-28, brepocitinib 08-26, and **zilganersen on 09-03, ahead of its own 09-22 date.**
-> 5. **The FMP constraint is much wider than "a 13-week horizon."** Measured this run: `search-company-screener`, the entire `directory` tool, and `quote.batch-quote` are **all ACCESS DENIED** on this plan tier. **A true market-wide screen for "cap ≥ $2B and ADV ≥ $10M" is impossible at any call budget** — not a budget shortfall, a structural gate. The Strategy A "universe" in this file is the set of names the earnings feed happens to return plus names carried from prior per-name verification. It is a floor, not a screen.
-
----
+> 1. **Strategy C — the only capital-enabled strategy in the book — has a NAV of $23.64, and that number explains a six-drain losing streak that no single drain got wrong.** MEASURED from `state.strategy_nomadic_status`. A $23.64 budget admits only the cheapest **debit** structures, which are **long premium** and need implied vol cheap relative to realized. Across a 33-name measured panel, **exactly two names have implied below realized — PYPL (IV/HV20 0.68) and F (0.83) — and both are earnings events, which the FOMC-only router forbids.** Both router-eligible candidates sit on the rich side, where the edge favours *selling* premium, which $23.64 cannot collateralise. **The affordability constraint and the routing constraint select disjoint sets.** That is the mechanism behind `strategy_c_criterion2_unreached_pattern`, which until now was recorded only as a pattern.
+>
+> 2. **A second FOMC entered the window this week, and it is not enterable today.** The 45-day window now reaches **2026-10-28**, so C has two router-eligible events where it has had one all quarter. But C's structure rail requires expiration within **1–45 days of entry**, and the first expiry after that meeting (2026-10-30) is **47 days out from today** — outside the rail. It comes inside on **2026-09-15**. A thesis dated today would be inadmissible on tenor alone.
+>
+> 3. **A conclusion in this file was drafted, then walked back on a free measurement — and the walk-back is the finding.** The warehouse's last reading (2026-09-10) has SPY_TREND flipping UP → NEUTRAL by **0.4158**, which alone would mean the three-cycle *technical-ACTIVATE vs fundamental-DNA* A-router divergence had closed from the technical side. But D1/D2a run `daily_sun_thu` and **Friday 2026-09-11 is not in the warehouse**. The IBKR bar for that session — the mandated price basis — has **SPY at 764.29, back above the same 50-day SMA.** The flip is most likely a one-session artifact that tonight's D2a will reverse. Nothing operational changes either way; the stronger claim was simply wrong.
+>
+> 4. **Brent rose +11.79% in four sessions while the equities levered to it did not follow** — XLE **−0.58%** on the session crude rose 6.34%. That divergence is the richest seam in the A shortlist (XOM and CVX rank #1 and #2).
+>
+> 5. **The single best new thesis in this file is one Strategy A is forbidden to use.** The same fuel shock, landing on three airlines that report inside the window with hedge books set beforehand (DAL 10-08, UAL 10-21, AAL 10-22), is a specific, quantified, dated divergence — and it is **short**. Under A's long-only rail it is `DIRECTION-INADMISSIBLE` at any conviction: a category error, not a judgment call. It is ranked, carried, and routed to Strategy B, which is where short theses belong.
+>
+> 6. **A PDUFA row was wrong in both directions at once, and neither source alone would have caught it.** Last cycle's file carried *"GSK zidesamtinib — approved 2026-07-22"*; this run's fresh aggregator pull returned *"NUVL zidesamtinib — PDUFA 2026-09-18, pending."* Resolved against the FDA's own approvals page: **zidesamtinib is Nuvalent's (NUVL), and it was approved 2026-07-22, two months ahead of its PDUFA target.** The prior cycle had the company wrong; the fresh pull was serving a stale, superseded date. **Row struck.**
+>
+> **And the census, because the spec pins it:** `SELECT * FROM state.open_queue WHERE strategy = 'A'` returns **40 rows**. Last cycle's file said 23 against a true 39. The query wins, always.
 
 ## Regime and routing state (measured this run)
 
-Read from `state.current_regime` at run time. The fundamental plane is M1a's 2026-09-01 scoring; the activation plane is the 2026-09-03 divergence-review cohort, which resolved all five reviews.
+Every figure below is a MEASURED read of a `state.*` / `events.*` view or an IBKR bar this session, not a recollection.
 
-| Plane | Key | Value | As of |
+| Input | Value | As of | Source |
 |---|---|---|---|
-| FUNDAMENTAL_AXIS | growth_momentum | decelerating | 2026-09-01 |
-| FUNDAMENTAL_AXIS | inflation_trend | disinflating | 2026-09-01 |
-| FUNDAMENTAL_AXIS | policy_stance | hawkish | 2026-09-01 |
-| FUNDAMENTAL_AXIS | risk_sentiment | risk-on | 2026-09-01 |
-| FUNDAMENTAL_AXIS | shock_overlay | **acute** | 2026-09-01 |
-| STRATEGY_ACTIVATION | **A** | **DO-NOT-ACTIVATE** (unchanged) | 2026-09-03 |
-| STRATEGY_ACTIVATION | B | DO-NOT-ACTIVATE (unchanged) | 2026-09-03 |
-| STRATEGY_ACTIVATION | **C** | **HYBRID ACTIVATE (FOMC-only)** (unchanged) | 2026-09-03 |
-| STRATEGY_ACTIVATION | D | DO-NOT-ACTIVATE (unchanged) | 2026-09-03 |
-| STRATEGY_ACTIVATION | E | DO-NOT-ACTIVATE (**STATE CHANGE** from ACTIVATE) | 2026-09-03 |
+| Fundamental regime (integrative) | decelerating growth + disinflation + hawkish tightening bias + risk-on + acute shock | 2026-09-01 | `state.current_regime` (M1a) |
+| `growth_momentum` | decelerating | 2026-09-01 | `state.current_regime` |
+| `inflation_trend` | disinflating (on the disinflating/stable boundary, low confidence) | 2026-09-01 | `state.current_regime` |
+| `policy_stance` | hawkish | 2026-09-01 | `state.current_regime` |
+| `risk_sentiment` | risk-on | 2026-09-01 | `state.current_regime` |
+| `shock_overlay` | acute | 2026-09-01 | `state.current_regime` |
+| SPY_TREND | **NEUTRAL** (close 757.83) — see the correction below | 2026-09-10 | `events.regime_events` (D2a) |
+| EQUITY_BREADTH | HEALTHY, 54.67% | 2026-09-10 | `events.regime_events` (D1 measurement, D2a threshold) |
+| VIX_REGIME | NORMAL, 17.84 | 2026-09-10 | `events.regime_events` (D2a) |
+| SUSTAINED_INVERSION | NOT-SUSTAINED, 10Y−2Y = +0.39 | 2026-09-10 | `events.regime_events` (D2a) |
 
-**What this means for the two strategies this file serves.**
+**Strategy activation / capital state** — `state.strategy_capital_enablement`, all five rows stamped 2026-09-03 (the M1b/AR_orc divergence cohort):
 
-- **Strategy A is shut to new entries.** `div-A-202608-1` resolved 2026-09-03 and held A at DO-NOT-ACTIVATE for a third consecutive cycle. The technical call was ACTIVATE and the fundamental call DO-NOT-ACTIVATE; the orchestrator reached its verdict affirmatively rather than by default, finding that two independently-satisfied pre-committed router rules would force any raw ACTIVATE back to DNA. A stays `capital_disabled`. **The next scheduled opportunity for A to open is the 2026-10-01 M1a/M1b re-score** — there is no scheduled event between now and then that can flip it, so every A candidate in PART 2A is being ranked for an epoch that cannot begin before ~2026-10-01 at the earliest.
-- **Strategy C is open, but only for FOMC.** `div-C-202608-1` resolved 2026-09-03 as CONTINUE HYBRID and affirmatively re-confirmed the FOMC-only carve-out rather than defaulting to it. The review recorded that broad ACTIVATE is **procedurally unreachable through a divergence review**: widening beyond FOMC-only is reserved to a separate scope-widening adjudication whose conditions (≥5 closed FOMC trades, or portfolio ≥ ~$25k) are unmet and none is open. C remains `capital_enabled` and is, as of 2026-09-04, **the only capital-enabled strategy in the book**.
-
-**Consequence for how PART 2 must be read.** Exactly one row anywhere in this file is executable this cycle: the **2026-09-16 FOMC**. Every other C candidate is barred by the carve-out, not by rank; every A candidate is barred by the router, not by rank. Both facts are stated per-row rather than left for a downstream reader to rediscover.
-
-### The C thesis is already enqueued — W4 must not enqueue it again
-
-`events.queue_events` carries `thesis-FOMC-C-20260908` (`PENDING_ANALYSIS`, `strategy = C`, `item_type = thesis-construction`, `due_date = 2026-09-08`, status pending, `artifact_path = Weekly_Catalyst_Calendar.md`). D2 drains it on 2026-09-08. Its recorded conservative default is: decline if unresolved by 2026-09-15 (entry is required at least one trading day before the 2026-09-16 decision), or if no affirmative, sourced, quantified divergence from market pricing can be established.
-
-W4's §D C-limb enqueues one `PENDING_ANALYSIS` row per top-tier C name. **The FOMC row is already live and must not be duplicated** — the 2026-08-30 W4 run resolved this correctly by matching to the existing row rather than minting a second one, and that is the behaviour to repeat.
-
-### Positions and overlap (measured)
-
-`state.current_positions` holds **zero open A, B, C and E positions**. The twelve open lots are all Strategy D (GOOGL ×2, AMZN ×2, TSM ×2, DIS ×2, UBER, ISRG, RTX, GEV). Consequences:
-
-- The **A↔C simultaneous-holding constraint cannot bind any candidate in this file**, because there is nothing in either book to collide with. The per-candidate overlap field is therefore reported against the Strategy A *watchlist queue* and against the open D book, which is the only live exposure.
-- Names carried in the open D book that also appear as A candidates below — **GOOGL, GEV** — are flagged where they appear. Strategy D and Strategy A are separate mandates and may hold the same name, so this is disclosure, not an exclusion.
-
-The Strategy A watchlist queue (`state.open_queue`, queue `WATCHLIST`) currently holds 23 pending A rows: ADBE, AMD, AMZN, DDOG, DELL, GEV, GOOGL, HD, HPE, IBM, INTC, LLY, MRVL, MSFT, MU, OKTA, ORCL, QCOM, SMCI, SNOW, TGT, VRTX, WMT. Overlap with each shortlist candidate is marked in PART 2A field (d).
-
-### Park state
-
-The park vehicle is **VOO** as of 2026-09-03 (D1 BOUND SWITCH SGOV → VOO, re-risk, MEDIUM 60, executed by D2 the same day). This is context only — the park is D1/D2's surface, not W1's, and no row in this file bears on it.
-
-
----
-
-## DAILY-TO-WEEKLY BOUNDARY — what D1 already owns, and one claimed gap that is not one
-
-### The claimed gap, and why it is refuted
-
-A discovery sub-agent this run reported that **"the 2026-09-04 session was never screened by D1"** and recommended W1 either cover Friday's tape itself or file an out-of-scope referral. **That claim is a false positive and was refuted before any of it was acted on.** It is recorded here rather than silently dropped, because it is a fresh instance of the exact failure `Claude_Task_Plan.md`'s RUN-LOG GAP INTERPRETATION bullet was written to prevent — and that bullet exists because **W1 itself** raised the original `cadence_outage` false alarm on 2026-08-23 (`ops.alerts` `f6ff58ee`), counting zero rows on a Friday and a Saturday and calling it a fleet-wide trigger outage. An operator email went out before W3 refuted it.
-
-The sub-agent reproduced the error the same way: by reading raw `ops.run_log` row counts. The rule requires resolving a **single-routine** claim against `state.cadence_expected_history`, where a routine is missing only if `expected AND in_service AND rows_logged = 0`. Measured this run:
-
-| routine | run_date | expected | in_service | rows_logged | verdict |
-|---|---|---|---|---|---|
-| D1 | 2026-08-30 | true | true | 2 | ran |
-| D1 | 2026-08-31 | true | true | 2 | ran |
-| D1 | 2026-09-01 | true | true | 2 | ran |
-| D1 | 2026-09-02 | true | true | 2 | ran |
-| D1 | 2026-09-03 | true | true | 2 | ran |
-| **D1** | **2026-09-04 (Fri)** | **false** | true | 0 | **not expected — not a miss** |
-| D1 | 2026-09-05 (Sat) | false | true | 0 | not expected — not a miss |
-| D1 | 2026-09-06 (Sun) | true | true | 0 | expected today; W1 fires before D1 |
-
-D1's `monitor_class` is `daily_sun_thu` (`dow NOT IN (6,7)`), so **Friday is not a D1 day by design.** Friday's tape is not unowned either: W2's own section records that *"D1's Sunday dynamic scan owns the Friday/Saturday gap before the next daily action cycle."* Today's D1 run is the scan that covers 2026-09-04, and it has not fired yet at W1's slot — `rows_logged = 0` for 2026-09-06 is W1 running first on a Sunday, not D1 failing.
-
-**Consequence for this run: W1 does NOT cover Friday 2026-09-04's single-name or sector moves, and does not file a referral.** Doing either would duplicate D1's Sunday scan a few hours before it runs, which is the specific thing the daily-to-weekly boundary forbids. No `ops.alerts` row is raised; per the same bullet, a residual concern would go to `sp_log_decision`, and there is no residual concern here — the claim is simply wrong.
-
-### Catalysts D1 already announced — reused, not re-searched
-
-D1 completed five runs in the boundary window (2026-08-30 → 09-03, five of five expected days). Per the boundary rule, the following are taken from D1's records at D1's canonical date and source; W1 performed **no** announcement search for any of them.
-
-| Ticker | Catalyst type | Date | Canonical source as D1 recorded it | D1 decision_log ref |
-|---|---|---|---|---|
-| — (rates) | FOMC decision, SEP-carrying | **2026-09-16** | CME FedWatch hike odds 39.9% → 57% → **65-66%**; Kalshi 59% | `611b5499-270e-4d85-b7da-912a5da21592` (2026-08-31) |
-| PCG | Capex deferral + strategic review | ~2027 capex horizon; **no fixed decision date** | ~$2B 2027 capex deferral and strategic review announced 2026-09-02, after CA SB 492 died 2026-09-01 | `b606229e-1a83-455f-bcf8-cc9160dad805` (2026-09-03) |
-| TSLA | Cybercab event (Austin, invite-only) | **2026-09-03** — now spent | D1 flagged the 08-31 +5.51% as anticipation of a scheduled catalyst, not a resolved one | `0c8ece63-9a7d-4845-a803-0622b30490dc` (2026-08-31) |
-| UBER | Restructuring | Announced **2026-09-02**; no forward date | ~3,300 roles (~10% headcount) cut, management layers −20%, AV footprint 7 → 15 cities | `b57c82aa-2ae1-41b8-9e2b-43e66e023dc2` (2026-09-02) |
-| AMZN | Capacity commitment | **2027-28** horizon; no dated event | AWS tripled its Nvidia GPU order to ~2M GPUs, ~$110B commitment | `ec0c9a26-7602-4518-bee0-032de9551956` (2026-08-30) |
-
-**Only one of these is a dated forward catalyst W1 can calendar: the 2026-09-16 FOMC.** PCG, UBER and AMZN are announcements with no scheduled forward date — they are narrative inputs to PART 2A, not PART 1 rows. TSLA's event has already occurred inside the window.
-
-**Nothing else with a new forward date surfaced in D1's window.** D1 recorded no new PDUFA, spin-off, investor-day, tariff or M&A date in the boundary window; the one M&A item (PYPL / Advent-Stripe) is a **collapsed** deal, not a forward one. So W1's forward-calendar acquisition below is genuinely W1-owned work, not a re-run of D1's.
-
-### Movers D1 flagged — Strategy A context, carried not re-measured
-
-Per the boundary rule W1 does not recompute these. Session-dated, from D1's screens:
-
-- **2026-08-28**: PYPL −12.71% (Advent/Stripe take-private abandoned) · MRVL −10.28% (beat, soft FY28 guide) · IREN −12.53%, PCG −7.52%, COIN −6.33% (crypto + rates unwind) · ESTC +19.31% (beat + raise) · GAP +12.94% · AMZN +3.97% (AWS GPU order) · INTC −2.85% (Altera-sale reports) · RIVN −4.35% (CFO resignation)
-- **2026-08-31**: EIX −23.07%, PCG −20.06%, SRE −3.10% — the CA SB 492 wildfire-liability bill failure is the whole session · TSLA +5.51% (Cybercab anticipation)
-- **2026-09-01**: FRVO +28.41% · CRK +11.02% · PCG +5.95% (bounce) · AAL −3.57% (Hormuz → jet fuel) · NIO −4.02% (Q2 miss) · AAPL +2.61% (CEO transition effective; D1 flagged the attribution as unresolved)
-- **2026-09-02**: CRDO −20.04%, MDB −13.54% (beats sold on margin anxiety) against DELL +15.81% (ISG +89%, guide raised) — D1's framing: *demand intact, the fight moved to margin* · PLTR −5.81% · PCG −5.19% (second-session persistence, refuting the prior day's "bounded" read) · RTX −2.13%
-- **2026-09-03**: DELL +4.91%, HPE +5.04%, ORCL +5.69% — AI-infrastructure continuation
-
-### Killed rows that must not be resurrected
-
-The prior W1 completion (`0975eda6`, 2026-08-30) struck three phantom catalysts. No D1 entry in this window touched any of them, so there is nothing to reconcile — but they must not reappear:
-
-- **META "UTECA trial, October 2026"** — does not exist; a one-year mis-projection of a trial held 1-2 October **2025** that already produced a ~€479M judgment.
-- **QCOM v. Arm "trial begins 2026-10-05"** — uncorroborated by any source; a conflation of a case Qualcomm already won in 2025 with a separate undated suit.
-- **FDX 2026-09-17 earnings** — a phantom the FMP feed still returns; FedEx changed its fiscal year end (May 31 → Dec 31, effective 2026-06-01) and has no quarterly call in the window.
-
-
----
-
-## Past-window tape — what the eleven scheduled catalysts of 2026-08-31 → 09-04 actually produced
-
-Every earnings date last cycle carried inside the week just closed has now resolved. This section exists because **PART 2A ranks on narrative-versus-price gaps, and a spent catalyst either closes a gap or widens it** — carrying a candidate forward without reading its own print is how a shortlist goes stale.
-
-Reaction figures below are source-attributed approximations from financial media, **not** broker-measured closes. The exact regular-session closes and 5-bar returns are measured separately against IBKR daily bars (see the measurement table in PART 2A); where the two disagree, **the IBKR figure is the one that governs** — §19 PRICE BASIS names IBKR regular-session daily bars as the authority for any close this file gates on.
-
-| Ticker | Date | Print vs consensus | Guidance — usually the mover | Reaction (approx.) | What it did to the gap |
-|---|---|---|---|---|---|
-| **DELL** | 09-01 AMC | Rev $47B (+58%), non-GAAP EPS $7.04 (+203%); ISG +89% to $31.8B; $60.9B AI orders, $95B AI backlog | FY raised to $192B rev / $25.50 EPS; Q3 $49.0B / $6.50 | **+16%** | Gap closed decisively bullish. The AI-server backlog *was* the bull case and it printed. |
-| **PANW** | 09-01 AMC | Rev $3.41B (+34%, beat $3.35B); adj EPS $1.02 (beat $0.98); NGS ARR $9.10B (+63%) | FY27 EPS $4.16-4.19, rev $14.1-14.2B | **−9%** | Beat-and-raise sold. Priced-for-perfection setup; spend/margin dominated. |
-| **NIO** *(ADR)* | 09-01 BMO | Deliveries 107,658 (+49.4%) but below guide; rev RMB32.1B (+69.1%), missed; adj EPS ¥0.01 vs est −¥0.21 | Q3 guide weak; JPM to Neutral, PT $7 → $4.50 | **−4%** → ~**−14%** on the week | Surprise profit overridden by revenue miss + weak guide. Not A-eligible (ADR). |
-| **AVGO** | 09-02 AMC | Rev $29.6B (+86%); AI semis $16.7B (+221%); NI $13.09B / EPS $2.68 — but rev beat only ~0.5%, EPS ~2.5% | FY26 AI rev raised to $58B; FY27/28 $115B/$230B; **Q4 rev guide $34.8B vs $35.03B consensus — a miss** | **−5 to −6%** | Thin beat + guide miss punctured the premium. The standing AI-financing objection is not answered by this print. |
-| **SNOW** | 09-02 AMC | Product rev $1.49B (+37%), total $1.55B (+35%); EPS $0.62 vs $0.26 est; NRR 126% | FY27 product rev raised $5.84B → $6.07B; Q3 $1.59B vs $1.50B consensus | **+21%**, held | Clean beat-and-raise. Gap closed bullish; sell-side PT hikes followed. |
-| **HPE** | 09-02 | Record Q3 rev $12.2B (+34%), above high end of guide; non-GAAP EPS $1.11 vs $0.93 — fifth straight beat; orders +42%, AI orders +30% QoQ | FY26 EPS raised to $3.75-3.85; FY27 rev +13-17%, EPS $4.40-4.60, FCF ≥$5B | **+8.5%**, fresh 52-week high $58.79 | Gap closed bullish and the company gave a full FY27 frame a quarter early. |
-| **NTAP** | 09-02 AMC | Rev $2.03B (+30%, beat $1.84B); non-GAAP EPS $2.58 (+66%); above high end of own guide | FY27 rev raised to $7.975-8.225B; EPS to $9.73-10.03 | **−8 to −10%** | **The most interesting row in the table.** Beat, raised, and fell — coverage attributes it to a free-cash-flow decline behind the headline beats (Barclays still raised PT to $219). This is a *created* gap, not a closed one. |
-| **LULU** | 09-03 | Rev $2.4B (−4%), missed $2.46B; comps −9% (−10% cc); adj EPS $2.92 vs $1.82 est **but including a $0.86/sh one-time tariff refund** — ex-item ~$2.06 | **Cut hard**: FY rev $10.35-10.5B (−5 to −7%) vs $11.03B consensus; EPS $9.48-9.73 from $10.95-11.15; Q3 implies −10 to −11% | **−15 to −18%**, through the 52-week low | The guide, not the print, drove it. The headline "beat" was a tariff refund. Bear case confirmed. |
-| **DOCU** | 09-03 | Rev $876M (+9%); non-GAAP op margin 31.6% (+180bps); IAM 15.1% of ARR from 12.6% | FY27 rev $3.499-3.507B (~9%); ARR growth raised to 8.5-9.0%; Q3 $886-890M | **+3.7%** | Steady beat-and-raise, no narrative shift. |
-| **CPB** | 09-03 | Adj EPS $0.39 in line; net sales $2.14B slightly below $2.15B; gross margin −190bps to 28.6% on ~6% inflation | FY27 adj EPS **$1.65-1.80 vs $1.84 est**; organic sales −2 to −4%; **dividend cut 36%** to accelerate debt paydown | **−6.3%** premarket | Bearish confirmation. A dividend cut is a structural signal, not a quarter. |
-| **RH** | — | **DID NOT REPORT** | — | — | **Correction.** Last cycle carried RH at `(!)` "09-03 or 09-10". It is **2026-09-10 AMC** — a forward catalyst for the coming week, not a spent one. |
-
-### The pattern worth carrying into PART 2A
-
-Nine of the ten actual prints beat. **Four of those nine fell anyway** — PANW −9%, AVGO −5/−6%, NTAP −8/−10%, and (on an ex-item basis) LULU. The 2026-08-28 tape D1 recorded showed the same shape (CRDO −20.04%, MDB −13.54%: *"beats sold on margin anxiety"*), and D1's own framing for the 09-02 session was **"demand intact, the fight moved to margin."**
-
-That is a coherent, twice-observed cross-sectional regularity and it is **directly adverse to a naive Strategy A long-on-a-good-print thesis**: in this tape, a beat is not the operative variable. It also refines — rather than restores — the "beats keep landing, the tape sells them" objection last cycle narrowed to hardware/semicap after the 08-26/27 software rally. This week the selling hit software (PANW), semis (AVGO) and storage (NTAP) alike, while DELL, SNOW and HPE — all beat-and-*raise* with the raise on AI infrastructure — rose hard.
-
-The discriminator this week was not sector and not the beat. It was **whether the guide went up and whether cash conversion held**. NTAP is the clean instance: it raised guidance and still fell, on cash flow. Any A thesis ranked below that leans on "the print will be good" must answer this.
-
-### Carry-forwards closed and left open
-
-- **ORCL — CLOSED after four cycles.** Oracle's Q1 FY27 report is **Thursday 2026-09-10, after market close** (call 5:00 p.m. ET). Verified directly against Oracle's own "Oracle Sets the Date…" release on `investor.oracle.com`, published **2026-09-02** — a primary source, not an aggregator inference. The 09-08 / 09-10 / 09-14 split is resolved to **09-10 (C)**. This also means the prior cycle's #1-ranked A candidate finally has a datable catalyst, and that ORCL and RH report the same day.
-- **NVO denecimig (Mim8) — still open, but tightened.** BLA submitted 2025-09-29; **no FDA action taken** as of 2026-09-06 (searched for approval and CRL, found neither); **no official PDUFA date has ever been published** by Novo Nordisk or FDA. The closest available is a pharmacy-benefit-manager pipeline tracker (Prime Therapeutics, published 2026-06-15) citing an expected decision window of **Q3 2026** — an industry tracker's estimate, not a company or FDA date. Carried at `(E)` and flagged: Q3 2026 ends this month, so a decision could land inside this file's window without a date ever having been announced.
-- **FDA advisory committees — re-checked, unchanged.** Two FDA notices stand for the window: the **GRAIL / Galleri** Molecular and Clinical Genetics Panel on **2026-09-23** (notice published 2026-08-10 — the same panel known last cycle, not a new date), and a **Pediatric Advisory Committee** virtual meeting on **2026-09-16**, which the surfaced notice describes as general pediatric regulatory issues and not sponsor- or product-specific. **No October 2026 FDA AdCom for a US-listed sponsor has been noticed yet.** Committees found on October dates (Office of AIDS Research 10-22, Research on Women's Health 10-20, NIOSH radiation-worker 10-28) are NIH/HHS/NIOSH bodies, not FDA sponsor-review AdComs, and are excluded. Coverage here is structurally incomplete by design — the Federal Register lead time is ~15-75 days, so October notices can post any day; this is a re-check next cycle, not a gap to alert on.
-
-
----
-
-## PART 1A — Strategy A universe catalyst calendar (6-month window, 2026-09-06 → 2027-03-06)
-
-Universe rails per `strategy/03_strategy_a.md`: **US-listed common equity, market cap ≥ $2B at entry, 30-day average daily volume ≥ $10M.** Long-only; no options (an options-shaped thesis belongs in C). **ADRs are not A-eligible** per W4's 2026-08-09 ruling — they appear below tagged `ADR` for calendar completeness and are excluded from PART 2A.
-
-No interpretation in this PART.
-
-> ### COVERAGE STATEMENT — read before using the tables. The vendor constraint is WIDER than previously recorded.
->
-> **The horizon itself has not moved — it rolled, exactly as a rolling window should.** Measured this run by direct probe: the latest earnings date FMP returns anywhere is **2026-12-03** (DOCU), which is 88 days / ~12.6 weeks from the run date. Last cycle the same probe returned 2026-11-24 from a 2026-08-30 vantage — 86 days / ~12.3 weeks. The window advanced 9 days as the calendar advanced 7. **This is the documented ~13-week forward-only rolling window behaving normally, not a change in the constraint, and it is therefore not a run-note finding.** Probes: 2026-12-16→12-31 returned **0 rows**; 2027-01-15→02-15 returned **0 rows**; the historical probe 2026-01-26→01-30 returned `ACCESS DENIED` verbatim, so the "project last year's actual report dates forward" fallback remains unavailable.
->
-> **What IS new, and is a genuine finding: the plan gate is far broader than a date cliff.** Measured this run, on this FMP tier:
->
-> | FMP surface | Result |
-> |---|---|
-> | `search.search-company-screener` | **ACCESS DENIED** — requires Starter/Premium/Ultimate/Enterprise |
-> | `directory.*` (all endpoints) | **ACCESS DENIED** — same tiers |
-> | `quote.batch-quote` | **ACCESS DENIED** — requires Premium/Ultimate/Enterprise |
-> | `quote.quote` (single symbol) | works, 1 request per symbol |
-> | `company.profile-symbol` | works, no batch form |
-> | `calendar.earnings-calendar` (forward) | works, allow-listed subset only |
->
-> **Consequence, stated plainly: a true market-wide screen for "market cap ≥ $2B and 30-day ADV ≥ $10M" is IMPOSSIBLE on this plan at any call budget.** This is not a budget shortfall and not a transient failure. Prior cycles framed the constraint as a date cliff plus a ~78-87 name symbol allow-list; the allow-list is real (this run's full forward pull returned **77 unique symbols** across seven slices) but it is a *symptom*. The actual gate is that every bulk-enumeration surface is denied, leaving only one-symbol-at-a-time lookups. **The Strategy A "universe" in this file is therefore not a screened universe — it is the set of names the earnings feed happens to return, plus names carried forward from prior cycles' per-name IR verification.** Downstream readers must treat it as a floor.
->
-> This is recorded here and belongs in `OWNER_ACTIONS.md` item `FMP-earn-horizon`, whose framing ("raise the tier or accept the gap") is narrower than what is actually gated. **No fresh `ops.alerts` row is raised for the horizon** — `37a4de80` already covers it and a weekly re-raise is alarm fatigue. The *screener* denial is a distinct and previously unrecorded fact and is referred once, in the OUT-OF-SCOPE section.
->
-> **Eligibility verification is correspondingly partial.** Of 77 symbols on the feed, 46 were individually checked against both rails this run before the 60-request ceiling was reached: **43 passed, 3 failed** — TLRY ($503M), FUBO ($1.23B), LCID ($1.49B), all below the $2B floor and excluded. **31 symbols were not re-checked** and are marked `NOT VERIFIED` in the tables: they are large, liquid, long-established index constituents almost certainly past both rails, but that is an inference, not a measurement, and is not written as one.
->
-> Two further feed limitations, both verified as properties of the whole payload rather than per-row gaps: **no report-time (bmo/amc) field exists** on this plan, so every FMP-sourced row is `unknown` for timing; and **sector/industry could not be pulled** for any row (`company.profile-symbol` has no batch form and was unaffordable alongside the calendar slices).
-
-**Status vocabulary** (unchanged from prior cycles): **(C)** confirmed against the company's own IR release or SEC filing · **(2S)** two independent sources agree, no company release located · **(E)** single-source or cadence estimate · **(!)** sources disagree, all candidate dates shown · **ADR** — listed for completeness, not Strategy A eligible.
-
-### 1A.1 — Earnings catalysts inside the Strategy C 45-day window (2026-09-06 → 2026-10-21)
-
-| Date | Ticker | Company | Fiscal Q | Status / source |
-|---|---|---|---|---|
-| ~2026-09-08/09 | GME | GameStop | Q2 FY26 | **(!)** sources split; GameStop does not pre-announce. Unchanged |
-| 2026-09-09 | CHWY | Chewy | Q2 FY26 | **(C)** investor.chewy.com |
-| **2026-09-10** | **ORCL** | **Oracle** | **Q1 FY27** | **(C) — RESOLVED AFTER FOUR CYCLES.** Oracle's own *"Oracle Sets the Date…"* release, investor.oracle.com, published 2026-09-02; results after the close, call 5:00pm ET. The 09-08 / 09-10 / 09-14 split is closed |
-| **2026-09-10** | **RH** | **RH** | **Q2 FY26** | **(C) — RESOLVED.** RH did **not** report in the week just past; last cycle's "09-03 or 09-10" split settles at **09-10 AMC**. Market cap is near the $2B floor — verify before any A use |
-| 2026-09-10 | ADBE | Adobe | Q3 FY26 | **(2S)** — FMP feed corroborates the carried date. **Third consecutive cycle with no Adobe IR release located** |
-| 2026-09-11 | KR | Kroger | Q2 FY26 | **(C)** ir.kroger.com |
-| ~~2026-09-17~~ | ~~FDX~~ | ~~FedEx~~ | — | **STRUCK — phantom.** See the FedEx note below |
-| 2026-09-22 | AZO | AutoZone | Q4 FY26 | **(C)** globenewswire 2026-08-24 |
-| 2026-09-23 | GIS | General Mills | Q1 FY27 | **(C)** businesswire 2026-08-26 |
-| ~2026-09-23/24 | CTAS | Cintas | Q1 FY27 | **(E)** cadence only; no FY27 announcement located |
-| 2026-09-24 | COST | Costco | Q4 FY26 | **(C)** investor.costco.com; FMP corroborates. Cap $406.1B, ADV $1,879.9M — both rails verified |
-| 2026-09-24 | DRI | Darden Restaurants | Q1 FY27 | **(2S)** |
-| 2026-09-24 | JBL | Jabil | Q4 FY26 | **(2S)** |
-| ~2026-09-29/30 | PAYX | Paychex | Q1 FY27 | **(E)** cadence only |
-| 2026-09-30 | MU | Micron | Q4 FY26 | **(C)** globenewswire 2026-08-26 |
-| ~late Sept | ACN | Accenture | Q4 FY26 | **(E)** cadence only |
-| 2026-10-01 | NKE | Nike | Q1 FY27 | **(C)**; FMP corroborates |
-| ~2026-10-01 | STZ | Constellation Brands | Q2 FY27 | **(E)** single-source |
-| 2026-10-05 | CCL | Carnival | Q3 FY26 | **(2S)**; FMP corroborates. Cap $32.2B, ADV $380.3M verified |
-| 2026-10-08 | DAL | Delta Air Lines | Q3 2026 | **(2S)** — FMP resolves last cycle's "~10-08/12" to 10-08. Cap $52.7B, ADV $406.5M verified |
-| 2026-10-08 | PEP | PepsiCo | Q3 2026 | **(2S)**; FMP corroborates |
-| 2026-10-08 | ~~TLRY~~ | Tilray | Q1 FY27 | **INELIGIBLE** — market cap $503M, measured. Below the $2B floor |
-| 2026-10-13 | JPM | JPMorgan Chase | Q3 2026 | **(C)** from JPM's own multi-quarter 2026 date release. Cap $961.0B, ADV $1,745.9M verified |
-| 2026-10-13 | JNJ | Johnson & Johnson | Q3 2026 | **(E)** feed. Cap $663.3B, ADV $1,067.7M verified |
-| 2026-10-13 | GS · C · WFC | Goldman · Citigroup · Wells Fargo | Q3 2026 | **(E)** feed; not individually verified against company IR |
-| 2026-10-14 | BAC | Bank of America | Q3 2026 | **(C)** from BAC's own 2026 reporting-dates release |
-| 2026-10-15 | TSM | Taiwan Semiconductor | Q3 2026 | **(E)** · **ADR — not A-eligible** |
-| 2026-10-20 | GE | GE Aerospace | Q3 2026 | **(E)** feed. Cap $349.8B, ADV $825.0M verified |
-| 2026-10-20 | GM · KO · LMT · NFLX · VZ | — | Q3 2026 | **(E)** feed |
-| 2026-10-21 | UAL | United Airlines | Q3 2026 | **(E)** feed. Cap $36.2B, ADV $326.2M verified |
-| 2026-10-21 | T | AT&T | Q3 2026 | **(E)** feed |
-| ~2026-10-21/22 | GEV · IBM | GE Vernova · IBM | Q3 2026 | **(E)** cadence — **absent from the FMP feed entirely** |
-
-**The FedEx correction — a prior-cycle withdrawal that went one step too far.** Last cycle withdrew FDX outright for a second time, on the correct finding that FedEx changed its fiscal year end from May 31 to December 31 effective 2026-06-01 and therefore has no quarterly call on the old cadence. This run the FMP feed returned FDX **twice** — 2026-09-17 *and* 2026-10-28 — five weeks apart with distinct estimates, which the population agent flagged as anomalous rather than silently deduplicating. It is not simply a duplicate. Checked directly: FedEx will report results for the **seven-month transition period 2026-06-01 → 2026-12-31 on a Transition Report Form 10-K**, moving to calendar-year reporting from FY2027, and its **next earnings report is ~2026-10-29**. So:
-
-- **2026-09-17 is the phantom** — the stale old-cadence date, correctly struck, now for the third cycle.
-- **2026-10-28/29 is a REAL reporting event** under the new calendar, and last cycle's blanket withdrawal wrongly removed it. It is restored to §1A.2 at **(!)** — FMP says 10-28, the corroborating search says 10-29, and no FedEx IR release giving the exact date was located.
-
-The general lesson is worth stating because it is the mirror image of this cycle's other errors: **a correct finding about why one date is wrong does not license striking every date for that name.** The fiscal-year change invalidated the September row and simultaneously *created* an October one.
-
-### 1A.2 — Earnings catalysts, 2026-10-22 → 2026-12-03 (where the bulk feed still reaches)
-
-Cap/ADV shown only where FMP verified them this run; `NV` = NOT VERIFIED, meaning not measured, not "failed".
-
-| Date | Ticker(s) | Status |
+| Strategy | Activation state | Capital |
 |---|---|---|
-| 2026-10-22 | INTC · F | (E) feed · NV |
-| 2026-10-22 | AAL | (E) feed. Cap $8.7B, ADV $972.3M verified |
-| 2026-10-22 | NOK | (E) feed · **ADR**. Cap $54.2B verified |
-| 2026-10-23 | HCA | (E) feed. Cap $87.7B, ADV $376.3M verified |
-| 2026-10-27 | UNH · V | (E) feed. UNH cap $360.7B / ADV $1,917.2M; V cap $700.3B / ADV $1,730.5M — verified |
-| 2026-10-27 | CARR · SOFI | (E) feed. CARR $49.2B/$259.7M; SOFI $23.4B/$520.8M — verified |
-| 2026-10-27 | PYPL | (E) feed · NV |
-| 2026-10-28 | GOOGL · META · MSFT · TSLA | (E) feed. All four verified: GOOGL $4,096.1B/$7,054.3M · META $1,571.2B/$9,712.1M · MSFT $3,710.6B/$8,713.8M · TSLA $1,398.5B/$22,862.7M |
-| 2026-10-28 | BA · SBUX | (E) feed · NV |
-| **2026-10-28 or 10-29** | **FDX** | **(!) RESTORED** — first report under the new calendar-year cadence. FMP 10-28 vs corroborating search 10-29; no FedEx IR release located |
-| 2026-10-29 | AAPL · AMZN | (E) feed. AAPL $4,699.5B/$12,246.7M · AMZN $2,780.8B/$7,748.0M — verified |
-| 2026-10-29 | COIN · RBLX · RIOT · RKT | (E) feed. All four verified, caps $8.2B-$48.7B |
-| 2026-10-30 | XOM · ABBV | (E) feed. XOM $660.9B/$2,537.3M · ABBV $452.9B/$1,197.9M — verified |
-| 2026-10-30 | CVX | (E) feed · NV |
-| 2026-11-02 | PLTR | (E) feed · NV |
-| 2026-11-03 | AMD · SHOP · UBER | (E) feed · NV |
-| 2026-11-03 | PFE · PINS · RIVN · SIRI | (E) feed. PFE $162.2B/$669.4M · PINS $13.0B/$204.2M · RIVN $19.1B/$218.8M · SIRI $9.8B/$92.1M — verified |
-| 2026-11-04 | ET · ETSY · HOOD · MGM · ROKU · SNAP | (E) feed. All six verified; HOOD $109.8B/$2,886.1M is the largest |
-| 2026-11-05 | MRNA | (E) feed · NV |
-| 2026-11-10 | SONY | (E) feed · **ADR** · NV |
-| **2026-11-11 or 11-12** | **CSCO** | **(!) — NEW DISAGREEMENT.** FMP feed says **11-11**; last cycle carried **11-12 at (C)** from newsroom.cisco.com. **The company release governs: 11-12 (C).** Recorded because it is a measured instance of the feed disagreeing with first-party IR, which bears on how much weight (E)-feed rows deserve elsewhere in this table |
-| 2026-11-12 | BILI | (E) feed · **ADR**. Cap $6.4B verified |
-| 2026-11-12 | DIS | (E) feed · NV |
-| 2026-11-17 | BIDU | (E) feed · **ADR**. Cap $33.8B verified |
-| 2026-11-18 | NVDA | (E) feed. Cap $5,579.6B, ADV $30,462.0M verified — the largest on the feed |
-| 2026-11-18 | TGT | (E) feed · NV |
-| 2026-11-19 | WMT | (E) feed. Cap $852.6B, ADV $2,055.8M verified |
-| 2026-11-23 | ZM | (E) feed. Cap $29.7B, ADV $353.9M verified |
-| 2026-11-24 | BABA | (E) feed · **ADR** · NV |
-| 2026-11-24 | NIO | (E) feed · **ADR**. Cap $9.4B verified |
-| **2026-12-03** | **DOCU** | (E) feed. Cap $13.1B, ADV $542.6M verified. **This is the last date the feed reaches** |
+| A | DO-NOT-ACTIVATE | disabled |
+| B | DO-NOT-ACTIVATE | disabled |
+| **C** | **HYBRID ACTIVATE (FOMC-only)** | **enabled** |
+| D | DO-NOT-ACTIVATE | disabled |
+| E | DO-NOT-ACTIVATE | disabled |
 
-**Names with confirmed or cadence-projected dates in this span that the FMP feed does not carry at all** — carried from prior cycles' per-name verification, all **(E)** cadence unless noted: MU Q1 FY27 ~12-16 · CRWD ~12-01 (2S) · NTAP Q2 FY27 **2026-12-01 (C)**, stated in NetApp's own Q1 release · MRVL ~12-01/02 · OKTA ~12-02 (2S) · CRM ~12-02/03 · HPE ~12-03/04 · ORCL Q2 FY27 ~12-09/10 · ADBE Q4 FY26 ~12-09/10 · AVGO Q4 FY26 ~12-10 · KR and COST early Dec (low confidence) · NKE Q2 FY27 ~12-17/18 · SNOW **(!)** 11-27 or ~12-02/03. Also absent from the feed across the whole window: **CAT, GEV, SMCI, DDOG, AMAT, CRWV, NBIS, NOW, VRTX, LLY, MRK, IBM, QCOM, AKAM, TTWO, FSLR, HD, CTVA** — the same absentee set as last cycle, re-confirmed.
+**C is the only capital-enabled strategy, and only for FOMC.** That is the most load-bearing routing fact in this file and it decides how both shortlists should be read.
 
-### 1A.3 — The 2026-12-04 → 2027-03-06 tail, filled per-name for shortlisted names only
+### THE WAREHOUSE STOPS AT 2026-09-10; THE TAPE DOES NOT — and one reading has to be walked back because of it
 
-Beyond the feed's reach. Every row is a cadence projection off the company's own prior-year date unless marked otherwise, and **none of these may be used to date an options structure or a catalyst-timed entry.** That companies have not yet announced December-to-February dates from a 2026-09-06 vantage is normal — they typically announce two to four weeks ahead — and is a property of the calendar, not a research failure.
+`state.trading_day_today` reports today `2026-09-13`, `is_trading_day = false`, **last trading day `2026-09-11`**. But every `events.regime_events` / `state.signal_marks_curated` row above is stamped **2026-09-10**, because D2a and D1 run `daily_sun_thu` and their last fire was Thursday evening. **Friday 2026-09-11 traded and is simply not in the warehouse yet.** It is, however, in IBKR — the source `Operating_Protocols.md` §19 PRICE BASIS names as authoritative for any close a screen gates on — and this run pulled it directly, free and unmetered.
 
-| Date | Ticker | Fiscal Q | Status |
+**The correction that follows from it.** On the warehouse's last reading, SPY_TREND flipped **UP → NEUTRAL on 2026-09-10**: SPY closed 757.83 against a 50-day SMA of **758.2458**, short by **0.4158** (about 0.05%), with the 50/200 relationship unchanged and still strongly positive (+44.54). Read alone, that is Strategy A's router rule — **SPY Trend = UP AND Breadth = HEALTHY** — failing on its first conjunct for the first time in this sequence, which would mean the three-cycle *technical ACTIVATE vs fundamental DO-NOT-ACTIVATE* divergence recorded in `div-A-202608-1` had closed from the technical side.
+
+**MEASURED on the IBKR bar for the session the warehouse has not yet seen: SPY closed 764.29 on 2026-09-11, +0.85% on the day and roughly six points back ABOVE that same 50-day SMA.** So the flip is, on the evidence, **a one-session artifact that D2a's next run tonight will most likely reverse** — not a regime change, and not a closed divergence. **I am recording the walk-back explicitly rather than quietly publishing the stronger claim**, because the stronger claim was what the warehouse alone supported and it would have been wrong.
+
+Three things stay true regardless of which way the key resolves:
+
+1. **Nothing operational changes either way.** A's operative state is DO-NOT-ACTIVATE and A is capital-disabled; the technical leg agreeing or disagreeing cannot make A more disabled. **No portfolio action follows and none is proposed.**
+2. **The recomputation is D2a's, not W1's.** W1 does not compute `SPY_TREND` and must not pre-empt it. The authoritative 09-11 value will exist after tonight's D2a fire; what is written here is the input, not the verdict.
+3. **Strategy C's router is untouched.** C's rule is **SPY Trend ≠ DOWN**. NEUTRAL satisfies it and UP satisfies it, so C remains routed and capital-enabled for FOMC on either resolution.
+
+### What actually moved in the evidence window (2026-09-06 → 2026-09-13)
+
+| Series | 2026-09-04 | 2026-09-10 | Change | Source |
+|---|---|---|---|---|
+| Brent (BZUSD) | 96.28 | **107.63** | **+11.79%** | `state.signal_marks_curated` (stops at 09-10) |
+| SPY | 770.19 | 757.83 → **764.29 (09-11)** | −1.60% to 09-10, **−0.77% to 09-11** | warehouse to 09-10; **IBKR bar for 09-11** |
+| ^VIX | 14.53 | 17.84 | +3.31 pts | `state.signal_marks_curated` (stops at 09-10) |
+| S&P 500 % above 200-DMA | 60.63 (09-08) | 54.67 | −5.96pp over three sessions | `events.regime_events` |
+| 10Y / 2Y | — | 4.95 / 4.56 | spread +0.39 (from +0.40 on 09-09) | D2a 2026-09-10 |
+
+**Brent's Friday print is NOT known to this file.** The commodity mark is D2a-written and D2a's last run was Thursday, so `+11.79%` is measured **2026-09-04 → 2026-09-10** and stops there. Whether crude extended or gave back on Friday is unobserved, and no row below assumes either.
+
+**Brent +11.79% in four sessions is the dominant new fact of this window** and it is what most of the ranking turns on. It is not a regime re-score — `shock_overlay` was already `acute` at the 2026-09-01 M1a — but it is a large, dated, quantified intensification of the shock axis landing inside the catalyst window and three days before an FOMC that is already two-sided on inflation.
+
+D1 recorded the equity-side response and that is the interesting part: **energy equities did not follow crude up.** XLE +1.11% (09-08), +0.83% (09-09) against Brent +3.36%, then **−0.58% on 09-10 while Brent rose 6.34%**. D1 read the last of these as demand-destruction pricing. A commodity repricing violently while the equities levered to it do not is a documentable consensus-versus-tape gap, and it is the richest seam in this cycle's A shortlist.
+
+## DAILY-TO-WEEKLY BOUNDARY — what D1 already owns, and the one session no W1 can ever see
+
+Per this section's spec, W1 does not rediscover catalysts D1 has already announced and synthesized. D1's records for the window 2026-09-07 → 2026-09-13 were read in full (`events.decision_log`, entry types `research-screen`, `add-candidate-review`, `thesis-construction`, `action-conversion`, plus `Daily.md`). **The forward-dated catalysts below are REUSED from D1 with its canonical date, source and `entry_id` — this file does not re-run the announcement search for any of them.**
+
+| Ticker | Catalyst type | D1's canonical date | D1 `entry_id` |
 |---|---|---|---|
-| 2026-12-16 | MU | Q1 FY27 | (E) vendor-inferred |
-| 2026-12-17/18 | NKE | Q2 FY27 | (E) cadence |
-| 2027-01-13/14 | JPM | Q4 2026 | (E) cadence |
-| 2027-01-14/15 | GS | Q4 2026 | (E) cadence |
-| 2027-01-14/15 | TSM | Q4 2026 | (E) cadence · **ADR** |
-| 2027-01-21/22 | INTC | Q4 2026 | (E) cadence |
-| 2027-01-27 | MSFT | Q2 FY27 | (E) cadence |
-| 2027-01-27/28 | META · GEV · IBM | Q4 2026 | (E) cadence |
-| 2027-01-28 | AAPL | Q1 FY27 | (E) cadence |
-| 2027-01-28 | CAT | Q4 2026 | (E) cadence |
-| 2027-02-02/03 | AMD | Q4 2026 | (E) cadence |
-| 2027-02-03/04 | GOOGL | Q4 2026 | (E) cadence |
-| 2027-02-05 | AMZN | Q4 2026 | (E) single-source |
-| 2027-02-24 | HD | Q4 FY26 | (E) cadence |
-| 2027-02-25 | NVDA | Q4 FY27 | (E) cadence — prior three years landed 2/21, 2/26, 2/25 |
+| ORCL | Earnings, FQ1 FY2027 (reported AMC) | 2026-09-10 | `Daily.md` §2 (reaction session 09-11) |
+| ADBE | Earnings, Q3 FY2026 + CEO transition (reported AMC) | 2026-09-10 | `Daily.md` §2 (reaction session 09-11) |
+| TLX | FDA PDUFA, TLX101-Px | 2026-09-11 | `Daily.md` §2 pending list |
+| SRRK | FDA PDUFA, apitegromab (SMA) | 2026-09-30 | `Daily.md` §2 pending list |
+| VRTX | sNDA PDUFA, Journavx chronic low-back pain | 2026-12-05 | `Watchlist.md` A-queue row |
+| INTU | Investor Day | 2026-09-17 | `Watchlist.md` A-queue row |
+| TTWO | GTA VI launch (company-confirmed twice) | 2026-11-19 | `Watchlist.md` A-queue row |
+| AMZN | Q3 earnings / re:Invent | 2026-10-29 / 2026-11-30→12-03 | `Watchlist.md` A-queue row |
+| FSLR | US Section 232 solar-trade regime effective | 2026-12-04 | `Watchlist.md` A-queue row (added 2026-09-06) |
+| NVS / AMGN / IONS | Pelacarsen CV-outcomes Phase 3 miss + read-across | 2026-09-08 | `a4ce03b2` |
+| IONQ | Investor Day, FY26 revenue guide raised | 2026-09-08 | `a4ce03b2` |
+| TBBK | Named BaaS client loss (Chime/Stride Bank, $590M) | 2026-09-09 | `acc31c4a` |
+| COO / AEO / NAVN / M / AVAV | Earnings prints | 2026-09-09 → 09-10 | `7d717e9f` |
+| SCCO / FCX | US copper-tariff decision — **no dated resolution point** | undated | `7d717e9f` |
 
-**Newly reachable this cycle because the window rolled forward one week:** the span 2027-02-28 → 2027-03-06 is now inside the 6-month window and was outside it last cycle. **No confirmed or projected earnings date was located inside that new week** — early March is a genuinely quiet stretch for large-cap reporters, falling between the Q4 season that ends in late February and the Q1 season that begins in mid-April. Recorded as an affirmative "nothing found," not as an unexamined gap.
+### THE FRIDAY BLIND SPOT — structural, not an outage, and it binds every W1 run
 
-**Not reached at all:** TTWO, FSLR, MRK and DELL have no located date beyond 2026-10-21. TTWO and FSLR are ranked on non-earnings catalysts (see §1A.4 and §1A.6) so this does not blind them; **MRK and DELL are genuine holes** — DELL notably so, having just printed the strongest beat-and-raise of the week just past with no next date available.
+I checked whether the fleet had stalled and it had not. **MEASURED, and stated as a correction to the obvious first reading of the data:** `ops.run_log` holds 26 rows across 13 routines for 2026-09-09 and again for 2026-09-10, and then **zero rows for 2026-09-11 and 2026-09-12**. That looks exactly like a two-day fleet outage. **It is not one.** The daily fleet's monitor class is `daily_sun_thu`, documented in `ops/cadence.yaml` as "every Sunday-Thursday calendar day, NOT Friday/Saturday", `state.fleet_blackout_days` returns **zero rows**, and no `missed_run` / `routine_stalled` / `staleness` / `missing_dependency` alert has been raised since 2026-09-08. Friday and Saturday are simply not run days. Nothing is late and nothing is owed.
 
+What IS true, and what the spec's DAILY-TO-WEEKLY paragraph does not account for, is the **ordering**:
+
+- **W1 fires Sunday 07:30 UTC** (`30 7 * * 0`).
+- **D1 fires 22:00 UTC on Sun–Thu** (`0 22 * * 0,1,2,3,4`).
+- D1's most recent run was **Thursday 2026-09-10 22:00 UTC**, covering the 09-10 session. Its next run is **tonight, 2026-09-13 22:00 UTC — 14.5 hours AFTER this W1 run.**
+
+Therefore **the Friday session is never in D1's record at the moment any W1 executes.** This is not this week's accident; it is true of every W1 run by construction. This week it costs more than usual: Friday **2026-09-11** carried the **ADBE and ORCL earnings reaction sessions** — both companies reported after the 09-10 close, and D1 explicitly recorded the 09-10 moves as *pre-print drift, not the reaction*, stating "the next D1 owns them" — and, per D2's 2026-09-08 Strategy C entry, the **August CPI print was scheduled for 09-11**, three sessions before the FOMC this file's only executable candidate turns on.
+
+**How this run handled it, per the spec's own instruction to do only the minimum check needed to preserve the forward calendar and never turn the exception into a second broad news scan:** no news scan was run, and **no metered call was spent on Friday at all.** The two known Friday events are *reactions to prints already in the record*, not new forward-dated catalysts, and ADBE's **next** date (2026-12-09) was already captured by this run's bulk calendar pull.
+
+Friday's **tape**, by contrast, was covered in full and for free: every one of the 33 names measured for PART 2B returned an IBKR regular-session bar dated **2026-09-11**, and those bars are the mandated price basis. **SPY closed 764.29 on 2026-09-11, +0.85% on the day.** That single free measurement is what forced the SPY_TREND walk-back in the section above — the warehouse's 09-10 NEUTRAL reading would have supported a materially stronger and wrong claim about A's router. **The Friday blind spot is a NARRATIVE gap, not a PRICE gap, and this run closed the price half at zero cost.**
+
+**The forward calendar below loses nothing to this gap. The backward-looking read of Friday's news belongs to tonight's D1 and is deliberately left there.**
+
+The spec gap itself — its escape hatch is written for "D1 itself is genuinely unavailable", which is not this case, and it does not contemplate a guaranteed one-session blind spot arising from trigger ordering — is **outside W1's ownership** (W1 does not own its own section's design). It is recorded, not repaired; see OUT-OF-SCOPE FINDINGS.
+
+## PART 1A — Strategy A universe catalyst calendar (6-month window, 2026-09-13 → 2027-03-13)
+
+### COVERAGE STATEMENT — read before any table below
+
+Strategy A's universe is *"all US-listed equities with market cap ≥ $2B and 30-day ADV ≥ $10M with a scheduled catalyst in the next 6 months."* **That population cannot be enumerated from the connectors this system has.** This is a structural plan gate, not a budget shortfall and not a transient failure: `search.search-company-screener`, all `directory.*` endpoints and `quote.batch-quote` each return ACCESS DENIED on this FMP tier (measured 2026-09-06; `ops.alerts` `6c4004e3`, owned to W5 / `OWNER_ACTIONS.md` item `FMP-earn-horizon`). **No fresh alert is raised for it here** — it is recorded, it has not changed, and a weekly re-raise is alarm fatigue.
+
+What this file therefore IS: a catalyst calendar over the **reachable** population — the union of (i) every symbol the forward `earnings-calendar` pull returns, (ii) the 40 names already on the Strategy A queue, (iii) names D1 surfaced in the evidence window, and (iv) dated non-earnings catalysts carried from prior-cycle research. **Every count below is a floor, not a total.** A reader who quotes a figure from this file as "the number of Strategy A catalysts" will be wrong in the optimistic direction.
+
+**Measured this run.** The bulk pull returned **78 rows across 77 unique symbols** spanning **2026-09-17 → 2026-12-09**, from 9 date-sliced requests; two consecutive slices beyond 2026-12-20 returned zero rows, which is what fixes the horizon.
+
+**A new endpoint finding, stated in its corrected form — the first version of this paragraph was wrong and the error is instructive.** `batch-market-cap` is **not** plan-denied: it returned a market cap for **all 77** calendar symbols in ONE request, so 74 clear the $2B rail and TLRY ($0.45B), FUBO ($1.26B) and LCID ($1.34B) fail it **by measurement rather than by assumption**. That looked like it generalised to "the $2B rail is now checkable for any candidate list at one call." **It does not.** A follow-up probe passing **47 A-queue and energy names** returned **only 8** — and those 8 were precisely the ones already inside the calendar allow-list. The single-symbol `company/market-cap` endpoint then returned **ACCESS DENIED** outright.
+
+So the corrected reading, which is narrower and more useful than either the old finding or my first draft of this one:
+
+- `batch-market-cap` works **only over the plan's covered symbol set** — effectively the same allow-list the forward calendar exposes.
+- For symbols outside it, **it does not error. It silently omits them from the response.** A caller that passes 47 symbols, receives 8, and does not compare the two lists will conclude the other 39 have no market cap, or will run a "screen" over 8 names believing it covered 47.
+- Single-symbol `market-cap` is denied, so there is no per-name fallback.
+
+**Consequence for this file:** market cap is MEASURED for the 77 reachable calendar names and is **NOT measured** for queue-only names (AKAM, AMAT, AVGO, CAT, CRM, CRWD, DDOG, DELL, FSLR, GEV, HPE, IBM, INTU, LLY, MRVL, MU, NBIS, NOW, NTAP, OKTA, ORCL, PANW, QCOM, SMCI, SNOW, TTWO, VRTX and the rest). For those the cap rail is carried as **CAP-UNVERIFIED**, and where this file judges them above the floor it says so as a labelled **inference**, never as a measurement. The silent-omission behaviour is recorded as finding **F-4**.
+
+The 30-day ADV half of the rail is unreachable from FMP at any tier here and was measured instead off **IBKR regular-session daily bars, which are free and unmetered** — see 1A.3a, where it is measured for 52 names and every one of them passes.
+
+**Provenance key used throughout PART 1A and 1B:**
+**(C)** first-party confirmed — company IR, an agency, or an exchange release, cited.
+**(2S)** two independent secondary sources in agreement.
+**(E)** vendor calendar or a single secondary source — estimated.
+**(T)** tentative: no day-level date, or a date this file positively distrusts (said so at the row).
+
+The bulk `earnings-calendar` rows are **(E)** without exception. FMP mixes company-confirmed and vendor-projected dates in that endpoint and exposes no field distinguishing them, and `calendar/earnings-company` — the per-symbol route that would settle it — is ACCESS DENIED. Rows upgraded to (C) below are upgraded because D1, `Watchlist.md` or a company release independently pinned them, not because the vendor asserted them twice.
+
+### THE HORIZON, AND WHAT IS BEYOND IT
+
+The effective confirmed-earnings horizon is **2026-12-09**, 87 days out — against **2026-12-03 at 88 days** last cycle. **The horizon did not move.** It is the same forward-only rolling ~13-week window, advanced by the seven days between runs; a probe inside the window returning zero, or the window genuinely lengthening, would be new information and neither happened. Roughly the last **13 weeks** of the 6-month window — all of January, February and the first half of March 2027, which is exactly the FY-report cluster — **cannot be filled from a bulk calendar pull at all**, and the historical end is not merely empty but explicitly refused (`ACCESS DENIED`), so the "project last year's actual report dates forward" fallback is unavailable too.
+
+The tail is filled per-name for shortlisted names only, from company IR and prior-cycle research, and every such row is labelled. It is not filled speculatively for names that are not shortlisted, and the resulting holes are real.
+
+#### 1A.1 — Earnings inside the Strategy C 45-day window (2026-09-13 → 2026-10-28)
+
+| Date (E) | Ticker | Market cap | A-eligible? |
+|---|---|---|---|
+| 2026-09-17 | FDX | $73.8B | yes |
+| 2026-09-24 | COST | $401.2B | yes |
+| 2026-10-01 | NKE | $54.5B | yes |
+| 2026-10-05 | CCL | $31.2B | yes |
+| 2026-10-08 | DAL | $52.6B | yes |
+| 2026-10-08 | PEP | $186.2B | yes |
+| 2026-10-08 | TLRY | $0.4B | NO - cap $0.45B < $2B |
+| 2026-10-13 | C | $238.1B | yes |
+| 2026-10-13 | GS | $303.6B | yes |
+| 2026-10-13 | JNJ | $640.0B | yes |
+| 2026-10-13 | JPM | $954.5B | yes |
+| 2026-10-13 | WFC | $272.9B | yes |
+| 2026-10-14 | BAC | $444.9B | yes |
+| 2026-10-15 | TSM | $2247.0B | NO - ADR, not US common equity |
+| 2026-10-20 | GE | $335.8B | yes |
+| 2026-10-20 | GM | $77.4B | yes |
+| 2026-10-20 | KO | $379.9B | yes |
+| 2026-10-20 | LMT | $121.0B | yes |
+| 2026-10-20 | NFLX | $322.3B | yes |
+| 2026-10-20 | VZ | $211.3B | yes |
+| 2026-10-21 | T | $178.5B | yes |
+| 2026-10-21 | UAL | $35.6B | yes |
+| 2026-10-22 | AAL | $8.6B | yes |
+| 2026-10-22 | F | $55.7B | yes |
+| 2026-10-22 | INTC | $519.2B | yes |
+| 2026-10-22 | NOK | $60.2B | NO - ADR, not US common equity |
+| 2026-10-23 | HCA | $92.4B | yes |
+| 2026-10-27 | CARR | $47.4B | yes |
+| 2026-10-27 | PYPL | $46.0B | yes |
+| 2026-10-27 | SOFI | $22.2B | yes |
+| 2026-10-27 | UNH | $344.3B | yes |
+| 2026-10-27 | V | $691.6B | yes |
+| 2026-10-28 | BA | $166.3B | yes |
+| 2026-10-28 | FDX | $73.8B | NO - (T) suspect vendor row |
+| 2026-10-28 | GOOGL | $4096.6B | yes |
+| 2026-10-28 | META | $1650.8B | yes |
+| 2026-10-28 | MSFT | $3680.3B | yes |
+| 2026-10-28 | SBUX | $112.6B | yes |
+| 2026-10-28 | TSLA | $1443.3B | yes |
+
+39 rows.
+
+#### 1A.2 — Earnings from 2026-10-29 to the horizon (2026-12-09)
+
+| Date (E) | Ticker | Market cap | A-eligible? |
+|---|---|---|---|
+| 2026-10-29 | AAPL | $4880.2B | yes |
+| 2026-10-29 | AMZN | $2762.2B | yes |
+| 2026-10-29 | COIN | $46.2B | yes |
+| 2026-10-29 | RBLX | $32.5B | yes |
+| 2026-10-29 | RIOT | $8.1B | yes |
+| 2026-10-29 | RKT | $37.2B | yes |
+| 2026-10-30 | ABBV | $454.2B | yes |
+| 2026-10-30 | CVX | $426.2B | yes |
+| 2026-10-30 | XOM | $688.1B | yes |
+| 2026-11-02 | FUBO | $1.3B | NO - cap $1.26B < $2B |
+| 2026-11-02 | PLTR | $384.0B | yes |
+| 2026-11-03 | AMD | $841.6B | yes |
+| 2026-11-03 | PFE | $158.0B | yes |
+| 2026-11-03 | PINS | $12.1B | yes |
+| 2026-11-03 | RIVN | $19.5B | yes |
+| 2026-11-03 | SHOP | $167.1B | yes |
+| 2026-11-03 | SIRI | $9.8B | yes |
+| 2026-11-03 | UBER | $145.9B | yes |
+| 2026-11-04 | ET | $74.2B | yes |
+| 2026-11-04 | ETSY | $6.9B | yes |
+| 2026-11-04 | HOOD | $101.2B | yes |
+| 2026-11-04 | LCID | $1.3B | NO - cap $1.34B < $2B |
+| 2026-11-04 | MGM | $10.0B | yes |
+| 2026-11-04 | ROKU | $23.0B | yes |
+| 2026-11-04 | SNAP | $9.6B | yes |
+| 2026-11-05 | MRNA | $57.1B | yes |
+| 2026-11-10 | SONY | $140.4B | NO - ADR, not US common equity |
+| 2026-11-11 | CSCO | $442.0B | yes |
+| 2026-11-12 | BILI | $6.5B | NO - ADR, not US common equity |
+| 2026-11-12 | DIS | $185.0B | yes |
+| 2026-11-17 | BIDU | $31.1B | NO - ADR, not US common equity |
+| 2026-11-18 | NVDA | $5287.2B | yes |
+| 2026-11-18 | TGT | $70.8B | yes |
+| 2026-11-19 | WMT | $852.7B | yes |
+| 2026-11-23 | ZM | $28.0B | yes |
+| 2026-11-24 | BABA | $262.0B | NO - ADR, not US common equity |
+| 2026-11-24 | NIO | $9.2B | NO - ADR, not US common equity |
+| 2026-12-03 | DOCU | $12.5B | yes |
+| 2026-12-09 | ADBE | $100.3B | yes |
+
+39 rows.
+
+### 1A.3 — The universe rails, and which one actually binds
+
+Strategy A's two rails are **market cap ≥ $2B** and **30-day average dollar volume ≥ $10M**, both at entry.
+
+**Cap rail — MEASURED for the 77 reachable calendar names, NOT measurable for queue-only names.** One `batch-market-cap` request returned a cap for all 77. **74 clear $2B; three fail and are excluded from A by measurement: TLRY ($0.45B), FUBO ($1.26B), LCID ($1.34B).** A further seven are excluded on a different ground — **TSM, BABA, NIO, BIDU, BILI, SONY and NOK are ADRs**, not US-listed common equity, and A's universe is defined on the latter. (That is the same ground on which TSM appears in `Watchlist.md`'s audit trail but not in the live A queue.) For names outside the allow-list the cap is **CAP-UNVERIFIED** — see the corrected endpoint finding in the COVERAGE STATEMENT and finding F-4.
+
+### 1A.3a — ADV rail, MEASURED off IBKR regular-session bars
+
+52 names — the full A queue, the open D book and an energy cross-section — were measured from IBKR daily RTH bars, 30-day average dollar volume computed per-bar (mean of close × volume, not average price × average volume). **All 52 resolved cleanly to a US-listed primary common-stock contract, and all 52 PASS the ≥$10M rail. Zero fail, zero unverified, zero unresolved.**
+
+The rail is not close for any of them. The **lowest** measured 30-day average dollar volume in the set is **AKAM at ~$183M** — roughly **18x** the $10M floor — and the highest is **MU at ~$18.1B**. Selected rows:
+
+| Ticker | Close (2026-09-11) | 30d avg $ volume | 1-week % |
+|---|---|---|---|
+| MU | 975.26 | ~$18,131M | +1.78% |
+| NVDA | 218.29 | ~$15,822M | −4.45% |
+| AAPL | 332.27 | ~$8,914M | +1.24% |
+| MSFT | 495.63 | ~$6,899M | −2.84% |
+| INTC | 102.94 | ~$6,303M | **+12.29%** |
+| META | 648.03 | ~$6,193M | +6.12% |
+| AMZN | 256.78 | ~$5,597M | −0.82% |
+| AMD | 516.13 | ~$5,585M | **+13.15%** |
+| GOOGL | 338.50 | ~$4,921M | −1.16% |
+| XOM | 165.99 | ~$983M | +2.33% |
+| CVX | 214.06 | ~$692M | +1.30% |
+| COP | 137.35 | ~$379M | +1.20% |
+| **ADBE** | 252.23 | ~$727M | **−11.73%** |
+| AKAM | 106.79 | ~$183M (lowest in set) | +0.27% |
+
+**So the ADV rail binds nothing here, and that is a measurement rather than an assumption.** The constraints that actually bind the shortlist are the cap rail, ADR status, and above all whether a name is *reachable at all* — the vendor allow-list, not liquidity, is what shapes this file.
+
+**Two things the 1-week column settles that the warehouse could not.** Both are measured off the 2026-09-11 bar the warehouse has not yet ingested:
+
+- **ADBE −11.73% on the week.** Adobe reported after the close on 2026-09-10 alongside a CEO transition, and D1 explicitly recorded the 09-10 move as *pre-print drift, not the reaction*. This is the reaction, and it is sharply negative — which **vindicates on the tape** the bearish direction ADBE has carried in the DIRECTION-INADMISSIBLE tier for several cycles. It does not make ADBE admissible to Strategy A; a confirmed-correct short thesis is still a short thesis.
+- **The semiconductor and AI-infrastructure complex ran hard into the same week the index fell:** INTC +12.29%, AMD +13.15%, MRVL +13.06%, HPE +14.05%, DELL +9.86%, QCOM +7.95%, NTAP +7.50%, NBIS +6.61% — against SPY −0.77% over the comparable span. Breadth fell 5.96pp over three sessions while this group rose, which is consistent with the narrowing D1 flagged and is the tape-level counterpart of it.
 
 ### 1A.4 — Product launches, keynotes and product events
 
-| Date | Ticker | Event | Status |
-|---|---|---|---|
-| 2026-09-09 | AAPL | Hardware keynote, Apple Park — "Surprise and Shine"; iPhone 18 Pro / Pro Max and a first foldable expected; first Ternus-led keynote | **(2S)** — invites went out 2026-08-26. Corroborated by two trackers; no Apple newsroom page located giving the date |
-| 2026-09-15 → 09-17 | CRM | Dreamforce 2026, Moscone Center SF — Agentforce announcements expected | **(C)** |
-| 2026-09-23 → 09-24 | META | Meta Connect 2026 — AI / VR / wearables | **(C)** — **upgraded from (E)**; last cycle could not re-verify it before its search budget ran out |
-| 2026-10-20 → 10-22 | NVDA | GTC Berlin | **(E)** — carried, not re-verified |
-| 2026-10-25 → 10-28 | ORCL | Oracle AI World / CloudWorld 2026 | **(C)** — **upgraded from (E)** |
-| 2026-11-10 → 11-12 | ADBE | Adobe MAX 2026 | **(E)** — carried, not re-verified |
-| 2026-11-17 → 11-20 | MSFT | Microsoft Ignite 2026 | **(C)** — **upgraded from (E)** |
-| **2026-11-19** | **TTWO** | **GTA VI launch** (PS5, Xbox Series X\|S); pre-load opens 11-12 | **(2S)** reaffirmed. The single largest dated non-earnings binary in the window |
-| 2026-11-30 → 12-04 | AMZN | AWS re:Invent 2026 | **(C)** — **upgraded from (E)** |
-| 2026-11-30 → 12-03 | NVDA | GTC Washington DC | **(E)** — carried, not re-verified |
-| 2026 (year-level only) | GOOGL | Waymo multi-city robotaxi launches — Dallas, Houston, San Antonio, Miami, Orlando | **(T)** — no day-level date published per city |
-| 2027-01-06 → 01-09 | broad | CES 2027, Las Vegas | **(E)** — carried, not re-verified |
+CARRIED rows come from the 2026-09-06 file with original sourcing intact and were **not re-verified** this run.
 
-**Dropped as out-of-window:** NVDA **GTC 2027** is confirmed for **2027-03-15 → 03-18**, which falls after this window's 2027-03-06 close. It is named here so a future cycle does not treat it as newly discovered — it is known and simply not yet reachable.
+| Date | Ticker | Event | Prov. | Source |
+|---|---|---|---|---|
+| 2026-09-15 → 09-17 | CRM | Dreamforce 2026, Moscone Center SF — Agentforce | (C) | CARRIED |
+| 2026-09-23 → 09-24 | META | Meta Connect 2026 — AI / VR / wearables | (C) | CARRIED |
+| 2026-10-20 → 10-22 | NVDA | GTC Berlin | (E) | CARRIED |
+| 2026-10-25 → 10-28 | ORCL | Oracle AI World / CloudWorld 2026 | (C) | CARRIED |
+| 2026-11-10 → 11-12 | ADBE | Adobe MAX 2026 | (E) | CARRIED |
+| 2026-11-17 → 11-20 | MSFT | Microsoft Ignite 2026 | (C) | CARRIED |
+| **2026-11-19** | **TTWO** | **GTA VI launch** (PS5, Xbox Series X\|S); digital pre-load 11-12 | **(C)** | CARRIED **+ RE-VERIFIED NEW this run** — CEO publicly reaffirmed, no further delay |
+| 2026-11-30 → 12-04 | AMZN | AWS re:Invent 2026 | (C) | CARRIED |
+| 2026-11-30 → 12-03 | NVDA | GTC Washington DC | (E) | CARRIED |
+| 2026 (year only) | GOOGL | Waymo multi-city robotaxi launches (Dallas, Houston, San Antonio, Miami, Orlando) | (T) | CARRIED — no day-level date |
+| 2027-01-06 → 01-09 | broad | CES 2027, Las Vegas | (E) | CARRIED |
 
-Four rows that last cycle downgraded from (C) to (E) purely because its search budget ran out (META Connect, ORCL CloudWorld, MSFT Ignite, AMZN re:Invent) have been **re-verified and restored to (C)** this run. Three remain at (E) — NVDA's two GTC events and Adobe MAX — and CES 2027 stays (E); these are carried, and the fact that they are carried rather than checked is stated rather than hidden.
+**Named as BEYOND WINDOW so a later cycle does not rediscover it:** NVDA GTC 2027, 2027-03-15 → 03-18 (C) — the window closes 2027-03-13, two days before it starts.
 
-### 1A.5 — Analyst days, investor days and major conferences
+**Caveat:** this table is carry-forward-heavy and the March 2027 tail is thin. AAPL's next hardware event (typically spring) has not been announced and was not searched for. AAPL's 2026-09-09 keynote is **NOW PAST** and is deliberately not carried forward as a forward row.
 
-| Date | Ticker | Event | Status |
-|---|---|---|---|
-| 2026-09-10 | LH | Labcorp Investor Day, 9am–12pm ET | **(C)** ir.labcorp.com |
-| 2026-09-16 | ON | onsemi Financial Analyst Day, NYC | **(C)** onsemi.com |
-| 2026-09-17 | INTU | Intuit Investor Day, 8:00am–12:00pm PDT | **(C)** investors.intuit.com — re-verified first-party for a second consecutive cycle |
-| 2026-09-17 | DCO | Ducommun (~$3.1B) Investor Day, NYC | **(C)** |
-| 2026-10-13 | BGC | FMX (BGC Group) first-ever Investor Day, NYC; Geoffrey Hinton keynote | **(C)** businesswire |
-| **2026-10-13** | **WDAY** | **Workday Financial Analyst Day**, held at Workday Rising | **(C) NEW** — newsroom.workday.com release dated **2026-09-01**, i.e. announced inside this cycle's own boundary window |
-| "Fall 2026" | NKE | Nike investor day | **(T)** — no specific day published; single low-quality source |
-| ~early Dec 2026 | UNH | UnitedHealth investor conference | **(E)** — projected from a firm annual early-December cadence (2024 edition was Dec 4) |
-| **2027-02-22** | **JPM** | **JPMorganChase Investor Day** | **(C) NEW** — company release syndicated via Nasdaq, 2026-06-15. Context: JPM held a placeholder "Company Update" on 2026-02-23 precisely *because* it was deferring its investor day to Q1 2027 |
+### 1A.5 — Analyst days, investor days and conferences
 
-This category was the thinnest in the first research pass (two rows, neither day-level) and was re-run against IR-calendar surfaces rather than broad search. **Three day-level, primary-sourced additions resulted.** Targeted searches for investor days at GM, Wells Fargo, Caterpillar, Deere, Costco, Visa and American Express found **none announced** in the window — Caterpillar's most recent ("The Next 100 Years") was 2025-11-04, before the window, with no follow-up announced. That is an affirmative negative, not an unsearched gap.
+| Date | Ticker | Event | Prov. | Source |
+|---|---|---|---|---|
+| 2026-09-16 | ON | onsemi Financial Analyst Day, NYC | (C) | CARRIED |
+| **2026-09-17** | **INTU** | **Intuit Investor Day**, 08:00–12:00 PDT | (C) | CARRIED — first-party, second consecutive cycle. **The nearest dated catalyst on the entire A queue** |
+| 2026-09-17 | DCO | Ducommun Investor Day, NYC | (C) | CARRIED |
+| 2026-10-13 | BGC | FMX (BGC Group) first Investor Day, NYC | (C) | CARRIED |
+| **2026-10-13** | **WDAY** | **Workday Financial Analyst Day**, at Workday Rising | (C) | CARRIED — release dated 2026-09-01 |
+| "Fall 2026" | NKE | Nike investor day | (T) | CARRIED — no day, single weak source |
+| ~early Dec 2026 | UNH | UnitedHealth investor conference | (E) | CARRIED — projected from annual cadence |
+| **2027-02-22** | **JPM** | **JPMorganChase Investor Day** | (C) | CARRIED |
+
+**Affirmative negative, searched this run:** no standalone investor or analyst day exists in the window for **AMZN, MSFT, META or GOOGL**. Searches returned only quarterly earnings dates. This is consistent with those companies' actual practice — they communicate through product keynotes and earnings calls — and is stated as a *not found* rather than left as an unsearched hole. It was one search pass, not an IR-calendar-by-IR-calendar sweep.
 
 ### 1A.6 — Regulatory, legal, trade and policy decisions
 
-| Date | Ticker(s) | Event | Status |
+| Date | Ticker(s) | Event | Prov. |
 |---|---|---|---|
-| 2026-09-29 | GOOGL | DOJ v. Google **search**-remedies appeal — Google's reply brief due (D.C. Cir.); oral argument unscheduled | **(C)** |
-| 2026-09-30 | BMY | Camzyos adolescent oHCM sNDA PDUFA — see §1B.3 | **(2S)** |
-| 2026-09-30 | broad | US government funding deadline; Senate-passed CR ran to 2026-12-11 | **(E)** — live process; bears on October BLS/BEA print reliability |
-| **2026-10-02** | **GOOGL** | **DOJ v. Google ad-tech — deadline for a joint proposed Final Judgment**, following Judge Brinkema's 2026-09-02 remedies ruling (Google spared a breakup; operational changes ordered) | **(C) NEW** — a genuinely new dated catalyst created inside this cycle's own boundary window. Distinct from the search case above |
-| 2026-10-04 | MRK | Welireg + Lenvima advanced-RCC sNDA PDUFA — see §1B.3 | **(C)** |
-| 2026-10-10 | MRK | Ifinatamab deruxtecan ES-SCLC BLA PDUFA — see §1B.3 | **(C)** |
-| 2026-10-16 | V | DOJ v. Visa — fact discovery closes (expert to 2027-04-08); **no trial date set** | **(C)** |
-| 2026-10-17 | VTRS | MR-141 presbyopia sNDA PDUFA — see §1B.3 | **(C)** |
-| by Oct 2026 | AAPL | Company-stated deadline to update App Store terms for EU DMA compliance | **(C)** as a commitment; no fixed day |
-| 2026-11-10 | broad China-import-exposed | USTR Section 301 China-tariff exclusions (178 products) expire 11:59pm ET 11-09 absent extension | **(C)** ustr.gov |
-| 2026-11-18 | UNP · NSC | STB UP–NS review: public comments due | **(C)** |
-| **2026-11-30** | **VRTX** | Povetacicept BLA PDUFA, IgA nephropathy, Priority Review | **(C)** news.vrtx.com — company release |
-| 2026-12-03 | UNP · NSC | STB UP–NS: DOJ / USDOT preliminary comments due | **(C)** |
-| 2026-12-04 | FSLR + solar chain | Section 232 tariff / minimum-import-price regime effective (polysilicon $21/kg, ingots-wafers $100/kg, cells $0.22/W, modules $0.38/W) | **(C)** whitehouse.gov |
-| by year-end 2026 | BA | FAA type-certification of 737 MAX 10 | **(T)** — FAA guidance, no fixed day |
-| late 2026 | NVO | FDA decision on CagriSema NDA | **(T)** company guidance, no PDUFA day published · **ADR — not A-eligible** |
-| **2027-01-21** | **DYN** | z-rostudirsen BLA PDUFA, DMD exon 51, Priority Review | **(C) NEW** — company-reported off the FDA BLA acceptance (July 2026) |
-| 2027-02-16 | UNP · NSC | STB UP–NS: responses to comments/protests due | **(C)** |
-| **2027-02-28** | **BMRN** | VOXZOGO (vosoritide) sNDA — full approval in achondroplasia | **(C) NEW** biomarin.com |
-| **2027-02-28** | **SRPT** | AMONDYS 45 / VYONDYS 53 sNDAs, DMD | **(C) NEW** — **cap ~$2.14B, immediately at the $2B floor** after a heavy decline. Verify current cap before any A use |
-| ~2027-02 | LYV | DOJ / states v. Live Nation — remedies phase, estimated and unscheduled | **(E)** |
-| **2027-03-02** | **WBD** (acquirer PSKY) | States' antitrust trial over the Paramount Skydance–WBD merger begins — **judge-set date** | **(C) NEW** |
+| 2026-09-29 | GOOGL | DOJ v. Google search remedies — Google reply brief due (D.C. Cir.); argument unscheduled | (C) |
+| 2026-09-30 | BMY | Camzyos adolescent oHCM sNDA PDUFA | (2S) |
+| 2026-09-30 | broad | US government funding deadline; Senate-passed CR runs to 2026-12-11 | (E) |
+| **2026-10-02** | **GOOGL** | **DOJ v. Google ad-tech — joint proposed Final Judgment due**, following the 2026-09-02 Brinkema remedies ruling (breakup avoided, operational changes ordered) | (C) |
+| 2026-10-04 | MRK | Welireg + Lenvima, advanced RCC sNDA PDUFA | (C) |
+| 2026-10-10 | MRK | Ifinatamab deruxtecan, ES-SCLC BLA PDUFA | (C) |
+| 2026-10-16 | V | DOJ v. Visa — fact discovery closes (expert discovery to 2027-04-08); no trial date | (C) |
+| 2026-10-17 | VTRS | MR-141 presbyopia sNDA PDUFA | (C) |
+| by Oct 2026 | AAPL | Company-stated deadline to update App Store terms for EU DMA compliance | (C) as commitment, no day |
+| 2026-11-10 | China-import-exposed | USTR Section 301 exclusions (178 products) expire 23:59 ET 11-09 absent extension | (C) |
+| 2026-11-18 | UNP · NSC | STB UP–NS merger review: public comments due | (C) |
+| **2026-11-30** | **VRTX** | Povetacicept BLA PDUFA, IgA nephropathy, Priority Review | (C) |
+| 2026-12-03 | UNP · NSC | STB UP–NS: DOJ / USDOT preliminary comments due | (C) |
+| **2026-12-04** | **FSLR** + solar chain | **Section 232 tariff / minimum-import-price regime effective** — polysilicon $21/kg, ingots-wafers $100/kg, cells $0.22/W, modules $0.38/W | (C) whitehouse.gov |
+| **2026-12-05** | **VRTX** | **Journavx (suzetrigine) chronic-low-back-pain sNDA PDUFA** — distinct from the povetacicept row above | (2S) |
+| by year-end 2026 | BA | FAA type certification, 737 MAX 10 | (T) |
+| late 2026 | NVO | FDA decision, CagriSema NDA — **ADR, not A-eligible** | (T) |
+| **2027-01-21** | **DYN** | Z-rostudirsen BLA PDUFA, DMD exon 51, Priority Review | (C) |
+| 2027-02-16 | UNP · NSC | STB UP–NS: responses to comments/protests due | (C) |
+| **2027-02-28** | **BMRN** | VOXZOGO sNDA — full approval in achondroplasia | (C) |
+| 2027-02-28 | SRPT | AMONDYS 45 / VYONDYS 53 sNDAs, DMD — cap ~$2.14B, **sits on the $2B floor; re-measure before use** | (C) |
+| ~2027-02 | LYV | DOJ / states v. Live Nation — remedies phase, unscheduled | (E) |
+| **2027-03-02** | **WBD** (acquirer PSKY) | States' antitrust trial over the Paramount Skydance–WBD merger begins — judge-set | (C) |
 
-**Out of window, named so it is not rediscovered:** the FTC v. Amazon trial (~2027-03-29) falls after 2027-03-06, as it did last cycle.
+**One row recovered this run that last cycle's table did not carry:** VRTX's **Journavx sNDA PDUFA 2026-12-05**, present in `Watchlist.md`'s A-queue row but absent from the 2026-09-06 regulatory table. It is distinct from VRTX's povetacicept PDUFA on 2026-11-30 — **two separate dated regulatory catalysts five days apart on the same name**, which is why the omission mattered.
 
-**The 2027 tail is no longer empty.** Last cycle's regulatory table stopped at 2027-02-16 with a single (E) row beyond it. Four confirmed 2027 dates now sit in the window (DYN 01-21, BMRN 02-28, SRPT 02-28, WBD 03-02), which matters disproportionately because §1A.3 showed the *earnings* tail cannot be filled at all past ~2026-12-03. **For the last quarter of this window, regulatory and legal dates are the only confirmed catalysts available** — a structural fact about what Strategy A can even be timed against in Jan–Mar 2027.
+**Resolved before the window, recorded so it is not rediscovered:** the SCOTUS IEEPA tariff ruling (*Learning Resources v. Trump*, consolidated with *Trump v. V.O.S. Selections*) was decided **2026-02-20**; the IEEPA tariff regime terminated 2026-02-24. It is **not** a forward catalyst, and specifically **it does not touch the FSLR Section 232 row above** — Section 232 rests on separate national-security statutory authority untouched by that ruling. Checked this run precisely because a reader could reasonably assume otherwise.
+
+**Named as BEYOND WINDOW:** FTC v. Amazon trial, ~2027-03-29 (E).
+
+**Not searched this run:** the FDA advisory-committee calendar was not re-checked for new October–March notices. Federal Register lead times make these highly time-sensitive and last cycle already classified this as a re-check rather than a gap to alert on; the budget was spent on higher-priority items first.
 
 ### 1A.7 — Restructuring and structural events
 
-| Date | Ticker(s) | Event | Status |
+| Date | Ticker(s) | Event | Prov. |
 |---|---|---|---|
-| 2026-09-18 | broad S&P 500 | Q3 quarterly index rebalance (third Friday; effective ~09-21 open) | **(E)** |
-| Q4 2026 | CTVA | "Vylor" seed/genetics spin-off completion | **(T)** — a **quarter, not a date**. Corteva's own releases (05-04, 06-29, 08-06) say only "on track for Q4 2026." Last cycle's demotion stands |
-| 2H / by year-end 2026 | KMB · KVUE | Kimberly-Clark / Kenvue merger close; shareholder votes already passed 2026-01-29; outside date 2026-11-02, auto-extending to 2027-05-03 | **(T)** — no exact day |
-| 2026-09 → 2027-03 | TECK | Anglo American–Teck final approvals; China MOFCOM the last pending item | **(C)** angloamerican.com |
-| mid-Dec 2026 | broad Nasdaq-100 | Annual reconstitution, effective before the open on the third Friday | **(E)** — mechanism date only |
-| 2026-12-18 | broad S&P 500 | Q4 quarterly index rebalance | **(E)** |
-| 2027-01-01 | DG | CEO transition — Fleeman becomes CEO; Vasos senior advisor to 2027-04-02 | **(C)** |
-| upon 2026 10-K filing | BA | SVP Finance Shedd succeeds Cleary as Controller | **(C)** 8-K Item 5.02, disclosed 2026-08-21 |
+| 2026-09-18 | S&P 500 | Q3 quarterly index rebalance (third Friday; effective ~09-21 open) | (E) |
+| Q4 2026 | CTVA | "Vylor" seed/genetics spin-off completion — company says only "on track for Q4 2026" | (T) |
+| 2H / by year-end 2026 | KMB · KVUE | Kimberly-Clark / Kenvue merger close; votes passed 2026-01-29; outside date 2026-11-02, auto-extending to 2027-05-03 | (T) |
+| spans window | TECK | Anglo American–Teck final approvals; China MOFCOM the last pending item | (C) |
+| mid-Dec 2026 | Nasdaq-100 | Annual reconstitution, effective before the third-Friday open | (E) |
+| 2026-12-18 | S&P 500 | Q4 quarterly index rebalance | (E) |
+| 2027-01-01 | DG | CEO transition — Fleeman becomes CEO | (C) |
+| upon 2026 10-K filing | BA | SVP Finance Shedd succeeds Cleary as Controller (8-K 2026-08-21) | (C) |
 
-**Resolved during the week just past — moved out of the forward calendar.** Three CEO transitions this file carried as forward catalysts took effect **2026-09-01** and are now history: **AAPL** (Ternus succeeds Cook; Cook to Executive Chairman), **COP** (O'Brien succeeds Lance), **TFC** (Lyons succeeds Rogers). D1 measured AAPL +2.61% on 2026-09-01 and explicitly flagged the attribution as unresolved — the keynote on 09-09 is the nearer catalyst and the two are entangled.
+**Narrative input with no datable forward row:** UBER's 2026-09-02 restructuring announcement (~3,300 roles, ~10% of headcount; management layers −20%; AV footprint 7→15 cities). It feeds PART 2A #19 as thesis context; it is not a forward calendar row because the announcement is already past and no execution date was given.
 
-**The structural-narrative category is genuinely thin, and that is not a research failure.** Two sub-categories were pursued and both are structurally unavailable right now:
+**Checked this run and confirmed already complete before the window** (so they are not rediscovered as gaps): Comcast/Versant spin-off (completed 2026-01-02, trading as VSNT from 01-05), Honeywell/Solstice (Oct 2025), DuPont/Qnity (Nov 2025).
 
-- **IPO lockup expiries** require a company to have already priced. The two most visible 2026 candidates have not: **Wella (WELA)** filed 2026-08-31 with no price range, offer size or trade date; **Panera Brands** remains a confidential S-1 with no public terms. Medline's lockup already expired 2026-06-15, before the window. Other Oct–Nov 2026 lockups found (Avalyn, Hemab, Seaport, CH4) carry $60M–$300M deal sizes implying caps far below the $2B floor and volumes unlikely to clear $10M ADV; they were not individually confirmed and are named here rather than silently omitted.
-- **Index reconstitution** additions and removals are announced by S&P and Nasdaq only about a **week before** they take effect. The December 2026 mechanism dates are known and are in the table; **no company-specific addition or removal for Oct 2026 – Mar 2027 has been announced by anyone yet.** Nothing citable exists at this vantage.
+**One unresolved gap, left unresolved rather than guessed:** the **Honeywell Aerospace** spin-off — distinct from the completed Solstice spin-off — returned internally inconsistent dates across sources, so no date is published here. It needs a direct read of Honeywell's own spin-off reference page, which was not fetched within budget. **Named as an open gap; not fabricated.**
 
-Last cycle's **SPCX lockup expiry (2026-12-08)** row is **struck**: it was tagged (C) but its own cited source said the lockup expired 2026-08-06, and a follow-up found SpaceX's lockup is not a single date at all but a staged release — an initial tranche, a 180-day tranche, an "extended group" running into 2027, and a separate longer lock on Musk's block. No single clean in-window date is sourceable. A row whose date contradicts its own citation cannot stand.
+**Caveat:** this is the thinnest of the four tables, and that is structural rather than a research failure — IPO lockups and index-reconstitution adds/drops are largely unannounceable this far ahead.
 
+## PART 1B — Strategy C universe catalyst calendar (45-day window, 2026-09-13 → 2026-10-28)
 
----
+Strategy C's qualifying event list is **closed by the strategy itself** and this run re-read it to be sure: corporate earnings releases (US-listed, **confirmed date from company IR**), FDA PDUFA dates (FDA calendar or company disclosure), FOMC meetings (confirmed Fed calendar). `strategy/05_strategy_c.md` then says in terms: *"Other event types (analyst days, product launches, conference presentations, M&A-related, legal rulings, index rebalances) are excluded at the strategy level."* Nothing else below the line is eligible, however interesting.
 
-## PART 1B — Strategy C universe catalyst calendar (45-day window, 2026-09-06 → 2026-10-21)
+### 1B.1 — FOMC (confirmed, federalreserve.gov)
 
-Strategy C admits **only three event types**, from named sources: corporate earnings releases (US-listed, confirmed date from company IR), FDA PDUFA dates (FDA calendar or company disclosure), and FOMC meetings (confirmed Fed calendar). Analyst days, product launches, conferences, M&A, legal rulings and index rebalances are **excluded at the strategy level** and do not appear here, even though several sit in PART 1A for Strategy A.
+| Dates | Decision day | SEP / press conference | Window |
+|---|---|---|---|
+| 2026-09-15 → 09-16 | **Wed 2026-09-16**, statement 14:00 ET, presser 14:30 ET | **SEP (dot plot) + press conference** | IN WINDOW — **3 days away** |
+| 2026-10-27 → 10-28 | **Wed 2026-10-28** | press conference, **no SEP** | IN WINDOW |
 
-No interpretation in this PART. Ranking is PART 2B.
+**The October FOMC is newly in scope and that is purely a window-arithmetic fact, not new research.** Last cycle's 45-day window ended 2026-10-21 and stopped short of it; this cycle's ends 2026-10-28 and reaches the decision day exactly. C now has **two** qualifying FOMC events in window where it has had one all quarter.
 
-### 1B.1 — FOMC
+Remaining 2026: Dec 8-9 (SEP). Announced 2027: Jan 26-27, Mar 16-17, Apr 27-28, Jun 8-9, Jul 27-28, Sep 14-15, Oct 26-27, Dec 7-8 — each tentative until confirmed at the preceding meeting, per the Fed's own note. **Provenance honesty:** the two in-window dates are cross-confirmed against federalreserve.gov and multiple independent secondary sources and are (C). The 2027 list did not re-render cleanly from the Fed's own page in this run's extract and rests on secondary aggregation — carried at **(2S)**, adequate for 6-month context and not adequate to trade from.
 
-| Meeting | Decision day | SEP? | Press conf. | Status | Source |
+### 1B.2 — Earnings inside the 45-day window
+
+Thirty-seven distinct US-listed names have a scheduled report inside the window. The full dated list is in PART 1A.1 below and is not duplicated here.
+
+**A provenance warning that binds every one of these rows, and it is a strategy-level requirement rather than a preference.** Strategy C requires a **"confirmed date from company IR."** Every earnings date in this file's bulk table came from the FMP `earnings-calendar` endpoint, which mixes company-confirmed and vendor-projected dates and **exposes no flag distinguishing them**. They are therefore carried at **(E)**, not (C). That is sufficient to RANK a candidate here; it is **not** sufficient to enter one. Any C earnings thesis must have its date re-confirmed against the company's own IR page at D2 thesis-construction time, and this file does not discharge that obligation for it.
+
+One row in the vendor pull is rejected outright rather than carried:
+
+- **FDX appears TWICE — 2026-09-17 and 2026-10-28 — and the second date is almost certainly a vendor artifact.** FedEx's fiscal Q1 ends in August and reports in September; fiscal Q2 ends in November and reports in December. **2026-10-28 corresponds to no FedEx quarter-end.** The 09-17 row is consistent with the fiscal calendar and is carried; the 10-28 row is marked **(T) — REJECTED AS SUSPECT** and is excluded from both shortlists. It is named here rather than silently dropped so a later cycle does not "rediscover" it as a gap. Confirming it is impossible from this plan tier: `calendar/earnings-company` is ACCESS DENIED, so there is no per-symbol route to check a bulk row against.
+
+### 1B.3 — FDA PDUFA target action dates
+
+Rows marked CARRIED come from last cycle's 1B.3/1B.4 with their original sourcing intact — **prior-cycle research, not re-verified this run.** Rows marked NEW were sourced this run.
+
+| PDUFA date | Ticker | Drug / indication | Provenance | C-eligible? |
+|---|---|---|---|---|
+| 2026-09-19 | RARE | UX111, Sanfilippo A | CARRIED | cap near floor; C has no cap rail, options liquidity is the binding test |
+| 2026-09-23 | GRAL | Galleri **AdCom panel** | CARRIED | **NO — an advisory-committee vote is not a PDUFA action date.** Excluded at the strategy level |
+| 2026-09-26 | MIRM | Zilurgisertib, FOP | CARRIED (resolves this run's MIRM-vs-INCY ambiguity in favour of MIRM) | yes |
+| 2026-09-28 | BFRI | Ameluz PDT, sBCC (sNDA) | NEW | nominally yes; micro-cap, options chain likely unusable |
+| 2026-09-30 | SRRK | Apitegromab, SMA (BLA) | NEW + CARRIED (agree) | yes |
+| 2026-09-30 | BMY | Camzyos, adolescent oHCM (sNDA) | CARRIED (2S) | yes |
+| 2026-10-04 | MRK | Welireg + Lenvima, advanced RCC | CARRIED | yes |
+| 2026-10-09 | RHHBY | Tecentriq, colon cancer | CARRIED | **NO — ADR, fails the US-listed test** |
+| 2026-10-10 | MRK | Ifinatamab deruxtecan, ES-SCLC | CARRIED | yes |
+| 2026-10-15 | RHHBY | Enspryng, thyroid eye disease | CARRIED | **NO — ADR** |
+| 2026-10-17 | VTRS | MR-141, presbyopia (sNDA) | CARRIED | yes |
+| 2026-10-24 | PHAR | Joenja | CARRIED (lighter verification) | yes |
+| 2026-10-26 | GSK | Bepirovirsen, hepatitis B | CARRIED + corroborated this run | **NO — ADR** |
+
+**STRUCK THIS RUN — and it is a correction to this file's own prior cycle, not a vendor problem.** Last cycle's table carried a row reading *"GSK zidesamtinib — approved 2026-07-22"*, while this run's fresh aggregator pull independently returned *"NUVL zidesamtinib — PDUFA 2026-09-18, pending."* Same drug, different company, incompatible status; both could not stand. Resolved against the FDA's own approvals page and Nuvalent's IR: **zidesamtinib is Nuvalent's (NUVL), brand name Jideytro, and the FDA approved it on 2026-07-22 — roughly two months AHEAD of its 2026-09-18 PDUFA target.** So **each input was half wrong**: the prior cycle had the date and status right and the company wrong; the fresh aggregator had the company right and was serving a stale, superseded PDUFA date. **The row is struck — it is not a forward catalyst, and NUVL must not appear as a pending PDUFA in this or any later window.** Sources: [FDA approvals page](https://www.fda.gov/drugs/resources-information-approved-drugs/fda-approves-zidesamtinib-ros1-positive-non-small-cell-lung-cancer), [Nuvalent IR](https://investors.nuvalent.com/2025-11-19-Nuvalent-Announces-FDA-Acceptance-of-New-Drug-Application-for-Zidesamtinib-for-the-Treatment-of-TKI-Pre-treated-Patients-with-Advanced-ROS1-positive-NSCLC).
+
+**NOW PAST (was in last cycle's pending list):** TLX / Pixclara, 2026-09-11 — falls before this window opens. **Whether it actually resolved is not established here**; D1's 2026-09-10 file still had it pending and Friday 09-11 is the session no W1 can see (above). Tonight's D1 owns it.
+
+**OUT OF WINDOW:** PRAX / relutrigine → 2026-12-27 (extended); CAPR / deramiocel → 2026-11-22 (extended); INO / INO-3107 → 2026-10-30 (just past the 10-28 boundary, first-party 8-K corroborated this run); Beren / adrabetadex → 2026-11-17; SVRA / Molbreevi → 2026-11-22.
+
+**ALREADY RESOLVED before the window:** PTGX/TAK rusfertide (08-28), ROIV brepocitinib (08-26), IONS zilganersen (09-03), NUVL zidesamtinib (07-22, above).
+
+**COMPLETENESS CAVEAT — this PDUFA table is a FLOOR, not a total, and the October half is the thin part.** The FDA publishes no forward PDUFA calendar (it cannot confirm an application exists until the sponsor discloses it), so every row here originates in a third-party tracker or a company release. A dedicated follow-up pass spending its full budget on the 2026-10-01 → 10-28 sub-window closed **zero** new rows beyond the carry-forward, while aggregators claim on the order of a hundred Sept+Oct catalysts sitewide. The honest reading is that in-window October coverage is incomplete and cannot be shown to be complete from the sources reachable at this spend level.
+
+## PART 2A — Strategy A preliminary ranked shortlist (50 candidates)
+
+### A-QUEUE CENSUS — the pinned query, run verbatim
+
+The spec pins this and the pin exists because W1 got it wrong: last cycle's file stated the A queue "currently holds 23 pending A rows" and enumerated 23 tickers where the true figure was 39, an undercount that makes an already-queued name read as NEW. Run as pinned — `SELECT * FROM state.open_queue WHERE strategy = 'A'` — the query returns:
+
+> **40 rows.**
+
+That is the census. It is 39 plus **FSLR**, added by W4 on 2026-09-06 after last cycle's W1 had already written. Enumerated, all 40:
+
+`AAPL · ADBE · AKAM · AMAT · AMD · AMZN · AVGO · CAT · CRM · CRWD · CSCO · DDOG · DELL · FSLR · GEV · GOOGL · HD · HPE · IBM · INTC · INTU · LLY · META · MRVL · MSFT · MU · NBIS · NOW · NTAP · NVDA · OKTA · ORCL · PANW · QCOM · SMCI · SNOW · TGT · TTWO · VRTX · WMT`
+
+The hand enumeration agrees with the query at 40. **One reconcilable discrepancy is stated rather than smoothed over:** `Watchlist.md`'s Strategy A queue table carries **41** ticker rows — the 40 above plus **TSM**. TSM is not in the live queue because it is an ADR and therefore not Strategy-A-eligible; the markdown table is a historical audit trail and does not delete rows, so the two are expected to differ by exactly this kind of row. **The query wins: the census is 40.**
+
+### MODE — read this before reading the ranking
+
+Strategy A is **DO-NOT-ACTIVATE and capital-disabled**, for a fourth consecutive cycle, and as of 2026-09-10 its technical leg fails too (SPY_TREND NEUTRAL). **No name below can produce a position this cycle.** W4 section D routes A top-tier names to `Watchlist.md` under the router gate rather than enqueueing thesis-construction, so the downstream work is correctly gated already.
+
+That W1 has no explicit INDEX MODE limb for this situation — where W2's PART 2 gained one on 2026-08-24 after three router-gated cycles — is a **known, recorded finding**: `ops.alerts` `06520989`, raised by W1 itself on 2026-09-06, owned to W5. **It is not re-raised here.** Its `consecutive_gated_cycles` payload field read 3 when it was written and the true figure is now 4; that is an update to an open finding, not a new finding, and this file is the place to say so. The shortlist below is produced at the depth the spec specifies, because the spec specifies it.
+
+### THE DIRECTION RAIL, APPLIED FIRST
+
+Strategy A is **long-only** — `strategy/03_strategy_a.md`: *"Long-only (no short positions in A — short is B's territory)."* Per this section's DIRECTION ADMISSIBILITY rule, hypothesized direction is evaluated **before** ranking, and any candidate whose thesis is that the name is **over**-valued is marked `DIRECTION-INADMISSIBLE (A long-only rail)` and placed **below** the actionable tier regardless of how strong the narrative is. It is a category error, not a judgment call.
+
+**This cycle the rail costs more than it usually does, and that is worth saying plainly: the single best new idea in this window is inadmissible.** Brent rose **+11.79% in four sessions** (96.28 → 107.63). The three US carriers reporting inside the window — **DAL 10-08, UAL 10-21, AAL 10-22** — face a fuel-cost shock arriving after their hedge books were set, with a dated print to mark it against. That is a specific, quantified, dated, documentable divergence, and it is **a short thesis, so Strategy A cannot use it at any conviction.** It is ranked, carried, and routed below — to Strategy B's sub-pattern taxonomy, which is where short-direction theses belong. Suppressing it would lose real signal; admitting it to the actionable tier would consume a thesis slot that cannot produce a position.
+
+### TOP-10 — the actionable tier (all long-direction, rail-checked)
+
+Per candidate: (a) hypothesized direction · (b) supporting public documents · (c) catalyst date · (d) overlap with open A positions / watchlist · (e) tier.
+
+**There are ZERO open Strategy A positions.** The entire open book is 12 Strategy D lots (AMZN ×2, DIS ×2, GEV, GOOGL ×2, ISRG, RTX, TSM ×2, UBER), so for every candidate below, (d) reduces to queue membership and, for five names, co-existence with a D lot. That is noted per row rather than repeated.
+
+**Rail status for the names below, stated once.** Every shortlisted name was measured against the **ADV rail and passes** (1A.3a; the lowest in the whole measured set is ~18x the floor). The **cap rail is MEASURED only for names inside the vendor allow-list**; queue-only names are **CAP-UNVERIFIED** because `batch-market-cap` silently omits them and the single-symbol endpoint is denied (finding F-4). Where such a name is treated as clearing $2B that is a labelled **inference** from its dollar-volume magnitude, not a measurement. **One name is explicitly flagged for re-measurement before any use: SRPT, carried at ~$2.14B, sits directly on the floor.**
+
+| # | Ticker | (a) Direction | (c) Catalyst date | (d) Overlap | Thesis seam in one line |
 |---|---|---|---|---|---|
-| **2026-09-15 → 09-16** | **2026-09-16** | **Yes** | Yes | **(C)** — the only FOMC in the window | federalreserve.gov/monetarypolicy/fomccalendars.htm, fetched 2026-09-06 |
+| 1 | **XOM** | Bullish | Q3 earnings **2026-10-30 (E)** | not queued; no A position | Brent +11.79% in four sessions while XLE **fell 0.58%** on the session Brent rose 6.34% — the tape is pricing demand destruction, the upstream realization arithmetic in the 10-Q is not |
+| 2 | **CVX** | Bullish | Q3 earnings **2026-10-30 (E)** | not queued | Same seam, higher post-Hess upstream leverage; second independent instance rather than a duplicate |
+| 3 | **GEV** | Bullish | Q3 earnings **~2026-10-20 (T — company-unconfirmed, flagged "soft" in `Watchlist.md`)** | queued 2026-08-09; **also an open D lot** (`D:GEV:2026-08-03`) | Data-centre power capex; an energy shock raises the option value of gas-turbine and grid capex rather than lowering it. Prior cycle's #1, carried on its own rationale |
+| 4 | **INTC** | Bullish | Q3 earnings **2026-10-22 (E)** | queued 2026-05-12 | Cap $519.2B. Sold off inside the 09-10 XLK −1.41% rate-duration move; the foundry/industrial-policy thesis is not a duration thesis, so the transmission channel and the thesis channel are different things |
+| 5 | **JPM** | Bullish | Q3 earnings **2026-10-13 (E)**; Investor Day **2027-02-22 (C)** | not queued | XLF −1.38% on 09-08 as hike odds firmed, but a hike from 3.50–3.75% with a +0.39 curve is NIM-supportive for an asset-sensitive book. Consensus has been positioned for cuts since the June SEP |
+| 6 | **GOOGL** | Bullish | Q3 earnings **2026-10-28 (E)**; ad-tech joint proposed Final Judgment **2026-10-02 (C)**; search-remedies reply brief **2026-09-29 (C)** | queued 2026-07-05; **also an open D lot** (×2) | The 2026-09-02 Brinkema ruling avoided a breakup; the residual legal tail became **quantifiable rather than binary**, and a quantifiable tail is what a narrative thesis can actually price |
+| 7 | **TTWO** | Bullish | **GTA VI launch 2026-11-19 (C — re-verified first-party this run, no delay)**; pre-load 11-12 | queued 2026-08-09 | The single largest dated non-earnings binary in the entire calendar, and the date has now survived re-confirmation |
+| 8 | **FSLR** | Bullish | **Section 232 regime effective 2026-12-04 (C, whitehouse.gov)** — polysilicon $21/kg, ingots/wafers $100/kg, cells $0.22/W, modules $0.38/W | queued 2026-09-06 (newest queue member) | A fully specified, quantified, dated policy catalyst — the rarest shape in this file. Confirmed unaffected by the 2026-02-20 SCOTUS IEEPA ruling, which struck a *different* tariff authority |
+| 9 | **CAT** | Bullish | Q3 earnings **(T — no date in the reachable calendar)** | queued 2026-05-01, thesis ratified 2026-08-04 | Data-centre power capex plus energy-capex pull-through. **Ranked with its date weakness explicit** — an unconfirmed catalyst date is a real deduction, not a formality |
+| 10 | **MRK** | Bullish | **Welireg+Lenvima RCC PDUFA 2026-10-04 (C)**; **I-DXd ES-SCLC BLA PDUFA 2026-10-10 (C)** | not queued | Two first-party-confirmed dated regulatory catalysts eight days apart, into a sector the tape just marked down (XLV −2.52% on 09-08 on an unrelated clinical cluster) |
 
-One qualifier on the press conference, stated rather than smoothed over: the Fed's own calendar page had not yet posted meeting-specific press-conference and materials links for the Sept–Dec 2026 meetings at fetch time. Every FOMC meeting has carried a press conference since 2019 and two independent third-party trackers confirm one for 09-16, so the row stands — but the press-conference leg specifically is corroborated, not first-party. The **meeting dates and the SEP** are first-party from the Fed calendar.
-
-**This is the only router-eligible event anywhere in this file.** C's activation state is HYBRID ACTIVATE (FOMC-only), so the 2026-09-16 decision is the single event in either window that Strategy C may act on this cycle.
-
-Remaining 2026 meetings, outside the window and listed for context: **2026-10-27/28** (decision 10-28, no SEP) and **2026-12-08/09** (decision 12-09, SEP). The October meeting sits eight days past the window close and enters the window next cycle. 2027 meetings, marked tentative by the Fed's own convention until confirmed at the preceding meeting: Jan 26-27 · Mar 16-17 (SEP) · Apr 27-28 · Jun 8-9 (SEP) · Jul 27-28 · Sep 14-15 (SEP) · Oct 26-27 · Dec 7-8 (SEP).
-
-**Scheduled macro releases inside the window.** These are not Strategy C qualifying events in their own right — none of them is an earnings release, a PDUFA or an FOMC meeting — but they land inside the holding period of any structure written around the 09-16 decision, so they are calendar facts a C thesis must price rather than discover:
-
-| Date | Release | Agency | Note |
-|---|---|---|---|
-| 2026-09-10 | PPI, August | BLS | Carried from prior cycle at (C); not re-verified this run |
-| **2026-09-11** | **CPI, August** | BLS | Carried at (C). **Falls between a 09-08 entry and the 09-16 decision** — see PART 2B |
-| **2026-09-16** | **FOMC decision + SEP** | Fed | (C), first-party |
-| 2026-09-30 | PCE + Personal Income, August | BEA | Carried at (C). After the decision |
-| 2026-09-30 | GDP Q2, third estimate | BEA | Carried at (C) |
-| 2026-09-30 | US government funding deadline | — | Senate-passed CR ran to 2026-12-11; live process, (E). Bears on October data reliability |
-| 2026-10-02 | Employment Situation, September | BLS | Carried at (C) |
-| 2026-10-14 | CPI, September | BLS | Carried at (C); lands on the window's second-to-last day |
-| 2026-10-15 | PPI, September | BLS | Carried at (C) |
-
-**Provenance honesty on this table:** these dates were confirmed against bls.gov and bea.gov in a prior cycle and are **carried, not re-verified this run**. The metered budget went to the PDUFA verification pass instead, which found three rows that needed correcting — a better use of the calls. They are marked as carried so no reader mistakes them for fresh first-party reads.
-
-### 1B.2 — Corporate earnings inside the 45-day window
-
-Deferred to §1A.1, which enumerates the same dated set for the same window and is not duplicated here. Two changes matter for Strategy C specifically and are flagged at the point of use in PART 2B:
-
-- **ORCL is now dated: 2026-09-10 AMC (C)**, first-party from Oracle's own "Sets the Date" release of 2026-09-02, closing a four-cycle ambiguity.
-- **RH is now dated: 2026-09-10 AMC (C)** and did **not** report last week, correcting last cycle's `(!)` split.
-
-### 1B.3 — FDA PDUFA and advisory actions inside the window
-
-Every row below was individually checked for whether the action has **already been taken** — not merely whether a date was once scheduled. That check is why this section looks different from last cycle's.
-
-**PENDING — verified still open as of 2026-09-06**
-
-| Date | Ticker | Company | Drug / candidate | Indication | Type | Status |
-|---|---|---|---|---|---|---|
-| 2026-09-11 | **TLX** | Telix Pharmaceuticals | Pixclara (TLX101-Px, floretyrosine F 18) | Recurrent glioma PET imaging | NDA, 2nd cycle | **(C)** — US-listed test resolved explicitly: **Nasdaq: TLX**, a genuine dual listing (ASX + Nasdaq), not an OTC ADR. First NDA drew a CRL 2025-04-28; resubmitted 2026-03-13, accepted 2026-04-10 |
-| 2026-09-19 | **RARE** | Ultragenyx | UX111 (rebisufligene etisparvovec) | Sanfilippo A (MPS IIIA) | BLA, 2nd cycle | **(C)** company 8-K. Prior CRL July 2025. Market cap ~$2.5-2.6B — **borderline on the $2B A-floor**, immaterial for C |
-| 2026-09-23 | **GRAL** | GRAIL | Galleri | Multi-cancer early detection | **CDRH advisory panel — a VOTE, not a decision** | **(C)** Federal Register notice 2026-16245 (pub. 2026-08-10) **and** FDA's own Advisory Committee Calendar. Molecular and Clinical Genetics Panel, 9am-6pm ET. No rescheduling notice found |
-| 2026-09-26 | **MIRM** | Mirum (asset in-licensed from Incyte) | Zilurgisertib | Fibrodysplasia ossificans progressiva | NDA, Priority Review | **(C)** — Mirum Q2 2026 release still refers to a pending approval; no later action found |
-| 2026-09-30 | **SRRK** | Scholar Rock | Apitegromab | Spinal muscular atrophy | BLA, Priority Review | **(C)** — company release 2026-08-07: *"remains on track for potential FDA approval by the September 30, 2026 PDUFA action date"* |
-| 2026-09-30 | **BMY** | Bristol Myers Squibb | Camzyos (mavacamten) | Adolescent (12-<18y) obstructive HCM | sNDA | **(2S)** — FDA acceptance covered June 2026; no approval or CRL found |
-| 2026-10-04 | **MRK** / Eisai | Merck (primary) + Eisai | Welireg (belzutifan) + Lenvima | Advanced RCC | sNDA ×2 | **(C)** — Eisai's own release, Merck.com, and two trade sources all give 2026-10-04. Based on LITESPARK-011 |
-| 2026-10-09 | RHHBY | Genentech / Roche | Atezolizumab (Tecentriq / Tecentriq Hybreza) | Adjuvant stage III dMMR/MSI-H colon cancer | sBLA | **(C)** — Priority Review accepted June 2026. **US-listing caveat below** |
-| 2026-10-10 | **MRK** / Daiichi Sankyo | Merck (US-listed) + Daiichi (TSE) | Ifinatamab deruxtecan (I-DXd) | Previously-treated ES-SCLC | BLA | **(C)** merck.com |
-| 2026-10-15 | RHHBY | Genentech / Roche | Enspryng (satralizumab) | Thyroid eye disease | sBLA | **(C)** — Genentech's and Roche's own releases plus three trade sources. Priority Review granted 2026-06-29/30 on SatraGO-1/2. **Newly inside the window** (last cycle's closed 10-14). **US-listing caveat below** |
-| 2026-10-17 | **VTRS** | Viatris | MR-141 (phentolamine ophthalmic 0.75%) | Presbyopia | sNDA | **(C)** — date unchanged in all located coverage; no approval or CRL found |
-
-**The Roche/Genentech US-listing caveat, stated once and applied to both rows.** Genentech is a US-headquartered, wholly-owned Roche subsidiary. Roche's primary listing is SIX:RO/ROG; its only US quotation is **OTCQX: RHHBY**, an over-the-counter ADR, not a primary US listing. Strategy C's qualifying-event definition says "US-listed companies." **Both Roche rows are therefore carried as calendar facts but flagged as failing a strict reading of the US-listed test**, and neither is ranked in PART 2B. This is the same ADR question W4 ruled on for Strategy A on 2026-08-09; the ruling is applied consistently here rather than re-litigated. The Merck/Daiichi row is *not* affected — Merck (NYSE: MRK) is the US-listed BLA sponsor.
-
-**RESOLVED — acted on before the window opened. Recorded so they are not carried as pending.**
-
-| Original date | Ticker | Drug | What actually happened | Source |
-|---|---|---|---|---|
-| ~Q3 CY2026 ("~09-30") | **PTGX** / **TAK** | Rusfertide | **APPROVED 2026-08-28** as **Mimrylo™**, first drug of its kind for polycythemia vera | FDA.gov press release 08/28/2026 + Takeda newsroom, same date + drugs.com approval history |
-| ~Q3 CY2026 ("~09-30") | **ROIV** | Brepocitinib | **APPROVED 2026-08-26** as **Lisraya™**, first oral drug for adult dermatomyositis; announced 08-27 | Roivant IR release (GlobeNewswire 2026-08-27) + AJMC citing the FDA announcement + Reuters + drugs.com |
-| 2026-09-22 | **IONS** | Zilganersen | **APPROVED 2026-09-03** as **Zanvastro™** — *ahead of* its PDUFA date, first disease-modifying therapy for Alexander disease | FDA.gov press announcement 09/03/2026 + Ionis IR release |
-| 2026-09-18 | GSK | Zidesamtinib | **APPROVED 2026-07-22** as **Jideytro™**. Already struck last cycle; re-confirmed here so it cannot return a third time | GSK release, FDA drug-approval page, four trade outlets, all 2026-07-22/23 |
-
-**POSTPONED out of the window**
-
-| Ticker | Drug | Was | Now | Why |
-|---|---|---|---|---|
-| **PRAX** | Relutrigine (SCN2A/SCN8A DEE) | 2026-09-27 | **2026-12-27** | FDA extended review three months after Praxis submitted additional sensitivity analyses, classified a "major amendment." No new studies requested; **no safety or manufacturing issue cited.** Company IR release + 8-K, both 2026-06-29 |
-
-**STRUCK — the date does not appear to exist**
-
-> **MRK / Winrevair (sotatercept), HYPERION label update for newly-diagnosed PAH, carried last cycle at 2026-09-21 (2S) — REMOVED.** A dedicated verification pass found **no sBLA tied to HYPERION at all.** HYPERION has reached topline and full results (positive, primary endpoint met, per Merck.com, September 2026), and one source states explicitly that *Merck has not stated an expected date for regulatory submission.* The only sotatercept label sBLA with a real PDUFA date on record is a **different and already-past filing** — the ZENITH-trial label update, PDUFA **2025-10-25**. The most likely origin of the 09-21 row is a conflation of the two.
->
-> This is the **third consecutive cycle** in which a carried, ranked catalyst turned out not to exist as described — after META's "UTECA trial October 2026" (a one-year mis-projection of an October **2025** trial) and "QCOM v. Arm, 2026-10-05" (uncorroborated) last cycle. The prior cycle already named the failure mode as *confirming that a date was scheduled without checking whether it had already been acted on.* **This instance is a distinct and worse variant: the date was never scheduled at all.** Last cycle's own downgrade of this row from (C) to (2S) was the tell, and the lesson to carry is narrow and mechanical — **a row that has sat at (2S) or below for two consecutive cycles should be treated as a claim to falsify, not a fact to re-carry.**
-
-**Excluded — sponsor fails the US-listed screen** (all still pending as filings)
-
-| Drug | Indication | Date | Sponsor | Why excluded |
-|---|---|---|---|---|
-| Levacetylleucine (AQNEURSA), sNDA | Ataxia-telangiectasia | 2026-09-19 | IntraBio Inc. | Private (Austin, TX); no ticker across company site, BioSpace or BusinessWire |
-| Lirafugratinib (RLY-4008), NDA | FGFR2-altered cholangiocarcinoma | 2026-09-27 | Elevar Therapeutics | Majority-owned subsidiary of HLB Co. (Korea); Elevar not separately listed |
-| Emcitate (tiratricol), NDA | MCT8 deficiency | 2026-09-28 | Egetis Therapeutics AB | Listed **only** on Nasdaq Stockholm (EGTX) |
-| Tabelecleucel, BLA | EBV+ PTLD | 2026-10-10 | Pierre Fabre | **Now properly sourced**: thepharmaletter describes it as privately held; Pierre Fabre's own site states its majority shareholder is the Pierre Fabre Foundation. Not listed anywhere. Incidental finding: a **second CRL was issued 2026-01-09**, so this 10-10 date is a *third* review cycle |
-
-### 1B.4 — Beyond-window PDUFAs (2026-10-22 → 2026-11-22), context only
-
-Verified at a lighter standard than the in-window rows — sourced from the aggregator layer (checkrare, TipRanks) and **not** cross-checked against company IR. Treat as unconfirmed-pending. These enter the window over the next two cycles.
-
-- **GSK** — bepirovirsen, chronic hepatitis B — 2026-10-26
-- **PHAR** (Pharming Group, Nasdaq ADR) — Joenja (leniolisib) — 2026-10-24; indication/expansion not independently confirmed
-- **INO** (Inovio) — INO-3107, recurrent respiratory papillomatosis — 2026-10-30; note INO is far below the $2B floor, so it is C-context only
-- **Beren Therapeutics** — adrabetadex, Niemann-Pick type C — 2026-11-17; listing status not verified
-- **SVRA** (Savara) — Molbreevi, autoimmune pulmonary alveolar proteinosis — 2026-11-22
-
-### Coverage statement for this PART
-
-**FOMC coverage is complete and first-party.** There is exactly one meeting in the window and the Fed publishes the full calendar; nothing here is inferred.
-
-**PDUFA coverage is a floor, not a ceiling, and the reason is structural.** FDA is barred by 21 CFR 314.430 from confirming that an application even exists before the sponsor discloses it, so there is no authoritative forward list to enumerate against. Every "pending" verdict above rests on the most recent dated sponsor release or trade-press item found — between roughly one week and two months old at run time — showing no approval, CRL or further extension. The two approvals and the one postponement are firmer: those are corroborated directly against FDA.gov press announcements and company 8-Ks. **A PDUFA date that no sponsor has ever announced cannot appear in this table at all**, and NVO's denecimig is the known live instance of exactly that (see the carry-forward note in the past-window section).
-
-**Advisory-committee coverage is structurally incomplete and will remain so.** The Federal Register lead time is ~15-75 days, so October AdComs may simply not be noticed yet. Two FDA notices stand for the window: the GRAIL panel (09-23) and a Pediatric Advisory Committee virtual meeting (09-16) whose notice is general rather than sponsor-specific. **No October FDA AdCom for a US-listed sponsor has been noticed as of 2026-09-06.** One October-scoped Federal Register API query returned zero documents and a browser-facing search hit an anti-bot redirect that was deliberately not followed. This is a re-check next cycle, not a gap worth alerting on.
-
-**One unresolved aggregator artifact, recorded rather than invented:** a ticker rendered "IRD" appears alongside Viatris on one aggregator's 2026-10-17 entry. It could not be matched to any company or drug and appears in no other sourced list. It is left unidentified rather than assigned a plausible identity.
-
-
----
-
-## PART 2A — Strategy A preliminary ranked shortlist (44 candidates)
-
-All price, return and liquidity figures are **IBKR regular-session daily bars through the 2026-09-04 close**, `step=ONE_DAY`, `outside_rth=false`, 35 bars per name. Dollar ADV is the mean of per-bar (close × volume), **not** mean(close) × mean(volume); the convention was validated against SPY at **$20.8B/day**, inside the $15–30B sanity band. Eight rows (GEV, DDOG, PLTR, RARE, SMMT, AVGO, LLY, XLE) were independently re-fetched and matched the batch data exactly. No symbol failed to resolve.
-
-> ### THE REACH MARKER IS RE-ANCHORED. THE ENTIRE SEPTEMBER CATALYST CLUSTER IS UNREACHABLE.
->
-> Strategy A is DO-NOT-ACTIVATE and **no scheduled event before 2026-10-01 can change that** — the router moves on the M1a/M1b monthly re-score, and the next one is 2026-10-01. Capital restoration on `trigger=regime_enable` then takes a few sessions. So:
->
-> - **E1** — reachable if the **2026-10-01** re-score flips A. Requires a catalyst on or after **~2026-10-05**.
-> - **E2** — reachable only if 10-01 holds and the **2026-11-01** cycle flips it. Requires a catalyst on or after **~2026-11-05**.
-> - **SPENT-BY-GATE** — catalyst before ~2026-10-05. **Unreachable under either epoch, regardless of merit.**
->
-> Applying that marker to §1A.1 is bleak and must be said plainly: **every dated catalyst in September is SPENT-BY-GATE.** ORCL 09-10, RH 09-10, ADBE 09-10, KR 09-11, AZO 09-22, GIS 09-23, COST 09-24, DRI 09-24, JBL 09-24, MU 09-30, NKE 10-01 — plus every non-earnings September item: the AAPL keynote 09-09, LH investor day 09-10, CRM Dreamforce 09-15/17, ON analyst day 09-16, INTU investor day 09-17, META Connect 09-23/24, and the GOOGL ad-tech Final-Judgment deadline 10-02. **That is roughly a third of this file's dated content, ranked for an epoch it cannot reach.**
->
-> **The sharpest instance is ORCL.** Its date has been the file's flagship carry-forward for four consecutive cycles. It was resolved this run to first-party certainty — **2026-09-10** — and that resolution places it **six days before the earliest date any A epoch could open.** The four cycles of effort produced a correct answer that arrives too late to trade. That is not an argument against having resolved it (the date is now right for every other consumer, including PART 2B where ORCL ranks #3 on measured premium), but it *is* an argument about what W1 should be spending its research budget on while A is gated — recorded in the OUT-OF-SCOPE section.
-
-> ### A SECOND STRUCTURAL FINDING: BEARISH CANDIDATES CANNOT BECOME STRATEGY A POSITIONS
->
-> `strategy/03_strategy_a.md` is explicit that A is **long-only** — *"no shorts — short is B's territory."* A candidate whose hypothesized mispricing is that the name is **over**-valued therefore cannot produce an A entry no matter how strong the evidence.
->
-> Last cycle's shortlist ranked four bearish candidates inside its ranked tiers, including one at **#3** (AMAT), with AKAM at #10, WMT at #12 and ADBE at #34. W4's §D converts the **top-10** into A thesis-construction work (or, while gated, into Watchlist rows). **A bearish name in the top-10 consumes a thesis slot that cannot produce a position**, which is a category error rather than a judgment call.
->
-> **This cycle's top-10 is therefore all long-direction.** Bearish candidates are still ranked and still carried — the analysis has value for Strategy B's taxonomy and for the divergence record — but they are marked **DIRECTION-INADMISSIBLE (A long-only rail)** and placed below the actionable tier. This is a W1-side fix; the underlying spec gap is referred in the OUT-OF-SCOPE section.
-
-### What the week established, and why it re-orders the list
-
-The week just past produced a cross-sectional regularity that is directly adverse to the naive A thesis. **Nine of ten prints beat consensus. Four fell anyway** — PANW −9%, AVGO −5/−6%, NTAP −8/−10%, and LULU on an ex-item basis once the $0.86/share tariff refund is stripped. D1 recorded the identical shape on 2026-08-28 (CRDO −20.04%, MDB −13.54%, *"beats sold on margin anxiety"*) and framed the 09-02 session as **"demand intact, the fight moved to margin."**
-
-Last cycle narrowed the standing "beats keep landing, the tape sells them" objection to **hardware and semicap only**, after the 08-26/27 software rally appeared to refute its general form. **This week refutes that narrowing.** The selling hit software (PANW), semis (AVGO) and storage (NTAP) alike. The discriminator was neither sector nor the beat: it was **whether guidance went up and whether cash conversion held.** DELL, SNOW and HPE each raised guidance on AI infrastructure and rose hard (+16%, +21%, +8.5%). NTAP raised guidance too and still fell, on free cash flow.
-
-**Any A thesis below that rests on "the print will be good" is answering the wrong question.** The operative question is now the guide and the cash conversion, and every top-10 rationale is stated against that bar.
-
-### Two eligibility facts measured this run
-
-**Every one of the 49 names measured clears the 30-day $10M ADV rail.** The thinnest are COGT $38.5M, RARE $40.7M, SMMT $53.2M, EXEL $67.8M, IONS $73.4M and BBIO $81.2M — all comfortably above. The liquidity screen struck nobody this cycle, unlike last cycle where it removed GRAL at $6.8M/day.
-
-**RARE fails the market-cap floor and comes off the shortlist.** Measured: **−43.12% over 30 bars and −40.26% in the last five**, closing 2026-09-04 at **$15.30**. The cause is *not* its PDUFA: Ultragenyx's **Angelman syndrome candidate (GTX-102) failed a late-stage study**, the stock fell ~46% after hours from a $26.53 regular close, and Baird cut to Neutral with a target of $40 → $16. Carrying last cycle's ~$2.5–2.6B cap reading through the measured −43.12% puts the cap at roughly **$1.4–1.5B — below the $2B floor.** This is a *derived* figure, not a fresh FMP quote (RARE was among the 31 symbols the population pull could not re-check before its ceiling), and it is flagged as derived; but the margin is wide enough that the conclusion is not close. **RARE is struck on the cap rail — a mechanical exclusion, not a narrative one.**
-
-Two things worth separating, because conflating them would be the same error this file caught elsewhere: **the UX111 PDUFA on 2026-09-19 is unaffected and remains pending.** The prior CRL (July 2025) was on CMC/manufacturing grounds, not clinical data; the BLA was resubmitted early 2026 and accepted April 2026. A failed trial on a *different* asset does not invalidate that date. RARE leaves the A shortlist on size and stays in §1B.3 as a live PDUFA.
-
-### TOP-10 — all long-direction, all reachable at E1 or E2
-
-| # | Ticker | Direction | Catalyst (date, provenance) | REACH | 30-bar | 5-bar | ADV $M | Gap thesis, and how it answers the guide/cash bar |
-|---|---|---|---|---|---|---|---|---|
-| 1 | **GEV** | Bullish | Q3 ~2026-10-21/22 **(E)**; Q4 ~2027-01-27/28 **(E)** | **E1+E2** | −7.17% | +3.29% | 1,281.8 | Widest documents-vs-price gap in the set: Q2 orders **+88% to $24.2B**, backlog **$176B**, and the stock is still down over 30 bars. Orders and backlog *are* the guide-and-conversion evidence the week demanded. **Open Strategy D lot in GEV — disclosure, not exclusion** |
-| 2 | **CAT** | Bullish | Q3 **2026-11-04 (C)**; Q4 ~2027-01-28 (E) | **E1+E2** | −8.42% | +1.71% | 1,263.4 | Largest beat in five years, record **$63B backlog**, and the de-rating **deepened** this cycle (−7.41% → −8.42%). Confirmed date. The gap widened while the evidence didn't move |
-| 3 | **NTAP** | Bullish | Q2 FY27 **2026-12-01 (C)** | **E1+E2** | +10.64% | −0.76% | 224.0 | **The week's cleanest newly-created gap.** Beat (rev +30%, EPS +66%), *raised* FY27 guidance, and fell 8–10% on a free-cash-flow decline. It is the one name that failed the week's actual discriminator rather than the beat test — which makes it the most decidable name here. **The only company-confirmed date beyond the feed horizon** |
-| 4 | **DDOG** | Contested (long) | Q3 ~2026-11-05 **(E)** | **E1+E2** | −13.74% | **−10.15%** | 587.1 | Worst 5-bar in the set after PANW, and the worst 30-bar of any mega-cap-adjacent name. The 08-06 customer-concentration objection is still unanswered and price has now moved *with* it for a second cycle. Decidable at the print; the objection is explicit and falsifiable |
-| 5 | **AMD** | Contested (long) | Q3 **2026-11-03** (E feed); Q4 ~2027-02-02/03 (E) | **E1+E2** | −8.50% | +2.58% | 5,970.7 | MI400 ratified on product while the stock de-rated; priced its largest-ever bond and rose on it. Must answer the AVGO read-across — a semi that beat and still sold on guide |
-| 6 | **TTWO** | Bullish | **GTA VI launch 2026-11-19 (2S)**; pre-load 11-12 | **E1+E2** | −7.32% | **−8.79%** | 291.6 | The largest dated non-earnings binary in the window, **sold hard into it** ten weeks out. Uncorrelated with the AI complex, so it is the one top-10 name the guide/cash discriminator does not govern |
-| 7 | **INTC** | Bullish | Q3 **2026-10-22** (E feed); Q4 ~2027-01-21/22 (E) | **E1+E2** | +3.77% | +7.07% | 6,382.0 | Q2 rev +25% (fastest in 15 years), DCAI +59%, unrefuted since. Gap narrowing (+7.07% on the week) but not closed. Altera-sale reports are the live counter |
-| 8 | **GOOGL** | Bullish | Q3 **2026-10-28** (E feed); Q4 ~2027-02-03/04 (E) | **E1+E2** | +5.85% | −2.35% | 5,105.6 | Cloud trend intact. **The 2026-09-02 ad-tech remedies ruling removed the breakup tail** — Brinkema ordered operational changes only. The 10-02 Final-Judgment deadline is SPENT-BY-GATE, but the *reduced* legal tail persists into the Q3 print. **Open Strategy D lots in GOOGL ×2 — disclosure** |
-| 9 | **FSLR** | Bullish | **Section 232 regime effective 2026-12-04 (C)** | **E1+E2** | +0.80% | −0.00% | 284.0 | Fully specified, quantified, dated policy catalyst (polysilicon $21/kg, cells $0.22/W, modules $0.38/W) and the stock is **flat** over 30 bars and exactly flat on the week. A non-earnings thesis the guide/cash bar does not touch |
-| 10 | **VRTX** | Bullish | **Povetacicept PDUFA 2026-11-30 (C)**; Q3 ~2026-11-02/03 (E) | **E1+E2** | +14.40% | +0.82% | 299.8 | Non-AI diversifier carrying a dated, company-confirmed regulatory binary plus a print. The +14.40% means part of the gap is already paid for — the weakest of the ten on that basis, retained for the dated catalyst and the diversification |
+**Why COP is not in the top-10, and the coverage hole it exposes.** A pure-play E&P is the highest-beta expression of the #1/#2 seam and on merit would rank near the top. It is held out because **the reachable calendar contains no independent E&P at all** — no COP, no EOG, no DVN, no FANG row exists in the 77-symbol pull — so its catalyst date is (T) and unverifiable at this plan tier. That is not a judgment that COP is unattractive; it is the vendor allow-list deciding the shortlist's composition, which is exactly the distortion the COVERAGE STATEMENT warns about. **Named here so the hole is visible rather than invisible.**
 
 ### 11–20
 
-| # | Ticker | Direction | Catalyst | REACH | 30-bar | 5-bar | Note |
-|---|---|---|---|---|---|---|---|
-| 11 | ORCL | Bullish | **2026-09-10 (C)** — resolved after four cycles | **SPENT-BY-GATE** | +38.08% | +5.26% | Date finally certain, six days before any reachable epoch. Also +38% over 30 bars, so the gap it was ranked #1 on last cycle has substantially closed on price alone. Next reachable: Q2 FY27 ~12-09/10 (E) |
-| 12 | CRWV | Bullish, two-sided | Q3 ~2026-11-10/11 (E) | E1+E2 | +24.32% | +6.09% | Rev +112%, backlog +246% — and the purest instance of the standing AI-financing objection |
-| 13 | NBIS | Bullish | Q3 ~2026-11-10/11 (E) | E1+E2 | +20.57% | +8.23% | Financing objection reads across from CRWV |
-| 14 | META | Reframed | Q3 **2026-10-28** (E feed) | E1+E2 | +3.63% | +6.70% | Rests on the print alone since the phantom UTECA row was struck. +6.70% on the week erodes the de-rating it was ranked on |
-| 15 | NVDA | Bullish | Q3 FY27 **2026-11-18** (E feed); GTC Berlin 10-20/22 (E) | E1+E2 | +11.37% | +5.89% | Largest ADV in the set at $16.2B/day. Two dated catalysts, both reachable |
-| 16 | MRVL | Bullish | Q3 FY27 ~2026-12-01/02 (E) | E1+E2 | **+15.10%** | +3.20% | **Demoted from #2.** Ranked last cycle on a −10.28% post-print drop; it has since recovered to +15.10% over 30 bars. The gap largely closed on price without new evidence |
-| 17 | MU | Bullish | Q4 FY26 **2026-09-30 (C)** → next Q1 FY27 ~12-16 (E) | **SPENT-BY-GATE**, then E2 | +10.38% | +8.98% | Second-largest ADV ($20.2B/day). The near catalyst is unreachable; the December one is E2 only |
-| 18 | CSCO | Bullish | **2026-11-12 (C)** newsroom.cisco.com | E1+E2 | −4.35% | −0.66% | AI-infra orders $9.3B (4.5× prior year) beat the thesis's own $9B cite, and the stock is *down* 4.35%. **Feed/IR date conflict resolved to the company: 11-12, not FMP's 11-11** |
-| 19 | MSFT | Bullish, largely realized | Q1 FY27 **2026-10-28** (E feed); Ignite 11-17/20 **(C)** | E1+E2 | +30.91% | −2.69% | Thesis substantially realized at +30.91%. Retained for the dated Ignite catalyst |
-| 20 | QCOM | Bullish | Q4 FY26 ~2026-11-11 (E) | E1+E2 | +1.06% | +2.77% | Still resting on its print alone after the phantom Arm-trial row was struck last cycle. Flat over 30 bars |
+| # | Ticker | Direction | Catalyst date | Note |
+|---|---|---|---|---|
+| 11 | MSFT | Bullish | earnings 2026-10-28 (E); Ignite 11-17→11-20 (C) | queued 2026-07-05 |
+| 12 | META | Bullish | earnings 2026-10-28 (E); Meta Connect 09-23→09-24 (C) | queued 2026-07-05; D1 logged +6.55% on 09-09 with no attributed event |
+| 13 | AMZN | Bullish | earnings 2026-10-29 (E); re:Invent 11-30→12-04 (C) | queued 2026-07-12; **also an open D lot (×2)** |
+| 14 | NVDA | Bullish | earnings 2026-11-18 (E); GTC Berlin 10-20→10-22 (E) | queued 2026-05-09; circular-financing objection still unresolved on the queue row |
+| 15 | AMD | Contested (long) | earnings 2026-11-03 (E) | queued 2026-05-29 |
+| 16 | UNH | Bullish | earnings 2026-10-27 (E); investor conference ~early Dec (E) | not queued; XLV weakness is the entry seam |
+| 17 | VRTX | Bullish | **povetacicept BLA PDUFA 2026-11-30 (C)**; **Journavx CLBP sNDA PDUFA 2026-12-05 (2S)** | queued 2026-07-05; two dated regulatory catalysts, both beyond the earnings horizon and neither dependent on it |
+| 18 | CSCO | Bullish | earnings 2026-11-11 (E) | queued 2026-05-09 |
+| 19 | UBER | Contested (long) | earnings 2026-11-03 (E) | queued? no — **not on the A queue**; restructuring announced 2026-09-02 (~3,300 roles, ~10%); **also an open D lot** |
+| 20 | GE | Bullish | earnings 2026-10-20 (E) | not queued; aero + power capex, energy-linked |
 
-### 21–44 (rest tier)
+### 21–50 — the rest tier
 
-**Long-direction, ranked:** 21 **SNOW** (+25.79%; catalyst spent 09-02, next ~11-27 or 12-02/03 `(!)`) · 22 **DELL** (+19.80%, **+14.88% on the week** — the strongest print of the week; no next date located, a genuine hole) · 23 **CRM** (+58.40%, largest 30-bar move in the set; next ~12-02/03 E) · 24 **NOW** (+43.00%, no own catalyst; Q3 10-28 E1+E2) · 25 **SMCI** (+31.53%, +6.77% on the week; Q1 FY27 11-03 C) · 26 **AMZN** (+11.37%; Q3 10-29 E1+E2; open D lots ×2 — disclosure) · 27 **IBM** (+9.66%; Q3 ~10-21/22 E) · 28 **MRK** (+14.69%; the densest regulatory calendar in the file — Welireg+Lenvima 10-04 (C), I-DXd 10-10 (C), both E1) · 29 **PLTR** (+41.82%, −6.42% on the week; direction SUSPENDED, bearish lean refuted at the print) · 30 **INTU** (+12.27%, **−7.08% on the week**; investor day 09-17 SPENT-BY-GATE, Q1 FY27 11-20 (C) E1+E2) · 31 **BA** (+1.30%; Q3 10-28; 737 MAX 10 cert (T) year-end) · 32 **LLY** (−3.90%; Q3 10-29; retatrutide filing slipped to Q1 2027) · 33 **CTVA** (−1.56%; spin-off is a *quarter*, not a date — demotion stands) · 34 **SMMT** (+28.88%, **+28.22% on the week**; ivonescimab PDUFA 2026-11-14 (C), contested HARMONi HR 0.76) · 35 **BBIO** (−10.93%; BBP-418 PDUFA 11-27 (C), no AdCom planned) · 36 **EXEL** (+6.57%, +8.37% on the week; zanzalintinib PDUFA 12-03 (2S)) · 37 **IONS** (+2.72%, −4.85% on the week; **its 09-22 PDUFA resolved early as an APPROVAL on 09-03** — the catalyst is spent, not forthcoming) · 38 **COGT** (−12.58%; bezuclastinib PDUFA 12-30, unconfirmed) · 39 **ON** (−14.32%; analyst day 09-16 SPENT-BY-GATE) · 40 **DYN** (z-rostudirsen PDUFA **2027-01-21 (C)** — E2, one of only four confirmed 2027 catalysts) · 41 **BMRN** (VOXZOGO sNDA **2027-02-28 (C)** — E2) · 42 **WDAY** (Financial Analyst Day **2026-10-13 (C)** — E1) · 43 **JPM** (Q3 10-13 (C) E1; **Investor Day 2027-02-22 (C)** E2) · 44 **TSM** — **ADR, NOT A-ELIGIBLE**, listed for visibility only; the open Strategy D lots ×2 are unaffected.
+Ranked, long-direction, all rail-checked. `q` = on the A queue.
 
-**DIRECTION-INADMISSIBLE for A entry (long-only rail) — ranked but not convertible:** **AMAT** (−15.21%, the worst large-cap 30-bar in the set; bearish; Q4 FY26 10-22-or-11-12 `(!)`) · **AKAM** (−8.80%; bearish/contested; Q3 ~11-05) · **WMT** (−2.13%, +3.93% on the week; bearish; Q3 11-19) · **ADBE** (+18.39%, **−8.58% on the week**; bearish; Q3 09-10 SPENT-BY-GATE, Q4 ~12-09/10) · **HD** (−3.58%; bearish/neutral; Q3 11-18). These five carry real evidence and are retained for the divergence record and for Strategy B's taxonomy, but **none can produce a Strategy A position** and W4 must not convert them.
+21 **BAC** (10-14, E) · 22 **GS** (10-13, E) · 23 **C** (10-13, E) · 24 **WFC** (10-13, E) — the NIM seam at #5, three further instances plus the money-centre peer; ranked below JPM on balance-sheet mix rather than on thesis.
+25 **V** (10-27, E; DOJ fact discovery closes 2026-10-16 (C)) · 26 **ORCL** q (AI World 10-25→10-28 (C); reported 09-10, reaction session unobserved) · 27 **CRM** q (Dreamforce 09-15→09-17 (C)) · 28 **NOW** q (T) · 29 **INTU** q (**Investor Day 2026-09-17 (C)** — the nearest dated catalyst on the whole queue) · 30 **WDAY** (**Financial Analyst Day 2026-10-13 (C)**).
+31 **MU** q (T) · 32 **AVGO** q (T) · 33 **MRVL** q (T) · 34 **QCOM** q (T) · 35 **DELL** q (T) · 36 **SNOW** q (T) · 37 **CRWD** q (T) · 38 **PANW** q (T) · 39 **NBIS** q (T) · 40 **SMCI** q (T).
+41 **HPE** q (T) · 42 **IBM** q (T) · 43 **OKTA** q (T) · 44 **DDOG** q (T) · 45 **NTAP** q (T) · 46 **AAPL** q (10-29, E) · 47 **LLY** q (T; a Strategy D re-screen is due 2026-09-14) · 48 **BMY** (**Camzyos adolescent oHCM PDUFA 2026-09-30 (2S)**) · 49 **ON** (**Financial Analyst Day 2026-09-16 (C)**) · 50 **BA** (10-28, E; 737 MAX 10 FAA certification "by year-end 2026" (T)).
 
-**STRUCK this cycle:** **RARE** — market cap fails the $2B floor after the Angelman Phase 3 failure (mechanical, see above). **SRPT** — considered on its confirmed 2027-02-28 PDUFA but **cap ~$2.14B sits directly on the floor** after a heavy decline; not ranked pending a fresh cap measurement, and named rather than silently dropped.
+**Ranks 31–45 are queue-carried names whose catalyst dates fall in the unreachable tail.** They are ranked on carried thesis strength, not on catalyst proximity, and that is stated because the ranking would look different if their dates were knowable. This is the horizon constraint showing up as a *ranking* distortion rather than as a missing row, which is the harder form to notice.
 
-**SPENT cluster** (catalysts resolved in the week just past, retained in `Watchlist.md`, not ranked): DELL 09-01 · PANW 09-01 (+2.92% 30-bar but **−10.32% on the week**, the worst 5-bar in the set) · AVGO 09-02 (−6.29%, −2.96%) · SNOW 09-02 · HPE 09-02 · NTAP 09-02 (promoted to #3 on the gap the print created) · LULU 09-03 · DOCU 09-03 · CPB 09-03 · NIO 09-01 (ADR).
+### DIRECTION-INADMISSIBLE — ranked, carried, and ineligible for the actionable tier
 
-### The standing objection class produced no new instance this week
+`DIRECTION-INADMISSIBLE (A long-only rail)`. These are **not** rejected candidates — they are genuine evidence for the divergence record and for Strategy B, which is where short-direction theses belong.
 
-The **AI-financing objection** (NVDA 07-27, DDOG 08-06, AVGO 08-14, CRWV structural, IREN 08-28) produced **no new instance** this cycle. AVGO's 09-02 print did not answer the existing one — a thin beat and a Q4 guide below consensus leaves it exactly where it was. CRWV (#12) and NBIS (#13) remain the purest carriers. A thesis on either must answer the objection on its own terms rather than inherit a cohort verdict.
-
-
----
-
-## PART 2B — Strategy C preliminary ranked shortlist (20 measured event candidates)
-
-> ### ⚠️ THE FOMC THESIS IS ALREADY ENQUEUED. W4 MUST NOT ENQUEUE IT AGAIN.
-> `thesis-FOMC-C-20260908` is live in `events.queue_events` (`PENDING_ANALYSIS`, strategy C, due **2026-09-08**, status pending). W4's §D C-limb enqueues one row per top-tier C name; the 2026-08-30 W4 run correctly resolved this to the existing row rather than minting a duplicate. Repeat that. **Candidate 1 below is that queue item, not a new one.**
-
-**Router reality, stated once and applied per row.** C is **HYBRID ACTIVATE (FOMC-only)**. Candidate 1 is the only router-eligible row in this section. Candidates 2–20 are **router-PARKED — barred by the carve-out, not by rank** — and are carried as divergence context and as the evidence series a future scope-widening adjudication would read. They are explicitly **not** handoff-ready, and W4 should not enqueue them.
-
-**Ratios below are not comparable across rows** without reading the tenor flag: each name is measured against the first listed expiry strictly after its own event, and those tenors range from 1 day to 24 days past the event.
-
----
-
-### Candidate 1 — FOMC 2026-09-16 (the only router-eligible row) · TOP-5 tier, rank 1
-
-**(a) Direction of hypothesized divergence: NO VIEW TAKEN — and this cycle the reason is stronger than last cycle's.** Both legs of the case have now moved against a long-premium reading, where last cycle only one had.
-
-**(b) Supporting measurement.** All figures measured against the 2026-09-04 close via the IBKR connector; SPY primary, QQQ cross-check. Expiry **2026-09-18**, the first regular monthly after the decision (a 09-17 weekly also exists and was not used). ATM strike SPY 769 against spot 769.45.
-
-| Quantity | This cycle (2026-09-06) | Last cycle (2026-08-30) | Change |
+| Ticker | Direction | Catalyst date | Why it is real, and why A cannot use it |
 |---|---|---|---|
-| SPY ATM IV, 09-18 expiry | **10.525%** | 10.86% | **−0.34 vol pts** |
-| ATM straddle expected move to 09-18 | **±1.796%** (last) / ±1.762% (mid) | ±2.20% | **−0.40pp** |
-| Days to expiry at measurement | 12 | 19 | −7 |
-| IV / HV10 | **1.227** | — | — |
-| IV / HV20 | **1.299** | — | — |
-| IV / HV30 | **0.900** | — | — |
-| Ratio range across estimators | **0.814 – 1.299** (incl. QQQ) | 0.914 – 1.006 | **materially wider** |
+| **DAL** | **Bearish** | earnings **2026-10-08 (E)** | Brent +11.79% in four sessions, arriving after the hedge book was set, with a dated print to mark it against. **The strongest new thesis in this cycle's file** |
+| **UAL** | **Bearish** | earnings **2026-10-21 (E)** | Same shock, same window, independent print |
+| **AAL** | **Bearish** | earnings **2026-10-22 (E)** | Same shock; thinnest balance sheet of the three, so the highest sensitivity — and consensus already models a loss (−$0.32 EPS) |
+| **CCL** | **Bearish** | earnings **2026-10-05 (E)** | Bunker-fuel channel of the identical shock; first of the fuel-exposed names to report |
+| **AMAT** | Bearish | (T) | China WFE cliff; carried, and re-affirmed bearish this cycle rather than inherited |
+| **AKAM** | Bearish / contested | (T) | Carried |
+| **WMT** | Bearish | 2026-11-19 (E) | Carried; two adverse datapoints since the original bullish tariff-pass-through framing |
+| **ADBE** | Bearish — **vindicated on the tape this week** | **2026-12-09 (E)** — the horizon-edge row | Creative Cloud deceleration. Reported 09-10 AMC with a **CEO transition announced**, and D1 recorded the 09-10 move as pre-print drift rather than the reaction. **MEASURED off the 2026-09-11 IBKR bar the warehouse has not ingested: ADBE −11.73% on the week.** That is the reaction, and it is sharply negative. **A confirmed-correct short thesis is still a short thesis** — this makes the direction call better evidenced, not admissible |
+| **HD** | Bearish / neutral | (T) | Housing-turnover starvation; carried |
 
-**THE COMPRESSION IN EXPECTED MOVE IS TIME DECAY, NOT A VOL RE-PRICING — do not read it as a signal.** The straddle fell from ±2.20% to ±1.796%, which looks like a 19% collapse in priced risk into a decision that is now closer. It is not. Both readings are on the **same contract** (09-18 expiry), 19 days out then and 12 days out now. √(12/19) = 0.795, and 2.20% × 0.795 = **1.75%** — against an observed 1.796%. **Essentially the entire move is the square-root-of-time term.** The IV itself barely moved: 10.86% → 10.525%, about −3%. A thesis that cites the shrinking straddle as evidence the market is under-pricing the meeting is reading a calendar effect as an information effect, and the 09-08 session must not make that error.
+**TGT — direction UNRESOLVED, held below the actionable tier.** Carried into this cycle bearish, but the prior print was a beat-and-raise that refuted the bearish thesis on its own terms, and no replacement direction has been established. **An unresolved direction is not a long direction**, so it does not enter the actionable tier by default; it is held here until a cycle establishes a direction either way. Catalyst: earnings 2026-11-18 (E).
 
-**THE PREMIUM LEG HAS TURNED, AND THIS IS THE CYCLE'S KEY FINDING.** Last cycle the premium leg *supported* a long-vol thesis: IV sat at the 0th/0th/~2nd percentile of its own 13w/26w/52w distributions and the IV/HV ratio bracketed 1.0 tightly (0.914–1.006), so implied was arguably cheap against realized. **That is no longer true on the windows that matter.** For a 12-day structure the relevant realized comparison is HV10 and HV20, and against both, implied is now clearly *richer* than realized — 1.227 and 1.299. Only against HV30 (11.701%) does IV look cheap at 0.900, and HV30 is the least appropriate window here *and* is inflated by an early-August volatility patch that has already rolled out of the 10- and 20-day windows but not the 30-day one.
+## PART 2B — Strategy C preliminary ranked shortlist (15 event candidates)
 
-Both things are simultaneously true and the reconciliation is the analytical content: **absolute IV is still near the bottom of its own history** (raw connector fractions: SPY 13w 0.0156, 26w 0.0079, 52w 0.0278 — near-zero on any reading), **but realized volatility has collapsed faster than implied did.** Cheap in absolute terms; expensive relative to what the market has actually been delivering. A long-premium structure is now buying above realized; a defined-risk *credit* structure is the one the premium metric favours. That is a reversal of last cycle's read and it is the single most consequential thing this file hands to the 09-08 session.
+### THE TWO CONSTRAINTS THAT DECIDE THIS WHOLE SECTION, AND THEY POINT AT DISJOINT SETS
 
-**(c) Event date:** 2026-09-16 **(C)**, first-party from the Fed calendar, with SEP.
+**Constraint 1 — routing.** C is **HYBRID ACTIVATE (FOMC-only)**. Only FOMC events are router-eligible; every earnings and PDUFA candidate below is ranked but **router-parked**. Widening past FOMC-only is procedurally unreachable through a divergence review — `Strategy.md` reserves it to a separate scope-widening adjudication whose conditions (≥5 closed FOMC trades, or portfolio ≳$25k) are unmet, and none is open.
 
-**(d) Executability.** C is the only capital-enabled strategy in the book and holds zero open positions, so the whole strategy NAV is available. Sizing is the AI-chosen per-thesis risk budget with **no numeric ceiling at any level** — both the per-name ≤10% CaR and the per-strategy ≤75% deployed-CaR envelopes were retired by owner directive 2026-08-05. What still binds and must appear in the thesis record: a **seven-factor sizing justification**, a **mandatory adversarial attack on the size**, and C's own defined-risk rails — max loss deterministically computable at entry, the bounded early-assignment cascade quantity ≤ the stated budget, **dual-path verification** of base max loss (closed-form + Monte Carlo agreeing within $1, disagreement defers the thesis), single expiration only (calendars and diagonals are excluded), and structure expiration 1–45 days out with the event strictly before expiration. **No deferral flag is raised on size** — nothing in the current state blocks constructing a defined-risk structure.
+**Constraint 2 — size, and it is smaller than it looks.** MEASURED this run from `state.strategy_nomadic_status`: **Strategy C's NAV is $23.64.** Idle capital $23.64, deployed $0.00, zero open positions, `capital_enabled = TRUE`, `is_nomadic = TRUE`. Account NAV is $15,629.21, of which $15,088.25 is the SGOV park and **$15,368.39 of strategy NAV sits with Strategy E — which is capital-DISABLED as of 2026-09-04.** So the one strategy permitted to deploy capital has **$23.64** to deploy. (The capital-debt side of this is already carried at `ops.alerts` `regime_restore_shortfall`, warning, 2026-09-07 — debtor strategies A, B and D against an empty enabled-donor set. **Not re-raised here.**)
 
-**(e) Overlap with open A positions:** **none.** Zero open A positions exist, so the A↔C simultaneous-holding bar cannot bind.
+**Put the two together and this cycle's central finding falls out of the arithmetic.** A $23.64 budget admits only the cheapest **debit** structures — D2 priced six of them at $5–$65/contract on 2026-09-08 and recorded criterion 4 (executability) as PASSING, so this is not a mechanics failure. A debit structure is **long premium**, and long premium needs implied vol to be **cheap relative to realized**.
 
-**(f) Priority tier: TOP-5, rank 1** — and the only member of the tier that is actionable.
+MEASURED across the 33-name panel (IBKR RTH bars dated 2026-09-11; ATM IV from the first listed expiry strictly after each event): **exactly two names have implied below realized — PYPL (IV/HV20 0.68) and F (0.83). Both are earnings events, which the FOMC-only router forbids.** Every router-eligible candidate — both FOMC dates — sits on the *rich* side, where the measurable edge favours **selling** premium, which $23.64 cannot collateralise.
 
-#### Three measurement caveats the 09-08 session must carry, not inherit silently
+**The affordability constraint and the routing constraint select disjoint sets.** That is the structural reason criterion 2 has now failed on six consecutive drains, and it is not a judgment any single drain got wrong. It is recorded at `ops.alerts` `strategy_c_criterion2_unreached_pattern` (info, 2026-09-08, owned to W5) — **not re-raised here**, but this run supplies the mechanism that entry only named as a pattern.
 
-1. **Call and put ATM IV are identical to all 16 significant figures — on BOTH SPY and QQQ.** Last cycle flagged this as a tell on SPY; it is now confirmed as a property of the connector, not of the market. The `option_midpoint_iv` field returned invalid (`isValid:false`, negative annualised IV) on every contract tried, so `implied_vol` is the only usable field and it evidently computes one vol per strike rather than solving calls and puts separately. **Consequence: this connector cannot evidence skew, and no C thesis may assert a call-put IV divergence from it.**
-2. **Week-over-week IV direction could not be measured by the connector** — it exposes point-in-time option snapshots and OHLCV bars, with no IV history series. The −0.34pt figure in the table above is *this file* differencing its own prior-cycle reading of the same contract, which is a legitimate comparison but rests on a stored measurement, not on a vendor time series.
-3. **The IV-percentile fractions cannot be responsibly converted to percentile claims.** The connector returns `implied_volatility_percentile` at 13w/26w/52w but does not document whether the semantic is percentile-of-days or fraction-of-52-week-high. The raw fractions are reported above and deliberately not translated. The agent declining to invent an interpretation is the correct behaviour and is recorded as such.
+### Method for the ranking
 
-Additional transparency, both reported rather than reconciled: the connector's own `implied_vol_underlying` for SPY annualises to **11.435%** against the 769-strike solve's 10.525%, and its built-in `historical_vol` reads **10.051%** against the computed close-to-close HV30 of 11.701%. Different methodologies; the computed figures are the ones used above because their estimator is stated (close-to-close log returns, sample stdev, ×√252).
+Ranked by the measured divergence between the options market's implied view and realized behaviour. **(e) is uniform and therefore stated once: there are ZERO open Strategy A positions, so the A/C simultaneous-holding prohibition binds no candidate below.** (d) is per-row. Every IV figure is MEASURED from IBKR; every HV and ratio is INFERRED from measured closes by sample stdev of log returns × √252.
 
-#### What still governs the entry decision
+### TOP-5
 
-**CPI for August lands 2026-09-11**, between a 09-08 entry and the 09-16 decision. Entering before versus after that print remains a materially different trade and the queue item's conservative default (decline if unresolved by 09-15, or if no affirmative sourced quantified divergence can be established) is unchanged. Note also that **2026-09-07 is Labor Day**, so a 09-08 entry is the first session available and there is no earlier fallback.
+| # | Event | Date | (a) Hypothesized divergence | IV / HV20 | (d) Executable at $23.64? | Router |
+|---|---|---|---|---|---|---|
+| 1 | **FOMC** | **2026-09-16** (SEP + presser) | **NO VIEW TAKEN on direction.** The measurable leg is premium, and it points against the only affordable structure: SPY ATM IV **11.72%** (09-17 expiry, strike 764) vs HV10 **10.00%** and HV20 **8.74%** | **1.34** (IV/HV10 1.17) | Structures buildable; **the measurable edge runs against every affordable one** | **ELIGIBLE** |
+| 2 | **FOMC** | **2026-10-28** (presser, no SEP) | Not yet measurable — the governing expiry is not the one quoted above | n/a | **NOT ENTERABLE TODAY — see the tenor note below** | **ELIGIBLE (from 2026-09-15)** |
+| 3 | **PYPL** | 2026-10-27 earnings **(E)** | Implied materially **CHEAPER** than realized — ATM IV 40.04% against HV10 **80.94%** and HV20 58.69%. The only row in the panel where the gap is large and in the direction a debit structure wants | **0.68** (IV/HV10 **0.49**) | Affordable in principle; **router-parked, so moot** | parked |
+| 4 | **F** | 2026-10-22 earnings **(E)** | Implied below realized — ATM IV 33.55% vs HV20 40.41%. Second and only other such row | **0.83** | Affordable; **router-parked** | parked |
+| 5 | **AAL** | 2026-10-22 earnings **(E)** | **Richest premium in the panel** — ATM IV 46.83% vs HV20 26.48%. Consistent with the Brent +11.79% fuel shock being priced into the option surface ahead of the print | **1.77** | A credit structure is indicated and **$23.64 cannot collateralise one**; **router-parked** | parked |
 
----
+**Tenor note on candidate 2, and it is a real rail rather than a formality.** Strategy C requires the structure's **expiration within 1–45 days of entry**, with the event strictly before expiration. The first listed expiry after 2026-10-28 is 2026-10-30, which is **47 days from today** — **outside the rail, so the October FOMC is NOT enterable on today's date.** It comes inside the rail from **2026-09-15**, when 10-30 falls at 45 days. It is ranked at #2 rather than deferred out because a two-day wait is a scheduling fact, not a disqualification — but a thesis dated today would be inadmissible on tenor alone, and that is the kind of error worth pre-empting.
 
-### Candidates 2–20 — router-PARKED, divergence context only
+### REST (6–15), by measured IV/HV20 descending — all router-parked
 
-Sorted by IV/HV descending. Every row confirmed `expiry > event_date`; the wrong-expiry defect that voided last cycle's MU row is closed and MU is re-measured correctly.
+| # | Ticker | Event date (E) | ATM IV | HV20 | IV/HV20 |
+|---|---|---|---|---|---|
+| 6 | GOOGL | 2026-10-28 | 33.74% | 19.36 | 1.74 |
+| 7 | JPM | 2026-10-13 | 24.21% | 14.50 | 1.67 |
+| 8 | VZ | 2026-10-20 | 23.34% | 14.50 | 1.61 |
+| 9 | BAC | 2026-10-14 | 25.22% | 15.79 | 1.60 |
+| 10 | NKE | 2026-10-01 | 49.64% | 31.26 | 1.59 |
+| 11 | CCL | 2026-10-05 | 45.10% | 29.00 | 1.56 |
+| 12 | GM | 2026-10-20 | 37.81% | 25.39 | 1.49 |
+| 13 | BA | 2026-10-28 | 32.95% | 22.47 | 1.47 |
+| 14 | MSFT | 2026-10-28 | 31.20% | 21.78 | 1.43 |
+| 15 | T | 2026-10-21 | 27.22% | 19.27 | 1.41 |
 
-| # | Ticker | Event date | Expiry | ATM strike | ATM IV % | HV30 % | IV/HV | Flags |
-|---|---|---|---|---|---|---|---|---|
-| 2 | CHWY | 2026-09-09 | 09-11 | 23.5 | 94.150 | 42.135 | **2.234** | Richest premium in the window |
-| 3 | **ORCL** | **2026-09-10** | 09-11 | 160 | 105.273 | 54.337 | **1.937** | **Date resolved this run; the DATE-COMPROMISED flag is REMOVED and the reading is now directly comparable** |
-| 4 | RH | 2026-09-10 | 09-11 | 148 | 116.035 | 59.948 | 1.936 | Highest absolute IV on the list; near the $2B cap floor |
-| 5 | KR | 2026-09-11 | 09-18 | 59 | 41.581 | 22.547 | 1.844 | A same-day 09-11 weekly exists but is not strictly-after; 09-18 used per rule |
-| 6 | NKE | 2026-10-01 | 10-02 | 38 | 46.525 | 31.120 | 1.495 | |
-| 7 | BAC | 2026-10-14 | 10-16 | 62.5 | 24.553 | 16.801 | 1.461 | |
-| 8 | ADBE | 2026-09-10 | 09-11 | 267.5 | 72.626 | 51.700 | 1.405 | Date still (2S), third cycle without an Adobe IR release |
-| 9 | JPM | 2026-10-13 | 10-16 | 360 | 23.819 | 17.394 | 1.369 | |
-| 10 | AZO | 2026-09-22 | 10-16 | 2980 | 35.247 | 26.643 | 1.323 | **TENOR-COMPROMISED** — overshoots 24 days, no weekly listed |
-| 11 | COST | 2026-09-24 | 09-25 | 915 | 24.150 | 19.049 | 1.268 | |
-| 12 | NFLX | 2026-10-20 | 10-23 | 78 | 41.794 | 34.403 | 1.215 | |
-| 13 | PEP | 2026-10-08 | 10-09 | 138 | 22.555 | 18.586 | 1.214 | |
-| 14 | CCL | 2026-10-05 | 10-09 | 24 | 42.049 | 36.955 | 1.138 | |
-| 15 | STZ | ~2026-10-01 | 10-02 | 128 | 30.099 | 26.828 | 1.122 | **DATE-APPROXIMATE** — "~10-01" not further resolved |
-| 16 | LMT | 2026-10-20 | 10-23 | 525 | 28.539 | 26.121 | 1.093 | |
-| 17 | JBL | 2026-09-24 | 09-25 | 310 | 54.704 | 53.717 | 1.018 | |
-| 18 | GIS | 2026-09-23 | 10-16 | 37.5 | 32.827 | 32.577 | 1.008 | **TENOR-COMPROMISED** — overshoots 23 days |
-| 19 | DRI | 2026-09-24 | 10-16 | 220 | 30.998 | 31.071 | 0.998 | **TENOR-COMPROMISED** — overshoots 22 days |
-| 20 | TSM | 2026-10-15 | 10-16 | 430 | 34.230 | 34.745 | 0.985 | **ADR** — fails the US-listed test for C as it does for A |
-| — | MU | 2026-09-30 | 10-02 | 1015 | 65.888 | 83.785 | **0.786** | **DEFECT CLOSED.** Last cycle measured MU against a 09-25 expiry that expired *before* the 09-30 event and had to be voided. Re-measured on a correct 10-02 expiry: MU is the **only** name in the window with implied meaningfully BELOW realized |
+The spec caps this shortlist at 10–15 candidates and it is held to **exactly 15**; the measured panel was **33 names**, and the remainder (DAL 1.40, PEP 1.40, C 1.40, COST 1.38, GS 1.31, WFC 1.31, UAL 1.27, NFLX 1.23, META 1.17, KO 1.16, V 1.14, INTC 1.13, JNJ 1.08, GE 1.04, HCA 1.04, LMT 1.02) is in PART 1B's universe rather than promoted into a shortlist the spec does not size for.
 
-**The MU row is the one worth carrying forward.** It is the only genuine implied-below-realized reading in the window (0.786), and it exists only because the wrong-expiry defect was fixed rather than re-inherited. It is router-parked and cannot be traded under the FOMC-only carve-out — but it is precisely the kind of evidence a scope-widening adjudication would want, and it should not be lost when this file is overwritten next week.
+**Three names returned no IV and are excluded from the ranking rather than estimated into it:** **FDX**, **UNH** and **TSLA**. In each case both the ATM call and the ATM put returned `is_valid:false` from IBKR after a retry and a cross-check on the opposite leg. HV was measured cleanly for all three; only the option leg failed. **No IV was estimated for any of them** — an unavailable quote is reported as unavailable.
 
-**PDUFA events carried without volatility measurement** (out of scope for this measurement pass, and mostly sub-$2B or single-name binaries where an ATM IV reading carries little information): TLX 09-11 · RARE 09-19 · GRAL panel 09-23 · MIRM 09-26 · SRRK 09-30 · BMY 09-30 · MRK/Eisai 10-04 · MRK/Daiichi 10-10 · VTRS 10-17. The two Roche rows (10-09, 10-15) fail the US-listed test. Last cycle's RARE IV/HV of 2.14 is now two cycles stale and **must not be carried forward** — it is not restated here.
+**One measurement-method caveat worth recording, because it would silently corrupt this table if inherited.** IBKR's `option_midpoint_iv` field returned an identical invalid sentinel — `annualIv = -15.874507866387544`, `isValid: false` — on **every contract tried, across every ticker and strike**. It is not a per-name data gap; the field is unusable wholesale at present. The IV figures above come from the `implied_vol` market-data field instead, which returned valid contract-specific quotes for 30 of 33 names. A future cycle that reads `option_midpoint_iv` and does not check `isValid` would ingest a **negative** volatility as a number.
 
-### Methodological note on this section
+### PDUFA candidates — carried, unmeasured, and honestly so
 
-All measurements are IBKR connector reads at zero metered cost. Five rows (SPY 769C, ADBE 267.5C, MU 1015C, JPM 360C, LMT 525C) were independently re-pulled at the end of the measurement pass and returned identical IV and last-price values with identical timestamps — snapshot data was stable across the session and no transcription discrepancy was found. Every one of the 20 rows returned valid option data; there were no UNAVAILABLE rows.
-
-
----
+The in-window PDUFA events from PART 1B.3 (MIRM 09-26, BFRI 09-28, SRRK 09-30, BMY 09-30, MRK 10-04, MRK 10-10, VTRS 10-17, PHAR 10-24, RARE 09-19) are **not ranked above**, because no IV was measured for any of them this run. They are router-parked regardless, so a measurement would not have changed a disposition this cycle. **Stated rather than omitted:** their absence from the ranking is an unmeasured gap, not a judgment that their premium is uninteresting, and a cycle in which C's router widens would need to measure them before ranking.
 
 ## OUT-OF-SCOPE FINDINGS — RECORDED, NOT REPAIRED
 
-Three findings surfaced this run on surfaces W1 does not own. Per the standing scope addendum, each is recorded at a venue with a verified consumer and named here; none was repaired, and none blocks this run's own job.
+W1 does not own any of the surfaces below. Each is recorded with its owning routine named, per this run's standing instruction, and none is repaired here.
 
-**1. FMP bulk-enumeration surfaces are ALL plan-gated, which is broader than the recorded constraint.** `OWNER_ACTIONS.md` item `FMP-earn-horizon` frames the decision as "raise the tier or accept the reduced confirmed-earnings horizon." Measured this run, the horizon is only the visible symptom: `search.search-company-screener`, all `directory.*` endpoints, and `quote.batch-quote` are each ACCESS DENIED. **The consequence is that no routine on this plan can perform a market-wide screen at any budget** — which affects the framing of that open owner decision, since "accept the gap" is accepting more than a shortened earnings calendar. Recorded as an `ops.alerts` `info` row for W5's SPEC-DEFECT NOTICE INTAKE. **No new alert is raised for the horizon itself** — `37a4de80` covers it, and a weekly re-raise is alarm fatigue, exactly as W1's own section directs.
+**F-1 · The Friday blind spot is structural, and W1's spec does not contemplate it.** `ops.alerts` info, category `w1_daily_boundary_excludes_friday_session`, owner: W5 SPEC-DEFECT NOTICE INTAKE (the `Claude_Task_Plan.md` W1 section). MEASURED from `ops/routine_backup.json`: W1's trigger is `30 7 * * 0` and D1's is `0 22 * * 0,1,2,3,4`, so every W1 run executes **14.5 hours before** the D1 fire that will first cover the preceding Friday session. The DAILY-TO-WEEKLY BOUNDARY paragraph instructs W1 to reuse D1's records and provides an escape hatch only for "D1 itself is genuinely unavailable" — which is not this case and never will be. The gap is guaranteed by trigger ordering, recurs weekly, and this cycle covered the ADBE and ORCL earnings reaction sessions and the August CPI print. **It is a narrative gap only: the price half is closeable for free off IBKR bars, as this run did.**
 
-**2. W1's PART 2A has no router-aware mode, unlike W2's PART 2.** W2 gained an explicit **INDEX MODE** on 2026-08-24 after three consecutive router-gated cycles produced 15 full-depth candidate analyses of which *not one* was ever evaluated against B's entry criteria. W1 has no analogous limb: it produces a 30–50 name Strategy A shortlist at full specified depth every cycle regardless of A's activation state, and A has now been DO-NOT-ACTIVATE for three consecutive cycles. The two cases are **not identical** — W1's shortlist is explicitly "preliminary narrative synthesis," inherently lighter than W2's per-candidate enrichment, and W4's §D already gates the *enqueue* side by routing A top-tier names to `Watchlist.md` while gated. So the downstream waste W2 suffered does not occur here. **But the research cost is still incurred every week**, and this cycle produced a sharp illustration: the ORCL date, chased across four cycles, resolved to a catalyst six days before any reachable A epoch. Recorded as an `ops.alerts` `info` row naming W5.
+**F-2 · `option_midpoint_iv` returns an invalid negative sentinel across every contract on the IBKR connector.** `ops.alerts` info, category `ibkr_option_midpoint_iv_invalid_sentinel`, owner: OPS1 (the connector manifest, `ops/connector_tools.yaml`), with D2's options-pricing path as the consumer at risk. MEASURED across every ticker and strike attempted in a 33-name sweep this run: the field returns `annualIv = -15.874507866387544` with `isValid: false`, identically, wholesale — not a per-name data gap. The usable field is `implied_vol`, which returned valid contract-specific quotes for 30 of 33 names. **The hazard is specific: a consumer that reads `option_midpoint_iv` without checking `isValid` ingests a NEGATIVE implied volatility as a number**, and Strategy C's entire entry test is an implied-versus-realized comparison.
 
-**3. A bearish candidate cannot become a Strategy A position, and nothing in W1's or W4's spec prevents one being ranked and converted.** Strategy A is long-only. W4 §D converts the W1 top-10 into A thesis-construction work. Last cycle's top-10 contained a bearish candidate at #3 (AMAT), and #10, #12 and #34 were bearish too. A thesis slot spent on a name that cannot produce a long entry is a category error, not a judgement call. **W1 fixed this on its own side this cycle** — the top-10 is all long-direction and bearish names are marked DIRECTION-INADMISSIBLE — but the underlying spec permits the error to recur, and the fix should live in the spec rather than in one cycle's discipline. Recorded as an `ops.alerts` `info` row naming W5.
+**F-4 · FMP `batch-market-cap` SILENTLY OMITS symbols outside the plan's covered set instead of erroring.** `ops.alerts` info, category `fmp_batch_market_cap_silently_omits_symbols`, owner: OPS1 (`ops/connector_tools.yaml`, the FMP tool record), with W1/W2/W3 and any universe-screening step as consumers at risk. MEASURED by direct probe this run, in three steps: a 77-symbol request (all inside the forward-calendar allow-list) returned **77 of 77**; a 47-symbol request of A-queue and energy names returned **8 of 47**, and those 8 were exactly the ones that also appear in the calendar allow-list; the single-symbol `company/market-cap` endpoint returned **ACCESS DENIED**. **The 39 omitted symbols produced no error, no warning and no null row — they were simply absent from the response.**
 
-One further item, deliberately **not** raised as a finding: a discovery sub-agent this run reported a D1 coverage gap on Friday 2026-09-04. It was refuted against `state.cadence_expected_history` before anything was acted on (`expected = false`; D1's `monitor_class` is `daily_sun_thu`). It is written up in the DAILY-TO-WEEKLY BOUNDARY section as a reproduction of the 2026-08-23 `cadence_outage` false positive, and **no alert is raised** — per the RUN-LOG GAP INTERPRETATION rule, a residual concern would go to `sp_log_decision`, and there is no residual concern because the claim is simply wrong.
+This is the same failure shape as the already-open `treasury_range_call_silently_truncates` finding on a different FMP endpoint, and it is more dangerous here because the natural use is a screen: a caller that passes N symbols, receives M < N, and does not diff the two lists will either read the omitted names as having no market cap, or will believe a universe screen covered N names when it covered M. **This run wrote a paragraph asserting the generalisation before probing it, and the probe falsified it** — which is precisely how a consumer would get this wrong. Recorded rather than repaired; the prior finding `6c4004e3` should be read as amended by it rather than replaced.
 
----
+**F-3 · The A-router gating count on an already-open finding is now 4, not 3.** No new alert. `ops.alerts` `06520989` (`w1_part2a_no_router_aware_mode`, info, 2026-09-06, owned to W5) carries `consecutive_gated_cycles: 3` in its payload; with this cycle it is **4**. That is an update to an open finding, not a new finding, and re-raising it would mint a second row for one condition — the exact alarm-fatigue failure the message-literal rules exist to prevent. Recorded here instead.
+
+### CHECKED AND FOUND NOT TO BE A DEFECT — recorded so it is not re-raised
+
+**N-1 · The 2026-09-08 Strategy B handoff was NOT dropped.** An intermediate reading of this run's own evidence suggested it had been: D1's 2026-09-08 single-name screen names seven names clearing Strategy B's frozen Entry criterion 1 (NVS, ROIV, GPCR, AMGN, INTC, BKNG, QBTS, each `qualifying_event_date` 2026-09-08); **no `action-conversion` row exists in `events.decision_log` for 2026-09-08 at all**, while 09-09 and 09-10 both have one; and none of those names appears in `Watchlist.md`'s Strategy B index under that event date. Against the convention that a router-gated candidate still earns an index-only add, that reads exactly like a silent drop.
+
+**It is not one, and the primary source says so in terms.** D1's own entry (`a4ce03b2`) states: *"None is routed as a thesis handoff because state.current_regime STRATEGY_ACTIVATION B reads DO-NOT-ACTIVATE and B holds no capital. The identities are preserved here so a later session can pick any of them up without re-deriving them."* That is a **deliberate, stated, reasoned decision with the identities durably preserved**, not an omission. The inference was drawn from the absence of a record and was refuted by reading the record; it is written up here because an inference from absence is the highest-risk kind and the next cycle to notice the same shaped hole should not spend the work again.
+
+The one genuine residue is a **convention inconsistency, not a defect**: D1 declined to route on 09-08 while D2 made router-gated index-only adds on 09-09 and 09-10. Nothing was lost either way — the 09-08 identities are recoverable from `a4ce03b2` — so it is noted and not escalated.
+
+**N-2 · The fleet did not stall on 2026-09-11/12.** `ops.run_log` holds 26 rows across 13 routines for each of 09-09 and 09-10 and **zero rows for 09-11 and 09-12**, which reads as a two-day outage. It is not: the daily fleet's monitor class is `daily_sun_thu`, documented in `ops/cadence.yaml` as "every Sunday-Thursday calendar day, NOT Friday/Saturday"; `state.fleet_blackout_days` returns zero rows; and no `missed_run` / `routine_stalled` / `staleness` / `missing_dependency` / `trading_halted` alert has been raised since 2026-09-08. **Nothing is late and nothing is owed.** Recorded because the raw table is genuinely misleading on first read and a future session will read it the same way.
 
 ## Method and coverage notes
 
-**Orchestration.** Eight Sonnet 5 sub-agents did the retrieval and measurement; ranking, adjudication, corrections, the reach-marker design and every finding above were done in-session and not delegated. Two agents were sent targeted follow-ups after their first returns (a PDUFA gap-closing pass against the prior cycle's carried rows, and a re-run of the thinnest non-earnings categories against IR-calendar surfaces rather than broad search); both follow-ups changed the output materially, and the ORCL resolution was pushed back into the volatility agent mid-run so its ORCL reading could be re-measured on a correct expiry.
+**What was measured, and with what.** BigQuery (`state.*`, `events.*`, `ops.*`) and the IBKR connector are free and unmetered and did the great majority of the work here: the regime and routing reads, the A-queue census, the capital state, every close, every realized-volatility figure and every option implied-volatility quote. Metered spend went to two places only — the FMP forward earnings calendar and market caps, and a small amount of web research for the FOMC and PDUFA calendars, which no structured connector on this plan holds.
 
-**One shared pull, not N independent ones.** The FMP earnings calendar was pulled **once**, by a single dedicated population agent, which persisted the raw result to disk. **No other agent called FMP.** The IBKR connector (free) was used by two agents for price and option measurement; the web agents were told explicitly which surfaces they did *not* own.
+**Metered calls this run: 34 in total** — **15 FMP** (9 date-sliced `earnings-calendar` pulls, 1 `splits-calendar`, 1 `ipos-calendar` returning ACCESS DENIED, 1 screener probe, 2 `batch-market-cap`, 1 single-symbol `market-cap` returning ACCESS DENIED), **16 `WebSearch`**, and **3 Tavily `tavily_extract`** at basic depth (~3 credits). **`tavily_research` was not used and was explicitly forbidden to every sub-agent** — it is the 4–250-credit tail risk in the pricing table and no question here was open-ended enough to warrant it. Against the FMP free-tier daily cap of 250, this run consumed 15 (~6%). One `ops.web_calls` row is written per call.
 
-**Where facts came from.** Every `(C)` row rests on a company IR release, an SEC filing, or an agency publication (federalreserve.gov, federalregister.gov, fda.gov, ustr.gov, whitehouse.gov, stb.gov). Every price, return, ADV, implied-volatility and realized-volatility figure is an IBKR read at zero metered cost. Regime, position, queue and cadence state came from BigQuery.
+Three of those calls were spent on things that returned no data and were worth spending anyway: the two ACCESS DENIED probes fixed the boundary of what this plan reaches, and the 47-symbol `batch-market-cap` probe is what falsified a generalisation this file had already drafted (finding F-4).
 
-**Anti-transcription protocol.** Market data was pulled in batches of ≤4 symbols with each symbol kept attached to its own intermediate values; 8 of 49 rows were independently re-fetched and all 8 matched exactly. The dollar-volume convention was validated against SPY at $20.8B/day. In the option pass, 5 rows were re-pulled and all 5 returned identical values.
+**Sub-agent fan-out obeyed the one-shared-pull rule.** Five Sonnet sub-agents ran. The earnings calendar and the market-cap batch — the only datasets identical for every agent — were pulled **once**, by a single designated agent that was told it held the sole FMP budget, and every other agent was explicitly forbidden from calling FMP at all. The measurement agents (liquidity, options) were confined to IBKR and BigQuery, which are free, so fan-out multiplied compute and not spend. Each agent carried a stated call budget and an instruction to report a completeness caveat on exhaustion rather than discover the ceiling by hitting it; two did exactly that and their caveats are carried verbatim above rather than smoothed away.
 
-**Known measurement limits, stated rather than smoothed.** The IBKR connector returns one implied volatility per strike, not separate call and put solves — confirmed this run on both SPY and QQQ, where ATM call and put IV were identical to 16 significant figures. **No thesis may assert option skew from this connector.** It also exposes no IV history, so week-over-week IV direction is computed by differencing this file's own prior-cycle reading, not from a vendor series. Its `implied_volatility_percentile` field has undocumented semantics and its raw fractions are reported untranslated rather than converted into a percentile claim.
+**Where sub-agent output was overridden.** Two sub-agent conclusions did not survive verification against primary sources and are corrected rather than inherited:
+- A reported "dropped Strategy B handoff" on 2026-09-08 was **refuted** by reading D1's own entry, which records a deliberate, reasoned decision not to route (finding N-1).
+- A fresh PDUFA pull reported NUVL/zidesamtinib as pending on 2026-09-18; the FDA's own approvals page shows it **approved 2026-07-22** (PART 1B.3). The prior cycle's contradicting row was also wrong, on a different field.
 
-**Sources that failed, recorded so they are not re-attempted blind:** thecardiologyadvisor.com (HTTP 402 paywall) · endocrinologyadvisor.com (403) · federalregister.gov browser search (anti-bot redirect to `unblock.federalregister.gov`, deliberately not followed) · the Federal Register JSON API scoped to FDA notices since 2026-08-30 returned zero documents. Previously recorded failures were not retried: cnbc.com and bloomberg.com 403 on direct fetch, drugs.com 403, and fda.gov's live AdCom calendar (401/JS shell — the Federal Register was used instead and confirmed the GRAIL panel).
+Both are noted because a fan-out architecture makes it cheap to generate confident claims and no cheaper to check them; the checking is the orchestrator's job and it changed two answers here.
 
-**Coverage caveats, each stated at its point of use:** the Strategy A universe is a floor and not a screen (COVERAGE STATEMENT, §1A.1); 31 of 77 feed symbols could not be re-checked against the eligibility rails before the FMP request ceiling and are marked NOT VERIFIED rather than presumed passing; PDUFA coverage rests on sponsor disclosure because 21 CFR 314.430 bars FDA from confirming an application exists before the sponsor discloses it; advisory-committee coverage is structurally incomplete because Federal Register lead times are ~15–75 days; the macro-release dates in §1B.1 are carried from a prior cycle, not re-verified this run; four product-event rows remain at (E) as carried, not checked; and the structural-narrative category is thin because forward IPO lockups require a priced deal and index-reconstitution names are published only about a week ahead — nothing citable exists yet at this vantage.
+**The three standing constraints, restated so no reader mistakes a floor for a total.**
+1. **The Strategy A universe cannot be enumerated** on this FMP tier — screener, directory and batch-quote endpoints are all ACCESS DENIED. Every count in PART 1A is a floor over a reachable population of 77 vendor-listed symbols plus the queue, not the universe the strategy defines. **Newly measured this run:** `batch-market-cap` is *not* gated and returns caps for all 77 in one call, so the $2B rail is mechanically checkable for a candidate list even though the universe is not listable. The denial is of *enumeration*, not of *rail-checking* — those are different things and the distinction was not previously recorded.
+2. **The confirmed-earnings horizon is 2026-12-09**, 87 days out, unchanged in substance from last cycle's 88. The final ~13 weeks of the 6-month window — the January-to-March FY-report cluster — cannot be filled from any bulk source, and the historical fallback is refused outright, so ranks 31–45 of the A shortlist are ranked on carried thesis strength rather than catalyst proximity. That is the horizon showing up as a **ranking distortion** rather than as a missing row, which is the harder form to see.
+3. **The in-window PDUFA table is incomplete and provably so.** The FDA publishes no forward PDUFA calendar. A follow-up pass spending its full budget on 2026-10-01 → 10-28 closed zero new rows while aggregators claim ~100 Sept+Oct catalysts sitewide.
 
-**Carry-forwards for the next cycle.** ORCL is **closed**. Still open: **NVO denecimig** has no published PDUFA date at all and a PBM tracker's Q3 2026 estimate expires this month — a decision could land inside the window with no date ever announced. **FDX** needs a company-sourced date to resolve the 10-28-vs-10-29 split. **SNOW** carries a `(!)` between 11-27 and ~12-02/03. **AMAT** carries a `(!)` between 10-22 and 11-12. **ADBE** has now gone three cycles with no IR release for a date the feed and aggregators agree on. **SRPT's ~$2.14B cap** sits directly on the floor and needs a fresh measurement before it can be ranked. **October FDA AdComs** may be noticed any day. And **RARE's derived sub-$2B cap** should be confirmed against a direct quote when the FMP budget allows.
+**Carry-forward provenance.** The four non-earnings tables in PART 1A are largely carried from the 2026-09-06 file with their original sourcing intact. Carried rows were re-classified against this cycle's window but **not re-verified against their primary sources**, and each is labelled CARRIED for that reason. Three rows were re-checked or recovered this run and are labelled NEW: the GTA VI date (re-confirmed, no delay), the VRTX Journavx PDUFA (recovered from `Watchlist.md`, absent from last cycle's regulatory table), and the SCOTUS IEEPA ruling (confirmed already-resolved and confirmed *not* to touch FSLR's Section 232 row, which rests on separate statutory authority).
+
+**What this file deliberately did not do.** It did not re-run D1's announcement search for any catalyst D1 already owns; it did not spend a metered call on the Friday session, whose forward-calendar content is nil and whose tape was recoverable free; it did not raise a fresh alert for the earnings horizon, the enumeration gate, or the A-router gating count, all of which are already open findings; and it did not construct a thesis for any candidate — full thesis construction per `Strategy.md` happens in separate D2 sessions scheduled by W4, and nothing here is a thesis.
