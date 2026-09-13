@@ -487,6 +487,14 @@ connectors:
     connector_uuid: 64f9594a-0ed8-4081-883c-df850f1c8fcd
     settings_prefix: mcp__Google_Cloud_BigQuery__
     tools:
+      - name: cancel_job
+        use: unused
+        note: >-
+          Auto-added by OPS1 2026-09-13. Vendor-added tool, first observed in the live connector's tool
+          inventory. `use: unused` is the conservative default — nothing in this fleet calls it (mirrors
+          the IBKR `whats_new` precedent, July 2026). Promoting it to required/optional and adding
+          routine prose that calls it is a separate, deliberate feature-adoption decision this step
+          never makes on its own.
       - name: execute_sql
         use: required
         note: >-
@@ -502,6 +510,14 @@ connectors:
       - name: get_dataset_info
         use: required
         note: diagnostics/schema inspection (RUNBOOK §15a canonical matrix)
+      - name: get_query_results
+        use: unused
+        note: >-
+          Auto-added by OPS1 2026-09-13. Vendor-added tool, first observed in the live connector's tool
+          inventory. `use: unused` is the conservative default — nothing in this fleet calls it (mirrors
+          the IBKR `whats_new` precedent, July 2026). Promoting it to required/optional and adding
+          routine prose that calls it is a separate, deliberate feature-adoption decision this step
+          never makes on its own.
       - name: get_table_info
         use: required
         note: diagnostics/schema inspection (RUNBOOK §15a canonical matrix)
