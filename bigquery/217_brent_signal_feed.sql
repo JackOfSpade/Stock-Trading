@@ -10,12 +10,19 @@
 -- the axis can never fire, silently capping the ladder while the design claims six axes.
 --
 -- SOURCE AND VERIFICATION. FMP `commodity` / commodities-historical-price-eod-light, symbol BZUSD —
--- reachable on the CURRENT plan tier (verified 2026-09-04; note FMP `economics` is NOT, which is why
--- the rates axis stays UNTESTABLE — standing vendor constraint, do NOT re-alert it). The series
+-- reachable on the CURRENT plan tier (verified 2026-09-04). The series
 -- cross-validates against a primary record written independently of it: BZUSD prints 94.65 on
 -- 2026-09-01, exactly the figure D1's own 09-01 PARK ALLOCATION CALL cites ("Brent +4.60% to 94.65,
 -- within $0.35 of a named trigger level"), and prints 95.52 on 09-03, consistent with that session's
 -- clause (c) being scored NOT CLEARED on "Brent above $95".
+--
+-- CORRECTED 2026-09-13. The parenthetical above previously continued "note FMP `economics` is NOT,
+-- which is why the rates axis stays UNTESTABLE — standing vendor constraint, do NOT re-alert it".
+-- That was FALSE: FMP economics/treasury-rates is NOT plan-gated, re-probed live 2026-09-13 for the
+-- very date cited (2026-09-04 → year10 4.78, year2 4.37), and D2a called it successfully that same
+-- day. The rates axis is stood down only because the 10Y lands as free text in
+-- events.regime_events.rationale with no numeric column to join on. Full account: bigquery/216's
+-- header and PARK_ALLOCATOR_V4_DESIGN.md §"Phase-1 data decision".
 --
 -- WINDOW — 2026-06-01 .. 2026-09-04, and this boundary is principled rather than convenient.
 -- state.park_signal_daily.shock_overlay is non-NULL only from 2026-06-01 (67 rows, 24 of them

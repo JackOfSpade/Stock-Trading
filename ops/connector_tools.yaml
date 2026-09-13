@@ -148,9 +148,19 @@ connectors:
           move in one commit (this file's EDIT DISCIPLINE header).
           MEASURED WORKING on the current plan tier 2026-09-04, and it cross-validates against a record
           written independently of it (BZUSD prints 94.65 on 2026-09-01, the figure D1's own 09-01
-          de-risk record cites). Contrast `economics`, measured DENIED on the same tier the same day —
-          which is why the park v4 RATES axis is UNTESTABLE by documented property rather than a gap.
-          Do NOT raise `fmp_quote_plan_gated` for either fact; both are STANDING tier constraints.
+          de-risk record cites). Do NOT raise `fmp_quote_plan_gated` for this; it is a STANDING tier
+          constraint.
+          CORRECTED 2026-09-13 — this note previously read "Contrast `economics`, measured DENIED on the
+          same tier the same day — which is why the park v4 RATES axis is UNTESTABLE". THAT WAS FALSE and
+          it contradicted this same file's own `economics` entry (`use: required`, "D1/D2a
+          TECHNICAL_SIGNAL ingest (treasury-rates for SUSTAINED_INVERSION)") two screens below. FMP
+          `economics`/`treasury-rates` is NOT plan-gated: re-probed live 2026-09-13 for the exact cited
+          date, it returned a full payload (`year10` 4.78, `year2` 4.37 on 2026-09-04), and D2a's own
+          `events.regime_events` SUSTAINED_INVERSION row for 2026-09-04 records that same successful
+          call with those same two figures. The RATES axis is stood down for an unrelated and much
+          smaller reason — the 10Y those calls return is captured only as free text inside
+          `events.regime_events.rationale`, never in a numeric column `state.park_axis_daily` can join
+          against. See bigquery/216's header and PARK_ALLOCATOR_V4_DESIGN.md §"Phase-1 data decision".
       - name: company
         use: required
         prose_ambiguous: true
@@ -495,6 +505,13 @@ connectors:
           the IBKR `whats_new` precedent, July 2026). Promoting it to required/optional and adding
           routine prose that calls it is a separate, deliberate feature-adoption decision this step
           never makes on its own.
+          DELIBERATELY NOT PROMOTED alongside its sibling `get_query_results` (2026-09-13) — do NOT
+          promote it "for symmetry". The two are not symmetric: `get_query_results` RECOVERS the result
+          of a query that outran the synchronous window, whereas `cancel_job` only ABORTS one, discarding
+          work BigQuery is already being billed for. No routine has a reason to abandon a query it
+          deliberately issued, and on a DML/DDL statement a cancel would leave the write in an
+          indeterminate state the fleet has no reconciliation path for — strictly worse than waiting.
+          See RUNBOOK §52.
       - name: execute_sql
         use: required
         note: >-
@@ -511,13 +528,19 @@ connectors:
         use: required
         note: diagnostics/schema inspection (RUNBOOK §15a canonical matrix)
       - name: get_query_results
-        use: unused
+        use: required
         note: >-
-          Auto-added by OPS1 2026-09-13. Vendor-added tool, first observed in the live connector's tool
-          inventory. `use: unused` is the conservative default — nothing in this fleet calls it (mirrors
-          the IBKR `whats_new` precedent, July 2026). Promoting it to required/optional and adding
-          routine prose that calls it is a separate, deliberate feature-adoption decision this step
-          never makes on its own.
+          Auto-added by OPS1 2026-09-13 as `use: unused`; PROMOTED TO `required` the same day by the
+          deliberate, hand-authored path this file's EDIT DISCIPLINE header reserves for actually wiring
+          a capability into a routine (manifest `use:` + the routine prose that calls it, changed
+          together). It is the ONLY way to retrieve the result of a query that exceeds the MCP's
+          synchronous window: `execute_sql` / `execute_sql_readonly` then return
+          `{"jobComplete": false, "jobId": ...}` — NOT an error, NO rows — and the result is
+          unreachable without polling this tool with that `jobId`. Measured 2026-09-13: 867 of 54,522
+          MCP-labelled jobs (1.6%) exceeded 20s over the trailing 180d, on EVERY operating day, p99
+          26.3s, max 195.7s — so this is a live path, not a theoretical one. Called from
+          Claude_Task_Plan.md's TRANSIENT-FAILURE WAIT-AND-RETRY ladder
+          (SYNCHRONOUS-TIMEOUT HANDOFF bullet); full record in RUNBOOK §52.
       - name: get_table_info
         use: required
         note: diagnostics/schema inspection (RUNBOOK §15a canonical matrix)

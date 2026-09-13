@@ -666,10 +666,11 @@ stall with it (it ran under the same identity).
 
   **Authority: `ops/connector_tools.yaml` (added 2026-08-08).** The per-tool expected state for ALL
   SEVEN connectors this fleet uses (FMP, Gmail, Google-Calendar, Google-Cloud-BigQuery,
-  Interactive-Brokers-IBKR, Tavily, Hugging-Face — 103 tools total) is now version-controlled in that
+  Interactive-Brokers-IBKR, Tavily, Hugging-Face — 118 tools total as of 2026-09-13) is now
+  version-controlled in that
   manifest, each tool marked `required` / `optional` / `unused`. That file is the authority going
   forward. The BigQuery matrix below is RETAINED as the worked example — it predates the manifest and
-  its incident record is live history — rather than duplicated into all 103 rows here; for any other
+  its incident record is live history — rather than duplicated into all 118 rows here; for any other
   connector, read `ops/connector_tools.yaml` directly.
 
   **Canonical expected matrix — Google Cloud BigQuery connector (worked example):**
@@ -3843,3 +3844,81 @@ and none exhausted. A second identical failure is the same bug again: re-issue a
 **Never shorten a record to make a write succeed.**
 
 **Status: FILED 2026-09-11 — awaiting maintainer response.** [anthropics/claude-ai-mcp#1022](https://github.com/anthropics/claude-ai-mcp/issues/1022), submitted under the repo's Bug Report template (Area: Tool Discovery / Invocation). It carries all three asks: the drop itself, the misleading message as an independent defect, and the retry-semantics question. The GCP project ID was deliberately withheld from the public body and offered on request instead. **No maintainer has responded yet**, so this is filed, not acknowledged — if it is closed as a duplicate of the `claude-ai-mcp#628` brokered-argument-loss family, that is a legitimate outcome and should be recorded here as such. Full measurements and the submitted body: `ops/spikes/bigquery-mcp-query-arg-drop-2026-09-11.md`.
+
+---
+
+## 52. A BigQuery MCP call that outruns the synchronous window returns success-shaped emptiness — and the recovery tool was forbidden by our own CI gate *(external dependency, 2026-09-13)*
+
+**The signature.** `execute_sql` / `execute_sql_readonly` can return
+
+```json
+{"jobComplete": false, "jobId": "job_bpsvGc2jj_QY3_zU-AsSlU7sb2Tn"}
+```
+
+— no rows, no `error_result`, no message of any kind. This is **not a failure**. BigQuery accepted the
+statement and the job is RUNNING; it will run to completion and commit whether or not the session ever
+looks at it again. The MCP tool merely stopped waiting: its synchronous window defaults to ~20 s
+(`timeoutMs`).
+
+**Why this is dangerous rather than merely awkward.** The response is shaped like an empty success, so
+the two natural readings are both wrong. Read as "the query returned nothing", a routine proceeds on
+absent data. Read as "the call failed", a routine re-issues the statement — and on an `INSERT` /
+`UPDATE` / `MERGE` / `DELETE` / `CALL` that is a **double-write**, because the first job is still live
+and will commit. The re-issue does not replace it; it duplicates it.
+
+**It is the exact inverse of §51 and the two must never be conflated.** §51's arg-drop
+(`Required parameter is missing: query`) is diagnosed by *no provider job having been created* — no
+`queryId`, no bytes billed, nothing in `INFORMATION_SCHEMA.JOBS_BY_PROJECT` — and its correct handling
+is ONE immediate verbatim re-issue. Here a job demonstrably WAS created and its id is in hand, and
+re-issuing is precisely the wrong move. A session that pattern-matches this onto §51 converts a
+non-event into data corruption.
+
+**Frequency — measured 2026-09-13, not estimated.** Over the trailing 180 days, **867 of 54,522**
+MCP-labelled BigQuery jobs (**1.6 %**) ran past 20 s. It happens on **every single operating day**
+(range 7–95/day); **p99 is 26.3 s — already above the default window** — and the maximum observed was
+**195.7 s**. Over the trailing 60 days the statements affected were **565 `SCRIPT`** (mean 29.1 s —
+these are the `ops.sp_routine_start` / `ops.sp_auto_resolve_alerts` pre-flight blocks that EVERY
+routine runs), **239 `SELECT`** (mean 41.0 s), and, mutating: **12 `MERGE`, 9 `INSERT`, 6 `UPDATE`,
+1 `DELETE`**.
+
+*No confirmed corruption incident has been traced to this yet* — a retry-signature sweep over the same
+60 days found identical re-issues within 10 min for 0 of 9 `INSERT`, 0 of 6 `UPDATE` and 0 of 1
+`DELETE` slow jobs (the 12-of-12 `MERGE` matches are `sp_sq_embed_pending`'s naturally-recurring
+idempotent backfill, not retries). The exposure is that each occurrence leaves the outcome **unknown to
+the session**, with no written procedure to resolve it.
+
+**Verified end-to-end the same day.** A deliberately-timed-out read (`timeoutMs: 1`) returned
+`jobComplete:false` + a `jobId`; `get_query_results` polled on that id returned the complete result set
+(`n = 200000000`). So the recovery works and the tool is permitted.
+
+**The second defect — the recovery was structurally un-documentable.** `get_query_results` arrived in
+the connector on 2026-09-13 and OPS1 auto-added it to `ops/connector_tools.yaml` as `use: unused`,
+which is the correct conservative default for a vendor-added tool. But
+`scripts/check_connector_tools.py` **CHECK 3** hard-fails any routine text naming a tool the manifest
+does not mark `required` — and `get_query_results` resolves to exactly one connector and carries no
+`prose_ambiguous` flag. So for as long as it stayed `unused`, **writing the recovery procedure into
+`Claude_Task_Plan.md` would have turned CI red**. The gate designed to stop routines calling tools they
+should not was, for this one tool, also preventing the fleet from being told how to recover a lost
+result. Note the fence is NOT the escape hatch here: `<!-- connector-tools-checker: ignore-start -->`
+is reserved for documentary mentions, and this is an active call site.
+
+**Fix landed 2026-09-13 (all in one commit, per `ops/connector_tools.yaml`'s EDIT DISCIPLINE rule that
+a `use:` promotion and the prose that calls the tool move together):**
+1. `ops/connector_tools.yaml` — `get_query_results` promoted `unused` → **`required`**.
+2. `.claude/settings.json` — `mcp__Google_Cloud_BigQuery__get_query_results` added to
+   `permissions.allow` (CHECK 2's requirement for any `required` tool).
+3. `Claude_Task_Plan.md` — new **SYNCHRONOUS-TIMEOUT HANDOFF** bullet in the TRANSIENT-FAILURE
+   WAIT-AND-RETRY ladder, placed immediately before THE LADDER and immediately after the two
+   MCP-TRANSPORT REJECTION bullets so the contrast with §51 is read in place.
+
+**`cancel_job` was deliberately NOT promoted, and must not be "for symmetry".** The two tools are not
+symmetric: `get_query_results` RECOVERS a result, `cancel_job` only ABORTS one — discarding work
+already being billed. No routine has a reason to abandon a query it deliberately issued, and cancelling
+a DML would leave the write in an indeterminate state the fleet has no reconciliation path for, which
+is strictly worse than waiting. It stays `use: unused`.
+
+**Still open / not done here.** No vendor issue has been filed for this one — unlike §51 it is
+documented, intended tool behaviour rather than a defect, so the fix is ours. If the fleet later wants
+long statements to stop handing back control at all, the lever is an explicit larger `timeoutMs` on the
+call rather than more polling; that was NOT changed here, because raising it fleet-wide would lengthen
+every routine's worst-case stall and none of the measured 867 occurrences is known to have caused harm.

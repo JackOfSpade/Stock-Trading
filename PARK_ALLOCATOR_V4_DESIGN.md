@@ -150,11 +150,33 @@ this session against live sources, not assumed:
   cross-validates against the primary record: BZUSD prints 94.65 on 2026-09-01, exactly the figure
   D1's own 09-01 de-risk record cites. Ingest it into `state.signal_marks_curated` on D2a's existing
   STEP 1d pass — no new routine, no new cron (§0.4).
-- **rates → NOT LANDABLE, and this is now a documented property, not a gap.** FMP `economics` returns
-  ACCESS DENIED on the current plan tier (verified 2026-09-04; the standing tier constraint — do NOT
-  raise a fresh `fmp_quote_plan_gated` alert for it), and no in-house daily 10Y series exists. The
-  rates axis launches UNTESTABLE, contributing to NEITHER firing counts NOR the standing cap, and the
-  hike-odds limb launches OFF. Revisit only if the plan tier changes.
+- **rates → not landed YET, for a plumbing reason — NOT a vendor constraint (corrected 2026-09-13).**
+  The rates axis launches UNTESTABLE, contributing to NEITHER firing counts NOR the standing cap, and
+  the hike-odds limb launches OFF. The reason is narrow: the daily 10Y **is** fetched successfully on
+  every trading day, but it is recorded only as **free text inside `events.regime_events.rationale`**
+  (scope `TECHNICAL_SIGNAL`, key `SUSTAINED_INVERSION`) — there is no numeric column
+  `state.park_axis_daily` can join against.
+
+  **This bullet previously asserted that FMP `economics` returns ACCESS DENIED on the current plan
+  tier (verified 2026-09-04), and instructed readers not to re-raise `fmp_quote_plan_gated` for it.
+  That was FALSE, and the do-not-re-investigate clause made it self-sealing for nine days.** Re-probed
+  live 2026-09-13 against the exact date cited as the denial, `economics`/`treasury-rates` returned a
+  full payload for 2026-09-04 (`year10` 4.78, `year2` 4.37). D2a's own `events.regime_events`
+  `SUSTAINED_INVERSION` row for 2026-09-04 records that same successful call with those same two
+  figures — the routine was demonstrably using the endpoint on the day it was written down as denied —
+  and `ops/connector_tools.yaml`'s `economics` entry (`use: required`) never recorded a denial either.
+  This is the same "endpoint-level gate wears tool-level wording" trap the FMP tier matrix already
+  documents having caused one prior incident (commit d020e50, the 2026-08-26 `quote`/`batch-quote`
+  case), repeated here for `economics` and not caught by the same-day review pass (4011a28) that
+  edited text directly beside it.
+
+  **To land it** (deliberately NOT done in the 2026-09-13 correction pass, which was factual only):
+  capture the 10Y structurally — cheapest form is a `TECHNICAL_INPUT` / `TREASURY_10Y` row written to
+  the existing `events.regime_events` numeric column alongside D2a's existing STEP 1e call — then
+  point `bigquery/216`'s `'rates'` CASE branch at it and apply the `10Y >= 4.90` threshold specified
+  below. **§2.7's re-pin rule binds:** re-run the Phase-1 shadow with six axes live and re-pin the
+  acceptance f-path/cap arithmetic **in the same commit** that lands the feed, exactly as Brent/shock
+  did in c0a6c61. Do NOT tune the threshold to reproduce the old numbers. Only then flip to LIVE.
 
 **Consequence, which the implementer must carry into the acceptance numbers:** the live axis set is
 **five** (volatility, breadth, index, credit, shock), not three and not six. `cap = min(100, 25 ×
@@ -171,7 +193,13 @@ recover the old numbers — that is the failure mode §2.7's re-pin rule exists 
 honest direction of this: on the one live episode, the richer axis set makes the ladder look WORSE,
 not better. That is exactly the kind of finding Phase 1 exists to surface before any capital moves.
 
-*(Original decision text, retained for the record.)* Choose ONE:
+*(Original decision text, retained for the record — **with one CORRECTION flagged 2026-09-13**: option
+(a)'s parenthetical "the economics endpoint returned ACCESS DENIED on the current tier, measured
+2026-09-04" is **FALSE**. It is left in place unedited because this block is a verbatim historical
+record and this repo's convention is to append a correction rather than rewrite the original. FMP
+`economics`/`treasury-rates` is not plan-gated — re-probed live 2026-09-13 for that very date. See the
+"**rates → not landed YET**" bullet above for the evidence and for what landing the axis actually
+requires.)* Choose ONE:
 (a) land the three feeds — daily DGS10 via FMP economics, HY-OAS proxy from the HYG/IEF ratio, Brent
 via FMP commodity — **verifying FMP plan-tier access FIRST** (the economics endpoint returned ACCESS
 DENIED on the current tier, measured 2026-09-04), before the shadow's evidence clock starts; or

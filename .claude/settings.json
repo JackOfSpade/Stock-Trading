@@ -32,6 +32,7 @@
   "mcp__Google_Cloud_BigQuery__execute_sql","mcp__Google_Cloud_BigQuery__execute_sql_readonly",
   "mcp__Google_Cloud_BigQuery__list_dataset_ids","mcp__Google_Cloud_BigQuery__list_table_ids",
   "mcp__Google_Cloud_BigQuery__get_dataset_info","mcp__Google_Cloud_BigQuery__get_table_info",
+  "mcp__Google_Cloud_BigQuery__get_query_results",
   "mcp__Tavily__tavily_search","mcp__Tavily__tavily_extract","mcp__Tavily__tavily_crawl",
   "mcp__Tavily__tavily_map","mcp__Tavily__tavily_research",
   "mcp__Hugging_Face__hf_whoami","mcp__Hugging_Face__hf_fs","mcp__Hugging_Face__hub_repo_search",

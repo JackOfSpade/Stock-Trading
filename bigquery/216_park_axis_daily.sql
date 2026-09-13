@@ -31,10 +31,44 @@
 --                             BZUSD row exists in state.signal_marks_curated this axis reports
 --                             testable=FALSE and contributes to NEITHER count — it activates
 --                             automatically when the feed lands, with no change to this file.
---   rates       UNTESTABLE    FMP economics is plan-gated (ACCESS DENIED, verified 2026-09-04) and
---                             no in-house daily 10Y series exists. Documented property, not a gap.
---                             The hike-odds limb launches OFF. DO NOT raise a fresh
---                             fmp_quote_plan_gated alert for this — standing vendor constraint.
+--   rates       UNTESTABLE    The daily 10Y IS fetched successfully every trading day, but only ever
+--                             lands as FREE TEXT inside events.regime_events.rationale (scope
+--                             TECHNICAL_SIGNAL, key SUSTAINED_INVERSION) — there is no numeric column
+--                             this view can join against. That, and only that, is why the axis is
+--                             stood down. The hike-odds limb launches OFF.
+--
+--                             CORRECTED 2026-09-13 — this block previously read "FMP economics is
+--                             plan-gated (ACCESS DENIED, verified 2026-09-04)", and told future
+--                             sessions not to re-raise fmp_quote_plan_gated for it. THAT PREMISE WAS
+--                             FALSE and the do-not-re-investigate note made it self-sealing. FMP
+--                             economics/treasury-rates is NOT gated on this tier: re-probed live
+--                             2026-09-13 for the exact date cited as the denial, it returned a full
+--                             payload (2026-09-04: year10 4.78, year2 4.37) — and D2a's OWN
+--                             events.regime_events SUSTAINED_INVERSION row for 2026-09-04 records
+--                             that same successful call with those same two figures, i.e. the
+--                             routine was demonstrably using the endpoint on the day it was written
+--                             down as denied. ops/connector_tools.yaml's economics entry (use:
+--                             required) never recorded a denial either. Nine days of the RATES axis
+--                             contributing to neither the firing count nor the standing cap rest on
+--                             this error, not on a vendor constraint.
+--
+--                             TO ACTUALLY LAND THIS AXIS (deliberately NOT done in the 2026-09-13
+--                             correction pass, which was factual only): capture the 10Y structurally
+--                             — cheapest form is a TECHNICAL_INPUT / TREASURY_10Y row written into
+--                             the existing events.regime_events numeric column alongside D2a's
+--                             STEP 1e call — then point the 'rates' CASE branch below at it and
+--                             apply the design's 10Y >= 4.90 threshold. Design doc §2.7's re-pin
+--                             rule binds: re-run the Phase-1 shadow with six axes live and re-pin
+--                             the acceptance f-path/cap arithmetic IN THE SAME COMMIT that lands the
+--                             feed (the discipline Brent/shock followed in c0a6c61). Do NOT tune the
+--                             threshold to reproduce the old numbers. Only then flip to LIVE.
+--
+--                             NOTE the inline comment on the 'rates' CASE branch in the view body
+--                             below still reads "no daily 10Y series reachable" — imprecise for the
+--                             same reason. It is deliberately left byte-identical: it sits INSIDE the
+--                             object body, so editing it would drift check_live_sql_parity.py against
+--                             the deployed view for a pure comment change. It points here; this is
+--                             the corrected account.
 --
 -- SIGN TRAP (design doc §0.9): dd_from_252d_high is stored NEGATIVE. The index limb is dd < -0.03,
 -- never "drawdown > 3%". A wrong sign yields a plausible-looking inverted axis.

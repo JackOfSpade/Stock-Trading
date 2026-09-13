@@ -169,6 +169,11 @@ END;
 -- bigquery/150_cadence_check_autoage_connector_and_revised.sql's raise blocks: sp_raise_alert_once
 -- dedups on exact (category, message) among unresolved rows, so every message below is a STABLE string
 -- with no count or date embedded — all per-run detail lives in the payload only.
+-- SUPERSEDED LIVE by bigquery/235_connector_tool_selfheal_per_connector_scope.sql (2026-09-13), which
+-- rescopes block (c)'s staleness guard from fleet-wide to per-connector (plus the 'ALL' sentinel) so
+-- one stale connector no longer freezes every other connector's self-heal. Blocks (a), (b) and (d) are
+-- unchanged there. The definition is kept identical here so a from-scratch rebuild is safe before the
+-- apply-order successor runs.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_raise_connector_tool_drift`(in_source STRING)
 BEGIN
   DECLARE latest_run_date DATE;
