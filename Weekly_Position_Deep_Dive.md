@@ -1,195 +1,253 @@
-2026-W36
+2026-W37
 
 # W3 — Open-Position Deep-Dive (Strategies A, B, C, E)
 
-**Run:** Sunday 2026-09-06 · **Evidence window:** 2026-08-30 09:17 UTC → 2026-09-06 (this routine's own last `completed` run → now; `state.routine_catchup_window` `window_days = 6.99`, cadence-normal against the 10.5-day 1.5× weekly bar — no catch-up sub-section owed, no missed period, no `CATCHUP` token).
+**Run:** Sunday 2026-09-13 · **Evidence window:** 2026-09-06 09:31:29 UTC → 2026-09-13 (this routine's own last `completed` run → now; `state.routine_catchup_window` `window_days = 6.98`, cadence-normal against the 10.5-day 1.5× weekly bar — no missed period, no catch-up sub-section owed, no `CATCHUP` token).
 
 **NO `WEEKLY-THESIS-ACTION` FLAG.** No hold / weekly-thesis-action / further-research recommendation is issued, because there is no open in-scope position to issue one on.
 
-**Marker.** `2026-W36` is the plain ISO week of the run date (Sun 2026-09-06 is day 7 of the Mon 08-31 → Sun 09-06 week). W1 (`b921875`) and W2 (`3fa0da9`) both stamped `2026-W36` earlier today, so all three weekly files agree and W4's upstream-freshness read matches. Unlike the 08-23 and 08-30 cycles this marker does not repeat the prior file (`2026-W35`).
+**Marker.** `2026-W37` is the plain ISO week of the run date (Sun 2026-09-13 is day 7 of the Mon 09-07 → Sun 09-13 week). W1 (`f5ce3d5`) and W2 (`d3c24a0`, `98fdc74`) both stamped `2026-W37` earlier today, so all three weekly files agree and W4's upstream-freshness read matches.
+
+**Scope, derived not assumed.** In-scope = roster-active strategies with `review_cadence: reactive`. Read from `state.strategy_roster` (A, B, C, D, E all `ADOPTED`; F, G, H `REJECTED`, not roster-active) and `strategy/roster.yaml` (`reactive` for A, B, C, E; `long_horizon` for D). So the set is **A, B, C, E** — unchanged, and D's 12 tranches are M3's monthly deep-dive, untouched here.
 
 ---
 
-## HEADLINE — the in-scope book is empty for the third consecutive week, and the reason changed completely
+## HEADLINE — the book is empty for a fourth week, and the reason has hardened into arithmetic
 
-Zero open positions exist in any roster-active `review_cadence: reactive` strategy (A, B, C, E). D is out of scope by `review_cadence: long_horizon` and is M3's monthly deep-dive; its 12 tranches are untouched here.
+Zero open positions exist in any in-scope strategy. But the finding of this cycle is not the empty book; it is **what happened to the one number the whole book's re-opening hangs on.**
 
-**But the emptiness is no longer the same fact it was.** For the last two cycles Strategy E was the one strategy that was both router-ACTIVATE and meaningfully funded — the book's single genuine "no qualifying setup" case, and the only place a position could have come from. In the seven days covered here, **both halves of that changed on the same day:**
+Last week this file reported the shock overlay's published exit as failing on its price leg by 5.37, needing a −5.6% move in Brent. In the seven days covered here **the shock escalated sharply**: Brent closed **107.63** on 2026-09-10, a new high for the entire acute run, and the shock elevation **more than doubled** — 10.90 → 22.90. The retrace trigger ratcheted 90.18 → **96.18**. The required fall went from −5.6% to **−10.6%**.
 
-1. **E produced its first-ever GO on the merits** (`EFX/TRU`, 2026-09-03) — after four months and zero prior merits-GOs.
-2. **E's router closed** the same day (`div-E-202608-1`, 2026-09-03, ACTIVATE → DO-NOT-ACTIVATE), and the thesis was declined on the gate.
+And the second leg, which last week was recorded as *unmeasurable from the warehouse*, is this week **affirmatively failed**: there is a dated cluster of new qualifying shock events inside the window, the most recent on **2026-09-11 — the last trading day.** The 15-trading-day quiet clock has been reset to **zero**.
 
-So the book is empty this week not because nothing qualified, but because the one thing that qualified arrived on the day the door shut. **Every strategy in the book is now router-closed to new entries except C**, which is HYBRID ACTIVATE for FOMC only and holds **$23.64**.
+**The consequence is mechanical and worth stating first, because nothing else in this file is as load-bearing:**
+
+> **M1a's 2026-10-01 scoring cannot de-escalate the shock overlay, no matter what Brent does between now and then.** Only **14** trading days separate 2026-09-11 from 2026-10-01 (counted in `state.market_calendar`); leg (i) requires **15**; the legs are conjunctive. The 15th trading day after the last qualifying event is **2026-10-02** — the day *after* the next scheduled scoring. So A, B, D and E are router-closed to new entries through at least the 2026-10-01 cycle as a matter of calendar arithmetic, not of judgment, and the out-of-cycle re-risking limb cannot fire either.
+
+C remains the only strategy the router permits to trade, on **$23.64**.
 
 ### The empty book, re-established independently this week
 
-Not carried forward from 08-30. Five lines, all measured this session, all agreeing:
+Not carried forward from 09-06. Five lines, all measured this session, all agreeing:
 
 | # | Line of evidence | Result |
 |---|---|---|
 | 1 | `state.current_positions` | 12 rows, **all `strategy='D'`**. Zero A/B/C/E rows. |
-| 2 | Latest-event-per-`position_key` off raw `events.position_events`, compared case-insensitively | 13 in-scope keys, **all `B`, all `CLOSE`/`CLOSED`**. Non-closed count **0**. `SELECT DISTINCT strategy` over the whole table returns only `B` and `D` — not a casing artifact. |
-| 3 | `events.position_events WHERE event_ts >= 2026-08-30` | **Zero rows, all strategies.** Not one book event of any kind in the window, in scope or out. |
+| 2 | Latest-event-per-`position_key` off raw `events.position_events`, compared case-insensitively | 13 in-scope keys, **all `B`, all `CLOSED`**. Non-closed count **0**. `SELECT DISTINCT strategy` over the whole 74-row table returns only `B` and `D` — not a casing artifact. |
+| 3 | `events.position_events WHERE event_ts >= 2026-09-06` | **Zero rows, all strategies.** Not one book event of any kind in the window, in scope or out. |
 | 4 | `analytics.strategy_nav` | `deployed_mv = 0` for A, B, C **and** E. |
-| 5 | **Live broker cross-check** (IBKR `get_account_positions` / `get_account_orders`) | 8 equity lines + the park vehicles. Every equity line reconciles share-for-share to a Strategy D tranche sum (AMZN .3464, DIS .7244, GEV .1244, GOOGL .2577, ISRG .1091, RTX .1601, TSM .1550, UBER .5156). **Zero working orders. No broker line unattributable to D or the park.** |
+| 5 | **Live broker cross-check** (IBKR `get_account_positions` / `get_account_orders`) | 8 equity lines + 2 park vehicles. Every equity line reconciles share-for-share to a Strategy D tranche sum (AMZN .3464, DIS .7244, GEV .1244, GOOGL .2577, ISRG .1091, RTX .1601, TSM .1550, UBER .5156). Park: SGOV 74.8667, VOO 10.8278. **Zero working orders. No broker line unattributable to D or the park.** |
 
-**The same caveat as prior cycles, restated because it has not stopped being true.** A, C and E have **zero rows in `events.position_events` across all recorded history** — they have never opened a position, rather than having gone flat. Only **B** genuinely went flat (13 keys, last close 2026-08-03). An empty-book verdict on a strategy that has never traded is a weaker statement in kind, and is stated that way.
+**The same caveat as prior cycles, restated because it has not stopped being true.** A, C and E have **zero rows in `events.position_events` across all recorded history** — they have never opened a position, rather than having gone flat. Only **B** genuinely went flat. An empty-book verdict on a strategy that has never traded is a weaker statement in kind, and is stated that way.
+
+**One prior-file figure corrected by re-measurement.** Last week's file dated B's flattening to a "last close 2026-08-03." Measured this run, the last in-scope position event is the terminal `CLOSE` of `B:MSCI:2026-07-27` on **2026-08-18** (D2a STEP 0 fill reconciliation; the row's own note ends *"Strategy B now holds ZERO open positions"*). B has therefore been flat **26** days, not 41. Nothing downstream turns on it — but this is the routine's own prior prose being re-established against the table rather than restated, which is the discipline this section exists to enforce.
 
 ---
 
-## WHY THE BOOK IS EMPTY — the causes table, materially changed from last week
+## WHY THE BOOK IS EMPTY — the causes table
 
 | | Router state | Capital | Cause |
 |---|---|---|---|
-| **A** | DO-NOT-ACTIVATE (`div-A-202608-1`, held 2026-09-03, third consecutive cycle) | NAV **$0.00**, `outstanding_debt` $3,888.45 | **Double-blocked.** 23-name watchlist parked, router-gated. Next scheduled chance is the 2026-10-01 M1a/M1b re-score. |
-| **B** | DO-NOT-ACTIVATE (`div-B-202608-1`, held 2026-09-03) — entirely the universal `shock_overlay=acute` override; B's own legs (SPY UP, VIX LOW 14.32, breadth HEALTHY 66.40) all pass | NAV **$0.00**, `outstanding_debt` $4,973.25 | Blocked by an override external to B's own machinery. W2 ran in INDEX MODE accordingly. |
-| **C** | **HYBRID ACTIVATE, FOMC-only** — the only strategy the router permits to trade | NAV **$23.64** | **Flat by design, and now materially under-capitalised — see the finding below.** Its one live candidate is `thesis-FOMC-C-20260908` (FOMC 2026-09-16), due 2026-09-08, still `pending`. |
-| **E** | **DO-NOT-ACTIVATE — STATE CHANGE 2026-09-03**, the only change in the five-review cohort | NAV **$15,368.39** (96.4% of the $15,941.28 book), available $15,368.39 | **Closed on the day its first merits-GO arrived.** |
+| **A** | DO-NOT-ACTIVATE (`div-A-202608-1`, held 2026-09-03; DNA run open since 2026-04-22, dwell **98** trading days, left-censored) | NAV **$0.00** | **Double-blocked.** 41-name A-queue parked in `Watchlist.md`, router-gated. Next scheduled chance is the 2026-10-01 M1a/M1b re-score — which, per the headline, cannot clear the overlay. |
+| **B** | DO-NOT-ACTIVATE (held 2026-09-03) — entirely the universal `shock_overlay=acute` override; dwell **26** | NAV **$0.00** | Blocked by an override external to B's own machinery. W2 ran in INDEX MODE for a third consecutive cycle accordingly. |
+| **C** | **HYBRID ACTIVATE, FOMC-only** — the only strategy the router permits to trade | NAV **$23.64**, `sizing_base_2pct` **$0.47** | **Flat by design and materially under-capitalised.** Its FOMC candidate was drained NO-GO on 2026-09-08 — see the C section below. |
+| **E** | DO-NOT-ACTIVATE (state change 2026-09-03, adjudicated last cycle); dwell **5** | NAV **$15,368.39** (96.47% of the $15,931.45 book) | Closed on the day its first merits-GO arrived. Unchanged this week; not re-litigated here. |
 
-`state.entry_staging_allowed`: `entries_allowed = TRUE`, `block_reason` NULL. `perf.kill_flags`: rows only for B and D, **every boolean FALSE on both**. `ops.arsenal_control` enabled, not frozen. **Nothing was blocked at the capital or kill gate this week** — the emptiness is router state, plus C's balance.
+`state.entry_staging_allowed`: `entries_allowed = TRUE`, `block_reason` NULL. `perf.kill_flags`: rows only for B and D, **every boolean FALSE on both** (D: `deployed_days` 95, `closed_trades` 1, drawdown −4.34%, `excess_vs_sgov` +3.62%, β̂ 0.933, α 0.221 annualised). `state.strategy_capital_enablement`: **only C is `capital_enabled`**; A, B, D and E all `capital_disabled` since 2026-09-04T01:03:40Z. **Nothing was blocked at the capital or kill gate this week** — the emptiness is router state, plus C's balance.
 
----
-
-## THE E FLIP — and the mechanical shape that produced it
-
-**E was closed by its own case getting better.** This is not a figure of speech; it is the mechanism.
-
-- E carries **no strategy-specific reconciliation override** (unlike A's `decelerating AND hawkish` rule or D's `reaccelerating AND hawkish`). The only rule that can force E's raw ACTIVATE to DNA is the universal one: *"If M1a scores `shock_overlay = acute` AND M1b returns ACTIVATE for any strategy → override to DO-NOT-ACTIVATE for that strategy."*
-- That override is **conditioned on a raw ACTIVATE**. Through August, M1b's raw fundamental call on E was not ACTIVATE, so the override had nothing to bite on, and E carried an operative ACTIVATE from `div-E-202607-1` (2026-08-05).
-- On 2026-09-01 M1b's raw call for E **flipped to ACTIVATE** — a genuine improvement, credited substantially to M2's own August measurement (60d correlation exceeding 252d in 66 of 89 pairs, 74%). That flip is what armed the override, **which fired on E for the first time ever**, and the net result was DO-NOT-ACTIVATE.
-
-So a strategy whose raw call is negative passes through the override untouched and can carry an ACTIVATE state; a strategy whose raw call turns positive gets closed. **M4 named this in advance** — its 2026-09-01 carry-forward row reads *"NO NET FLIP, but the BASIS INVERTED and this is the consequential row of the cycle."* AR_orc then upheld the override on four grounds, including that the rule text admits no market-neutral carve-out and that disapplying it on E while upholding it on B in the same fire would be exactly the asymmetry it condemns elsewhere. Seven weaknesses graded (3 Tier 1 / 2 Tier 2 / 2 Tier 3), theater-check DIVERGENT.
-
-**W3 records the shape and does not re-litigate the verdict — and specifically does not re-file the general question, because it is already queued with a drainer.** `events.queue_events` carries `otr-router-shock-override-2026` (`PENDING_REVIEW`, `out-of-table-resolution`, due **2026-09-08**), landed by Rev 48 R3 out of `div-B-202608-1`'s referral, carrying precisely the two limbs Rev 48 does *not* discharge: **horizon scaling** and a **per-strategy transmission term**. Its recorded conservative default is HOLD — the override stands as written. That is the correct venue for "should a uniform shock override catch a market-neutral strategy," and it has a due date two days out. Nothing owed here.
+Book NAV re-measured: A $0.00 + B $0.00 + C $23.64 + D $539.42 + E $15,368.39 = **$15,931.45** (last week $15,941.28; the difference is D's mark).
 
 ---
 
-## E's FIRST MERITS-GO — the four-month calibration question, answered and then retired
+## THE SUBSTANTIVE ANALYSIS — the shock overlay, measured against its own published exit
 
-Two E pair theses were drained by D2 on 2026-09-03. They are the first real evidence about whether E's criteria discriminate, and they point in opposite directions — which is the point.
-
-| Pair | Verdict | Ground |
-|---|---|---|
-| **DY/EME** | **NO-GO on the merits** | Criterion 2 fails on a compound case. Explicitly *not* a conservative-default decline — "the analysis ran in full and reached NO-GO on its own." 252d correlation 0.5477 (clears the 0.50 floor by 0.048, inside estimation noise); EME's +19.3% was a genuine beat-and-raise re-rating; catalysts mostly undated. The item's own `honest_risk` re-test precondition came back **positive for the anti-thesis** — four further sell-side target cuts, not the one cited. |
-| **EFX/TRU** | **GO on the merits, MEDIUM, 60 — NO ENTRY** | 252d correlation **0.8450**, vols within 1pp, borrow GC at 0.27% annualised, all five criteria PASS. Declined on the item's own `conservative_default`, which required affirmative resolution of *both* named blockers; `state.trading_enabled` had cleared to TRUE, but `div-E-202608-1` had **not yet landed an orchestrator row** when D2 read it. One of two affirmative. The rule fired. |
-
-**Nothing was lost to the timing.** The review D2 was waiting on resolved DO-NOT-ACTIVATE later the same day, so a D2 that had waited would have been barred anyway. The decline is robust to the sequencing, and that is worth stating plainly rather than leaving as an open "what if."
-
-**The calibration question this file has carried for two cycles is now retired — and it was already resolved before last week's file re-affirmed it.** Both prior W3 cycles left with W5 the question *"is a ≥95th-percentile dispersion anchor with zero entries in four months correctly calibrated, or unsatisfiable?"* Measured this run against the governing text rather than against the prior file:
-
-- That anchor **never existed in canonical `Strategy.md` or in `strategy_math/strategy_e.py`**. E's Entry criterion 3 has always read *"L–S correlation over trailing 252 trading days ≥ 0.5; beta-adjusted leg sizing."* The percentile requirement existed only in `strategy/08_pre_mortems.md`'s prose, introduced at rev 2 via SL2's documentary-only route and enforced as a hard NO-GO gate anyway — including against TLN/VST on 2026-08-18, which passed the real criterion 3 at 0.7824 correlation and was declined at the 65.1st percentile.
-- **The owner decided on 2026-08-25: DROP** (pre-mortem rev 13, `Strategy.md` Rev 47). The percentile is still computed and recorded as `percentile_at_entry` and still drives the Pair-prioritization *ranking*, but **it gates nothing.**
-
-So the two 09-03 theses scoring criterion 3 on the correlation floor alone were **correct**, not inconsistent with the TLN/VST precedent — the spec changed between them. And the answer to the question as posed is: **E's criteria are satisfiable, and the threshold the question was actually about no longer exists.**
-
-**Held to its true weight, which is modest.** One MEDIUM/60 GO is not evidence that E's criteria are well-calibrated. The EFX/TRU analysis itself found that the pair's supporting arithmetic **did not reproduce**: the payload's "reconverging on schedule" rested on a 3-month spread of −6.54pp, and D2 measured −9.68pp on 63 trading days and −11.26pp on an exact calendar quarter — TRU's lead 50–70% wider than stated, with the number swinging from −3pp to −14pp across a two-week band of plausible window anchors. The sensitivity, not any single figure, was the finding. One merits-GO and one merits-NO-GO in a single day is the first genuine discrimination E's criteria have shown; it is not a calibration verdict.
-
----
-
-## THE SUBSTANTIVE ANALYSIS — the shock overlay now has a written exit, and it is not close to being met
-
-Steps 1–6 are per-position and vacuous on an empty book. The question that determines whether the book *stays* empty is whether `shock_overlay = acute` — the single value holding A, B, D and E shut — still holds. **This week, for the first time, that question has a published, owner-directed answer procedure and an in-warehouse series to run it on**, both landed by Rev 48 on 2026-09-05, after the last W3 ran.
+Steps 1–6 are per-position and vacuous on an empty book. The question that determines whether the book *stays* empty is whether `shock_overlay = acute` still holds. Rev 48 (2026-09-05) gave that question a required answer procedure; this is the first W3 cycle to run it end to end.
 
 ### The rubric's REQUIRED de-escalation test
 
-From `strategy/09_regime_scoring_strategy_blind_monthly.md` §"Shock / overlay grading rubric": *"De-escalation from `acute` to `latent` is REQUIRED, not optional, once both legs hold... (i) zero new qualifying events for 15 consecutive trading days; and (ii) Brent has retraced at least 50% of the shock elevation... Either leg failing keeps the grade at `acute`."* Escalation is immediate and the asymmetry is deliberate.
+From `strategy/09_regime_scoring_strategy_blind_monthly.md` §"Shock / overlay grading rubric" (**unchanged in the window** — verified, the file has no commit since 2026-09-05):
 
-### Leg (ii), measured — FAILS, and is moving the wrong way
+> **De-escalation from `acute` to `latent` is REQUIRED, not optional, once both legs hold.** Downgrade when BOTH are true, each dated and measured in the row rationale: (i) zero new qualifying events for 15 consecutive trading days; and (ii) Brent has retraced at least 50% of the shock elevation, i.e. it now sits at or below the baseline-to-peak midpoint. Either leg failing keeps the grade at `acute`.
+
+Escalation is immediate with no dwell requirement, and the rubric states that asymmetry is deliberate.
+
+### Leg (ii), measured — FAILS, and the gap has more than doubled
 
 Anchors read from `state.rerisking_limb_status`, which computes the rubric's triplet off `state.signal_marks_curated` (`ticker='BZUSD'`) — the CURATED view the rubric pins, never the raw table:
 
-| Quantity | Value |
-|---|---|
-| Pre-shock baseline | **84.73** (43 observations, 2026-06-01 → 2026-07-31 — the rubric's short-history fallback, count recorded as it requires) |
-| Acute-run start | 2026-08-01 |
-| Peak close since | **95.63** (2026-09-02) |
-| Shock elevation | 10.90 |
-| **Retrace trigger** (baseline + 50%) | **90.18** |
-| Current close | **95.55** (2026-09-04) |
-| Verdict | **95.55 > 90.18 — `leg_b_basis = 'not_retraced'`, by 5.37** |
+| Quantity | This week | Last week | Change |
+|---|---|---|---|
+| Pre-shock baseline | **84.73** (43 obs, 2026-06-01 → 2026-07-31 — the rubric's short-history fallback, count recorded as it requires) | 84.73 | — |
+| Acute-run start | 2026-08-01 | 2026-08-01 | — |
+| Peak close since | **107.63** (2026-09-10) | 95.63 (09-02) | **+12.00** |
+| Shock elevation | **22.90** | 10.90 | **+110%** |
+| **Retrace trigger** (baseline + 50%) | **96.18** | 90.18 | **+6.00** |
+| Current close | **107.63** (2026-09-10) | 95.55 (09-04) | — |
+| Verdict | **107.63 > 96.18 — `leg_b_basis = 'not_retraced'`, by 11.45** | not_retraced, by 5.37 | **worse** |
 
-Brent would need to fall **−5.6%** from the last print for leg (ii) to hold. It has done the opposite: **+8.5% in four sessions**, 88.10 (08-28) → 95.55 (09-04), setting a **new closing high for the entire acute run** at 95.63 on 09-02, above the prior 94.39 of 08-21. The price leg is not merely un-retraced; it is at its most elevated point since the shock began.
+**Peak equals current**: Brent is sitting at the most elevated point of the entire acute run. The path, from the curated series:
 
-**A mechanical property worth stating, because it is not obvious and it matters: the trigger ratchets.** The peak is a running maximum, so every new high raises the retracement target — the trigger moved 89.56 → 90.18 between 08-28 and 09-04 purely because Brent made new highs. A partial pullback after a new high does not restore the prior position; the test then demands half of the *new, larger* elevation. This is correct behaviour (a worsening shock should be harder to de-escalate) and it is stated here so it is not later mistaken for the test drifting.
+`88.10` (08-28) → `90.49` → `94.65` → `95.63` → `95.52` → `96.28` (09-04) → `99.39` (09-08) → `101.21` (09-09) → **`107.63`** (09-10)
 
-### Leg (i) — CANNOT BE EVALUATED from any in-warehouse source, and this is the real gap
+That is **+22.2% in nine sessions**, including **+6.34% on 09-10 alone**. Brent must now fall **−10.63%** from the last warehouse print for leg (ii) to hold.
 
-The rubric's leg (i) turns on *the date of the most recent qualifying event*. **No warehouse table records qualifying-event dates** — there is no `events.geopolitical_events`, no `qualifying_event` column anywhere across the `events`/`state`/`ops` datasets. The only available proxy, `shock_acute_run_start = 2026-08-01`, marks when the *axis value* began its run, which the rubric treats as a distinct fact from the most recent qualifying event. That date lives only in M1a's narrative rationale.
+**How large a fall that is, measured against the series' own history** (71 observations, 2026-06-01 → 2026-09-10): the worst single-day move ever recorded in this series is **−8.70%** and the worst 5-day is **−14.55%**. So the required retrace **exceeds the largest one-day decline the series has ever printed**; a five-session close is inside historical range but would take the worst such stretch on record. This is context, not a forecast — the point is that leg (ii) is not a near-miss.
 
-**This changes no conclusion** — the legs are conjunctive and leg (ii) fails outright, so the test is not satisfied regardless. It is recorded because a rubric whose second leg is unmeasurable from the warehouse will be evaluated on prose every time, which is precisely the failure mode the rest of Rev 48 was written to close. Not filed as a defect: the rubric is one day old, its rationale-recording duty (*"the date of the most recent qualifying event; the baseline / peak / current Brent triplet; which legs held"*) is exactly the mechanism that will surface this at the next scoring, and the 2026-10-01 M1a is the first scoring bound by it.
+**The trigger ratchets, and this cycle demonstrates it.** The peak is a running maximum, so every new high raises the retracement target. The trigger moved 90.18 → 96.18 purely because Brent made new highs; a partial pullback after a new high does not restore the prior position, because the test then demands half of the *new, larger* elevation. Correct behaviour — a worsening shock should be harder to de-escalate — and stated so it is not later mistaken for the test drifting.
 
-### The re-risking limb — armed, and blocked on the same leg
+### Leg (i), measured — FAILS OUTRIGHT. This is the part that changed in kind, not degree.
+
+Last week this file recorded leg (i) as unevaluable: *"No warehouse table records qualifying-event dates."* **That remains true of the warehouse, and it is still true that leg (i) has no in-warehouse source.** What was wrong was the implied conclusion that the leg therefore cannot be evaluated at all. It can — off-warehouse, at metered cost — and this run did it, because with leg (ii) escalating rather than retracing, leg (i)'s clock became the quantity that fixes the *earliest possible* exit date.
+
+The rubric defines the test precisely, and the definition is **conjunctive**:
+
+> **Qualifying shock event.** A dated development that (i) meets input category 4's structured inclusion criteria above — an effect on global trade flows, an oil price move > $5/bbl attributable to the shock channel, a widening in sovereign credit spreads, or a major currency move > 2% against USD — and (ii) is attributable to a named geopolitical or trade channel. Narrative escalation with no measurable leg, undated commentary, and developments failing category 4's criteria are not qualifying events regardless of salience.
+
+**Dated developments inside the window, each attributable to a named channel** (all EXTERNALLY SOURCED — no warehouse holds these; sources and dates given because the rubric's own bar is *dated*):
+
+| Date | Development | Source (date) |
+|---|---|---|
+| 2026-09-05 | US struck three Iranian oil tankers | CBS News (pub. 09-08) |
+| 2026-09-09 | Iran (IRGC) said it attacked 10 ships near the Strait of Hormuz | Al Jazeera (09-10) |
+| 2026-09-09/10 | US struck five Iranian oil tankers — an escalation on the ~3-tanker strike days earlier | Al Jazeera; ABC News Australia (both 09-10) |
+| 2026-09-10 | Houthis seized the Yemeni port of Mocha | Al Jazeera (09-10) |
+| **2026-09-11** | **Saudi East–West pipeline (7 mb/d, the principal Hormuz-bypass route) hit by drones from Iraq** | Buttondown *Fair Value* (09-12) |
+| ~2026-09-11/12 | Houthi forces captured Perim Island at Bab al-Mandeb | Buttondown *Fair Value* (09-12) |
+
+The **measurable-leg conjunct is satisfied with room to spare**: Brent rose **+$11.35** from the 09-04 close (96.28) to the 09-10 close (107.63), and **+$6.42 on 09-10 alone** — both far above the rubric's $5/bbl bar — and the channel is named (the Iran/US/Israel conflict; Houthi Red Sea interdiction). Independently, the IEA's *Oil Market Report – September 2026* records ICE Brent at ~$105 "at time of writing," **up $21/bbl since Aug 1**, with North Sea Dated spiking to **$113.48 on 2026-09-09**.
+
+**So the most recent qualifying event is 2026-09-11, which is the last trading day** (`state.market_calendar`: 09-11 `is_trading_day = true`; 09-12 and 09-13 are not sessions). **Zero trading days of quiet have elapsed against a requirement of 15.** The 15th trading day after 2026-09-11 is **2026-10-02**; the next scheduled scoring is **2026-10-01**, which is **14** trading days out. Hence the headline: the 2026-10-01 scoring is arithmetically incapable of de-escalating this axis, and any further qualifying event restarts the count from scratch.
+
+**Two honest limits on the above.** (a) This is a **W3 measurement offered as evidence, not a scoring act** — M1a owns the axis and must run the test itself under the rubric's rationale-recording duty. (b) The two 09-11/09-12 items rest on a **single source** (a newsletter recap); the sub-agent flagged a second, lower-quality source as consistent but it is not relied on. That single-sourcing does **not** change the verdict, because the 09-09/09-10 cluster is multiply sourced and is itself inside the 15-day window — leg (i) fails on the corroborated events alone, and the 09-11 pipeline strike only moves the earliest-possible exit date from 2026-09-30 to 2026-10-02, both of which are past 2026-10-01.
+
+### Leg (i)'s measurability gap — unchanged, deliberately still not filed
+
+The gap last week recorded is real and stands: leg (i) has no warehouse source, so every evaluation of it is an off-warehouse research act, reproducible only by spending credits again. What this run adds is a sharper statement of it — the leg is **evaluable but not warehouse-derivable**, which is a different and more actionable finding than "unmeasurable."
+
+**Still not filed as a defect, and the reason is unchanged and still operative:** the rubric's rationale-recording duty (*"the date of the most recent qualifying event; the baseline / peak / current Brent triplet; which legs held"*) is exactly the mechanism that surfaces this, and **the 2026-10-01 M1a is still the first scoring bound by it** — that scoring has not happened yet. Filing now would pre-empt a mechanism the prior cycle correctly identified, and would re-file a finding a prior cycle consciously left unfiled with a named trigger. Recorded here for that scoring to inherit.
+
+### The re-risking limb — armed on two legs, blocked on the same third
 
 `state.rerisking_limb_status`, measured this run:
 
-| Strategy | Run start | Dwell (trading days) | leg (a) dwell ≥15 | leg (c) technical | leg (b) price | `sql_limbs_fired` |
+| Strategy | DNA run start | Dwell (trading days) | leg (a) dwell ≥15 | leg (c) technical | leg (b) price | `sql_limbs_fired` |
 |---|---|---|---|---|---|---|
-| A | 2026-04-22 | 94 (left-censored) | TRUE | TRUE | FALSE | **FALSE** |
-| B | 2026-08-05 | **22** | TRUE | TRUE | FALSE | **FALSE** |
-| D | 2026-08-05 | **22** | TRUE | TRUE | FALSE | **FALSE** |
-| E | 2026-09-03 | 1 | FALSE | TRUE | FALSE | **FALSE** |
+| A | 2026-04-22 | 98 (left-censored) | TRUE | TRUE | FALSE | **FALSE** |
+| B | 2026-08-05 | **26** | TRUE | TRUE | FALSE | **FALSE** |
+| D | 2026-08-05 | **26** | TRUE | TRUE | FALSE | **FALSE** |
+| E | 2026-09-03 | 5 | FALSE | TRUE | FALSE | **FALSE** |
 | C | — (not DNA) | — | FALSE | TRUE | FALSE | **FALSE** |
 
-**B and D clear the dwell leg with seven days to spare** (22 against a 15-day threshold), and the technical leg passes for all five. **Leg (b) — the identical price arithmetic as rubric leg (ii) — is the sole binding constraint fleet-wide.** So the entire out-of-cycle re-risking path now hangs on one number: Brent at or below 90.18.
+A, B and D clear the dwell leg comfortably, and the technical leg passes for all five. **Leg (b) — the identical price arithmetic as rubric leg (ii) — remains the sole binding constraint fleet-wide.** Consistent with that, `events.queue_events` has still never held a `PENDING_REGIME_REFRESH` row, and M1R has found zero open items on every fire.
 
-Consistent with that, `events.queue_events` has **never held a `PENDING_REGIME_REFRESH` row**, and **M1R ran for the first time on 2026-09-05** (a registration-day artifact, fired Saturday because its trigger was created that day), found zero open items, and correctly no-opped with `rows_written=0`.
+### The technical plane is still passing — but its margin narrowed on all three axes at once
 
-**FINDING: `acute` is not merely still defensible — the evidence for it has strengthened materially since the last review, and the published exit is further away than it was a week ago.** No case for a regime change exists on the measured evidence, and none is made here. **No alert is raised on this**, and none is owed: W3 does not score the axis, the owning re-score paths (M1a 2026-10-01, or M1R on a limb firing) read this same series independently, and M1a is strategy-blind by hard file boundary so a finding framed around which strategies are held out must not be routed to it.
+This is new this week and it matters, because leg (c) and two strategies' own router rules read the same three values. From `events.regime_events`:
+
+| Axis | 09-04 | 09-08 | 09-09 | 09-10 |
+|---|---|---|---|---|
+| `VIX_REGIME` | **LOW** 14.53 | **NORMAL** 15.72 | NORMAL 16.46 | NORMAL **17.84** |
+| `SPY_TREND` | UP 770.19 | UP 765.96 | UP 762.40 | **NEUTRAL** 757.83 |
+| `EQUITY_BREADTH` | HEALTHY 64.01 | HEALTHY 60.63 | HEALTHY 56.85 | HEALTHY **54.67** |
+
+Two labelled state changes: **VIX_REGIME LOW → NORMAL** (09-08) and **SPY_TREND UP → NEUTRAL** (09-10, caused solely by SPY closing 0.4158 below its own 50d SMA; the 50d/200d relationship is unchanged and still strongly positive). Breadth held its HEALTHY label through four consecutive declining readings but now sits **4.67pp above the WEAK boundary** of 50.
+
+**Why this is decision-relevant rather than merely descriptive:**
+
+- **Leg (c)** requires `VIX ≠ HIGH AND SPY ≠ DOWN AND Breadth = HEALTHY`. All three still pass, but every one of them moved toward its failure boundary in the same week. If breadth breaks 50 or SPY turns DOWN, the re-risking limb loses leg (c) as well, and the book is blocked on two legs instead of one.
+- **Strategy E's own router rule** is the same conjunction (`SPY ≠ DOWN AND VIX ≠ HIGH AND Breadth = HEALTHY`), and **Strategy C's** is `SPY Trend ≠ DOWN`. SPY is now **NEUTRAL**, one step from DOWN. **A SPY_TREND flip to DOWN would close C — the only strategy currently permitted to trade at all.** That is the single most consequential technical threshold in the book right now, and it is 0.4158 points of SPY away from having already moved once.
+
+None of this is a regime call; M1a and M1b own the axes. It is recorded because the book's entire re-opening path, and its one open door, now sit close to thresholds that were comfortable a week ago.
+
+### The system's own allocator agrees, and that is corroboration worth naming
+
+The park allocator de-risked **twice** inside this window, unprompted by anything in this file: target risk-sleeve fraction 0 → 25% on 2026-09-08 (`c915970c`, MEDIUM 50) and 25% → 50% on 2026-09-10 (`a383d21d`, MEDIUM 55), rotating ~$3.78k of a ~$15.09k park from VOO into SGOV on the second step. One week ago the park was 100% VOO. The broker now shows **VOO 10.8278 / SGOV 74.8667**, roughly 50/50.
+
+That is an independent, mechanically-graded read of the same macro deterioration this section measures, produced by a different routine on different inputs. It does not change any W3 conclusion and the park is D1/D2/D2a's surface — but a shock reading that the capital allocator is independently acting on is stronger evidence than one only this file sees.
+
+**FINDING: `acute` is correct, both legs of the published exit now fail, and the exit is further away than at any point in the run.** No case for a regime change exists on the measured evidence, and none is made here. **No alert is raised and none is owed**: W3 does not score the axis; the owning re-score paths (M1a 2026-10-01, M1R on a limb firing) read this same series independently; and M1a is strategy-blind by hard file boundary, so a finding framed around which strategies are held out must not be routed to it.
 
 ---
 
-## CORRECTING THIS ROUTINE'S OWN PRIOR FILE — the price leg, and the method behind it
+## STRATEGY C — the only open door, and what the oil shock did to it
 
-Last week's file concluded that the price leg had *"largely mean-reverted"*, that Brent was *"~two-thirds retraced"*, and that the overlay's two legs *"now disagree."* Measured this week against the system's own anchors, **that reading has been overturned by the tape, and the way it was reached was fragile.**
+C has no open position, so steps 1–6 stay vacuous for it. But step 4 names C's implied-volatility regime explicitly, and it moved materially this week.
 
-**What was right, stated first.** Its individual price observations were accurate. Against the curated series now available: it reported Brent 88.29 for 2026-08-28 (actual close **88.10**, 0.2% off), and $78.17 for the 2026-07-08 pre-shock reference (actual close **78.02**, 0.2% off). Its $105 intraday peak for 07-23 is not contradicted by that day's **100.69** close. The data were not the problem.
+**What already happened, terminal and not to be re-opened.** `thesis-FOMC-C-20260908` was **drained NO-GO by D2 on 2026-09-08** — the fifth consecutive NO-GO in the C-FOMC series. Its grounds: the 2026-09-16 hike was priced near **56%**, genuinely two-sided for the first time; the decisive input (August CPI, due 2026-09-11) was unreleased, so any directional view was *"a bet on an unpublished print"*; and SPY IV/HV stood at **1.235** — rich, arguing for *selling* vol, while every structure affordable inside a $23.64 budget was a long-premium debit spread. Executability itself **passed** (5 verticals buildable).
 
-**What was fragile.** It chose its own anchors — a single-day pre-shock close and a July *intraday* high — and computed a retracement fraction off them. The system's rubric uses a 43-observation median baseline (84.73), closes only, and a peak measured from the acute-run start (2026-08-01, so the July high is outside the window entirely). Different anchors, different arithmetic, and a conclusion that could not be checked against anything the system itself holds.
+**What has changed since that drain, and it hardens the NO-GO rather than softening it.** The oil shock transmitted straight into the rates complex:
 
-**What the honest retrospective shows — and it is not a simple "wrong."** Run the rubric's own arithmetic on the data that file had (peak-through-08-28 = 94.39, elevation 9.66, trigger 89.56, Brent 88.10): the price leg **was** retraced on 2026-08-28, by 1.46. Its qualitative verdict was defensible, and arguably correct, on the day. **It was then reversed within three sessions**, and the file offered no way for a reader to see how narrow the margin was, because the margin was never computed against the binding threshold.
+- The 10-year Treasury reached its highest intraday level since October 2023, **above 4.9%** (WSJ, 2026-09-10).
+- Fed-hike odds for the 09-15/16 FOMC moved from **~60%** (CME FedWatch via Barron's, 09-08) to **~75%** after the August PPI print (Investing.com), which showed diesel **+24.1% m/m** and transportation & warehousing **+2.3%**.
 
-**Fair to that run: the substrate did not exist.** `bigquery/217_brent_signal_feed.sql` landed **2026-09-04** and the rubric on **2026-09-05** — five and six days after it ran. Web-sourcing was its only option, and the same is true of M1a's 2026-09-01 scoring. Neither is a lapse.
+So the meeting that was "two-sided for the first time" at ~56% has moved decisively toward a hike. For C that raises event-implied vol into the meeting — i.e. raises the cost of exactly the long-premium structures its $23.64 budget was already unable to carry economically. **The drained NO-GO's reasoning is strengthened by subsequent evidence, not undermined by it.** W1 reports today that C's $23.64 NAV explains the drain streak, and that a second FOMC now sits in the window unenterable on tenor.
 
-**But the pattern across three cycles is W3's own, and it is the fixable part.** Three consecutive W3 cycles have propagated a quantitative claim taken from prose rather than from the governing surface: the treasury-rate misread (asserted 08-17, re-raised 08-23, refuted 08-23); this Brent retracement (08-30); and the E "≥95th-percentile anchor" question, re-affirmed as open on 08-30 **five days after the owner had dropped it**, in a file that cited the very revision series that closed it. The root cause is single and specific: **reasoning from this routine's own prior file instead of re-reading the governing spec or the warehouse series.** Both surfaces now exist. `Claude_Task_Plan.md`'s W3 section is amended in this run's commit to bind the next run to them — the same in-section self-correction W2 made to its own INDEX MODE clause this cycle.
+**W3 crafts nothing, enqueues nothing, and must not duplicate the terminal item.** D2 owns the C-FOMC lane. This is context for its next pass.
+
+**One sector read-through worth a line, because it cuts the other way.** XLE gained only **+0.3%** against Brent's ~+17.6% monthly move (Buttondown, 09-12), where energy equities typically run a beta near 1.5 to crude. The equity market is not pricing this crude move as persistent. Held at its true weight: that is one data point from one source, and it argues for humility about extrapolating the shock — not against the measured fact that the overlay's exit conditions fail today.
+
+---
+
+## CORRECTING THIS ROUTINE'S OWN PRIOR FILE — and a measured exoneration
+
+The MEASURE-FROM-THE-GOVERNING-SURFACE rule this routine wrote into its own spec last week worked. Three of its four checks came back clean, and the one discrepancy it surfaced turns out **not** to be a prior-run error at all.
+
+**1. The Brent 09-04 close: 95.55 last week, 96.28 now — a SERIES RESTATEMENT, not a misread.** Measured in the raw table, `events.signal_marks` holds **two** rows for `BZUSD` 2026-09-04:
+
+| close | `ingest_ts` | `row_uid` |
+|---|---|---|
+| 95.55 | 2026-09-04 | `b91369d6-8759-4f3d-8c14-56dec7b97f56` |
+| **96.28** | **2026-09-06 22:51 UTC** | `26508c7e-9a10-4cf9-9850-f02785d3a20a` |
+
+The curated view surfaces the later row. The restatement landed **13h20m after last week's W3 completed** (09:31:29 UTC). That run read 95.55 from the correct governing surface at the correct time; the surface itself moved afterwards. **The prior run is exonerated on this figure** — and per the rule, the claim is re-measured anyway rather than kept.
+
+**2. A mechanical consequence of (1) that is not obvious, and is the one thing filed this run.** Because `brent_peak` is a running maximum over a **revisable** series, a restatement moves the peak — and therefore the retrace trigger — **retroactively**. Applying the 96.28 restatement to last week's window raises that run's peak from 95.63 to 96.28 and its trigger from **90.18 to 90.51**. Neither reading changes the verdict (95.55 > 90.18 and 96.28 > 90.51 both fail), so nothing here is an incident. But the general property is real: `state.rerisking_limb_status` recomputes live every day off the current series, so a *downward* restatement of the peak could retroactively satisfy leg (ii) for a date already scored, with no record that the threshold moved. Filed as an `ops.alerts` info row — see FILED THIS RUN.
+
+**3. The E "≥95th-percentile divergence anchor" question: confirmed closed, third cycle running, and re-verified against the spec rather than the file.** `strategy/08_pre_mortems.md` has **no commit inside this window**; its current top revision for E is **rev 15 (2026-08-30)**, and rev 15 changed no entry criterion, exit rule, threshold, indicator or router rule — documentary route only. Rev 13 (2026-08-25, owner directive) is what dropped the percentile as an entry gate; `Strategy.md` is at **Rev 48** and its Strategy E section is **byte-unchanged in the window**. The percentile is still computed and recorded as `percentile_at_entry` and still drives pair *ranking*, but **it gates nothing**. Not re-raised.
+
+**4. Leg (i) "cannot be evaluated" → evaluated, and failed.** Recorded above as an upgrade of the prior claim, not a correction of an error: the prior statement about the *warehouse* was and is accurate.
+
+**No spec amendment beyond one clarifying clause is owed this cycle, and that restraint is deliberate.** Last cycle's amendment is working — it is what made this run re-read the pre-mortem instead of restating the percentile question, and what made it check `ingest_ts` instead of assuming the prior file was wrong. The single clause added to `Claude_Task_Plan.md` in this run's commit closes an ambiguity this run actually hit: the warehouse-first rule binds only where the warehouse **holds** the quantity for the date in question, so externally sourcing the one trading session the marks do not yet cover is required rather than forbidden — and a figure differing from the prior file is not by itself that file's error, because `ingest_ts` may explain it.
 
 ---
 
 ## COVERAGE STATED HONESTLY
 
-D1 ran and completed on **2026-08-30, 08-31, 09-01, 09-02 and 09-03** — five of five expected days. Verified **mechanically**, not by raw row count: `state.cadence_expected_history` returns **no row** with `expected AND in_service AND rows_logged = 0` for any date from 2026-08-28 through 2026-09-05. This is the check W1's own 2026-08-23 `cadence_outage` false positive existed for, and W1 ran it again this cycle against a fresh instance of the same claim.
+D1 ran and completed on **2026-09-06, 09-07, 09-08, 09-09 and 09-10** — five of five expected days (09-07 was Labor Day, and D1's own records for it read "ZERO US TRADING SESSIONS IN WINDOW"). Verified **mechanically**, not by raw row count: `state.cadence_expected_history` returns **no row** with `expected AND in_service AND rows_logged = 0` for any *completed* day from 2026-09-04 through 2026-09-13. The only rows matching that filter are dated **today**, for routines whose cadence expects them today and which have not fired yet — the day is not over, and that is not a miss. 09-11 and 09-12 correctly show `expected = FALSE` for the `daily_sun_thu` class.
 
-- **2026-09-04 (Friday) is a full trading session no internal routine has yet observed.** The daily tier is `daily_sun_thu`; Friday is structurally outside it. Today's D1 Sunday scan covers it, and has not fired yet — `Daily.md`'s marker is still **2026-09-03**. W1 and W2 both state the same and both decline to cover it early, correctly: doing so would duplicate D1's scan hours before it runs.
-- **With an empty in-scope book this changes no conclusion**, but this file claims no coverage it does not have. Note that the newest Brent print used above, 2026-09-04, *is* in the warehouse — the signal-marks ingest and D1's narrative scan are separate paths.
+- **2026-09-11 (Friday) is a full trading session no internal routine has observed.** `Daily.md`'s marker is **2026-09-10**; `events.daily_marks` / the curated signal series stop at 09-10 (`marks_due_through = 2026-09-10`). The daily tier is `daily_sun_thu`, so Friday is structurally outside it; today's D1 Sunday scan covers it and has not fired yet. W1 and W2 both landed earlier today and both state the same.
+- **Unlike last cycle, the gap is closed for the one quantity that mattered.** Brent's 09-11 close was **externally sourced at ~$104.61 (−2.81%)**, corroborated by two independent sources (PSU Connect; Buttondown *Fair Value*, which reports *"Brent at $104.61 is down 2.8% Friday but up 9.5% on the week and 17.6% on the month"*). **Taking that figure, leg (ii) still fails by 8.43** — so the unobserved session changes no conclusion, and this file does not have to rest on "we cannot see Friday." A third source's claim of "~$108 on the 12th" is **not established** and is discarded: ICE Brent does not trade Saturdays.
+- VIX likewise pulled back on the Friday (to **15.84**, −11.2% intraday, per the same recap), which does not move the NORMAL label.
 
 ---
 
 ## OBSERVED, NOT ADJUDICATED — recorded so a future run does not re-flag them
 
-- **96.4% of book NAV is stranded, and this is already fully instrumented — do NOT re-file it.** `state.regime_capital_sync_pending` returns exactly one row: `SWEEP / E / 15368.39 / counterparty NULL / blocked_no_recipient TRUE / blocked_reason 'no_eligible_recipient'`. Nothing moves, which is the safe outcome. AR_orc raised `capital_enablement_single_strategy` on 09-03; it was measured and closed on 09-04 by `bigquery/215` (superseded by `bigquery/223`), which added the blocked signal, registered `regime_sweep_blocked` in `ops.alert_policy` and wired a D2a handler. The commit states the residual plainly: *"The right answer to 'the whole book routes behind one narrowly-scoped strategy' is an owner decision about the roster."* Owned, signalled, and not W3's to decide.
-- **`state.trading_enabled = FALSE`** with `halt_reason` *"state.freshness marks_fresh/engine_fresh not both TRUE"*. `state.staging_halt_disposition` reads `halt_is_prerefresh_artifact = TRUE`, `gate_alert_action = 'defer_to_craft_site'`, `mechanical_enabled = TRUE`, `marks_current`/`engine_current` both TRUE — the documented pre-refresh artifact (marks cover 09-03; 09-04 has had no D2a slot). **W3 crafts no orders, so per the PRE-REFRESH HALT DISPOSITION rule it raises nothing at all.** `state.system_health.all_green = TRUE`, zero open criticals.
-- **Three queue items two days past `due_date` (2026-09-04), none a defect.** `premortem-C-2026-a3` (attacker-complete, awaiting AR_orc) and the paired `parkswitch-SGOV-sell-20260903` / `parkswitch-VOO-buy-20260903` DAY orders (awaiting D2a). All three came due on the Friday nobody runs; AR_orc and D2a both fire tonight. This is the documented Thu→Sun catch-up shape.
-- **The park ledger is behind the broker, expectedly.** IBKR shows the 09-03 SGOV→VOO switch fully filled (VOO 21.4714, SGOV 0) while both legs still read `pending` in `state.open_orders`. Same Fri/Sat mechanism; D2a's next reconciliation is tonight. Flagged only because a broker-vs-ledger mismatch is otherwise exactly the shape that looks alarming to a fresh reader. The park is D1/D2/D2a's surface, not W3's.
-- **One open `warning`: `ci_finding` (2026-09-06)**, listing six unresolved `live-sql-parity` guard findings including `state.regime_capital_sync_pending` — consistent with the 09-04 apply of `bigquery/215`/`223`. Already on the board with an owner; not re-filed, and not W3's surface.
-- **M1a's 2026-09-01 Brent figures do not reconcile with the curated series, and this is a pre-substrate artifact, not a live defect.** Its rationale records *"Brent ranged 83.55 to 93.73... and closed at 93.03, ABOVE the July close."* The curated series gives August closes ranging 79.36–94.39 with 08-31 at **90.49** against a 07-31 close of **87.93**. **The directional claim is correct** (90.49 > 87.93); the specific levels are not the series the rubric now pins. M1a scored on 09-01, three days before `bigquery/217` landed, so it had no in-warehouse series either. From 2026-09-05 M1a's read grant includes `BZUSD`, and the rubric's rationale-recording duty binds from the 2026-10-01 scoring. **No alert; nothing to fix retroactively.**
-- **A's `analytics.strategy_nav` row is entirely zero including `deposits`**, unlike its four adopted siblings. Consistent with A having been capital-disabled and swept (`outstanding_debt` $3,888.45 records what left), so this is very likely the sweep ledger working as designed rather than a missing allocation. Not measured to a conclusion this run and not escalated — recorded so it is not mistaken for a fresh anomaly.
+- **The C nomadic-borrow defect is ALREADY OPEN on the board — do NOT re-file it.** Re-measured this run: `analytics.fn_nomadic_capital_restore_plan('C', 500.0)` returns **zero rows**; only C is `capital_enabled` and C is itself nomadic and excluded as its own donor, so the donor set is empty. **The loop from last week's filing worked and is documented:** W3's info row `e2eb2990` was drained by W5, routed to queue item `nomadic-borrow-recheck-C-20260906`, and closed by D2 on 2026-09-07 with disposition **"CONDITION CONFIRMED PERSISTENT"** (zero rows at all six sizes 100–5000; donor capacity $0.00). D2 then raised the durable form itself — **`6f04ff75-f81e-4736-9e5a-7a688b4a5fda`, `nomadic_borrow_blocked_unsignalled`, open since 2026-09-07T23:29:51** — noting the asymmetry against the sweep rail has *widened* now that D2a has a `nomadic_sweep_blocked` close path. Owned, signalled, persistent; re-filing would duplicate.
+- **The stale funding text W3 flagged last week was fixed within a day.** D2 re-emitted `thesis-FOMC-C-20260908` on 2026-09-06T23:21:50 *specifically* to correct the stale assertion that C could borrow an uncapped amount, then drained it 09-08. The finding W3 filed as an info row reached a consumer and changed a live queue item's text before it was acted on.
+- **`otr-router-shock-override-2026` was drained HOLD by AR_orc on 2026-09-09**, as last week's file predicted it would be. The HOLD explicitly *"does NOT discharge `resolves_when` — the design question is recorded as UNDECIDED, not affirmed"*, with no binding effect (Strategy.md unchanged, no capital moved), and AR_orc filed its own follow-up notice `otr_hold_verdict_has_no_resurfacing_path`. Clean loop; **W3 owes nothing here and specifically does not re-file the general "should a uniform shock override catch a market-neutral strategy" question.**
+- **`premortem-C-2026-a3` cycle 18 closed SUFFICIENT** on 2026-09-06T23:22:32 (zero Tier-1 findings survived verification; the cycle-5 soft cap fired acceptance). No new cycle open. Resolved.
+- **96.4% of book NAV is stranded behind E, and this is fully instrumented — do NOT re-file it.** `state.regime_capital_sync_pending` still returns exactly one row: `SWEEP / E / 15368.39 / counterparty NULL / blocked_no_recipient TRUE / blocked_reason 'no_eligible_recipient'`. Nothing moves, which is the safe outcome. D2a's `regime_sweep_blocked` warning `b40cb3e6` (2026-09-06) is open and owned. The residual is an owner decision about the roster, not W3's.
+- **The park ledger is behind the broker again, same documented shape.** Both 09-10 legs (`park-derisk-buy-SGOV-20260910`, `park-derisk-sell-VOO-20260910`) still read `pending` in `state.open_orders` with `entry_window_close = 2026-09-11`, now passed, and the scheduled staging-cap check has two open `staged_order_awaiting_confirm` warnings (`af617125`, `6931b175`, both 2026-09-11 05:25). **MEASURED:** the broker holds SGOV 74.8667 and VOO 10.8278. **INFERRED, and flagged as inference:** that is consistent with *both* graded rounds having filled (2 × the staged 37.4492 SGOV = 74.8984, against 74.8667 actual), which would make this a reconciliation lag rather than a lost order — but W3 did not match fills to orders and does not adjudicate it. D2a owns Step 0 reconciliation; `bigquery/233`/`234` landed inside this window precisely to surface dead-on-arrival windows. Flagged only because a broker-vs-ledger mismatch is otherwise exactly the shape that looks alarming to a fresh reader.
+- **A related sweep expired unfilled:** `sweep-VOO-20260908` expired on 2026-09-09 with its conservative default applied (`44bc4e49`, MECHANICAL). D1/D2's surface.
+- **W5's two open warnings are consistent with the park churn and are owned.** `wash_sale_exposure` (VOO, ~$107.73 disallowed, `37263083`) and `regime_restore_shortfall` ($13,291.72 debt against $0 donor capacity, `be27644c`), both 2026-09-07. The wash-sale exposure is the arithmetic consequence of rotating VOO out on 09-08/09-10 having rotated it *in* on 09-03; W5 owns it.
+- **`state.trading_enabled = FALSE`** with `halt_reason` *"state.freshness marks_fresh/engine_fresh not both TRUE"*. `state.staging_halt_disposition` reads `halt_is_prerefresh_artifact = TRUE`, `gate_alert_action = 'defer_to_craft_site'`, `mechanical_enabled = TRUE`, `marks_current`/`engine_current` both TRUE — the documented pre-refresh artifact (marks cover 09-10 = `marks_due_through`; `last_trading_day` is 09-11, which no D2a slot has yet had the chance to ingest). **W3 crafts no orders, so per the PRE-REFRESH HALT DISPOSITION rule it raises nothing at all.** `state.system_health.all_green = TRUE`, **zero open criticals**, 54 open alerts (49 info, 5 warning — all five named above or already owned).
+- **A provider-token case drift in `ops.web_calls`**, observed while tallying this run's own telemetry: D2a wrote `provider = 'FMP'` on 2026-09-08 where every other row uses canonical lowercase `fmp`. `bigquery/203` folds case on read in all three consuming views, so this is already repaired downstream and no counter is wrong today. Recorded, not filed — D2a's surface, and the existing normalisation covers it.
+- **A's `analytics.strategy_nav` row is entirely zero including `deposits`**, unlike its siblings — consistent with A having been capital-disabled and swept. Unchanged from last week, not measured to a conclusion this run, not escalated.
 
 ---
 
 ## FILED THIS RUN — one finding, on a surface W3 does not own
 
-**Strategy C — the only strategy the router permits to trade — has $23.64 and a borrow rail whose donor set is empty, and nothing anywhere says so.**
+**The shock rubric's Brent peak — and therefore its retrace trigger — is computed off a series that can be restated after the fact, so leg (ii)'s verdict for a past date is not stable.**
 
-Measured directly this session, not relayed:
+Measured directly this session, not relayed: `events.signal_marks` holds two `BZUSD` rows for 2026-09-04 — 95.55 ingested 2026-09-04 and **96.28 ingested 2026-09-06 22:51 UTC** (`row_uid` `26508c7e-…`), the later of which the curated view surfaces. Because `brent_peak` is a running maximum and `state.rerisking_limb_status` recomputes live each day, that restatement silently raised last week's effective trigger from 90.18 to 90.51. A restatement in the other direction could retroactively *satisfy* leg (ii) for a date already scored — and de-escalation is **REQUIRED**, not discretionary, once both legs hold.
 
-- `analytics.fn_nomadic_capital_restore_plan('C', 500.0)` returns **zero rows**. C is nomadic and by design *"holds NO exclusive standing capital"* (`Operating_Protocols.md` §16), borrowing pro-rata at trade time from donors matching `capital_enabled AND != C AND NOT nomadic AND available_funds > 0`.
-- `state.strategy_capital_enablement`: **only C is `capital_enabled`**; A, B, D and E are all `capital_disabled` as of 2026-09-04. C is itself nomadic and excluded as its own donor, so **the donor set is empty and the function returns an empty result set for any amount.**
-- C's own residual is **$23.64**, unswept only because it sits below the $25 de-minimis *movement* floor (a minimum transfer size, not a reserve, and not an entry gate).
+The rubric's rationale-recording duty pins the triplet as recorded *at scoring time*, which mitigates the audit problem but does not make the SQL limb's verdict stable between scorings. **Nothing is wrong today**: neither reading changed any verdict, past or present.
 
-**This is safe but silent, and the silence is the defect.** §16 already requires the caller to *"refuse to craft on `is_fully_funded = FALSE`, not merely on an empty plan"* — so D2 should decline rather than mis-size, and no capital is at risk. But this is the exact asymmetry `bigquery/215` closed on the regime rail four days ago, in the opposite direction: an empty view is indistinguishable from the healthy steady state. `ops.alert_policy` registers `nomadic_sweep_blocked` and `regime_sweep_blocked` — **there is no borrow-side category at all.**
+Filed per the OUT-OF-SCOPE FINDINGS rule as an `ops.alerts` **`info`** row, `source='W3'`, category `shock_rubric_brent_peak_revisable`, naming the surface (`strategy/09_regime_scoring_strategy_blind_monthly.md` §Shock / overlay grading rubric, plus `bigquery/224_rerisking_limb_status.sql`) and the nearest owning routine (M1a). **Venue consumer verified, not assumed:** W5's SPEC-DEFECT NOTICE INTAKE demonstrably drained W3's own info row inside this very window (`e2eb2990` → `nomadic-borrow-recheck-C-20260906` → D2, 2026-09-06/07). The finding is framed purely around series revisability and peak arithmetic, with no reference to which strategies are held out, so it does not collide with M1a's strategy-blind file boundary.
 
-**And there is a dated, concrete instance two days out.** The live queue item `thesis-FOMC-C-20260908` (due **2026-09-08**, FOMC 2026-09-16) carries, in its own context, a measurement asserting the opposite: *"C can now borrow an UNCAPPED amount at order-craft time (`fn_nomadic_capital_restore_plan(C, 5000)` returns donor E, donor_capacity 15309.94, is_fully_funded TRUE)."* That was true when written on 2026-08-16. **E went `capital_disabled` on 2026-09-04 and nothing has revisited the item since.** D2 drains it in two days against text that points the wrong way. §16's live re-check should catch it; the item's own note should not have to be caught.
-
-Filed per the OUT-OF-SCOPE FINDINGS rule as an `ops.alerts` **`info`** row, `source='W3'`, category `nomadic_borrow_blocked_unsignalled`, naming the surface and the nearest owning routine — the venue W5's SPEC-DEFECT NOTICE INTAKE drains. **What W3 did NOT do, stated explicitly:** it did not edit the queue item, did not touch the capital rail or any `bigquery/*.sql`, did not craft, block or size anything, and did not decide whether C should be funded. Those are D2's, D2a's and the owner's calls.
+**What W3 did NOT do, stated explicitly:** it did not score or re-score any regime axis, did not touch `bigquery/224` or the rubric file, did not edit a queue item, did not craft, block or size anything, did not re-file the three findings already open (`nomadic_borrow_blocked_unsignalled`, `regime_sweep_blocked`, the leg-(i) measurability gap), and did not decide whether C should be funded.
 
 ---
 
@@ -200,8 +258,8 @@ Stated rather than omitted, so "missing" is never mistaken for "skipped."
 1. **Current thesis status** — no thesis in scope. Vacuous.
 2. **Competitive landscape** — no position whose peers matter. Vacuous.
 3. **Fundamental developments** — no position to accrue evidence against. Vacuous.
-4. **Sector and macro context** — the only step with in-scope content, discharged in full by the shock-overlay measurement above.
-5. **Thesis-invalidation signals** — no criteria live. Vacuous. (D1 covered the D book's criteria on every scanned day; out of scope.)
+4. **Sector and macro context** — the only step with in-scope content, discharged in full by the shock-overlay measurement, the technical-plane narrowing, and the Strategy C implied-vol section above.
+5. **Thesis-invalidation signals** — no criteria live. Vacuous. (D1 covered the D book's criteria on every scanned day — "12 open tranches evaluated, 0 flagged" on each of 09-06 through 09-10; out of scope here.)
 6. **Time-to-thesis-resolution** — no resolution window open. Vacuous. Per spec W3 checks no convergence targets, time-exit dates or option-expiry mechanics in any case: D1's connector sweep is the sole detector, D2 the sole converter.
 
 ---
@@ -210,7 +268,7 @@ Stated rather than omitted, so "missing" is never mistaken for "skipped."
 
 - **No `WEEKLY-THESIS-ACTION` flag.** No hold, no weekly-thesis-action, no further-research recommendation — there is no open in-scope position to carry one.
 - **Zero queue-convertible items.** No research-deferral checkpoint, no thesis action for D2 to revalidate.
-- **Cross-strategy deconfliction is vacuous** with zero open in-scope positions. Noted only for shape: GOOGL and GEV appear on W1's Strategy-A shortlist while both are open Strategy D positions — not a conflict (A has no positions and is double-blocked), and A and D are separate mandates that may hold the same name.
-- **The C FOMC thesis is already enqueued** as `thesis-FOMC-C-20260908` and **must not be duplicated** — W1 states this too, and the 2026-08-30 W4 run handled it correctly by matching rather than minting.
+- **Cross-strategy deconfliction is vacuous** with zero open in-scope positions. Noted only for shape: names on W1's A-queue overlap open Strategy D tranches (GOOGL, GEV, AMZN, TSM among them) — not a conflict, since A has no positions and is double-blocked, and A and D are separate mandates permitted to hold the same name.
+- **The C FOMC thesis is TERMINAL, not pending.** `thesis-FOMC-C-20260908` was drained NO-GO on 2026-09-08 — unlike last cycle, there is no live C item to avoid duplicating. Any new C candidate is W1's to shortlist and W4's §D to enqueue on its own terms, under C's `SPY Trend ≠ DOWN` router rule, which is now one step from failing.
 - **The shock-overlay measurement is evidence, not a referral.** W4 need not convert it and **must not route it to M1a** (blinding).
-- **One `ops.alerts` info row was raised by this run** (`nomadic_borrow_blocked_unsignalled`). It is a spec-defect notice for W5's intake, not a W4 conversion.
+- **One `ops.alerts` info row was raised by this run** (`shock_rubric_brent_peak_revisable`). It is a spec-defect notice for W5's intake, not a W4 conversion.
