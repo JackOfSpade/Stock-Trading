@@ -348,7 +348,13 @@ FROM `stock-trading-498512.state.staging_halt_disposition`;
     section contains no alert read at all.
   - **VENUE CHOICE.** Prefer `events.queue_events` when a lane with a real drainer fits the finding
     (`PENDING_ANALYSIS`→D2, `PENDING_REVIEW`→AR_att/AR_orc, `PENDING_DRAFT`→SL2, `PENDING_ROSTER`→SL5) — that venue
-    has both drainers and a mechanical consumer-reality check. For a SPEC/DESIGN defect on a surface you do not own,
+    has both drainers and a mechanical consumer-reality check. **THAT LANE→DRAINER MAP IS VERIFIED AT LANE
+    GRANULARITY ONLY, SO CHECK THE DRAINER'S OWN PREDICATE BEFORE USING IT (added 2026-09-13, AR_att):**
+    `PENDING_REVIEW`'s drainers act only on a row at `status='pending'` carrying a `payload.review_type` from the
+    eight-value enum in §"Pending_Adversarial_Reviews.md — queue file schema", so a finding filed there at any other
+    status or with no `review_type` reaches no drainer at all — measured on four such rows 2026-08-23..25, closed by
+    their own owners rather than by the lane (AR_att's RESIDUAL SWEEP now names them instead of passing over them in
+    silence). For a SPEC/DESIGN defect on a surface you do not own,
     no such lane exists: use an `ops.alerts` **`info`** row, which W5's SPEC-DEFECT NOTICE INTAKE now drains.
     Format, matching existing house practice: `severity='info'`, `source` = the DISCOVERING routine (never the
     owner), `category` = a snake_case noun phrase naming the defect class, and a message opening
