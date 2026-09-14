@@ -50,6 +50,20 @@
 -- NO registry row needed: this procedure is not `sp_sq_`-prefixed and is not a scheduled query; it is
 -- CALLed by OPS1. Mirrors 151's own header note to the same effect.
 
+-- SUPERSEDED LIVE by bigquery/239_connector_tool_drift_decorrelate_staleness_guard.sql — current
+-- single source of truth for this object. Kept here, unmodified, for DR-rebuild apply-in-order
+-- reference only. DO NOT re-apply this CREATE statement live in isolation.
+--
+-- WHY, IN ONE LINE: the block (c) guard below is a CORRELATED subquery against
+-- state.connector_tool_inventory_stale, and BigQuery rejects it AT CALL TIME with "Correlated
+-- subqueries that reference other tables are not supported unless they can be de-correlated". The
+-- CREATE succeeded and CI passed (a dry-run validates the CREATE, never a CALL), so this landed green
+-- and then failed on the first run that actually CALLed it — OPS1 2026-09-14 — taking the whole
+-- TOOL-INVENTORY DRIFT CHECK down with it. 239 keeps this file's per-connector intent and its 'ALL'
+-- sentinel reasoning verbatim, and only changes HOW the guard is evaluated (script locals + an outer
+-- IF, instead of a correlated NOT EXISTS). Note for anyone re-deriving the fix: De Morgan does NOT
+-- work — splitting the OR into two NOT EXISTS clauses was applied and re-called on 2026-09-14 and
+-- failed identically. The correlation is the problem, not the disjunction.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_raise_connector_tool_drift`(in_source STRING)
 BEGIN
   DECLARE latest_run_date DATE;
