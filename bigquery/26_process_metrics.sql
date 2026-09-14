@@ -84,6 +84,11 @@ FULL OUTER JOIN opened o USING (strategy);
 -- tally reset to ~zero on every M5 run and could never accumulate enough evidence to catch a
 -- persistently biased forecaster. Now reads the all-vintages view -- append-only, so the tally only
 -- grows across M5 runs, same fail-closed min_n_met>=8 floor as before.
+--
+-- SUPERSEDED LIVE by bigquery/239_process_scorecard_above_band_coverage.sql (2026-09-14) — adds
+-- pct_above_band alongside the existing pct_below_band (alert 8e8747ed-c8b0-4e87-8d4c-79c23bee765f);
+-- current single source of truth for this object. Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.forecast_bias` AS
 SELECT
   strategy,
@@ -97,6 +102,12 @@ FROM `stock-trading-498512.analytics.twr_forecast_vs_actual_all_vintages`
 GROUP BY strategy;
 
 -- ===== analytics.process_scorecard — one-row-per-strategy rollup for the weekly/monthly read =====
+--
+-- SUPERSEDED LIVE by bigquery/239_process_scorecard_above_band_coverage.sql (2026-09-14) — adds
+-- forecast_pct_above_band alongside the existing forecast_pct_below_band (alert
+-- 8e8747ed-c8b0-4e87-8d4c-79c23bee765f); current single source of truth for this object. Kept here,
+-- unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement
+-- live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.process_scorecard` AS
 SELECT
   s AS strategy,
