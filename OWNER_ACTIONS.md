@@ -634,6 +634,55 @@ headless-RemoteTrigger platform gap raises its actionable "please re-run X" remi
 `ops.sp_raise_alert_once` — **a BigQuery write**, so during a BigQuery outage OPS0 has no channel at all
 in which to request a manual re-run. The fallback for one outage routes through the other.
 
+**RECURRED AGAIN 2026-09-14 (Mon) — third occurrence, and the first with a TIGHT expiry bound.**
+Recorded by the M1R Out-of-cycle Regime Re-score slot (07:11 MT), which halted at pre-flight; the OPS1
+Morning Connector Liveness Probe had already hit the same wall at 06:41 MT and raised the calendar event.
+The 08-23 occurrence above did resolve — the fleet has run normally since, with W5 landing its 2026-09-13
+cycle at 05:45:54 UTC on 09-14 — but this item was never flipped to `[DONE]`, so this is annotated here
+rather than duplicated by a competing entry, on the same reasoning the 08-23 annotation gives.
+
+- **Failure shape.** OPS1's probe reports the Google-Cloud-BigQuery MCP server at
+  `installState = "needs_reconnect"`, `connected = false`, exposing **zero tools** — so the standard
+  pre-flight liveness read (`SELECT * FROM state.trading_day_today`) cannot be issued at all. The M1R slot
+  re-confirmed this independently: no BigQuery tool is present in the session, and the container has **no
+  fallback path** — `bq` and `gcloud` are absent, there are no application-default credentials, and
+  `google-cloud-bigquery` is not importable. Auth class, therefore NON-WAITABLE, so no retry ladder was run.
+- **Expiry window bounded to ~7 hours: 2026-09-14 05:46 – 12:41 UTC.** W5's commit at 05:45:54 UTC did
+  substantial BigQuery work before it pushed, so the grant was live then; it was dead at 12:41 UTC. This is
+  the tightest bound any occurrence has produced — worth recording against §15b's expiry-interval question.
+- **The notification channel is LIVE this time, unlike 08-23 — a second event is neither needed nor wanted.**
+  OPS1's event `8a1udr5d05uie8b6bb6khncmi8` (2026-09-14 08:50–09:20 `America/Toronto`) carries **email +
+  popup reminders at 0 min** and fired at 12:50 UTC, ~21 minutes before the M1R slot. M1R therefore created
+  no competing event and also did not append to that one: it had no perishable evidence to add, and
+  re-emitting the description to append risks the ~8,192-char silent-truncation defect (commit `18e4522`) on
+  the only live channel. **Close-out this time has ONE event to delete:** `8a1udr5d05uie8b6bb6khncmi8`.
+- **What the M1R slot lost — nothing that fails to self-heal.** M1R is queue-driven and no-ops unless a
+  `PENDING_REGIME_REFRESH` / `regime-refresh` item is open, and its STEP 1 gate is itself a BigQuery read, so
+  **whether an item was open is unknown and unknowable from this side.** If one is open it stays open — D2a's
+  dedup gate reads exactly that, so no limb firing is lost and nothing is double-counted; the drain simply
+  moves to the next Sun–Thu fire. Any unresolved `rerisking_limb_fired` alert stays unresolved for the same
+  reason. No `events.regime_events` row was written, no queue item closed, no `ops.run_log` row written, and
+  M1R stages no orders in any case. Its non-BigQuery inputs were verified present and intact
+  (`strategy/09_regime_scoring_strategy_blind_monthly.md`, `strategy/01_shared_regime_vocabulary.md`,
+  `Experiment_Parameters.md`, `AI_Trading_Foundation.md`), so nothing blocks the next fire but the grant.
+  Note that M1R is `monitor_class: queue_driven`, so today's miss surfaces through `state.stalled_runs` /
+  `state.queue_driven_silence_watch`, **not** `cadence_watch` — and since a healthy M1R no-op and a blocked
+  M1R differ only by the presence of a `completed` `ops.run_log` row, that missing row is the only signal
+  separating them.
+
+**One spec defect found and recorded but NOT fixed — route to W5's SPEC-DEFECT NOTICE INTAKE.** The
+§Observability connector pre-flight branch says to create the RE-AUTH calendar event "immediately" and
+attaches **no dedup rule**, so read literally, every routine firing during an outage creates its own event —
+five or more on a busy evening, each with its own reminders, which is the alarm-fatigue failure mode the rest
+of the alerting design works hard to avoid. Practice already does the right thing by analogy (the 08-23 D2a
+slot amended the existing event in place citing INCIDENT INHERITANCE; the OPS0 slot created a second event
+only to re-arm a spent notification), but that norm appears nowhere in the prose, and
+`sp_raise_alert_once`'s `(category, message)` dedup has no calendar counterpart. The sanctioned venue for
+this notice — an `ops.alerts` row at `severity='info'`, `source='M1R'`, category
+`reauth_calendar_event_has_no_dedup_rule` — is itself inside the outage, the same "the fallback for one
+outage routes through the other" gap the 08-23 entry records one paragraph above. It is written here so it
+survives D3's deletion of the calendar event; **file it as the info row once BigQuery returns.**
+
 ---
 
 # 2026-08-04 SISA roster-change notifications — `alert_emailer.gs` v4 → v5 + `bigquery/43` MERGE (sequenced)
