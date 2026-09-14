@@ -114,7 +114,9 @@ fractional CASH sleeve makes the scorecard grade a book that doesn't exist). Pha
 no policy row with 0<f<100 names CASH. Other menu instruments: reachable only via an explicit
 SPECIAL-SITUATIONS call (own rationale for why the VOO/SGOV pair is wrong, e.g. duration-rally thesis
 → IEF as defensive sleeve). Menu stays the allowlist rail. VOO↔VTI are treated as
-substantially-identical for wash-sale purposes pending owner ratification item 4.
+substantially-identical for wash-sale purposes — **owner ratification item 4 DISCHARGED 2026-09-14**
+(conservative reading adopted; the two contradicting standing sentences in `Operating_Protocols.md` and
+`PARK_ROUTER_DESIGN.md` were edited to agree), so this is now settled policy, not a pending default.
 
 ### 2.2 Axis state machine — `state.park_axis_daily` (new view)
 Six axes. Each has a **LEVEL** (defensive state, boolean, from primary series) and an **EVENT**
@@ -613,6 +615,16 @@ then build the FULL five-step v4. No intermediate variant is ever acceptable.**
    both. Recommendation: adopt the conservative reading and edit both standing sentences, noting the
    standing text has the more common tax reading (S&P-500 vs total-market are generally argued NOT
    substantially identical). One explicit owner decision.
+   **RATIFIED 2026-09-14 (interactive session, owner-delegated): CONSERVATIVE reading adopted.** Both
+   standing sentences are edited — `Operating_Protocols.md` §13 menu table row 4 and
+   `PARK_ROUTER_DESIGN.md`'s broad-equity menu row — to state that VTI is NOT a wash-sale alternate
+   for VOO. Decided on asymmetry of consequences rather than tax theory: the permissive reading risks
+   an unreported disallowed loss on a filed return, while the conservative reading forgoes only a
+   dodge, since the exposure view is detection-and-reporting only and the IBKR 1099-B is authoritative
+   either way. §2.1's "pending owner ratification item 4" qualifier is now discharged; live behaviour
+   is unchanged because §2.1 already applied the conservative treatment. This ALSO leaves the
+   graded-ladder wash-sale row class intact by design, which is why W5's WASH-SALE EXPOSURE REVIEW
+   gained a $25 materiality floor on the same date rather than a source-side fix.
 5. **Two-sleeve book vs §11's "do not re-propose without new evidence."** Standing: *"Weighted
    multi-vehicle park — deferred option... Rebuilds park machinery and multiplies taps at $9.2k
    scale; AOR covers the blend."* New evidence: (i) the owner's proportional-sizing ask is the

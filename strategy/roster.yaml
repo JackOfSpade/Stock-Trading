@@ -66,10 +66,35 @@ rails:
   adoption_rate_window_days: 90  # rate LIMIT: at most ONE strategy reaches PROBE (live capital) per
                                  #   rolling 90 days / per calendar quarter (paper_readiness checks the
                                  #   most recent PROBE lifecycle timestamp).
-  min_shadow_trading_days: 20    # SHADOW -> PAPER floor: state.strategy_shadow_readiness.days_met
-                                 #   (bigquery/35_strategy_arsenal.sql). Added 2026-07-14 -- the view's
-                                 #   own comment already claimed this was "mirrored in roster.yaml"
-                                 #   before this entry existed (self-improvement audit finding).
+  min_shadow_trading_days: 20    # SHADOW -> PAPER floor (POLICY RECORD ONLY, NOT ENFORCED -- see
+                                 #   below). state.strategy_shadow_readiness.days_met currently reads
+                                 #   a bare literal `20` compiled into bigquery/60_shadow_stuck_cull.sql
+                                 #   (byte-identical in dbt/models/state/strategy_shadow_readiness.sql;
+                                 #   supersedes the bigquery/35/52 versions of this view), NOT this key
+                                 #   -- it reads no table, no config, and no roster value. This key is
+                                 #   absent from scripts/check_roster_consistency.py's RAIL_NAMES /
+                                 #   ROSTER_RAIL_KEY_TO_SQL_NAME (the lists that cross-check every OTHER
+                                 #   rail below against its SQL constant), so editing this value changes
+                                 #   nothing live and CI will not flag the disagreement (SL3 finding
+                                 #   roster_rail_declared_unenforced, discovered 2026-09-06, adjudicated
+                                 #   by W5 SPEC-DEFECT NOTICE INTAKE 2026-09-14, alert_id
+                                 #   05a27d22-f02a-4c69-b89c-2b21ec58b109). To actually move the SHADOW
+                                 #   floor, edit the literal in a NEW numbered bigquery/*.sql file (this
+                                 #   repo's apply-in-order DR convention -- landed files are never
+                                 #   rewritten) and update this comment; wiring a full CI cross-check
+                                 #   for it is a separate, not-yet-done follow-up (same deferral
+                                 #   bigquery/52_shadow_readiness_band.sql's header already recorded).
+  min_paper_trading_days: 60     # PAPER -> PROBE floor (POLICY RECORD ONLY, NOT ENFORCED; this key did
+                                 #   not exist before 2026-09-14 -- added closing the PAPER half of the
+                                 #   same SL3 finding above, which had NO policy mirror at all, not even
+                                 #   an unwired one). state.strategy_paper_readiness.days_met reads a
+                                 #   bare literal `60` compiled into bigquery/189_paper_stuck_completeness.sql
+                                 #   (2026-08-20 -- supersedes bigquery/35_strategy_arsenal.sql's copy of
+                                 #   this view; confirmed live via INFORMATION_SCHEMA.VIEWS 2026-09-14),
+                                 #   mirrored in dbt/models/state/strategy_paper_readiness.sql, NOT this
+                                 #   key. Same non-enforcement caveat as min_shadow_trading_days above:
+                                 #   absent from RAIL_NAMES / ROSTER_RAIL_KEY_TO_SQL_NAME, editing it
+                                 #   changes nothing live.
   cooldown_days:                 # per-edge cooldown stamps enforced by SL1/SL4 to prevent oscillation,
                                  #   churn, and relabeled-continuation (dead-strategy laundering); paired
                                  #   with the material-structural-difference + fresh-derivation restart tests.

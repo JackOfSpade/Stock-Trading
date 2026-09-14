@@ -87,6 +87,22 @@ not a semantic one -- deliberate, so it is near-zero false positive: a name that
 assumed to have been placed there on purpose, and the only failure mode this check flags is total
 ABSENCE, which is exactly what all six founding instances were.
 
+A ROUTINE-SECTION-SCOPED extension was considered for this gap (alert_id 8b1ac4c5, disposed
+2026-09-14) and explicitly REJECTED, not merely deferred. The alert's own payload assumed an opt-in
+per-writer/per-routine-section name-presence check (layered on top of this plan-wide one, reusing
+routine_bodies()) would have caught its motivating instance -- SL5 branch (1)'s unpinned SHADOW
+`events.strategy_lifecycle` write, fixed in commit d1d9098. Verified against the PRE-FIX text
+(`git show d1d9098^:Claude_Task_Plan.md`) that this is false: SL5's OWN section already named
+`strategy_code` and `to_state` at that time, via branch (2)'s literal seed-row `INSERT INTO
+events.strategy_lifecycle (event_ts, strategy_code, from_state, to_state, ...)` a few paragraphs
+below branch (1) -- while branch (1) itself named neither. A check scoped to the whole routine
+section would therefore have read SL5 as "columns present" throughout, reproducing this check's own
+PLAN-wide blind spot one level down. Real per-writer protection needs BRANCH-level scoping (which
+BRANCH's own text names the column), not routine-section-level -- a materially larger redesign this
+check's own filer already declined to attempt "from a registrar fire" given its 36-table CI blast
+radius. Do not land a `writers:`-list-on-`write_targets` mechanism at routine-section granularity:
+it would look like protection without providing any.
+
 `write_targets` is a curated list (see the YAML file's own header for the full methodology): unlike
 CHECK A's queue lanes, a CREATE TABLE statement carries no machine-readable "who writes this" fact,
 so there is no independent source to diff against. Tables written ONLY through a stored procedure
