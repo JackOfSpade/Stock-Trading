@@ -482,8 +482,33 @@ cross_cutting_guards:
       alerting if the expected evaluation is missing — the same pattern ops.heartbeat already uses
       for the Apps Scripts (bigquery/16_automation_health.sql). LIVE for the strategy_arsenal loop (rev
       2026-07-10 — Strategy Arsenal autonomy conversion): SL1 (quarterly), SL4 (monthly), and SL3 (daily)
-      each write a decision_log 'evaluated, no change' heartbeat every firing, and a scheduled-query
-      dead-man's switch alerts if the expected quarterly / monthly / daily arsenal evaluation is missing.
+      each write a decision_log 'evaluated, no change' heartbeat every firing.
+      CORRECTED 2026-09-13 (W5 SPEC-DEFECT NOTICE INTAKE, adjudicating SL3's
+      arsenal_heartbeat_deadman_declared_absent notice — the claim removed here read "and a
+      scheduled-query dead-man's switch alerts if the expected quarterly / monthly / daily arsenal
+      evaluation is missing", and NO SUCH SWITCH EXISTS). Measured 2026-09-07 and re-verified
+      2026-09-13: the WRITE side is real and healthy (events.decision_log carries 45+ SL3-authored,
+      4 SL1-authored and 3 SL4-authored entry_type='arsenal-heartbeat' rows), but nothing READS it —
+      'arsenal-heartbeat' appears in SQL only inside backfill INSERTs and a header comment, the
+      category 'arsenal_heartbeat_missing' appears in no .sql file anywhere, and
+      sp_sq_cadence_check's constant_tuning_loop_heartbeat_missing leg reads ops.heartbeat over an
+      UNNEST of seven loop: ids that does NOT include loop:strategy_arsenal (ops.heartbeat holds 0
+      rows for that source). THE ACTUAL MECHANISM, stated so the declaration matches reality: the
+      loud failure mode — an SL routine not RUNNING — is covered by the run_log cadence dead-man
+      views (bigquery/12 + 24) and the stalled-run guard (bigquery/18), which do register SL1/SL3/SL4.
+      The residue — an SL routine that RUNS and logs no arsenal-heartbeat row — is covered by exactly
+      one thing: W5's weekly META-HEARTBEAT CHECK (Claude_Task_Plan.md, STRATEGY-ARSENAL LIFECYCLE
+      DIGEST + META-HEARTBEAT CHECK), which asserts SL1 within the quarter, SL3 within the trading
+      day and SL4 within the month, and raises arsenal_heartbeat_missing on a gap. That is a prose
+      assertion executed by a routine, not a scheduled query, and it is now described as such.
+      DO NOT "repair" this by adding loop:strategy_arsenal to that UNNEST: the leg reads
+      ops.heartbeat, which no SL routine writes, so the edit would convert a documentation overclaim
+      into a live false alarm firing daily against a healthy arsenal. A real mechanisation is a
+      BUILD — either a new leg reading events.decision_log keyed on entry_type AND the per-routine
+      title prefix (one entry_type is shared three ways, so entry_type alone cannot discriminate and
+      SL3's daily cadence would permanently satisfy the SL1 and SL4 legs), or an
+      ops.heartbeat(source='loop:strategy_arsenal') write added to SL1/SL3/SL4 first and the UNNEST
+      entry second. Neither is taken here; the overclaim is what was costing anything.
       SL1/SL3/SL4 also register in the cadence dead-man views (bigquery/12 + 24) and the stalled-run guard
       (bigquery/18); the queue_driven SL2/SL5 register in bigquery/18 stalled_runs only (NOT 12/24, per the
       queue_driven rule). LIVE for the four constant-tuning loops as of rev 2026-07-11 (ITEM 11): before

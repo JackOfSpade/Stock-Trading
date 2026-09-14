@@ -35,8 +35,11 @@ CREATE TABLE IF NOT EXISTS `stock-trading-498512.events.nogo_shadow` (
 OPTIONS(description='Shadow-tracks NO-GO decisions: logged at decision time (ticker + entry price), closed out by W5 after horizon_days with a forward price. analytics.nogo_counterfactual computes excess return vs SGOV over the same window. Makes the B taxonomy bidirectional (self-improvement audit S-3).');
 
 -- ===== analytics.nogo_counterfactual — per-shadow-row excess return vs SGOV =====
--- SUPERSEDED LIVE by bigquery/152_nogo_counterfactual_asof_and_primary_grouping.sql — current single
--- source of truth for this object. Both SGOV joins below are EXACT-date and return NULL whenever
+-- SUPERSEDED LIVE by bigquery/238_nogo_counterfactual_vehicle_aware.sql — current single
+-- source of truth for this object (it superseded bigquery/152_nogo_counterfactual_asof_and_primary_
+-- grouping.sql, which had superseded this definition; 152 is itself no longer canonical). The benchmark
+-- below is additionally the hardcoded `ticker = 'SGOV'` that stopped being the park on 2026-07-15 — see
+-- bigquery/238's header. Both SGOV joins below are also EXACT-date and return NULL whenever
 -- nogo_date / forward_price_date falls on a non-trading day, which silently unscored every closed-out
 -- shadow row (W5 2026-08-09; see bigquery/152's header). Kept here, unmodified, for DR-rebuild
 -- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.

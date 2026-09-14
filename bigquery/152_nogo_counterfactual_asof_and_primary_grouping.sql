@@ -67,6 +67,12 @@
 -- not touched here.
 
 -- ===== analytics.nogo_counterfactual — per-shadow-row excess return vs SGOV, as-of SGOV legs =====
+-- SUPERSEDED LIVE by bigquery/238_nogo_counterfactual_vehicle_aware.sql — current single source of truth
+-- for this object. The AS-OF repair below is correct and is carried forward unchanged by 238; what 238
+-- replaces is the BENCHMARK — `ticker = 'SGOV'` hardcodes a park vehicle the owner retired on 2026-07-15,
+-- and 238 scores against analytics.park_nav_daily.twr_index, the park's own realized vehicle- and
+-- blend-aware return. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.nogo_counterfactual` AS
 WITH sgov AS (
   SELECT mark_date, close FROM `stock-trading-498512.state.daily_marks_curated` WHERE ticker = 'SGOV'
@@ -125,6 +131,11 @@ LEFT JOIN sgov_fwd ON sgov_fwd.event_id = s.event_id;
 -- decorated-string grain). This is the view W5's taxonomy-demotion bullet should read for min_n_met: the
 -- >=5-closed-out floor is reachable here and is not at the raw grain. Still a raw tally, never a rate to
 -- act on at low N -- the N-floor caveat in the W5 prompt body governs unchanged.
+-- SUPERSEDED LIVE by bigquery/238_nogo_counterfactual_vehicle_aware.sql — current single source of truth
+-- for this object. The grain and the min_n floor below are unchanged by 238; 238 adds the legacy
+-- n_correct_vs_sgov / n_incorrect_vs_sgov columns and repoints n_correct / n_incorrect onto the
+-- park-benchmarked scoring. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.nogo_counterfactual_by_primary` AS
 SELECT
   COALESCE(sub_pattern_primary, '(unclassified)') AS sub_pattern_primary,

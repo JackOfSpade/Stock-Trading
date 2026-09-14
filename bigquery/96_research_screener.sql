@@ -27,7 +27,18 @@
 --     "routine": "D1"|"M2",
 --     "screen": "single-name-move"|"sector-move"|"pair-divergence",
 --     "population_rail": "<the Layer-1 net applied, e.g. 'move>=2% mktcap>=2B'>",
---     "surfaced_count": <int — Layer-1 population size>,
+--     "surfaced_count": <int — ARRAY_LENGTH(passed), i.e. how many names this screen SURFACED.
+--                        CORRECTED 2026-09-13 by W5 SPEC-DEFECT NOTICE INTAKE, adjudicating D1's
+--                        `screen_surfaced_count_header_contradicts_pin` notice. This line read
+--                        "Layer-1 population size" until now — the exact reading D1's 2026-08-30 pin
+--                        overturned (Claude_Task_Plan.md, closing W2's screen_surfaced_count_array_mismatch).
+--                        The Layer-1 arithmetic lives in fields.rail_tally (names clearing the mechanical
+--                        >=2% + >=$2B + identified-event rail) and fields.universe_measured (distinct names
+--                        actually measured), so each number is separately and honestly named rather than
+--                        this one key carrying two meanings. Comment-only correction: this block sits
+--                        OUTSIDE any CREATE statement, and the view below is itself superseded live by
+--                        bigquery/122_decision_correction_append_only.sql, so nothing about live SQL,
+--                        check_live_sql_parity.py or the dbt port changes>,
 --     "legacy_rule": "move>=5%"|"sector>=2%"|"corr>=0.5",
 --     "passed": [ {"name":"<TICKER | L/S pair | SECTOR>", "metric_pct": <number — the move %/corr>,
 --                  "conviction":"low|medium|high", "conviction_pct": <30|45|60|75>,

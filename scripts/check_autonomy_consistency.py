@@ -73,8 +73,22 @@ CADENCE_PROC = "sp_sq_cadence_check"
 
 # Loops intentionally NOT in cadence_check.sql's constant_tuning_loop_heartbeat_missing UNNEST list —
 # each for its own declared reason, not a silent gap:
-#   strategy_arsenal   — carries its OWN heartbeat + dead-man's switch elsewhere (SL1/SL3/SL4
-#                         heartbeats + cadence dead-man views in bigquery/12,18,24).
+#   strategy_arsenal   — SL1/SL3/SL4 each write an events.decision_log 'arsenal-heartbeat' row every
+#                         firing, and all three register in the run_log cadence dead-man views
+#                         (bigquery/12, 24) and the stalled-run guard (bigquery/18), which catch an SL
+#                         routine that fails to RUN. CORRECTED 2026-09-13 (W5, adjudicating SL3's
+#                         arsenal_heartbeat_deadman_declared_absent): this comment used to credit a
+#                         "dead-man's switch elsewhere" for the heartbeat itself, and there is none —
+#                         no SQL anywhere READS 'arsenal-heartbeat', and this loop is absent from
+#                         sp_sq_cadence_check's ops.heartbeat UNNEST (0 rows for loop:strategy_arsenal).
+#                         The residue — a routine that RUNS but writes no heartbeat row — is covered by
+#                         W5's weekly META-HEARTBEAT CHECK, a prose assertion in Claude_Task_Plan.md
+#                         that raises arsenal_heartbeat_missing on a gap. The exemption stands on THAT,
+#                         which is a real if agent-executed mechanism; do NOT discharge it by adding
+#                         loop:strategy_arsenal to the UNNEST, because no SL routine writes
+#                         ops.heartbeat for that source and the alarm would fire daily on a healthy
+#                         arsenal. See ops/autonomy_levels.yaml meta_monitoring_heartbeat for the full
+#                         measurement and the two shapes a genuine mechanisation could take.
 #   capital_allocator  — added 2026-07-19 (AI_DECISION_REDESIGN.md §3 Redesign A). Carries NO heartbeat
 #                         of its own, dedicated or otherwise: it is not a scheduled/cadence routine but
 #                         an inline step inside D2's STRATEGY TERMINATIONS handler, AR_orc's m2m-
