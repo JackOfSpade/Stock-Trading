@@ -1,183 +1,146 @@
--- 132_queue_driven_silence_watch.sql (2026-08-03)
--- Project: stock-trading-498512. Apply AFTER 128_b3_drift_promotion.sql.
+-- Per-day missed-fire detection for the queue_driven class (2026-09-15).
+-- Project: stock-trading-498512. Apply AFTER bigquery/230_run_outcome_notification.sql (the canonical
+-- body of ops.sp_sq_cadence_check this file carries forward) and bigquery/132_queue_driven_silence_watch.sql.
 --
--- Defines state.queue_driven_silence_watch (NEW) and SUPERSEDES bigquery/128's definition of
--- ops.sp_sq_cadence_check. 128's other objects are UNCHANGED and NOT re-issued here.
+-- THE INCIDENT. M1R logged nothing to ops.run_log for Monday 2026-09-14, a day inside its own
+-- Sun-Thu cron, and NOTHING in the system alerted. The miss surfaced only because M1R itself noticed
+-- on its next run and filed an info notice (ops.alerts 1e57700b). Every candidate detector was
+-- checked live and each is structurally blind to this:
+--   state.cadence_watch / state.cadence_period_watch  built on state.cadence_expected_today, which
+--       never receives a queue_driven row at all -- gen_12_region filters the class out before the
+--       UNNEST literal is written, so there is no predicate to relax.
+--   state.stalled_runs                                lists all five queue-driven routines (6h tier
+--       for AR_att/AR_orc/SL5/M1R, 18h for SL2) but keys on a started row with no terminal row. There
+--       was no started row.
+--   state.queue_driven_silence_watch                  read days_silent=2 against its threshold of 9.
+--   D3 queue_item_stale                               item-scoped, and silent on an empty queue.
 --
--- ============================ WHY ============================
--- MEASURED 2026-08-03. The fleet has 32 routines across 7 monitor_class values. Two nets watch them:
---   state.cadence_watch         -> daily_all, daily_trading
---   state.cadence_period_watch  -> weekly_sun, monthly_ftd, quarterly_ftd, annual_ftd
--- Both are built on state.cadence_expected_today, which EXCLUDES monitor_class = queue_driven by
--- construction (a queue-driven routine has no calendar expectation to miss). So the four
--- queue_driven routines -- AR_att, AR_orc, SL2, SL5 -- have never been watched by anything.
+-- THE ROOT CAUSE, AND THE CORRECTION THIS FILE RESTS ON. 1e57700b states that M1R did not fire. It
+-- DID fire. The RemoteTrigger run log -- readable from an interactive session, though not from a
+-- headless routine, which is why the notice could not establish this -- shows session
+-- cse_01EF21WXLxeGoSo7BfJNXbcJ created 2026-09-14T13:09:50Z with its last event at 13:20:59Z, an
+-- 11-minute run whose own final message records a clean HALT at connector pre-flight: the BigQuery
+-- MCP connector was de-authed for the third time (installState needs_reconnect, zero tools exposed,
+-- no bq/gcloud/ADC fallback in the container). It wrote no ops.run_log row BECAUSE RUN-LOGGING IS
+-- ITSELF A BIGQUERY WRITE. Independently corroborated: INFORMATION_SCHEMA.JOBS_BY_PROJECT for
+-- 2026-09-14 has exactly one job in the 13:00 UTC hour, from gh-ci-runner, and none from the
+-- connector identity, while the 14:00 hour has 185 -- bounding recovery to 13:21-14:00 UTC. The
+-- durable record is OWNER_ACTIONS.md BQ-1 and commit bd81376. ops.alerts 1e57700b is resolved on that
+-- correction and superseded by 3caa7e7b.
 --
--- The 2026-08-03 incident made that concrete: 8 triggers were found disabled, and for SL2 and SL5
--- the ONLY surfacing was D3's queue_item_stale alert -- a downstream symptom, whose own text had to
--- say "INFERRED (not verified against the routines console): SL2's queue-driven trigger has simply
--- not fired since 07-30 ... a silently-dead trigger here produces no other email signal." It was
--- right, and it had no way to prove it. This view is that proof.
+-- So the defect is NOT "a queue-driven trigger can silently fail to fire". It is that a routine whose
+-- slot falls inside an outage leaves NO durable BigQuery trace, and for this one class nothing
+-- retrospectively notices once BigQuery returns. The calendar classes get exactly that from
+-- missed_run; the queue_driven class had no equivalent.
 --
--- ============================ WHY NOT READ THE TRIGGER'S enabled FLAG ============================
--- The obvious design -- have a routine compare each live trigger's `enabled` against
--- ops/cadence.yaml's expected_trigger.enabled -- is IMPOSSIBLE inside a routine. OWNER_ACTIONS.md
--- item U records the platform caveat verbatim: "config correct, tool still absent headless."
--- RemoteTrigger is listed in every trigger's allowed_tools and is STILL not callable from a headless
--- routine session, which is why OPS0 STEP 3's weekly sweep and Q4 step E's quarterly audit -- both
--- written against `RemoteTrigger get` -- take their own tool-absent branch. This detector therefore
--- reads ONLY ops.run_log: it infers a dead trigger from ABSENCE OF WORK rather than by asking the
--- API why, which works headless and is agnostic to the cause (disabled, deleted, platform outage).
+-- WHY THIS IS SAFE NOW AND WAS NOT IN AUGUST. bigquery/132 header states a queue_driven routine "can
+-- legitimately go quiet" on a scheduled day, and sized its 9-day threshold on that premise. That was
+-- true of the July fleet. It is no longer true: these routines fire and log a completed run on every
+-- scheduled day regardless of queue content. BACKTEST over the complete run_log history of all five,
+-- expecting a completed row on every Denver day in their own day-set from each routine first row
+-- through 2026-09-14 -- 23 missing routine-days on 10 distinct dates, and EVERY ONE maps to a
+-- documented incident: 2026-07-07/08/09 (AR_att+AR_orc), 07-13, 07-16, 07-23 (all four, the 07-23/24
+-- connector outage), 07-30, 08-02 (all four, the eight-disabled-triggers incident bigquery/132 was
+-- itself written for), 08-23 (SL2+SL5, de-auth 2), 09-14 (M1R, de-auth 3). ZERO false positives. In
+-- September the four established routines are 40 for 40. Note that 132s own 9-day net would have
+-- caught NEITHER 08-02 nor 09-14.
 --
--- ============================ THRESHOLD ============================
--- 9 calendar days since the last status='completed' run (RE-DERIVED 2026-08-08 for the daily-tier
--- Fri/Sat consolidation onto Sunday, ops/cadence.yaml -- AR_att/AR_orc/SL2/SL5 stay monitor_class:
--- queue_driven, but their underlying triggers move onto the same Sun-Thu-only cron as the other 8
--- daily-tier routines). ORIGINAL derivation (2026-08-03), from the routines' OWN history
--- (ops.run_log, all completed runs, gap distribution between consecutive completed run_dates):
---   routine  completed_days  p50_gap  p90_gap  max_gap
---   AR_att   26              1        3        4
---   AR_orc   21              1        3        5
---   SL2      18              1        2        3
---   SL5      14              1        2        3
--- The old 6 was "one more than the worst observed gap" (AR_orc, 5) under a trigger that fired every
--- calendar day, so any single-day dry spell always resolved within 1-2 days and a 6-day silence was
--- unambiguously abnormal. Under Sun-Thu-only firing, a dry spell that used to resolve on a Friday (a
--- day these triggers still ran) now has to wait until the FOLLOWING Sunday before the trigger checks
--- the queue again -- e.g. a routine last completing Thursday with nothing due Fri/Sat/Sun/Mon (under
--- the OLD daily cron, at most a ~4-day quiet stretch) can now legitimately go quiet from Thursday to
--- the Sunday-after-next before its trigger even RUNS again: Thu -> (no fire Fri/Sat) -> Sun (checks,
--- nothing due) -> (no fire Fri/Sat) -> Sun (finally due) is a genuine ~10-day gap with the trigger
--- healthy throughout, pushing the worst-case NORMAL gap to roughly 7 calendar days (the old ~5-day
--- worst case plus the ~2 extra days Fri/Sat firing used to cover). 9 restores the same "one clear day
--- of margin over the worst normal case" relationship the original 6 had over its own worst case (5),
--- rather than leaving the threshold sized for a firing pattern these routines no longer follow.
--- Against the actual incident this view was built for: SL2 last completed 2026-07-30 and SL5
--- 2026-07-29, so they would have fired 2026-08-05 and 2026-08-04 either way -- unaffected by this
--- widening, since both gaps are well under 9.
+-- WHAT THIS FILE CHANGES, precisely:
+--   * state.queue_driven_missed_fire_watch -- NEW. Per-routine, per-day expectation over a 5-day
+--     lookback ending yesterday, with a strict adoption floor. Its routine list AND each routine
+--     Denver day-set are a GENERATED, CI-checked region (scripts/gen_routine_lists.py), mirroring
+--     bigquery/12/24/105/132, so ops/cadence.yaml stays the single source of truth and a future
+--     retime cannot silently invalidate a hardcoded Sun-Thu.
+--   * ops.sp_sq_cadence_check -- carried forward BYTE-IDENTICAL from bigquery/230 except (a) the
+--     heartbeat literal v22 -> v23, (b) two categories appended to the existing 7-day auto-age
+--     allowlist, and (c) one new best-effort block appended after the queue_driven_silent check. No
+--     predicate, threshold, exclusion or severity of ANY existing check is altered -- missed_run,
+--     queue_driven_silent, backup_stale and every other check are untouched.
+--   * ops.alert_policy -- registers queue_driven_missed_fire and
+--     queue_driven_missed_fire_check_failed, both non-latching.
 --
--- A never-completed routine (no run_log row at all) is reported silent immediately -- that is the
--- bigquery/113 never-ran concern, applied to the one class 113 could not reach.
+-- NO TRADING BEHAVIOR CHANGES. Nothing here stages, cancels, sizes or gates an order. Both new
+-- categories are severity warning, and every trading gate counts severity = critical ONLY (verified
+-- against bigquery/176 for state.trading_enabled / _mechanical / _check and bigquery/148 for
+-- ops.sp_auto_resolve_alerts), so neither can contribute to blocking_criticals or halt order staging.
 --
--- The threshold is a literal here rather than a mirrored ops/cadence.yaml constant on purpose: the
--- two constants cadence.yaml mirrors (cadence_watch_deadline_local, period_grace_days) each have a
--- dedicated check in scripts/check_cadence_consistency.py, and adding a third mirror without a
--- matching checker would create exactly the silent-drift surface that file exists to prevent.
+-- APPLY ORDER: after bigquery/230 (the procedure body), bigquery/132 (the sibling view this one
+-- complements), bigquery/34_alert_lifecycle.sql (ops.alert_policy) and bigquery/10_observability.sql
+-- (ops.sp_raise_alert_once). Idempotent and safe to re-apply: both CREATE OR REPLACEs are total and
+-- the alert_policy INSERT is guarded on NOT EXISTS.
+--
+-- LOCKSTEP: the heartbeat literal below is v23; bigquery/63_scheduled_query_version_registry.sql's
+-- cadence_check row is bumped to v23 in the same change. scripts/check_sq_version_registry.py fails
+-- CI if they disagree, and a landed mismatch raises a nightly scheduled_query_version_drift WARNING.
+-- =====================================================================================================
 
-CREATE OR REPLACE VIEW `stock-trading-498512.state.queue_driven_silence_watch` AS
+CREATE OR REPLACE VIEW `stock-trading-498512.state.queue_driven_missed_fire_watch` AS
 WITH routines AS (
   SELECT * FROM UNNEST([
 -- BEGIN GENERATED ROUTINE LIST (scripts/gen_routine_lists.py --write; do not hand-edit)
-    STRUCT('AR_att' AS routine, 'queue_driven' AS monitor_class),
-    STRUCT('AR_orc' AS routine, 'queue_driven' AS monitor_class),
-    STRUCT('SL2' AS routine, 'queue_driven' AS monitor_class),
-    STRUCT('SL5' AS routine, 'queue_driven' AS monitor_class),
-    STRUCT('M1R' AS routine, 'queue_driven' AS monitor_class)
+    STRUCT('AR_att' AS routine, 'queue_driven' AS monitor_class, [1,2,3,4,5] AS denver_dow),
+    STRUCT('AR_orc' AS routine, 'queue_driven' AS monitor_class, [1,2,3,4,5] AS denver_dow),
+    STRUCT('SL2' AS routine, 'queue_driven' AS monitor_class, [1,2,3,4,5] AS denver_dow),
+    STRUCT('SL5' AS routine, 'queue_driven' AS monitor_class, [1,2,3,4,5] AS denver_dow),
+    STRUCT('M1R' AS routine, 'queue_driven' AS monitor_class, [1,2,3,4,5] AS denver_dow)
   -- END GENERATED ROUTINE LIST
   ])
 ),
-last_completed AS (
-  SELECT routine, MAX(run_date) AS last_run_date
+t AS (
+  SELECT today FROM `stock-trading-498512.state.trading_day_today`
+),
+-- ADOPTION FLOOR, strict >. A routine is never expected on or before the date of its own first
+-- ops.run_log row: that row is typically a mid-day seed/manual run made when the routine was
+-- registered, on a day its cron had already passed or had not yet fired, so counting that day would
+-- flag a miss that never existed. Strict > rather than >= for the reason the DATE-grain join note
+-- gives -- a >= on a DATE admits the boundary day itself, which is exactly the ambiguous one.
+first_seen AS (
+  SELECT routine, MIN(run_date) AS first_run_date
+  FROM `stock-trading-498512.ops.run_log`
+  GROUP BY routine
+),
+completed AS (
+  SELECT DISTINCT routine, run_date
   FROM `stock-trading-498512.ops.run_log`
   WHERE status = 'completed'
-  GROUP BY routine
+),
+-- The expectation window ends YESTERDAY (Denver): today is never flagged, because these routines
+-- fire anywhere from 13:00 UTC (M1R, same Denver day) to 01:25 UTC (SL5, previous Denver day) and a
+-- slot that has not come round yet is not a miss. It starts 5 days back -- see the procedure-side
+-- comment in this same file for why 5 is bounded above by the 7-day auto-age and must not be widened
+-- past 6. denver_dow is BigQuery EXTRACT(DAYOFWEEK) numbering, 1 = Sunday .. 7 = Saturday, and is
+-- GENERATED from each routine own expected_trigger.cron_utc in ops/cadence.yaml rather than assumed:
+-- all five spell Denver Sun-Thu today, but by two different UTC shapes (M1R fires 13:00 UTC on the
+-- same Denver day; the other four fire 00:00-01:25 UTC on the NEXT UTC day, which is the PREVIOUS
+-- Denver day), so a hardcoded shared day-set would misdate a future retime by one day.
+expected AS (
+  SELECT r.routine, r.monitor_class, d AS expected_date
+  FROM routines AS r
+  CROSS JOIN UNNEST(r.denver_dow) AS wanted_dow
+  CROSS JOIN t
+  CROSS JOIN UNNEST(GENERATE_DATE_ARRAY(DATE_SUB(t.today, INTERVAL 5 DAY),
+                                        DATE_SUB(t.today, INTERVAL 1 DAY))) AS d
+  WHERE EXTRACT(DAYOFWEEK FROM d) = wanted_dow
 )
 SELECT
-  r.routine,
-  r.monitor_class,
-  CURRENT_DATE('America/Denver') AS today,
-  l.last_run_date,
-  DATE_DIFF(CURRENT_DATE('America/Denver'), l.last_run_date, DAY) AS days_silent,
-  9 AS silence_threshold_days,
-  -- COALESCE -> TRUE so a routine with NO completed run ever is reported silent rather than NULL.
-  -- Same fail-LOUD posture as state.freshness: a missing source must alarm, never read as green.
-  COALESCE(DATE_DIFF(CURRENT_DATE('America/Denver'), l.last_run_date, DAY) >= 9, TRUE) AS is_silent,
-  (l.last_run_date IS NULL) AS never_completed,
-  CURRENT_TIMESTAMP() AS checked_at
-FROM routines r
-LEFT JOIN last_completed l ON l.routine = r.routine
-ORDER BY r.routine;
+  e.routine,
+  e.monitor_class,
+  e.expected_date,
+  f.first_run_date,
+  DATE_DIFF(t.today, e.expected_date, DAY) AS days_ago,
+  t.today AS checked_on
+FROM expected AS e
+JOIN first_seen AS f ON f.routine = e.routine
+CROSS JOIN t
+LEFT JOIN completed AS c ON c.routine = e.routine AND c.run_date = e.expected_date
+WHERE c.run_date IS NULL
+  AND e.expected_date > f.first_run_date;
 
--- SUPERSEDED LIVE by bigquery/153_account_snapshot_gap_watch.sql — current single
--- source of truth for this PROCEDURE. 142 bumps the heartbeat literal v11 -> v12 and adds ONE new
--- record-only WARNING block (process_constant_evidence_invalidated) immediately after the
--- scheduled_query_version_drift block below; 147 bumps the heartbeat to v13 and adds the
--- run_log_note_missing record-only check; 149 bumps the heartbeat to v14 and adds script_version_drift
--- to the #14 auto-age category list; 150 bumps the heartbeat to v15 and adds 'connector' +
--- 'strategy_revised' to the #14 auto-age category list; 153 bumps the heartbeat to v17 and adds the
--- account_snapshot_gap record-only WARNING block (+ 'account_snapshot_gap' to the #14 auto-age list);
--- every other check in this body is carried forward unchanged. Kept here for DR-rebuild apply-in-order
--- reference only. DO NOT re-apply this CREATE PROCEDURE statement live in isolation — doing so silently drops the
--- process_constant_evidence_invalidated check and reverts the heartbeat to v11, which
--- state.scheduled_query_version_drift would then flag against a v15 bigquery/63 registry expectation.
--- SUPERSEDED (2026-08-19) by bigquery/186_monitor_promoted_autoage.sql (SQ_VERSION v21) -- the
--- CURRENT single source of truth for ops.sp_sq_cadence_check. 186 adds 'monitor_promoted' to the #14
--- auto-age allowlist: an info-severity COMPLETED-ACTION record (a monitor tier promotion) that is
--- filtered out of both notification relays before reaching notified_ts AND has no ops.alert_policy
--- row, so no automated path could ever close one -- all three prior rows were closed by hand, days
--- late. The full chain is 75 -> 111 -> 120 -> 128 -> 132 -> 142 -> 147 -> 149 -> 150 -> 153 -> 157
--- -> 159 -> 172 -> 186. DO NOT re-apply this file's CREATE statement live in isolation. The marker
--- immediately below is the PRIOR one, kept intact as the chain's history:
--- SUPERSEDED (2026-08-14) by bigquery/172_run_log_unpaired_terminal.sql (SQ_VERSION v20) -- the
--- current single source of truth for ops.sp_sq_cadence_check. 172 bumps the cadence_check wrapper to
--- v20 and adds a run_log_start_row_missing record-only WARNING over the new
--- state.run_log_unpaired_terminal view (a terminal ops.run_log row with no paired started row), plus
--- that category in the #14 auto-age allowlist. Its predecessor was bigquery/159_cadence_check_info_
--- severity_autoage.sql (SQ_VERSION v19), which is NO LONGER current. Its predecessor in turn was
--- bigquery/157_account_snapshot_gap_recoverable.sql (SQ_VERSION v18), which is NO LONGER current.
--- 157 retracts a FALSEHOOD carried by every
--- version from v17 down: the account_snapshot_gap alert message claimed the gap days could never be
--- backfilled because IBKR exposes no historical-NAV endpoint. It does -- get_pa_performance_all_periods
--- returns parallel dates[]/nav[] arrays, and D2a Step 0b already calls it but keeps only the last
--- element. 157 changes exactly three strings (heartbeat v17->v18, that message, one comment) and no
--- check logic. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
--- DO NOT re-apply this CREATE statement live in isolation.
--- SUPERSEDED (2026-08-31) by bigquery/205_alert_message_stability.sql, the current canonical
--- definition of this procedure. 205 changes MESSAGE TEXT ONLY, on three sp_raise_alert_once calls
--- (queue_driven_silent, backup_per_table_row_drop, process_constant_evidence_invalidated) whose
--- messages embedded run-varying values -- a day-count, two row counts, two streak counters -- and
--- so defeated that procedure's own exact-message dedup, re-alerting daily on a persisting
--- condition. No predicate, threshold, severity or control flow differs. Kept here, unmodified,
--- for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE live in isolation.
--- SUPERSEDED (2026-09-06) by bigquery/227_alert_message_stability_ordering.sql, the current
--- canonical definition of this procedure. 227 changes ORDER BY CLAUSES ONLY, on four
--- sp_raise_alert_once messages (ci_finding, routine_stalled, process_constant_evidence_invalidated,
--- constant_tuning_loop_heartbeat_missing) whose STRING_AGG ordering was NARROWER than the fields the
--- message prints -- or absent outright -- so tied rows could permute and render the SAME condition as
--- a DIFFERENT string, defeating that procedure's own exact-message dedup and re-alerting on an
--- UNCHANGED condition (measured twice live: 2026-07-24/25 and 2026-07-31 05:00/05:16, identical open
--- sets, duplicate rows and duplicate emails). No predicate, threshold, severity or control flow
--- differs. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this
--- CREATE live in isolation.
--- SUPERSEDED (2026-09-08) by bigquery/230_run_outcome_notification.sql, the current canonical
--- definition of this procedure. 230 makes exactly three changes against the v21 body: the heartbeat
--- literal v21 -> v22; the number 14 auto-age allowlist gains 'routine_run_failed',
--- 'routine_run_warning' and 'run_log_problem_unalerted' (receipts for a past run-outcome event, the
--- same monitor_promoted shape -- no ops.alert_policy resolve_rule needed, C3); and a new record-only
--- WARNING block, placed immediately before the consolidated RAISE, reading the new
--- state.run_log_unalerted_problems view and raising run_log_problem_unalerted with a STRING_AGG
--- ordered by (routine, run_date, status, run_id) -- a TOTAL order, per this file's own STRING_AGG-ordering
--- rule (see the header above). No predicate, threshold, severity or control flow on any EXISTING
--- check changes. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
--- re-apply this CREATE live in isolation.
--- RE-POINTED (2026-09-15): the CURRENT canonical definition of this procedure is
--- bigquery/241_queue_driven_per_day_missed_fire.sql, which SUPERSEDES every earlier copy including this
--- one. 241 carries the bigquery/230 body forward BYTE-IDENTICAL except exactly three edits: the
--- heartbeat literal v22 -> v23; two categories (queue_driven_missed_fire,
--- queue_driven_missed_fire_check_failed) appended to the number 14 auto-age allowlist; and one new
--- best-effort block appended after the queue_driven_silent check, raising a per-DAY missed-fire WARNING
--- from the new state.queue_driven_missed_fire_watch view. That closes the single-skipped-day case the
--- 9-day state.queue_driven_silence_watch threshold structurally cannot see and state.cadence_watch
--- never covers, because monitor_class=queue_driven is filtered out of state.cadence_expected_today
--- before the generated UNNEST literal is written (M1R logged nothing for 2026-09-14 and nothing
--- alerted). No predicate, threshold, exclusion or severity of any EXISTING check in this procedure
--- moves, and both new categories are severity warning so neither can contribute to blocking_criticals.
--- Any pointer ABOVE naming an earlier file is kept exactly as written, as history; THIS paragraph is
--- the live pointer. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
--- re-apply this CREATE live in isolation.
+
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';
-  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v11', 'cadence_check.sql ran');
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v23', 'cadence_check.sql ran');
 
   -- RUNBOOK section 38 self-heal (ITEM 3, bigquery/38_run_log_selfheal.sql): backfill any
   -- ops.run_log completion row whose routine already has a landed-commit marker in
@@ -210,9 +173,9 @@ BEGIN
   UPDATE `stock-trading-498512.ops.alerts`
   SET resolved = TRUE,
       resolved_ts = CURRENT_TIMESTAMP(),
-      resolved_note = CONCAT('auto-aged (>7d self-healing warning; cadence_check.sql #14). ', COALESCE(resolved_note, ''))
+      resolved_note = CONCAT('auto-aged (>7d self-healing warning/info; cadence_check.sql #14). ', COALESCE(resolved_note, ''))
   WHERE NOT resolved
-    AND severity = 'warning'
+    AND severity IN ('warning', 'info')
     -- trigger_missing added 2026-07-04 (audit finding): its message used to embed a daily-changing
     -- day-count, defeating sp_raise_alert_once's dedup and letting undeduped rows accumulate
     -- indefinitely since it was the one self-healing class missing from this auto-age list. The
@@ -245,7 +208,37 @@ BEGIN
     -- alert is stranded by dropping it) -- but do not re-derive "never raised" from the old wording.
     -- CAUTION for any future allowlist edit: before dropping a category from this FAIL-CLOSED list,
     -- query ops.alerts for OPEN rows in it. An open row in a removed category never auto-ages again.
-    AND category IN ('instruction_drift', 'calendar_runway_low', 'routine_stalled', 'trigger_missing', 'immediate_action_flagged', 'process_scorecard_signal', 'scheduled_query_stale', 'ci_findings_bridge_stale', 'control_plane_insert', 'scheduled_query_version_drift', 'queue_driven_silent')
+    -- connector_tool_inventory_stale added 2026-08-08 (same v16 change that adds the check block below,
+    -- bigquery/151_connector_tool_inventory.sql): the identical self-healing shape as scheduled_query_
+    -- version_drift / script_version_drift above -- state.connector_tool_inventory_stale reports only what
+    -- the LAST enumeration run observed, so once OPS1 resumes a trustworthy sweep the condition clears on
+    -- its own. It has no ops.alert_policy row either, so leaving it off this list would reproduce the exact
+    -- connector/strategy_revised bug this file exists to fix, for a third category, in the same commit.
+    -- monitor_promoted added 2026-08-19 (bigquery/186, by the D3 run that had just raised one) -- the SAME
+    -- structural bug as strategy_revised, which bigquery/150 added and bigquery/159 finally made effective.
+    -- It is an info-severity COMPLETED-ACTION RECORD ("check X promoted WARNING->CRITICAL, no owner action
+    -- required"), so at info severity it is filtered out of both alert_emailer.gs's and scripts/
+    -- alert_relay.py's notification queries before ever reaching notified_ts, and Rule 5's on-delivery
+    -- resolve path never sees it. It also has no ops.alert_policy row. Between those two facts NO automated
+    -- mechanism could ever close one, and the live table proves the cost was already being paid by hand:
+    -- all three prior rows (ddl_drift 2026-07-12, park_allocator/ddl_drift 2026-07-26, b3_trading_enabled_
+    -- drift 2026-08-03) were each closed manually in a later interactive triage session, days after the
+    -- change they announced had completed. SAFER TO AGE OUT THAN ANY OTHER ENTRY ON THIS LIST: a promotion
+    -- is idempotent by construction (ops.monitor_promotion_log makes the readiness view's
+    -- not_already_promoted FALSE forever after), so unlike every self-healing class above there is no
+    -- underlying condition that could still be true and no re-raise to rely on -- the row is a receipt for
+    -- something already done, and aging it can hide nothing. The promotion itself stays permanently
+    -- queryable in ops.monitor_promotion_log and events.decision_log (entry_type='monitor-promotion'),
+    -- which are the durable records; ops.alerts is only the announcement.
+    -- routine_run_failed / routine_run_warning / run_log_problem_unalerted added 2026-09-08
+    -- (bigquery/230_run_outcome_notification.sql, owner directive on run-outcome notification). Same
+    -- RECEIPT-FOR-A-PAST-EVENT shape as monitor_promoted directly above, not the self-healing-transient
+    -- shape most of this list is: the run that failed, or the run-time issue that was reported, is a
+    -- permanent fact about ops.run_log -- there is no mechanically re-checkable "it healed" condition
+    -- for ops.sp_auto_resolve_alerts to verify, so a resolve_rule / ops.alert_policy row is the wrong
+    -- tool (C3, bigquery/230's design doc). The durable record is ops.run_log itself; ops.alerts here
+    -- is only the announcement, exactly as the comment above already argues for monitor_promoted.
+    AND category IN ('instruction_drift', 'calendar_runway_low', 'routine_stalled', 'trigger_missing', 'immediate_action_flagged', 'process_scorecard_signal', 'scheduled_query_stale', 'ci_findings_bridge_stale', 'control_plane_insert', 'scheduled_query_version_drift', 'script_version_drift', 'queue_driven_silent', 'run_log_note_missing', 'run_log_start_row_missing', 'connector', 'strategy_revised', 'connector_tool_inventory_stale', 'account_snapshot_gap', 'trigger_drift_corrected', 'monitor_promoted', 'routine_run_failed', 'routine_run_warning', 'run_log_problem_unalerted', 'queue_driven_missed_fire', 'queue_driven_missed_fire_check_failed')
     AND alert_ts < TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY);
 
   -- missed_run (critical) — a monitored routine expected today did not complete.
@@ -283,15 +276,99 @@ BEGIN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
       'warning', 'scheduled.cadence', 'queue_driven_silent',
       CONCAT('Queue-driven routine(s) silent past threshold — these sit OUTSIDE the cadence nets, so a disabled or dead trigger here produces no other signal. Check the trigger is enabled in claude.ai before assuming an empty queue: ',
-             (SELECT STRING_AGG(CONCAT(routine, ' (last completed ',
-                                       COALESCE(CAST(last_run_date AS STRING), 'NEVER'), ', ',
-                                       COALESCE(CAST(days_silent AS STRING), '?'), 'd ago)'),
-                                ', ' ORDER BY routine)
+             (SELECT STRING_AGG(routine, ', ' ORDER BY routine)
               FROM `stock-trading-498512.state.queue_driven_silence_watch` WHERE is_silent)),
       (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(routine, last_run_date, days_silent,
                                               silence_threshold_days, never_completed) ORDER BY routine))
        FROM `stock-trading-498512.state.queue_driven_silence_watch` WHERE is_silent));
   END IF;
+
+  -- queue_driven_missed_fire (warning) -- a queue_driven routine logged NO run at all on a day its
+  -- OWN cron day-set expected one. Added 2026-09-15 (bigquery/241). This is the per-DAY net; the
+  -- queue_driven_silent check directly above is the per-ROUTINE one, and they are deliberately
+  -- different instruments:
+  --   * queue_driven_silent asks "has this routine gone DARK?" at a 9-day rolling threshold sized
+  --     (bigquery/132 header) against the worst NORMAL gap under Sun-Thu firing. It is correct for a
+  --     disabled or deleted trigger and structurally CANNOT see a single skipped day.
+  --   * this check asks "did this routine miss ONE day it was due?" and is the only thing that can.
+  --
+  -- WHY IT WAS NEEDED, measured 2026-09-15. M1R logged nothing for 2026-09-14. Nothing alerted:
+  -- cadence_watch/cadence_period_watch exclude the class by construction (gen_12_region never emits
+  -- a queue_driven STRUCT, so there is no predicate to relax); state.stalled_runs lists all five
+  -- queue-driven routines but only catches started-without-terminal, and there was no started row;
+  -- state.queue_driven_silence_watch read days_silent=2 against a threshold of 9; D3 queue_item_stale
+  -- is item-scoped and silent on an empty queue. The miss surfaced only because M1R itself noticed on
+  -- its next run. ROOT CAUSE, established from the RemoteTrigger run log rather than inferred: M1R
+  -- DID fire (session cse_01EF21WXLxeGoSo7BfJNXbcJ, 13:09:50Z-13:20:59Z) and halted at connector
+  -- pre-flight on the third BigQuery MCP de-auth, so it wrote no ops.run_log row because run-logging
+  -- is itself a BigQuery write. That is the general shape this check exists for: a routine whose slot
+  -- falls inside an outage leaves NO durable BigQuery trace, and for this class nothing notices.
+  --
+  -- BACKTEST over the complete run_log history of all five routines, expecting a completed row on
+  -- every Denver day in their own day-set from each routine first row through 2026-09-14:
+  -- 23 missing routine-days on 10 distinct dates, and EVERY ONE maps to a documented incident
+  -- (2026-07-07/08/09, 07-13, 07-16, 07-23 the connector outage, 07-30, 08-02 the eight-disabled-
+  -- triggers incident, 08-23 de-auth 2, 09-14 de-auth 3). ZERO false positives -- not one missing day
+  -- is a legitimate nothing-was-due quiet day, because these routines fire and log on every scheduled
+  -- day regardless of queue content. bigquery/132 header asserts the opposite ("can legitimately go
+  -- quiet"); that was true of the July fleet and is no longer true, which is precisely why a per-day
+  -- expectation is now safe and was not in August.
+  --
+  -- WARNING, NEVER CRITICAL, and it must stay that way. Verified against bigquery/176 (the three
+  -- trading gates) and bigquery/148 (ops.sp_auto_resolve_alerts): every one filters severity =
+  -- critical only, so a warning cannot contribute to blocking_criticals and cannot halt order
+  -- staging. A critical here would be worse than noisy -- a NEW critical category sits outside
+  -- halt_echo_mr and outside every hardcoded sp_auto_resolve_alerts rule, so it would produce a
+  -- manual-only-resolvable halt over one skipped morning. Do not promote this category, and do not
+  -- reclassify any of these routines to daily_sun_thu to get the same coverage: that routes them into
+  -- the missed_run CRITICAL path and buys the halt this design exists to avoid.
+  --
+  -- ONE ALERT PER (routine, missed_date), which is why the message names exactly one routine and one
+  -- date and NOTHING else. sp_raise_alert_once dedups on exact (category, message) over unresolved
+  -- rows, so the message IS the dedup key. A missed date is immutable -- 2026-09-14 stays 2026-09-14
+  -- -- so re-running this daily re-derives a byte-identical message and mints nothing new, while a
+  -- genuinely new miss on a new date gets its own alert. The set-valued STRING_AGG idiom the sibling
+  -- check above uses is deliberately NOT copied here: an aggregate message changes every time the set
+  -- changes, so a second routine going quiet would re-mint a fresh alert and a fresh email for the
+  -- first one too -- the alert-fatigue defect that retired the old daily orders push.
+  --
+  -- THE LOOKBACK IS 5 DAYS AND THAT IS LOAD-BEARING AGAINST THE 7-DAY AUTO-AGE ABOVE. This category
+  -- is on the auto-age allowlist because a missed date can never be back-filled -- there is no
+  -- condition to heal, so a condition-keyed resolve_rule would leave a permanently red row. But
+  -- auto-age and re-raise fight each other unless the windows are ordered: an alert raised on D+1
+  -- ages out at D+8, so the view must STOP reporting date D before then or the next run would re-raise
+  -- it forever. At 5 days the view stops reporting D at D+6, two clear days before the age-out. Do not
+  -- widen this lookback past 6 without widening the auto-age interval first.
+  --
+  -- BEST-EFFORT, like bigquery/233/234s staged-order block and for the same reason: backup_stale
+  -- (critical) and every check after it run BELOW this point, so a failure here must not take them
+  -- with it. bigquery/234 is the precedent -- one new statement in this family failed on every run and
+  -- the block-level handler is what kept the rest of the procedure alive and reported the breakage.
+  BEGIN
+    FOR rec IN (
+      SELECT routine, expected_date
+      FROM `stock-trading-498512.state.queue_driven_missed_fire_watch`
+      ORDER BY routine, expected_date
+    ) DO
+      CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+        'warning', 'scheduled.cadence', 'queue_driven_missed_fire',
+        CONCAT('Queue-driven routine ', rec.routine, ' logged no completed run for ',
+               CAST(rec.expected_date AS STRING),
+               ', a day its own cron day-set expected. This class sits OUTSIDE state.cadence_watch, so nothing else reports a single missed day; state.queue_driven_silence_watch only trips at 9 days dark. A run that fired but halted before it could write ops.run_log looks identical to one that never fired -- check the routine run log in claude.ai before assuming the trigger is broken, and check whether BigQuery was reachable in that slot.'),
+        TO_JSON_STRING(STRUCT(
+          rec.routine AS routine,
+          CAST(rec.expected_date AS STRING) AS expected_date,
+          'queue_driven' AS monitor_class,
+          'per-day cron day-set expectation (bigquery/241)' AS detector,
+          'warning by design: every trading gate counts criticals only, so this cannot halt order staging' AS severity_note)));
+    END FOR;
+  EXCEPTION WHEN ERROR THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.cadence', 'queue_driven_missed_fire_check_failed',
+      'The queue_driven_missed_fire per-day check raised an error and did not evaluate on its last run. The per-routine 9-day queue_driven_silent net above is unaffected and still running, but single missed days are currently undetected. See payload for the BigQuery error.',
+      TO_JSON_STRING(STRUCT(@@error.message AS error_message,
+                            'bigquery/241_queue_driven_per_day_missed_fire.sql' AS owning_file)));
+  END;
 
   -- backup_stale (critical) — events.* GCS backup has not logged a success in >2 days (16_automation_health.sql).
   IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.backup_health` WHERE stale) THEN
@@ -397,10 +474,87 @@ BEGIN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
       'warning', 'scheduled.cadence', 'routine_stalled',
       CONCAT('Stalled run(s): a routine started but never logged a terminal status: ',
-             (SELECT STRING_AGG(CONCAT(routine, '/', CAST(run_date AS STRING)), ', ' ORDER BY routine)
+             (SELECT STRING_AGG(CONCAT(routine, '/', CAST(run_date AS STRING)), ', ' ORDER BY routine, run_date)
               FROM `stock-trading-498512.state.stalled_runs`)),
       (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(routine, run_date, hours_since_started)))
        FROM `stock-trading-498512.state.stalled_runs`));
+  END IF;
+
+  -- run_log_note_missing (audit of the 2026-08-07 daily runs) — a routine logged a TERMINAL row
+  -- (completed/failed/halted) carrying NO note, so the run left no account of itself. ops.run_log.note is
+  -- the ONLY durable narrative record of what a routine decided and why: the routine's own reasoning is
+  -- otherwise unrecoverable once the session ends. MEASURED before shipping this check, over the trailing
+  -- 30 days: 8 terminal rows of 368 (~0.27/day) — rare enough that each firing means something, which is
+  -- why this is scoped to the note gap and NOT extended to a missing `instruction`. An absent instruction
+  -- looks similar but is NOT the same signal: 322 of 324 completed rows legitimately carry no instruction
+  -- (it belongs on the paired 'started' row), and 46 of 330 'started' rows lack one, so alarming on it
+  -- would fire ~14% of the time and train the operator to ignore this category.
+  --
+  -- WHY IT MATTERS, from the run that prompted it: D2/2026-08-07 logged completed with note NULL, ran
+  -- 5m34s against a 12-22min norm, and logged rows_written=5 while writing exactly ONE BigQuery row —
+  -- the other 4 were Watchlist.md ticker edits counted as though they were rows. The work itself was
+  -- substantively correct (its decision_log entry and commit 77c8c85 both check out), so nothing was
+  -- broken; but an abbreviated run left no explanation of itself and no monitor noticed, because nothing
+  -- in this stack has ever read run_log.note or rows_written. This is that reader.
+  --
+  -- RECORD-ONLY (no raise_msg join), deliberately: a missing note is an audit-hygiene defect, not a
+  -- reason to fail the nightly check or halt anything. It is also NOT REPAIRABLE after the fact — the row
+  -- is history and ops.run_log is not rewritten — so the category is in the #14 auto-age allowlist above
+  -- and closes itself once the 3-day view window rolls past the offending row.
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.run_log_content_gaps`) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.cadence', 'run_log_note_missing',
+      -- DEDUP-CRITICAL — the message is a FIXED STRING and must stay one. sp_raise_alert_once dedups on
+      -- exact (category, message) while the prior row is unresolved, so ANY per-row detail here (the
+      -- routine/date list, or even a count) changes the text every time the 3-day window's membership
+      -- shifts — a gap entering OR an older one aging out — and opens a NEW row each time instead of
+      -- collapsing onto one. Walked against the real 30-day history, an aggregated message would have
+      -- produced 6 distinct open rows for the 4 gaps between 07-08 and 07-18. Same convention as the
+      -- trigger_missing / calendar_runway_low / probe_funding_stalled / scheduled_query_stale blocks
+      -- in this procedure: identity in the message, detail in the payload only.
+      'Terminal run_log row(s) with no note in the trailing 3 days — a routine logged completed/failed/halted without recording what it did. See payload for the affected routine/run_date rows.',
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(routine, run_date, status, run_id)))
+       FROM `stock-trading-498512.state.run_log_content_gaps`));
+  END IF;
+
+  -- run_log_start_row_missing — a routine logged a TERMINAL row for a run_date with no paired
+  -- 'started' row. Sibling of run_log_note_missing above and deliberately the same shape: record-only
+  -- (no raise_msg join), fixed message, detail in the payload, 3-day window, #14 auto-age allowlist.
+  --
+  -- WHAT IT CATCHES that nothing else did. state.stalled_runs is the mirror check — started with no
+  -- terminal — and ops.run_log has no key linking the two rows (run_id is GENERATE_UUID() per INSERT;
+  -- the pair is only (routine, run_date)), so a terminal row whose start was never logged was covered
+  -- by no monitor at all. It matters because the 'started' row is where `instruction` lives: without
+  -- it state.routine_last_instruction has no sample for that run, so state.instruction_drift is blind
+  -- to a drifted web-UI trigger for exactly that day, and state.stalled_runs can never see the run.
+  --
+  -- MEASURED over the trailing 120 days before shipping: 2 firings, both on 2026-07-18 (SL2 and D3,
+  -- both 'halted'), i.e. ~0.017/day. That is an order of magnitude quieter than run_log_note_missing
+  -- was at its own ship date (~0.27/day), so it clears the bar this file's v13 note sets: a check that
+  -- fires often enough to be ignored is worse than no check.
+  --
+  -- TWO EXCLUSIONS, both load-bearing — WITHOUT THEM this fires 12 times instead of 2, and the noise
+  -- would be entirely false positives:
+  --   * FIRE_DRILL% / SELFHEAL_RUN_LOG call ops.sp_log_run DIRECTLY and never call sp_routine_start.
+  --     They are procedures recording that they fired, not sessions with a start. 30 such rows in 120d.
+  --   * Rows written by ops.sp_backfill_run_log_from_markers (RUNBOOK §38 self-heal) reconstruct a
+  --     COMPLETED row from a git commit marker for a run that never logged anything — so a missing
+  --     'started' row is the PREMISE of that mechanism, not a defect in it. Matched on the same
+  --     '^(auto-)?backfilled' prefix bigquery/89 already anchors on; keep the two in step if either
+  --     changes. These accounted for every one of the 9 apparent D1 cases in the raw 120-day count.
+  --
+  -- The routine-id comparison is separator-normalised, matching state.instruction_drift and
+  -- state.routine_catchup_window, so the legacy middle-dot ids (AR·att/AR·orc, written 2026-06-19..
+  -- 2026-07-01) fold onto their ASCII form instead of pairing a terminal row against nothing.
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.run_log_unpaired_terminal`) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.cadence', 'run_log_start_row_missing',
+      -- DEDUP-CRITICAL — fixed string, same convention and same reason as the run_log_note_missing
+      -- block directly above: per-row detail here would open a new alert row every time the 3-day
+      -- window's membership shifts, instead of collapsing onto one.
+      'Terminal run_log row(s) with no paired started row in the trailing 3 days — a routine logged completed/failed/halted for a run_date it never logged a start for. See payload for the affected routine/run_date rows.',
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(routine, run_date, status, run_id)))
+       FROM `stock-trading-498512.state.run_log_unpaired_terminal`));
   END IF;
 
   -- position_drift (B4) — the two open-position representations (state.current_positions vs
@@ -565,7 +719,7 @@ BEGIN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
       'warning', 'scheduled.cadence', 'backup_per_table_row_drop',
       CONCAT('Backup per-table row-count DROP detected (append-only table(s) should never shrink): ',
-             (SELECT STRING_AGG(CONCAT(dataset, '.', table_name, ' ', CAST(prior_rows AS STRING), '->', CAST(latest_rows AS STRING)), ', ' ORDER BY dataset, table_name)
+             (SELECT STRING_AGG(CONCAT(dataset, '.', table_name), ', ' ORDER BY dataset, table_name)
               FROM `stock-trading-498512.state.backup_per_table_health` WHERE row_count_dropped)),
       (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(dataset, table_name, prior_run_date, prior_rows, latest_run_date, latest_rows)))
        FROM `stock-trading-498512.state.backup_per_table_health` WHERE row_count_dropped));
@@ -609,6 +763,46 @@ BEGIN
       (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(sq_name, expected_version, last_reported_version, CAST(last_beat_ts AS STRING) AS last_beat_ts)))
        FROM `stock-trading-498512.state.scheduled_query_version_drift` WHERE drift));
   END IF;
+
+  -- process_constant_evidence_invalidated (warning, bigquery/142_cadence_deadline_revert_and_evidence_
+  -- drift.sql, 2026-08-06). state.process_constant_evidence_drift re-validates an ALREADY-APPLIED W5
+  -- process_reliability autotune against the metric-view predicate set its justification depended on,
+  -- recomputed as of TODAY — closing a gap state.process_constant_oos_watch (bigquery/72) structurally
+  -- cannot reach: that fail-safe only detects that the change did not work (a persisted POST-change
+  -- threat); this detects that the evidence was never real (a persisted PRE-change threat manufactured
+  -- by a metric formula later corrected — see bigquery/89, 2026-08-04, backfilled-row exclusion, which
+  -- is exactly what happened to the D1 2026-08-03 cadence_watch_deadline_local autotune; see bigquery/142
+  -- header for the full account). Record-only, like instruction_drift/ddl_drift/ci_finding above: does
+  -- NOT join raise_msg (an invalidated-evidence finding needs human adjudication — re-read the view,
+  -- decide whether to revert the constant or accept the change on other grounds — it is not a same-night
+  -- trading halt). Deliberately ABSENT from the #14 auto-age allowlist above: unlike a self-healing
+  -- transient, a genuinely invalidated evidence trail does not become false again on its own, so this must
+  -- stay open until a human closes it by hand — see ops.alert_policy.resolve_rule for this category
+  -- (bigquery/142).
+  -- BEST-EFFORT GUARD, same pattern this procedure already applies to sp_backfill_run_log_from_markers
+  -- and sp_auto_resolve_alerts above. BigQuery binds a procedure's referenced objects LAZILY, at CALL
+  -- time rather than CREATE time, so applying this v12 body BEFORE bigquery/142's Statement 2 would not
+  -- fail on creation — it would abort the NEXT nightly run mid-body with `Not found:
+  -- state.process_constant_evidence_drift`, silently killing every check BELOW this point
+  -- (scheduled_query_stale, probe_funding_stalled, cash_flows_backfill_broken, ci_finding,
+  -- ci_findings_bridge_stale, constant_tuning_loop_heartbeat_missing, park_allocator heartbeat) for that
+  -- run and every run after. Applying the file top to bottom makes that impossible, but a partial or
+  -- reordered apply must never be able to take down the fleet's dead-man switch over one advisory check.
+  BEGIN
+    IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.process_constant_evidence_drift` WHERE evidence_invalidated) THEN
+      CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+        'warning', 'scheduled.cadence', 'process_constant_evidence_invalidated',
+        CONCAT('Process-constant autotune evidence INVALIDATED by a later metric-formula correction — ',
+               '90-day trailing p90 completion-minute-of-day; see payload for the persisted vs recomputed threat streaks: ',
+               (SELECT STRING_AGG(
+                  CONCAT(routine, '/', deadline_key, ' change ', old_value, '->', new_value),
+                  '; ' ORDER BY routine, deadline_key, change_key, old_value, new_value)
+                FROM `stock-trading-498512.state.process_constant_evidence_drift` WHERE evidence_invalidated)),
+        (SELECT TO_JSON_STRING(ARRAY_AGG(t))
+         FROM `stock-trading-498512.state.process_constant_evidence_drift` t WHERE evidence_invalidated));
+    END IF;
+  EXCEPTION WHEN ERROR THEN SELECT @@error.message;
+  END;
 
   -- scheduled_query_stale (warning, MON H5, 2026-07-17). state.scheduled_query_version_drift detects only
   -- a VERSION mismatch among sources that have EVER beaten; a DTS config that silently STOPS forever (7 of
@@ -682,7 +876,7 @@ BEGIN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
       'warning', 'scheduled.cadence', 'ci_finding',
       CONCAT('Open CI guard finding(s): ',
-             (SELECT STRING_AGG(CONCAT(workflow, '/', finding_key), ', ' ORDER BY workflow)
+             (SELECT STRING_AGG(CONCAT(workflow, '/', finding_key), ', ' ORDER BY workflow, finding_key)
               FROM `stock-trading-498512.state.ci_findings_open`)),
       (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(workflow, finding_key, CAST(finding_ts AS STRING) AS finding_ts, detail, run_url)))
        FROM `stock-trading-498512.state.ci_findings_open`));
@@ -747,7 +941,7 @@ BEGIN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
       'warning', 'scheduled.cadence', 'constant_tuning_loop_heartbeat_missing',
       CONCAT('Constant-tuning loop(s) previously reporting a weekly W5 heartbeat have gone quiet >10 days: ',
-             (SELECT STRING_AGG(loop_source, ', ')
+             (SELECT STRING_AGG(loop_source, ', ' ORDER BY loop_source)
               FROM UNNEST(['loop:process_reliability','loop:strategy_playbook',
                             'loop:execution_quality_tuning','loop:calibration_parameter_carveout',
                             'loop:cross_model_referee_independence','loop:research_quality_feedback',
@@ -810,8 +1004,167 @@ BEGIN
     END IF;
   END;
 
+  -- Connector tool-inventory staleness (2026-08-08, bigquery/151_connector_tool_inventory.sql).
+  -- OPS1's TOOL-INVENTORY DRIFT CHECK diffs the live per-connector tool roster against
+  -- ops/connector_tools.yaml so a vendor-added tool -- which arrives as ask/needs-approval in the
+  -- claude.ai connectors UI and would silently stall an unattended routine that calls it -- is caught
+  -- the morning it appears. That check is SELF-REPORTED, and a self-reported check cannot detect its
+  -- own omission: OPS1 could complete normally, log a clean note, and simply never have run the step
+  -- (prompt drift, a skipped sub-agent, a truncated session). This block is the independent witness.
+  -- It reads only the observation table's recency, so it stays true regardless of what OPS1 claims.
+  -- RECORD-ONLY, WARNING, self-healing: once OPS1 resumes a trustworthy sweep the underlying condition
+  -- clears on its own, so this category is in the #14 auto-age allowlist above (it has no ops.alert_
+  -- policy row) rather than getting its own resolve-on-heal UPDATE, matching the connector /
+  -- strategy_revised / script_version_drift convention this file already uses.
+  -- DEDUP-CRITICAL: the message lists ONLY the affected connector names (stable while the stale set
+  -- itself is stable, matching the trigger_missing / probe_funding_stalled / scheduled_query_stale
+  -- convention elsewhere in this procedure) -- days_stale changes daily while a connector stays stale
+  -- and lives in the payload only, per the exact bug this file's own #14 comment records for
+  -- trigger_missing ("its message used to embed a daily-changing day-count, defeating
+  -- sp_raise_alert_once's dedup").
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.connector_tool_inventory_stale`) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.cadence', 'connector_tool_inventory_stale',
+      CONCAT('Connector tool-inventory observations are stale for: ',
+             (SELECT STRING_AGG(connector, ', ' ORDER BY connector)
+              FROM `stock-trading-498512.state.connector_tool_inventory_stale`),
+             '. OPS1 completed without recording a trustworthy tool sweep, so the morning clean bill of health for connector tool drift is void. See payload for per-connector day counts.'),
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(connector, last_good_run_date, days_stale) ORDER BY connector))
+       FROM `stock-trading-498512.state.connector_tool_inventory_stale`));
+  END IF;
+
+  -- Account-snapshot gap watch (2026-08-08, bigquery/153_account_snapshot_gap_watch.sql). ops.
+  -- account_snapshot holds one measured NAV/cash row per snapshot_date, written by D2a Step 0b for a
+  -- single day per run -- there is no loop, so a trading day D2a does not run on is missing until it is
+  -- explicitly backfilled (2026-07-23/24, the two days that prompted this file, were backfilled
+  -- 2026-08-09 and the view is empty again). state.book_drawdown_watch's flow-adjusted peak_gain (bigquery/78) is a running MAX over
+  -- whatever snapshot_date rows exist, so a missing day's NAV never enters that max -- if the gap day
+  -- was a peak, peak_gain (and therefore peak_nav) is PERMANENTLY UNDERSTATED, and the -15% soft /
+  -- -40% hard drawdown breaker under-triggers -- the fail-dangerous direction. snapshot_stale
+  -- (bigquery/78) only catches a missing TODAY; it is structurally blind to a historical gap. BACKFILL
+  -- IS POSSIBLE (v18, 2026-08-09 -- this REPLACES the v17 claim that it was impossible and must not be
+  -- attempted). get_pa_performance_all_periods returns parallel dates[]/nav[] arrays per period, about a
+  -- year of daily NAV, and D2a Step 0b already calls it but keeps only the last element. The v17 claim
+  -- came from over-generalising events.cash_flows' 2026-08-05 deposit note, which correctly records that
+  -- IBKR has no cash-transaction/statement ITEMISATION endpoint -- a different, narrower thing. Only nav
+  -- is recoverable this way; cash/TWR columns are absent from that response and must stay NULL. This
+  -- block is DETECTION plus a RECOVERY POINTER: a record-only WARNING naming every trading day between
+  -- the first and last
+  -- ops.account_snapshot row that has no row of its own (state.account_snapshot_gap,
+  -- bigquery/153_account_snapshot_gap_watch.sql). RECORD-ONLY, WARNING, NEVER a halt -- does NOT join
+  -- raise_msg, and bigquery/153's redefinition of state.book_drawdown_watch adds an OBSERVABILITY-ONLY
+  -- peak_window_gap_days column with no new gate term, so state.trading_enabled behaves exactly as it
+  -- did before this file. SELF-HEALING SHAPE for auto-age purposes, now genuinely
+  -- so rather than only nominally (a gap day is no longer permanent): the check re-evaluates state.account_snapshot_gap fresh every run and simply re-raises
+  -- (same stable message, deduped) for as long as it is non-empty, exactly like connector_tool_
+  -- inventory_stale above -- it has no ops.alert_policy row, so it rides the #14 auto-age allowlist
+  -- below (added alongside connector / strategy_revised / connector_tool_inventory_stale) rather than
+  -- sitting open forever once raised.
+  -- DEDUP-CRITICAL: the message lists ONLY the gap dates -- stable while the gap set is stable, which
+  -- it is except when a NEW day goes missing. NOTE (v18): the set CAN now shrink, because gap days are
+  -- backfillable (see this file's header); a shrink changes the message and therefore starts a NEW
+  -- alert row rather than deduping onto the old one -- harmless, since the usual shrink is to empty,
+  -- which raises nothing at all. Day counts and the surrounding prior/next NAV context live in the payload
+  -- only, per the trigger_missing / probe_funding_stalled / connector_tool_inventory_stale convention
+  -- elsewhere in this procedure.
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.account_snapshot_gap`) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.cadence', 'account_snapshot_gap',
+      CONCAT('ops.account_snapshot is missing a snapshot on trading day(s) that D2a never wrote -- the flow-adjusted peak in state.book_drawdown_watch may be understated until they are filled. THESE ARE RECOVERABLE: IBKR get_pa_performance_all_periods returns parallel dates[]/nav[] arrays (1M/YTD/1Y) covering roughly a year, so the missing nav can be read straight out of the endpoint D2a Step 0b already calls -- insert with source=ibkr-pa-history-backfill and leave cash/TWR columns NULL (they are not in that response). Gap day(s): ',
+             (SELECT STRING_AGG(CAST(gap_date AS STRING), ', ' ORDER BY gap_date)
+              FROM `stock-trading-498512.state.account_snapshot_gap`),
+             '. See payload for per-gap surrounding NAV context.'),
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(gap_date, prior_snapshot_date, prior_nav, next_snapshot_date, next_nav) ORDER BY gap_date))
+       FROM `stock-trading-498512.state.account_snapshot_gap`));
+  END IF;
+
+  -- run_log_problem_unalerted (warning, record-only, bigquery/230_run_outcome_notification.sql,
+  -- 2026-09-08 -- P4/P3 of the run-outcome-notification design). state.run_log_unalerted_problems is
+  -- the INDEPENDENT WITNESS for ops.sp_log_run's own write-time escalation (P1 of the same design):
+  -- that escalation raises routine_run_failed / routine_run_warning from INSIDE a
+  -- BEGIN...EXCEPTION WHEN ERROR THEN...END best-effort block (C8 -- an alerting failure must never
+  -- propagate out of run logging), so a write-time raise that itself throws is SILENT -- the terminal
+  -- run_log row still lands (unconditional, C8), but nobody is ever told. This block re-checks, from
+  -- outside that swallowing handler, whether every terminal problem row in the trailing 14 days
+  -- (failed/halted, or completed with a non-blank error_msg) has EVER had a matching
+  -- routine_run_failed/routine_run_warning alert -- resolved or not. Keying on EVER RAISED rather than
+  -- OPEN is load-bearing: those two categories sit on the number 14 auto-age allowlist directly above
+  -- (added in the SAME change as this block) and so close themselves after 7 days: an open-only anti-
+  -- join would make THIS check re-fire on every one of those routine, self-healed closures, which is
+  -- exactly the false-positive-every-night failure mode this comment's own review process rejects
+  -- everywhere else in this file (see the STRING_AGG-ordering rule this whole file exists to enforce).
+  -- RECORD-ONLY, WARNING, deliberately NOT joined to raise_msg: a routine that failed to log its own
+  -- account of itself is a notification-plumbing defect, not a same-night trading halt, and an open
+  -- CRITICAL here would feed state.trading_enabled's blocking_criticals (bigquery/107) the same way
+  -- every other record-only block in this procedure is careful not to.
+  -- DEDUP-CRITICAL, same convention this whole file enforces (see the file header): the message lists
+  -- routine/run_date/status TRIPLES with a TOTAL order over EVERY field the message prints --
+  -- (routine, run_date, status, run_id). status is included in the ORDER BY, not just the message,
+  -- on purpose: scripts/check_alert_message_stability.py's rule (bigquery/227's own rule) requires
+  -- the ORDER BY key to be a SUPERSET of every printed field, checkable from the call site alone,
+  -- rather than resting on the (also true here) semantic argument that run_id alone already makes
+  -- the row order unique -- run_id is a per-INSERT GENERATE_UUID(), included as the final tiebreaker
+  -- so two distinct terminal problem rows for the same (routine, run_date, status) still sort
+  -- deterministically. An unchanged open set therefore re-renders as the identical string and
+  -- collapses onto one alert row instead of permuting into a fresh one every run.
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.run_log_unalerted_problems`) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.cadence', 'run_log_problem_unalerted',
+      CONCAT('ops.sp_log_run reported a problem (failed/halted, or completed with a recorded error) ',
+             'for the run(s) below, but no routine_run_failed/routine_run_warning alert was ever ',
+             'raised for it -- the write-time escalation in ops.sp_log_run (bigquery/230) may have ',
+             'thrown inside its own best-effort handler. See payload for the recorded error/note ',
+             'detail. Affected routine/run_date/status: ',
+             (SELECT STRING_AGG(
+                CONCAT(routine, '/', CAST(run_date AS STRING), ' (', status, ')'), ', '
+                ORDER BY routine, run_date, status, run_id)
+              FROM `stock-trading-498512.state.run_log_unalerted_problems`)),
+      (SELECT TO_JSON_STRING(ARRAY_AGG(
+          STRUCT(routine, run_date, status, run_id, error_detail)
+          -- `status` is in this ORDER BY purely so it matches the message STRING_AGG above. The
+          -- payload is NEVER part of sp_raise_alert_once's dedup key (it compares category+message
+          -- only), so this has no functional effect -- but run_id already makes both orders total,
+          -- and two adjacent aggregates over the same rows ordering differently reads as a defect
+          -- to every future auditor who checks (two independent reviewers flagged it on the day
+          -- this landed). Agreeing costs one word.
+          ORDER BY routine, run_date, status, run_id))
+       FROM `stock-trading-498512.state.run_log_unalerted_problems`));
+  END IF;
+
   -- Single consolidated RAISE so the DTS failure-email fires once, AFTER every condition is recorded.
   IF raise_msg != '' THEN
     RAISE USING MESSAGE = CONCAT('STOCK-TRADING cadence/backup/heartbeat check FAILED — ', raise_msg);
   END IF;
 END;
+
+-- =====================================================================================================
+-- ops.alert_policy registration for the two new categories.
+--
+-- BOTH NON-LATCHING, and both close by AGE-OUT rather than by a healed condition -- which is the
+-- unusual choice here and the one worth stating. A missed date is IMMUTABLE HISTORY: 2026-09-14 is
+-- permanently a day M1R did not log, and no future run can ever back-fill it. So there is no
+-- condition for ops.sp_auto_resolve_alerts to re-check and no resolve_rule of the "heal when the view
+-- empties" shape can ever fire -- registering one would leave a permanently red row, the exact defect
+-- CLAUDE.md warns about. The close path is therefore the sp_sq_cadence_check 7-day auto-age
+-- allowlist, which both categories are added to in this same file, and the detector view lookback is
+-- deliberately 5 days so a row ages out two clear days AFTER the view stops re-raising it. This is the
+-- same RECEIPT-FOR-A-PAST-EVENT reasoning the allowlist comment already gives for monitor_promoted and
+-- for bigquery/230's routine_run_failed / routine_run_warning.
+--
+-- The durable record is ops.run_log itself (the absent row) plus the RemoteTrigger run log; ops.alerts
+-- here is only the announcement.
+-- =====================================================================================================
+
+INSERT INTO `stock-trading-498512.ops.alert_policy` (category, latching, resolve_rule, note)
+SELECT p.category, p.latching, p.resolve_rule, p.note
+FROM UNNEST([
+  STRUCT('queue_driven_missed_fire' AS category, FALSE AS latching,
+         'Closes by AGE-OUT, not by a healed condition: ops.sp_sq_cadence_check (bigquery/241_queue_driven_per_day_missed_fire.sql) carries this category on its 7-day auto-age allowlist, so the row resolves 7 days after it was raised. There is deliberately NO condition-keyed rule, because a missed date can never be back-filled and any heal-when-empty rule would leave the row permanently open. NOT covered by any ops.sp_auto_resolve_alerts rule (those are hardcoded to missing_dependency / missed_run / routine_stalled / catchup_refire_blocked / staleness / the six roster notices). The detector view state.queue_driven_missed_fire_watch uses a 5-day lookback specifically so it stops re-raising a given date two clear days BEFORE the 7-day age-out, so age-out and re-raise cannot fight each other; do not widen that lookback past 6 days without widening this interval first.' AS resolve_rule,
+         'QUEUE-DRIVEN PER-DAY MISSED FIRE, registered 2026-09-15 alongside the check that raises it. Reports that a monitor_class=queue_driven routine logged no completed run on a day its own cron day-set expected one -- the single-missed-day case that state.queue_driven_silence_watch (9-day threshold) is structurally unable to see and that state.cadence_watch never covers, because the class is filtered out of state.cadence_expected_today before the generated UNNEST literal is written. Deliberately warning, never critical: every trading gate counts criticals only, so a critical here would halt ALL order staging over one skipped morning, and a new critical category would also sit outside halt_echo_mr and outside every hardcoded sp_auto_resolve_alerts rule, making it manual-resolve-only. ONE ALERT PER (routine, missed_date): the message names exactly one routine and one date and nothing else, so it is a stable sp_raise_alert_once dedup key that re-derives byte-identically each day while a genuinely new miss still mints its own alert. A run that fired but halted before it could write ops.run_log is INDISTINGUISHABLE here from one that never fired -- the 2026-09-14 M1R case was the former (BigQuery de-auth at connector pre-flight) -- so read the routine run log in claude.ai before concluding a trigger is broken.' AS note),
+  STRUCT('queue_driven_missed_fire_check_failed' AS category, FALSE AS latching,
+         'Closes by AGE-OUT via the same ops.sp_sq_cadence_check 7-day auto-age allowlist, and re-raises on the next run while the check is still erroring, so a persistently broken detector stays visible rather than ageing quietly away. NOT covered by any ops.sp_auto_resolve_alerts rule.' AS resolve_rule,
+         'DETECTOR-DOWN NOTICE for the per-day queue_driven check, registered 2026-09-15. The check runs inside a best-effort BEGIN/EXCEPTION block so that a failure cannot take backup_stale (critical) or any later check in ops.sp_sq_cadence_check down with it; this category is what stops that containment from being silent. The precedent is bigquery/233 -> 234, where one new statement in the staged-order family failed on EVERY run for a day and it was exactly this shape of guard that reported it. A row here means single missed days are currently undetected; the per-routine 9-day queue_driven_silent net is independent and unaffected. Message is FIXED text with the BigQuery error in the payload, so repeated failures collapse onto one row instead of minting a fresh alert and email every night.' AS note)
+]) AS p
+WHERE NOT EXISTS (
+  SELECT 1 FROM `stock-trading-498512.ops.alert_policy` e WHERE e.category = p.category
+);

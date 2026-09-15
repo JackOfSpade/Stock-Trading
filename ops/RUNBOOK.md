@@ -375,6 +375,22 @@ worked example.
 > - `state.cadence_watch` + `cadence_check.sql` catch a *monitored* routine that skips a scheduled run.
 > A routine becomes monitored automatically the first time it logs, so adoption is incremental and
 > never false-alarms. Verify adoption: `SELECT routine, MAX(run_date) FROM ops.run_log GROUP BY 1`.
+> - **The `queue_driven` class is covered by two DIFFERENT instruments, and you need to know which
+>   answers which question.** `monitor_class: queue_driven` (AR_att, AR_orc, SL2, SL5, M1R) is filtered
+>   out of `state.cadence_expected_today` before its generated `UNNEST` literal is even written, so
+>   `cadence_watch`/`cadence_period_watch` can never see these five — deliberately, because those feed
+>   the `missed_run` **CRITICAL** and a critical here would halt order staging over one skipped
+>   morning. Instead:
+>   - `state.queue_driven_silence_watch` (`bigquery/132`) — *"has this routine gone DARK?"* 9-day
+>     rolling threshold, per ROUTINE. Correct for a disabled or deleted trigger.
+>   - `state.queue_driven_missed_fire_watch` (`bigquery/241`, added 2026-09-15) — *"did it miss ONE
+>     day it was due?"* Per routine, per DAY, against that routine's own cron day-set, `warning`.
+>   Neither replaces the other, and the 9-day net structurally cannot see a single skipped day.
+>   **Do not conclude "the dead-man's switch will catch it" from a switch's NAME — check its
+>   predicate.** The 2026-09-14 M1R miss was invisible to both `state.stalled_runs` (which needs a
+>   `started` row, and a run halted by a BigQuery outage writes none, because run-logging is itself a
+>   BigQuery write) and the 9-day threshold (`days_silent` was 2). See `OWNER_ACTIONS.md` BQ-1's
+>   2026-09-15 CORRECTION block for the full account.
 
 For reference, the calls each routine makes (see also `ops/cadence.yaml` `defaults`):
 - **Start/end of every routine:** `CALL ops.sp_log_run('<id>', <run_date>, 'started'|'completed'|'failed'|'halted', <session>, <branch>, <rows>, <error>, <note>)`.

@@ -1611,11 +1611,13 @@ def _write_gen_fixture(tmp_path):
     sql132.write_text(marker_body)
     sql205 = tmp_path / "205.sql"
     sql205.write_text(marker_body)
-    return plan, cadence, sql12, sql15, sql24, sql105, sql114, sql132, sql205
+    sql241 = tmp_path / "241.sql"
+    sql241.write_text(marker_body)
+    return plan, cadence, sql12, sql15, sql24, sql105, sql114, sql132, sql241, sql205
 
 
 def _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql105, sql114, sql132,
-                     sql205):
+                     sql241, sql205):
     # MUST patch every build_targets() entry, including ROUTINE_CATCHUP_SQL and DEP_GATE_SQL —
     # otherwise a test that calls gen.write_region() for all of build_targets() writes real content
     # straight into the actual repo's bigquery/105_routine_catchup_window.sql (or
@@ -1640,7 +1642,18 @@ def _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql10
     # clobber above. Now that 205 IS patched here the guard is DORMANT for these tests (both paths sit
     # in tmp_path, so its dirname equality holds and the target is exercised normally) — KEEP IT
     # ANYWAY: it is the safety net for the NEXT fixture that forgets, and it costs one comparison.
-    # If you are adding an 8th generated target: patch it HERE, in
+    #
+    # EIGHTH TARGET, wired in this pass: QUEUE_DRIVEN_MISSED_FIRE_SQL (bigquery/241), gen_241_region --
+    # state.queue_driven_missed_fire_watch's `routines` CTE, carrying each queue_driven routine's
+    # Denver day-set alongside gen_132_region's same routine/monitor_class pair. Unlike
+    # ALERT_MSG_STABILITY_SQL this target has NO conditional guard (build_targets() appends it
+    # unconditionally, before the `if os.path.dirname(...)` check for 205), so there is no dormant
+    # safety net for it the way there is for 205 -- leaving it unpatched here would have been the FIFTH
+    # occurrence of the exact real-repo clobber this comment already records four times over, this time
+    # against the 1000+-line bigquery/241_queue_driven_per_day_missed_fire.sql. _write_gen_fixture's
+    # cadence.yaml carries no queue_driven routine, so gen_241_region(routines) is always "" here --
+    # nothing about the fixture needs an expected_trigger.cron_utc for this shared helper to stay clean.
+    # If you are adding a 9th generated target: patch it HERE, in
     # tests/test_gen_routine_lists.py::_wire_fixture, AND in that file's build_targets() count test.
     monkeypatch.setattr(gen, "PLAN", str(plan))
     monkeypatch.setattr(gen, "CADENCE", str(cadence))
@@ -1651,13 +1664,14 @@ def _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql10
     monkeypatch.setattr(gen, "DEP_GATE_SQL", str(sql114))
     monkeypatch.setattr(gen, "QUEUE_SILENCE_SQL", str(sql132))
     monkeypatch.setattr(gen, "ALERT_MSG_STABILITY_SQL", str(sql205))
+    monkeypatch.setattr(gen, "QUEUE_DRIVEN_MISSED_FIRE_SQL", str(sql241))
 
 
 def test_gen_routine_lists_write_then_check_is_clean(tmp_path, monkeypatch):
     gen = load_module_from_path("gen_routine_lists", "scripts", "gen_routine_lists.py")
-    plan, cadence, sql12, sql15, sql24, sql105, sql114, sql132, sql205 = _write_gen_fixture(tmp_path)
+    plan, cadence, sql12, sql15, sql24, sql105, sql114, sql132, sql241, sql205 = _write_gen_fixture(tmp_path)
     _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql105, sql114, sql132,
-                     sql205)
+                     sql241, sql205)
     # --write: populates the marker regions
     for path, body in gen.build_targets():
         gen.write_region(path, body)
@@ -1671,9 +1685,9 @@ def test_gen_routine_lists_write_then_check_is_clean(tmp_path, monkeypatch):
 
 def test_gen_routine_lists_check_is_dirty_after_row_deleted(tmp_path, monkeypatch):
     gen = load_module_from_path("gen_routine_lists", "scripts", "gen_routine_lists.py")
-    plan, cadence, sql12, sql15, sql24, sql105, sql114, sql132, sql205 = _write_gen_fixture(tmp_path)
+    plan, cadence, sql12, sql15, sql24, sql105, sql114, sql132, sql241, sql205 = _write_gen_fixture(tmp_path)
     _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql105, sql114, sql132,
-                     sql205)
+                     sql241, sql205)
     for path, body in gen.build_targets():
         gen.write_region(path, body)
     # delete W1 from cadence.yaml (simulating drift) without re-running --write

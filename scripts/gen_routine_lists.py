@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the routine-list STRUCT rows for bigquery/12/15/24/105/114/132/205 from ops/cadence.yaml +
+"""Generate the routine-list STRUCT rows for bigquery/12/15/24/105/114/132/205/241 from ops/cadence.yaml +
 Claude_Task_Plan.md.
 
 WHY THIS EXISTS (ARCH-3 Item 30b, closing the deferred hand-copy hole). bigquery/12
@@ -54,7 +54,7 @@ Regions generated (marker-delimited, one BEGIN/END pair per file):
                                         same reason 114 reuses it.
 
 Usage:
-  python scripts/gen_routine_lists.py --write   # regenerate all 7 marker regions in place
+  python scripts/gen_routine_lists.py --write   # regenerate all 8 marker regions in place
   python scripts/gen_routine_lists.py --check   # exit 1 + diff if any region is stale
 
 Markers (exactly one BEGIN/END pair per file, wrapping ONLY the STRUCT rows -- the surrounding
@@ -293,6 +293,7 @@ def write_region(path, body):
 
 
 QUEUE_SILENCE_SQL = os.path.join(ROOT, "bigquery", "132_queue_driven_silence_watch.sql")
+QUEUE_DRIVEN_MISSED_FIRE_SQL = os.path.join(ROOT, "bigquery", "241_queue_driven_per_day_missed_fire.sql")
 
 
 def gen_132_region(routines):
@@ -308,6 +309,81 @@ def gen_132_region(routines):
     for i, r in enumerate(rows):
         comma = "," if i < len(rows) - 1 else ""
         lines.append(f"    STRUCT('{r['id']}' AS routine, '{r['monitor_class']}' AS monitor_class){comma}")
+    return "\n".join(lines)
+
+
+# The UTC hour at/after which a queue-driven owner's cron_utc fires on the SAME Denver calendar day it
+# serves (MDT offset -- Denver is UTC-6 in MDT, the season ops/cadence.yaml's time_local documents and
+# check_cron_dst_safety.py enforces). Deliberately DUPLICATES check_cadence_consistency.py's own
+# DENVER_UTC_OFFSET_HOURS_MDT rather than importing it: that check already derives the identical
+# same-day/previous-day split for the same five routines (its check Q), but a GENERATOR importing a
+# constant out of the CHECKER that validates the generator's own target would invert this file's
+# dependency direction (gen_routine_lists.py has no import of check_cadence_consistency.py anywhere
+# today, and this one constant is not worth starting that). MDT ONLY -- latent, not live: no
+# queue-driven owner's cron_utc hour falls in the 06:00-06:59 UTC band today.
+DENVER_UTC_OFFSET_HOURS_MDT = 6
+
+
+def _cron_utc_to_denver_dow(routine_id, cron_utc):
+    """[BigQuery EXTRACT(DAYOFWEEK) values (1=Sunday..7=Saturday), ...], sorted and deduped, for the
+    Denver calendar day(s) a 5-field `cron_utc` string actually FIRES on -- derived from its hour +
+    day-of-week fields, never hand-copied. Two numbering systems meet here:
+      - cron day-of-week: 0=Sunday .. 6=Saturday (the field ops/cadence.yaml's cron_utc strings use).
+      - BigQuery EXTRACT(DAYOFWEEK): 1=Sunday .. 7=Saturday -- exactly one higher throughout, so that
+        half of the conversion is a flat +1 with no wraparound of its own.
+    The wraparound that DOES need handling is the UTC-to-Denver DAY shift: a cron firing before
+    DENVER_UTC_OFFSET_HOURS_MDT UTC has already rolled past Denver local midnight, so its own
+    day-of-week field names the day AFTER the Denver day it actually serves -- e.g. a cron_utc dow
+    entry of 1 (Monday) fired at 00:xx UTC is really a Denver-SUNDAY (cron 0) fire, which is BigQuery
+    1. `(d - 1) % 7` performs that shift in cron-numbered space -- Python's `%` is non-negative for a
+    positive divisor, so cron Sunday (0) shifts to cron Saturday (6), not -1 -- BEFORE the +1
+    conversion to BigQuery numbering. A slot at/after the boundary hour needs no shift at all: its own
+    dow field already names the Denver day it fires on."""
+    fields = cron_utc.split()
+    if len(fields) != 5:
+        raise SystemExit(f"{routine_id}: expected_trigger.cron_utc {cron_utc!r} is not a 5-field cron "
+                         f"-- gen_241_region cannot derive its Denver day-set")
+    try:
+        hour = int(fields[1])
+    except ValueError:
+        raise SystemExit(f"{routine_id}: expected_trigger.cron_utc hour field {fields[1]!r} is not a "
+                         f"plain integer -- gen_241_region cannot derive its Denver day-set") from None
+    try:
+        cron_dows = [int(x) for x in fields[4].split(",")]
+    except ValueError:
+        raise SystemExit(f"{routine_id}: expected_trigger.cron_utc day-of-week field {fields[4]!r} is "
+                         f"not a comma-separated list of plain integers -- gen_241_region cannot "
+                         f"derive its Denver day-set") from None
+    if any(d < 0 or d > 6 for d in cron_dows):
+        raise SystemExit(f"{routine_id}: expected_trigger.cron_utc day-of-week field {fields[4]!r} has "
+                         f"a value outside 0-6 (cron Sunday=0..Saturday=6)")
+    same_day = hour >= DENVER_UTC_OFFSET_HOURS_MDT
+    denver_cron_dows = cron_dows if same_day else [(d - 1) % 7 for d in cron_dows]
+    return sorted({d + 1 for d in denver_cron_dows})
+
+
+def gen_241_region(routines):
+    """state.queue_driven_missed_fire_watch rows: the SAME queue_driven filter gen_132_region uses (so
+    the two regions can never disagree about WHICH routines are queue-driven -- see build_targets()'s
+    comment on the 241 target), plus each routine's Denver calendar day-set, DERIVED from
+    expected_trigger.cron_utc via _cron_utc_to_denver_dow() rather than hand-copied. Today all five
+    queue_driven owners spell Denver Sun-Thu, but through two different UTC cron shapes: M1R's 13:00
+    UTC slot lands on the SAME Denver day (cron dow 0,1,2,3,4 needs no shift), while
+    AR_att/AR_orc/SL2/SL5's 00:00-01:25 UTC slots land on the PREVIOUS Denver day (cron dow 1,2,3,4,5
+    shifts back by one) -- see ops/cadence.yaml's M1R entry and check Q in
+    scripts/check_cadence_consistency.py, which both narrate the identical split. Hardcoding
+    [1,2,3,4,5] here would silently stop matching the day a 6th queue_driven owner's cron used a shape
+    neither of those two already covers. cadence.yaml order, 4-space indent matching the surrounding
+    UNNEST([ block."""
+    rows = [r for r in routines if r.get("monitor_class") == "queue_driven"]
+    lines = []
+    for i, r in enumerate(rows):
+        comma = "," if i < len(rows) - 1 else ""
+        cron_utc = str((r.get("expected_trigger") or {}).get("cron_utc", ""))
+        denver_dow = _cron_utc_to_denver_dow(r["id"], cron_utc)
+        dow_literal = "[" + ",".join(str(d) for d in denver_dow) + "]"
+        lines.append(f"    STRUCT('{r['id']}' AS routine, '{r['monitor_class']}' AS monitor_class, "
+                     f"{dow_literal} AS denver_dow){comma}")
     return "\n".join(lines)
 
 
@@ -332,6 +408,15 @@ def build_targets():
         # roster, so a routine cannot be absent from both and end up watched by nothing -- which is
         # precisely the hole bigquery/132 was written to close (SL2/SL5, 2026-08-03).
         (QUEUE_SILENCE_SQL, gen_132_region(routines)),
+        # bigquery/241 takes the SAME queue_driven set as bigquery/132 -- gen_241_region applies the
+        # identical `monitor_class == "queue_driven"` filter gen_132_region uses (rather than deriving
+        # its own), so the two regions can never disagree about WHICH routines are queue-driven. 241
+        # additionally carries each routine's Denver calendar day-set (denver_dow), DERIVED from
+        # expected_trigger.cron_utc rather than hand-copied -- the five owners spell "Denver Sun-Thu"
+        # through two different UTC cron shapes (see gen_241_region's own docstring), so hardcoding the
+        # day-set here would silently stop matching the day a 6th owner used a shape neither shape
+        # already covers.
+        (QUEUE_DRIVEN_MISSED_FIRE_SQL, gen_241_region(routines)),
     ]
     # bigquery/205 is the THIRD gen_24_region consumer, and the one that matters most at runtime: it
     # CREATE-OR-REPLACEs the SAME ops.sp_assert_deps procedure bigquery/114 declares (205's own section
@@ -373,7 +458,7 @@ def build_targets():
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     g = ap.add_mutually_exclusive_group(required=True)
-    g.add_argument("--write", action="store_true", help="regenerate all 7 marker regions in place")
+    g.add_argument("--write", action="store_true", help="regenerate all 8 marker regions in place")
     g.add_argument("--check", action="store_true", help="exit 1 + diff if any region is stale")
     args = ap.parse_args()
 
@@ -387,7 +472,7 @@ def main():
         if changed:
             print(f"gen_routine_lists --write: regenerated {', '.join(changed)}.")
         else:
-            print("gen_routine_lists --write: all 7 regions already current (no-op).")
+            print("gen_routine_lists --write: all 8 regions already current (no-op).")
         return 0
 
     # --check
@@ -406,7 +491,7 @@ def main():
                   f"Claude_Task_Plan.md -- run `python scripts/gen_routine_lists.py --write`")
     if drift:
         return 1
-    print("gen_routine_lists --check: OK -- bigquery/12, 15, 24, 105, 114, 132, 205 generated regions "
+    print("gen_routine_lists --check: OK -- bigquery/12, 15, 24, 105, 114, 132, 205, 241 generated regions "
           "match ops/cadence.yaml + Claude_Task_Plan.md.")
     return 0
 

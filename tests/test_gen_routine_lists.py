@@ -1,4 +1,4 @@
-"""Guard scripts/gen_routine_lists.py — the generator for bigquery/12/15/24/105/114/132/205's
+"""Guard scripts/gen_routine_lists.py — the generator for bigquery/12/15/24/105/114/132/205/241's
 marker-delimited routine-list STRUCT regions (ARCH-3 Item 30b). This module had NO dedicated test before now:
 scripts/check_cadence_consistency.py only *checks* the regions agree with ops/cadence.yaml, while
 this script GENERATES them, so a generator bug (wrong filter, wrong indent, a stale --check that
@@ -270,6 +270,42 @@ def test_gen_105_region_empty_when_no_routines():
     assert gr.gen_105_region([]) == ""
 
 
+# ---- _cron_utc_to_denver_dow: cron_utc -> BigQuery-numbered Denver day-set (gen_241_region) --------
+# gen_241_region's own filter/format is exercised only indirectly, through build_targets() (see
+# test_build_targets_returns_eight_targets), so this is the ONLY place that pins the actual
+# same-day/previous-day/wraparound ARITHMETIC -- --check can only ever catch DRIFT against a stale
+# file, never a self-consistently wrong answer, so these are the sole guard against the shift or the
+# +1 conversion silently coming out wrong.
+def test_cron_utc_to_denver_dow_same_day_when_hour_is_at_or_after_the_denver_offset():
+    # M1R's real shape: 13:00 UTC is well past DENVER_UTC_OFFSET_HOURS_MDT (6), so no day shift is
+    # needed -- cron dow 0,1,2,3,4 (Sun-Thu) maps straight across to BigQuery 1,2,3,4,5 via the flat +1.
+    assert gr._cron_utc_to_denver_dow("M1R", "0 13 * * 0,1,2,3,4") == [1, 2, 3, 4, 5]
+
+
+def test_cron_utc_to_denver_dow_shifts_to_the_previous_denver_day_before_the_offset_hour():
+    # AR_att/AR_orc/SL2/SL5's real shape: 00:00 UTC has already rolled past Denver local midnight, so
+    # cron dow 1,2,3,4,5 (Mon-Fri) each shift back one cron day (-> 0,1,2,3,4) BEFORE the +1 -- landing
+    # on the identical [1,2,3,4,5] BigQuery result as the same-day case above, but via the shifted path.
+    assert gr._cron_utc_to_denver_dow("AR_att", "0 0 * * 1,2,3,4,5") == [1, 2, 3, 4, 5]
+
+
+def test_cron_utc_to_denver_dow_sunday_wraps_to_bigquery_saturday_not_negative():
+    # The wraparound case none of the five real queue_driven owners exercise today (see
+    # DENVER_UTC_OFFSET_HOURS_MDT's own "latent, not live" note): a cron dow of 0 (Sunday) shifted back
+    # a day must land on cron Saturday (6), not -1 -- `(d - 1) % 7` is non-negative for Python's `%`
+    # with a positive divisor, which is the whole reason the shift happens in cron-numbered space
+    # before the +1. BigQuery EXTRACT(DAYOFWEEK): Saturday = 7.
+    assert gr._cron_utc_to_denver_dow("TESTROUTINE", "0 1 * * 0") == [7]
+
+
+def test_cron_utc_to_denver_dow_raises_systemexit_on_malformed_cron():
+    # A cron_utc that isn't a 5-field string (e.g. a routine with no expected_trigger.cron_utc at all,
+    # which defaults to "") must fail LOUDLY naming the routine, not silently guess a day-set.
+    with pytest.raises(SystemExit, match=r"TESTROUTINE: expected_trigger\.cron_utc '' is not a "
+                                          r"5-field cron"):
+        gr._cron_utc_to_denver_dow("TESTROUTINE", "")
+
+
 # ---- wanted_region / current_region / write_region round-trip ------------------------------------
 def test_wanted_region_padding_is_exact():
     assert gr.wanted_region("BODY") == "\nBODY\n  "
@@ -365,7 +401,15 @@ def _wire_fixture(tmp_path, monkeypatch, *, plan_headings=True, extra_routine=""
     # ALERT_MSG_STABILITY_SQL would let the --write round-trip tests below overwrite its real 20-row
     # period_class region with this fixture's single W1 row, mid-test-run.
     f205 = tmp_path / "205.sql"
-    for f in (f12, f15, f24, f105, f114, f132, f205):
+    # 241 (state.queue_driven_missed_fire_watch's `routines` CTE, gen_241_region) is the 8th target.
+    # Same lockstep rule as 114/132/205 above: unpatched, a --write test below would reach PAST this
+    # fixture and overwrite the real, 1000+-line bigquery/241_queue_driven_per_day_missed_fire.sql with
+    # whatever this fixture's cadence.yaml happens to carry (empty when it has no queue_driven routine,
+    # a one-row body when a test adds one) -- exactly the cross-test clobber
+    # tests/test_cadence_consistency.py::_patch_gen_paths' own comment already records biting three
+    # times, once per target added (105, 114, 132), now with an 8th chance to recur.
+    f241 = tmp_path / "241.sql"
+    for f in (f12, f15, f24, f105, f114, f132, f205, f241):
         f.write_text(_sql_with_region("\nSTALE\n  "))
     monkeypatch.setattr(gr, "PLAN", str(plan))
     monkeypatch.setattr(gr, "CADENCE", str(cadence))
@@ -376,11 +420,12 @@ def _wire_fixture(tmp_path, monkeypatch, *, plan_headings=True, extra_routine=""
     monkeypatch.setattr(gr, "DEP_GATE_SQL", str(f114))
     monkeypatch.setattr(gr, "QUEUE_SILENCE_SQL", str(f132))
     monkeypatch.setattr(gr, "ALERT_MSG_STABILITY_SQL", str(f205))
-    return f12, f15, f24, f105, f114, f132, f205
+    monkeypatch.setattr(gr, "QUEUE_DRIVEN_MISSED_FIRE_SQL", str(f241))
+    return f12, f15, f24, f105, f114, f132, f241, f205
 
 
 def test_main_write_then_check_is_a_clean_round_trip(tmp_path, monkeypatch, capsys):
-    f12, f15, f24, f105, _f114, _f132, _f205 = _wire_fixture(tmp_path, monkeypatch)
+    f12, f15, f24, f105, _f114, _f132, _f241, _f205 = _wire_fixture(tmp_path, monkeypatch)
 
     monkeypatch.setattr(sys, "argv", ["gen_routine_lists.py", "--write"])
     assert gr.main() == 0
@@ -415,7 +460,7 @@ def test_main_check_returns_1_and_reports_stale_region(tmp_path, monkeypatch, ca
 def test_main_check_returns_1_when_a_target_lacks_markers(tmp_path, monkeypatch, capsys):
     # --check on a file with no markers must report the marker problem (current_region()==None path)
     # and fail, NOT silently pass — a stripped/renamed marker would otherwise hide real staleness.
-    f12, _f15, _f24, _f105, _f114, _f132, _f205 = _wire_fixture(tmp_path, monkeypatch)
+    f12, _f15, _f24, _f105, _f114, _f132, _f241, _f205 = _wire_fixture(tmp_path, monkeypatch)
     f12.write_text("a file with no markers at all\n")
     monkeypatch.setattr(sys, "argv", ["gen_routine_lists.py", "--check"])
     assert gr.main() == 1
@@ -435,8 +480,16 @@ def test_main_write_check_round_trips_with_an_apostrophe_heading(tmp_path, monke
     # GENERIC FORM (2026-08-17): a CODED heading's description (where an apostrophe would live) is now
     # dropped from the instruction, so this needs an UNCODED heading (no "<id>. " prefix, same shape as
     # AR_att/AR_orc) to keep exercising the escape/round-trip path at all.
-    _f12, f15, _f24, _f105, _f114, _f132, _f205 = _wire_fixture(
-        tmp_path, monkeypatch, extra_routine="  - id: AR_att\n    monitor_class: queue_driven\n")
+    # AR_att's expected_trigger.cron_utc is required now that 241 is an 8th, unconditional target:
+    # gen_241_region() feeds every queue_driven routine's cron_utc through _cron_utc_to_denver_dow(),
+    # which raises SystemExit on a routine with no (or an empty) cron_utc -- so an AR_att row with no
+    # expected_trigger block would take main()'s --write down before this test ever reaches its
+    # apostrophe assertions. 00:00 UTC Mon-Fri is AR_att's real ops/cadence.yaml shape (pre-offset ->
+    # Denver Sun-Thu, same as every other queue_driven routine today).
+    _f12, f15, _f24, _f105, _f114, _f132, _f241, _f205 = _wire_fixture(
+        tmp_path, monkeypatch,
+        extra_routine=("  - id: AR_att\n    monitor_class: queue_driven\n"
+                       "    expected_trigger:\n      cron_utc: '0 0 * * 1,2,3,4,5'\n"))
     plan = tmp_path / "Claude_Task_Plan.md"      # add an uncoded heading carrying an apostrophe
     plan.write_text(
         "## D1. Market Development Scan — deep research\nbody\n\n"
@@ -450,22 +503,27 @@ def test_main_write_check_round_trips_with_an_apostrophe_heading(tmp_path, monke
     assert gr.main() == 0                                                       # self-consistent round-trip
 
 
-def test_build_targets_returns_seven_targets(tmp_path, monkeypatch):
+def test_build_targets_returns_eight_targets(tmp_path, monkeypatch):
     # The fixture carries a queue_driven routine ON PURPOSE (2026-09-04 quality pass). With the default
     # `extra_routine=""` cadence -- D1 + W1 only -- `queue_ids` was necessarily EMPTY, so the partition
     # assertions below held for ANY behavior of gen_132_region and this test could not fail: mutating
-    # gen_132_region to return "" (emptying bigquery/132's watch list entirely) left all 33 tests in
+    # gen_132_region to return "" (emptying bigquery/132's watch list entirely) left all tests in
     # this file green. gen_132_region is not exercised anywhere else in this file, and the only backstop
     # was cross-file -- tests/test_cadence_consistency.py::test_gen_routine_lists_against_real_repo_
     # write_is_noop, which detects it only by WRITING the emptied region into the real, frozen
     # bigquery/132 and failing dirty (the clobber mode that file's own _patch_gen_paths comment records
     # as having bitten three times). One queue_driven id in the fixture makes the partition real here.
-    _wire_fixture(tmp_path, monkeypatch,
-                  extra_routine="  - id: AR_att\n    monitor_class: queue_driven\n")
+    # AR_att's expected_trigger.cron_utc is required now that 241 (gen_241_region) is an 8th,
+    # unconditional target -- see test_main_write_check_round_trips_with_an_apostrophe_heading's own
+    # comment on the same requirement.
+    _wire_fixture(
+        tmp_path, monkeypatch,
+        extra_routine=("  - id: AR_att\n    monitor_class: queue_driven\n"
+                       "    expected_trigger:\n      cron_utc: '0 0 * * 1,2,3,4,5'\n"))
     targets = gr.build_targets()
-    assert len(targets) == 7
+    assert len(targets) == 8
     assert [os.path.basename(p) for p, _ in targets] == [
-        "12.sql", "15.sql", "24.sql", "105.sql", "114.sql", "132.sql", "205.sql"]
+        "12.sql", "15.sql", "24.sql", "105.sql", "114.sql", "132.sql", "241.sql", "205.sql"]
     # 12 and 132 must PARTITION the roster: every routine is either calendar-class (12) or
     # queue_driven (132), never neither. A routine absent from both would be watched by nothing --
     # exactly the SL2/SL5 hole bigquery/132 closes.
@@ -479,6 +537,10 @@ def test_build_targets_returns_seven_targets(tmp_path, monkeypatch):
     assert queue_ids == {"AR_att"}, "gen_132_region dropped the queue_driven routine"
     assert calendar_ids | queue_ids == all_ids, "a routine is in neither watch list"
     assert not (calendar_ids & queue_ids), "a routine is in both watch lists"
+    # 241 (gen_241_region) applies the SAME queue_driven filter gen_132_region does, so it must name
+    # exactly the same routines -- the two regions can never disagree about WHICH routines are
+    # queue-driven (see gen_241_region's own docstring and build_targets()'s comment on this target).
+    assert _ids(bodies["241.sql"]) == queue_ids, "gen_241_region disagrees with gen_132_region"
     # 114 (ops.sp_assert_deps' period_class CTE, 2026-07-28) and 205 (the SUPERSEDING, LIVE copy of
     # that same procedure, registered as a target 2026-09-04) both reuse gen_24_region, so all three
     # bodies must be BYTE-IDENTICAL -- that identity is the guarantee the FATAL dependency gate and
@@ -491,19 +553,24 @@ def test_build_targets_returns_seven_targets(tmp_path, monkeypatch):
 def test_build_targets_drops_205_when_only_the_dep_gate_is_redirected(tmp_path, monkeypatch):
     """PAIRED-PATH GUARD (see build_targets()). bigquery/114 and bigquery/205 are two copies of ONE
     procedure, so a fixture that redirects DEP_GATE_SQL at a tmp tree but leaves ALERT_MSG_STABILITY_SQL
-    pointing at the real repo is mis-wired -- and an unguarded 7th target would then let `--write` reach
+    pointing at the real repo is mis-wired -- and an unguarded 8th target would then let `--write` reach
     PAST the fixture and overwrite the real, frozen, live-parity-checked bigquery/205 with the fixture's
     one-row period_class list. tests/test_cadence_consistency.py::_patch_gen_paths was exactly that
-    shape until it was wired for 205 in this same pass (it now takes an `sql205` and patches all
-    seven; its own comment records this cross-test clobber biting three times -- once per generated
-    target added -- and notes the guard is consequently DORMANT for those tests). Pin that the target
-    drops out instead, so the NEXT fixture that forgets is safe."""
+    shape until it was wired for 205 in the 2026-09-04 pass (it now takes an `sql205`, and an `sql241`
+    since this pass, and patches all eight; its own comment records this cross-test clobber biting
+    three times -- once per generated target added -- and notes the guard is consequently DORMANT for
+    those tests). Pin that the target drops out instead, so the NEXT fixture that forgets is safe.
+
+    241 (gen_241_region, unlike 205) carries NO conditional guard of its own -- it is unconditionally
+    appended in build_targets() before the `if` block below runs -- so it is unaffected by this
+    redirect and must still appear in `names` even while 205 is dropped."""
     _wire_fixture(tmp_path, monkeypatch)
     monkeypatch.setattr(gr, "ALERT_MSG_STABILITY_SQL",
                         os.path.join(gr.ROOT, "bigquery", "205_alert_message_stability.sql"))
     names = [os.path.basename(p) for p, _ in gr.build_targets()]
-    assert names == ["12.sql", "15.sql", "24.sql", "105.sql", "114.sql", "132.sql"]
-    # ...and with BOTH patched (the normal _wire_fixture wiring) it comes back.
+    assert names == ["12.sql", "15.sql", "24.sql", "105.sql", "114.sql", "132.sql", "241.sql"]
+    # ...and with BOTH patched (the normal _wire_fixture wiring) it comes back, still last (241 is
+    # appended before the conditional 205 in build_targets()).
     monkeypatch.setattr(gr, "ALERT_MSG_STABILITY_SQL", str(tmp_path / "205.sql"))
     assert [os.path.basename(p) for p, _ in gr.build_targets()][-1] == "205.sql"
 

@@ -672,6 +672,27 @@ rather than duplicated by a competing entry, on the same reasoning the 08-23 ann
   M1R differ only by the presence of a `completed` `ops.run_log` row, that missing row is the only signal
   separating them.
 
+  > **CORRECTION (2026-09-15, interactive session): the sentence immediately above was WRONG, and the
+  > miss surfaced through NOTHING.** Both named nets were checked live the next day and neither could
+  > see it. `state.stalled_runs` keys on a `started` row with no terminal row — this slot wrote NO row
+  > at all, `started` included, because run-logging is itself a BigQuery write, so there was nothing
+  > for it to match. `state.queue_driven_silence_watch` read `days_silent=2` against its threshold of
+  > `9`. `cadence_watch` was correctly excluded, as stated. The miss became visible only because M1R's
+  > OWN next run read `ops.run_log`, noticed the hole and filed an `info` notice (`ops.alerts`
+  > `1e57700b`) — i.e. by luck of that routine happening to look, not by any monitor. That notice then
+  > mis-diagnosed the cause as a non-fire; **M1R DID fire** (RemoteTrigger session
+  > `cse_01EF21WXLxeGoSo7BfJNXbcJ`, 13:09:50Z–13:20:59Z), which is establishable from an interactive
+  > session but not from a headless routine, and `1e57700b` is resolved on that correction and
+  > superseded by `3caa7e7b`. The gap is now closed by `bigquery/241_queue_driven_per_day_missed_fire.sql`:
+  > a per-DAY expectation over each queue-driven routine's own cron day-set, raising a `warning` (never
+  > a critical — that would halt order staging over one skipped morning). Backtested over the full
+  > `ops.run_log` history of all five queue-driven routines: 23 missing routine-days on 10 dates, every
+  > one a documented incident, zero false positives. **The general lesson, which is why this correction
+  > is written in full rather than silently edited:** a routine that halts because BigQuery is
+  > unreachable cannot record its own halt anywhere a BigQuery-side monitor will ever look, so
+  > "the dead-man's switch will catch it" must be VERIFIED against the switch's actual predicate, not
+  > assumed from its name.
+
 **One spec defect found and recorded but NOT fixed — route to W5's SPEC-DEFECT NOTICE INTAKE.** The
 §Observability connector pre-flight branch says to create the RE-AUTH calendar event "immediately" and
 attaches **no dedup rule**, so read literally, every routine firing during an outage creates its own event —

@@ -78,6 +78,21 @@
 -- rule (see the header above). No predicate, threshold, severity or control flow on any EXISTING
 -- check changes. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
 -- re-apply this CREATE live in isolation.
+-- RE-POINTED (2026-09-15): the CURRENT canonical definition of this procedure is
+-- bigquery/241_queue_driven_per_day_missed_fire.sql, which SUPERSEDES every earlier copy including this
+-- one. 241 carries the bigquery/230 body forward BYTE-IDENTICAL except exactly three edits: the
+-- heartbeat literal v22 -> v23; two categories (queue_driven_missed_fire,
+-- queue_driven_missed_fire_check_failed) appended to the number 14 auto-age allowlist; and one new
+-- best-effort block appended after the queue_driven_silent check, raising a per-DAY missed-fire WARNING
+-- from the new state.queue_driven_missed_fire_watch view. That closes the single-skipped-day case the
+-- 9-day state.queue_driven_silence_watch threshold structurally cannot see and state.cadence_watch
+-- never covers, because monitor_class=queue_driven is filtered out of state.cadence_expected_today
+-- before the generated UNNEST literal is written (M1R logged nothing for 2026-09-14 and nothing
+-- alerted). No predicate, threshold, exclusion or severity of any EXISTING check in this procedure
+-- moves, and both new categories are severity warning so neither can contribute to blocking_criticals.
+-- Any pointer ABOVE naming an earlier file is kept exactly as written, as history; THIS paragraph is
+-- the live pointer. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
+-- re-apply this CREATE live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';

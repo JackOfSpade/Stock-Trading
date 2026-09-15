@@ -123,8 +123,25 @@ defaults:
 #   monthly_ftd    : first trading day of the month   (visible, not alarmed)
 #   quarterly_ftd  : first trading day of the quarter (visible, not alarmed)
 #   annual_ftd     : first trading day of the year    (visible, not alarmed)
-#   queue_driven   : fires only when a queue entry is due — NOT calendar-predictable, so deliberately
-#                    EXCLUDED from state.cadence_expected_today (the adversarial AR routines).
+#   queue_driven   : does WORK only when a queue entry is due, so it is deliberately EXCLUDED from
+#                    state.cadence_expected_today (the adversarial AR routines, the SISA authoring
+#                    routines, and M1R). **READ THE DISTINCTION BELOW BEFORE REASONING FROM THIS
+#                    LINE — it used to read "NOT calendar-predictable" flat, and that was wrong in a
+#                    way that cost a real detection gap (corrected 2026-09-15, bigquery/241).**
+#                    What is queue-driven is the routine's WORK, not its FIRING. Every routine in
+#                    this class carries an ordinary cron with a fixed day-of-week set and FIRES on
+#                    every one of those days, logging `started` + `completed` to ops.run_log even
+#                    when its queue is empty and it no-ops. So the run_log ROW is calendar-
+#                    predictable even though the routine's OUTPUT is not. MEASURED 2026-09-15 over
+#                    the full run_log history of all five: 23 missing routine-days on 10 distinct
+#                    dates, and every single one maps to a documented incident (the 07-23/24
+#                    connector outage, the 08-02 eight-disabled-triggers incident, the 08-23 and
+#                    09-14 BigQuery de-auths) — not one is a legitimate nothing-was-due quiet day.
+#                    Exclusion from cadence_expected_today is still correct, because that view feeds
+#                    the missed_run CRITICAL and a critical here would halt order staging over one
+#                    skipped morning. The per-day coverage that exclusion used to forfeit is now
+#                    supplied at WARNING severity by state.queue_driven_missed_fire_watch
+#                    (bigquery/241), alongside the 9-day per-routine net in bigquery/132.
 #
 # SINGLE-SOURCE catchup_safe (added 2026-07-16, ARCH-3 Item 30b). Each routine also carries an explicit
 # `catchup_safe: true|false` boolean — a DECLARED capital-adjacency judgment (never derived from
@@ -569,7 +586,7 @@ routines:
   - id: AR_att   # ASCII id standardized 2026-07-01 (RUNBOOK §28); legacy middle-dot ops.run_log rows fold in via instruction_drift's separator-normalized join
     name: Adversarial Review — Attacker
     schedule: "Sun-Thu; if events.queue_events PENDING_REVIEW attacker_due<=today"
-    monitor_class: queue_driven           # NOT calendar-predictable -> excluded from cadence_expected_today
+    monitor_class: queue_driven           # WORK is queue-gated; FIRING is not -- see the monitor_class contract above
     catchup_safe: false
     depends_on: []
     writes: [events.adversarial_reviews]
@@ -611,7 +628,7 @@ routines:
   - id: SL2
     name: Strategy Draft, Revise & Post-mortem
     schedule: "Sun-Thu; if events.queue_events PENDING_DRAFT (strategy-draft/strategy-revise/post-mortem) due<=today"
-    monitor_class: queue_driven           # NOT calendar-predictable -> excluded from cadence_expected_today (like AR)
+    monitor_class: queue_driven           # WORK is queue-gated; FIRING is not -- see the monitor_class contract above
     catchup_safe: false
     depends_on: []
     writes: [Strategy.md, strategy/*.md, events.queue_events,
@@ -852,7 +869,7 @@ routines:
   - id: M1R
     name: Out-of-cycle Regime Re-score
     schedule: "Sun-Thu; if events.queue_events PENDING_REGIME_REFRESH regime-refresh is open"
-    monitor_class: queue_driven           # NOT calendar-predictable -> excluded from cadence_expected_today (like AR/SL2/SL5)
+    monitor_class: queue_driven           # WORK is queue-gated; FIRING is not -- see the monitor_class contract above
     catchup_safe: true
     depends_on: []
     writes: [events.regime_events, events.queue_events]
