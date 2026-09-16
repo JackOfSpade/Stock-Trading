@@ -329,3 +329,277 @@ def test_real_sp_log_run_extraction_with_one_changed_character_is_refused():
     assert noncanonical is False
     assert ok is False
     assert "does NOT match" in message
+
+
+# =====================================================================================================
+# REGISTRY LOCKSTEP REMINDER (2026-09-16) -- guards check_registry_lockstep(), the post-apply
+# courtesy check added to close the recurring "registry row applied without the procedure, or
+# procedure without the registry row" trap documented in bigquery/63_scheduled_query_version_
+# registry.sql's own git_note (v9, v14, v15, v16, v17, v18, v22 before this one) and in this
+# module's own docstring's REGISTRY LOCKSTEP REMINDER section. It is a REMINDER, never a gate: every
+# test below that reaches main() end-to-end asserts rc == 0 regardless of match/mismatch/missing-row/
+# exception, because the whole point is that this check can never turn a successful apply into a
+# failed run.
+# =====================================================================================================
+
+# A synthetic `ops.sp_sq_fix4_registry` procedure, built the same way CANONICAL_VIEW_SQL above is --
+# a fake object name so these tests never depend on any real, evolving bigquery/*.sql body staying
+# byte-identical over time. Its heartbeat literal is written in the REAL live shape (confirmed
+# 2026-09-16 via `SELECT SUBSTR(ddl, STRPOS(ddl,'sp_beat_heartbeat')-60, 160) FROM ops.INFORMATION_
+# SCHEMA.ROUTINES WHERE routine_name='sp_sq_cadence_check'`, which returned
+# "CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v23', ...)"): closing
+# backtick, THEN an immediate paren, no space either side -- the exact shape a naive
+# `sp_beat_heartbeat\(` anchor fails against (module docstring's import comment for HEARTBEAT_CALL).
+CANONICAL_SP_SQ_SQL = (
+    "CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_fix4_registry`()\n"
+    "BEGIN\n"
+    "  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:fix4_registry', 'v23', 'fix4_registry.sql ran');\n"
+    "END;\n"
+)
+_sp_m = clsp.CREATE_STMT.search(CANONICAL_SP_SQ_SQL)
+CANONICAL_SP_SQ_BODY = clsp.extract_body(CANONICAL_SP_SQ_SQL, _sp_m.start(), "PROCEDURE")
+FINAL_SP_SQ = {
+    ("ops", "sp_sq_fix4_registry"): ("PROCEDURE", PROJECT, "999_fake_sp_sq.sql", CANONICAL_SP_SQ_BODY),
+}
+
+
+class _FakeRegistryJob:
+    """`client.query(...)` return value for the registry SELECT: `.result()` yields row-like dicts
+    (real bigquery.table.Row supports the same `row["col"]` mapping access this code uses)."""
+    def __init__(self, rows):
+        self._rows = rows
+
+    def result(self):
+        return self._rows
+
+
+# ---- the regression that motivated this whole feature: the real no-space, backtick-qualified call --
+def test_heartbeat_call_regex_parses_the_real_backtick_qualified_no_space_shape():
+    # Exactly the live snippet returned by the 2026-09-16 verification query above (module docstring's
+    # import comment) -- a naive `sp_beat_heartbeat\(` anchor fails on this because a closing backtick,
+    # not the function name, sits directly before the paren.
+    real_body = (
+        "BEGIN\n"
+        "  DECLARE noise_msg STRING DEFAULT '';\n"
+        "  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v23', "
+        "'cadence_check.sql ran');\n"
+        "  -- RUNBOOK section 38\n"
+        "END;\n"
+    )
+    m = asf.HEARTBEAT_CALL.search(real_body)
+    assert m is not None
+    assert (m.group(1), m.group(2)) == ("cadence_check", "v23")
+
+
+# ---- silent, zero-BigQuery-work cases (design constraint (c)) ---------------------------------------
+class _CountingClient:
+    """Records every `.query()` call so a test can assert NONE happened, rather than relying on an
+    exception raised-and-swallowed inside check_registry_lockstep()'s own try/except to prove it
+    indirectly (that would still pass even if a query fired and merely failed)."""
+    def __init__(self):
+        self.calls = []
+
+    def query(self, sql, job_config=None):
+        self.calls.append(sql)
+        raise AssertionError("check_registry_lockstep must not query BigQuery for this file")
+
+
+def test_registry_lockstep_silent_for_a_plain_view_file(capsys):
+    client = _CountingClient()
+    asf.check_registry_lockstep(client, "f.sql", CANONICAL_VIEW_SQL)
+    assert client.calls == []
+    assert capsys.readouterr().out == ""
+
+
+def test_registry_lockstep_silent_for_bigquery_63s_own_merge_file(capsys):
+    # The exact file this whole feature tells the operator to apply next must never itself trip a
+    # reminder about applying it -- bigquery/63's MERGE is DML with no CREATE PROCEDURE in it at all.
+    merge_sql = (
+        "MERGE `stock-trading-498512.state.expected_scheduled_query_versions` T\n"
+        "USING (SELECT 'cadence_check' AS sq_name) S ON T.sq_name = S.sq_name\n"
+        "WHEN MATCHED THEN UPDATE SET T.expected_version = 'v23';\n"
+    )
+    client = _CountingClient()
+    asf.check_registry_lockstep(client, "bigquery/63_scheduled_query_version_registry.sql", merge_sql)
+    assert client.calls == []
+    assert capsys.readouterr().out == ""
+
+
+def test_registry_lockstep_silent_for_a_non_heartbeat_procedure(capsys):
+    # Defines an ops.sp_sq_* procedure (PROC_DDL matches) but its body never calls sp_beat_heartbeat
+    # at all -- both conditions (module docstring point (c)/constraint) must hold before any query.
+    no_heartbeat_sql = (
+        "CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_fix4_registry`()\n"
+        "BEGIN\n"
+        "  SELECT 1;\n"
+        "END;\n"
+    )
+    client = _CountingClient()
+    asf.check_registry_lockstep(client, "f.sql", no_heartbeat_sql)
+    assert client.calls == []
+    assert capsys.readouterr().out == ""
+
+
+# ---- versions match: one confirming line, no reminder -----------------------------------------------
+def test_registry_lockstep_versions_match_prints_confirming_line_only(capsys):
+    class FakeClient:
+        def query(self, sql, job_config=None):
+            assert "expected_scheduled_query_versions" in sql
+            assert "fix4_registry" in sql
+            return _FakeRegistryJob([{"expected_version": "v23"}])
+
+    asf.check_registry_lockstep(FakeClient(), "f.sql", CANONICAL_SP_SQ_SQL)
+    out = capsys.readouterr().out
+    assert "v23" in out
+    assert "OK" in out
+    assert "!!" not in out
+    assert "REMINDER" not in out
+
+
+# ---- versions differ: loud reminder naming BOTH versions and bigquery/63, exit still 0 --------------
+def test_registry_lockstep_versions_differ_prints_reminder_naming_both_versions(capsys):
+    class FakeClient:
+        def query(self, sql, job_config=None):
+            return _FakeRegistryJob([{"expected_version": "v22"}])
+
+    asf.check_registry_lockstep(FakeClient(), "f.sql", CANONICAL_SP_SQ_SQL)
+    out = capsys.readouterr().out
+    assert "!!" in out
+    assert "REMINDER" in out
+    assert "v23" in out            # the version this apply just wrote live
+    assert "v22" in out            # the stale registry version
+    assert "bigquery/63_scheduled_query_version_registry.sql" in out
+    assert "scheduled_query_version_drift" in out   # states the consequence, not just the mismatch
+
+
+def test_main_registry_lockstep_mismatch_does_not_change_exit_status(monkeypatch, capsys, tmp_path):
+    """End-to-end through main(): a real apply that succeeds but whose registry row is STALE must
+    still return 0 -- this is the design constraint (a) proof, not just a unit test of the printed
+    text above."""
+    proc_path = tmp_path / "999_fake_sp_sq.sql"
+    proc_path.write_text(CANONICAL_SP_SQ_SQL, encoding="utf-8")
+
+    class FakeJob:
+        def __init__(self, rows=None):
+            self.job_id = "job1"
+            self.state = "DONE"
+            self.errors = None
+            self._rows = rows if rows is not None else []
+
+        def result(self):
+            return self._rows
+
+    class FakeClient:
+        def __init__(self, **kw):
+            pass
+
+        def query(self, sql, job_config=None):
+            if "expected_scheduled_query_versions" in sql:
+                return FakeJob(rows=[{"expected_version": "v22"}])   # stale -- mismatch
+            return FakeJob()
+
+    monkeypatch.setattr(asf, "find_final_definitions", lambda: FINAL_SP_SQ)
+    monkeypatch.setattr(asf.bigquery, "Client", FakeClient)
+    monkeypatch.setattr(asf.bigquery, "QueryJobConfig", lambda **kw: kw)
+    rc = asf.main([str(proc_path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "APPLIED" in out
+    assert "REMINDER" in out
+    assert "v22" in out and "v23" in out
+
+
+# ---- registry row missing entirely: reminder, exit 0 -------------------------------------------------
+def test_registry_lockstep_missing_row_prints_reminder(capsys):
+    class FakeClient:
+        def query(self, sql, job_config=None):
+            return _FakeRegistryJob([])   # zero rows -- sq_name never registered at all
+
+    asf.check_registry_lockstep(FakeClient(), "f.sql", CANONICAL_SP_SQ_SQL)
+    out = capsys.readouterr().out
+    assert "!!" in out
+    assert "REMINDER" in out
+    assert "NO ROW" in out
+    assert "v23" in out
+    assert "bigquery/63_scheduled_query_version_registry.sql" in out
+
+
+def test_main_registry_lockstep_missing_row_does_not_change_exit_status(monkeypatch, capsys, tmp_path):
+    proc_path = tmp_path / "999_fake_sp_sq.sql"
+    proc_path.write_text(CANONICAL_SP_SQ_SQL, encoding="utf-8")
+
+    class FakeJob:
+        def __init__(self, rows=None):
+            self.job_id = "job1"
+            self.state = "DONE"
+            self.errors = None
+            self._rows = rows if rows is not None else []
+
+        def result(self):
+            return self._rows
+
+    class FakeClient:
+        def __init__(self, **kw):
+            pass
+
+        def query(self, sql, job_config=None):
+            if "expected_scheduled_query_versions" in sql:
+                return FakeJob(rows=[])   # no row at all
+            return FakeJob()
+
+    monkeypatch.setattr(asf, "find_final_definitions", lambda: FINAL_SP_SQ)
+    monkeypatch.setattr(asf.bigquery, "Client", FakeClient)
+    monkeypatch.setattr(asf.bigquery, "QueryJobConfig", lambda **kw: kw)
+    rc = asf.main([str(proc_path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "APPLIED" in out
+    assert "REMINDER" in out
+
+
+# ---- a BigQuery exception INSIDE the check is swallowed: exit 0, apply still reported APPLIED -------
+def test_registry_lockstep_bigquery_exception_is_swallowed_not_raised(capsys):
+    class ExplodingClient:
+        def query(self, sql, job_config=None):
+            raise RuntimeError("503 backendError: deadline exceeded")
+
+    # Must not raise.
+    asf.check_registry_lockstep(ExplodingClient(), "f.sql", CANONICAL_SP_SQ_SQL)
+    out = capsys.readouterr().out
+    assert "could not verify registry lockstep" in out
+    assert "503 backendError" in out
+    assert "!!" not in out          # a swallowed exception is not dressed up as a REMINDER banner
+
+
+def test_main_registry_lockstep_exception_does_not_change_exit_status_and_apply_still_reported(
+        monkeypatch, capsys, tmp_path):
+    proc_path = tmp_path / "999_fake_sp_sq.sql"
+    proc_path.write_text(CANONICAL_SP_SQ_SQL, encoding="utf-8")
+
+    class FakeJob:
+        def __init__(self):
+            self.job_id = "job1"
+            self.state = "DONE"
+            self.errors = None
+
+        def result(self):
+            return []
+
+    class FakeClient:
+        def __init__(self, **kw):
+            pass
+
+        def query(self, sql, job_config=None):
+            if "expected_scheduled_query_versions" in sql:
+                raise RuntimeError("network blip")
+            return FakeJob()
+
+    monkeypatch.setattr(asf, "find_final_definitions", lambda: FINAL_SP_SQ)
+    monkeypatch.setattr(asf.bigquery, "Client", FakeClient)
+    monkeypatch.setattr(asf.bigquery, "QueryJobConfig", lambda **kw: kw)
+    rc = asf.main([str(proc_path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "APPLIED" in out                              # the apply itself is still reported as such
+    assert "could not verify registry lockstep" in out
+    assert "network blip" in out

@@ -78,6 +78,45 @@ scripts/lib/sql_files.py's docstring raises about earlier near-identical parser 
 matched against files already on disk — so tests/test_apply_sql_file.py exercises it directly, fully
 offline, with no warehouse credentials (see that file's own docstring).
 
+REGISTRY LOCKSTEP REMINDER (added 2026-09-16). Commit aabb4ef landed bigquery/241_queue_driven_per_
+day_missed_fire.sql, which had to land THREE pieces together: a VIEW, a PROCEDURE
+(ops.sp_sq_cadence_check) whose FIRST executable statement self-reports
+`CALL ops.sp_beat_heartbeat('sq:cadence_check', 'v23', ...)`, and bigquery/63_scheduled_query_
+version_registry.sql's MERGE bumping the matching registry row to expected_version = 'v23'. The
+VIEW and the PROCEDURE were applied live; the MERGE was not — so the live procedure started beating
+v23 while `state.expected_scheduled_query_versions` still read v22,
+`state.scheduled_query_version_drift` went drift=TRUE, and ops.sp_sq_cadence_check itself emailed
+the operator a scheduled_query_version_drift WARNING (alert efd24568-fd52-4350-bb11-e86c250f0f6e) at
+2026-09-16 05:15:03Z — roughly a day after the partial apply. Fixed by hand the same day by
+re-running bigquery/63's MERGE (BigQuery job 64993219-0825-42b9-97f8-1d786df4a78d).
+
+This is not a one-off: bigquery/63's OWN registry `git_note` for cadence_check documents this
+identical "registry row applied without the procedure, or procedure without the registry row" trap
+recurring at v9, v14, v15, v16, v17, v18 and now v22/v23 — seven prior occurrences before this one,
+every one closed the same way, by a prose instruction to "apply them together, procedure first,"
+with nothing mechanical ever enforcing it. Critically, NO existing gate can see this class at all:
+scripts/check_sq_version_registry.py — this script's own sibling, and the thing that looks most
+like a check for exactly this — is pure repo-side text parsing (its own docstring says "Read-only,
+no BigQuery/dbt CLI needed"), so it happily compares repo file to repo file while live disagrees;
+scripts/check_live_sql_parity.py compares only object DEFINITIONS (VIEW / PROCEDURE / TABLE
+FUNCTION / FUNCTION DDL text) against INFORMATION_SCHEMA and never reads a TABLE's ROW content, so a
+stale `state.expected_scheduled_query_versions` row is structurally invisible to it — VERIFIED
+2026-09-16: it reported "0 mismatched" both before and after the manual fix above. The only thing
+that ever caught any of the eight occurrences was the nightly cadence_check alert itself, about a
+day late, at the cost of one operator email each time.
+
+check_registry_lockstep() (below) closes the gap at the one moment the mistake actually gets made:
+this script IS the canonical path for applying these bodies live (see WHY THIS EXISTS above). After
+a real, non-dry-run apply succeeds, if the just-applied file defines an `ops.sp_sq_<name>`
+procedure whose body carries a `sp_beat_heartbeat` literal, it re-reads the LIVE registry row for
+that same sq_name (one extra read-only SELECT, on the SAME client main() already built for the
+dry-run/apply calls) and compares versions — a one-line confirmation on a match, or a loud
+multi-line REMINDER (naming both versions and the exact bigquery/63 MERGE to run next) on a
+mismatch or a missing row. It is a REMINDER, not a gate: see check_registry_lockstep()'s own
+docstring for why it can never change this script's exit status and why a BigQuery error inside the
+check is swallowed rather than surfaced as a failure — the apply already succeeded, and a hiccup in
+a courtesy check must never make that look like it didn't.
+
 SAFETY PROPERTIES (all deliberate):
   * CANONICAL-PROVENANCE GATED, FIRST. See above — a file whose bytes are not the repo's own current
     canonical definition (or, for the non-CREATE escape hatch, not explicitly operator-flagged) never
@@ -132,6 +171,22 @@ from check_live_sql_parity import (
     find_final_definitions,
 )
 from lib.sql_files import normalize_kind, strip_sql_comments
+
+# Reused, not reforked (module docstring's REGISTRY LOCKSTEP REMINDER section) — these are
+# check_sq_version_registry.py's OWN, already-battle-tested regexes for exactly the two things
+# check_registry_lockstep() below needs to recognize: PROC_DDL finds an `ops.sp_sq_<name>` wrapper
+# procedure's CREATE header, HEARTBEAT_CALL finds its self-reported `CALL ops.sp_beat_heartbeat(
+# 'sq:<name>', '<version>', ...)` literal. HEARTBEAT_CALL's `` `...sp_beat_heartbeat`\(\s* `` shape
+# is the one that matters here: a naive `sp_beat_heartbeat\(` anchor (no backtick between the name
+# and the paren) FAILS against the real live call — confirmed live 2026-09-16 via
+# `SELECT SUBSTR(ddl, STRPOS(ddl,'sp_beat_heartbeat')-60, 160) FROM ops.INFORMATION_SCHEMA.ROUTINES
+# WHERE routine_name='sp_sq_cadence_check'`, which returned
+# "CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v23', ...)" — closing
+# backtick, THEN paren, no space either side. check_sq_version_registry.py's own docstring records
+# why HEARTBEAT_CALL is escape-aware (a `\'` inside a nearby git_note must never truncate the match
+# early) and PROC_DDL is anchored to THIS module's own PROJECT constant, so both are already exactly
+# right for this reuse rather than being a second, independently-drifting copy of the same parser.
+from check_sq_version_registry import HEARTBEAT_CALL, PROC_DDL
 
 PROJECT = "stock-trading-498512"
 
@@ -289,6 +344,89 @@ def check_canonical_provenance(path, sql, final=None):
         "apply-in-order final definition.")
 
 
+def check_registry_lockstep(client, path, sql):
+    """Post-apply REMINDER (module docstring's REGISTRY LOCKSTEP REMINDER section) — NOT a gate.
+
+    Called from main() exactly once per file, ONLY after that file's real (non-dry-run) apply has
+    already succeeded, with the SAME `client` main() already built for its dry-run/apply calls —
+    one extra read-only SELECT, not a second connection. If the just-applied `sql` defines an
+    `ops.sp_sq_<name>` wrapper procedure (PROC_DDL) whose body carries a `sp_beat_heartbeat` version
+    literal (HEARTBEAT_CALL — both reused from check_sq_version_registry.py, see the import comment
+    above), this reads the LIVE `state.expected_scheduled_query_versions` row for that same sq_name
+    and compares its `expected_version` to the version the heartbeat literal just reported live:
+      * MATCH -- prints one confirming line and returns.
+      * MISMATCH, or NO ROW AT ALL for that sq_name -- prints a loud, multi-line "!!"-bannered
+        REMINDER naming BOTH versions and the exact bigquery/63_scheduled_query_version_registry.sql
+        MERGE to run next, plus the consequence of not doing so (a nightly
+        scheduled_query_version_drift WARNING email — see module docstring). This is exactly the
+        pairing bigquery/241_queue_driven_per_day_missed_fire.sql's v22->v23 landing got wrong
+        2026-09-16, and the same pairing bigquery/63's own registry `git_note` records recurring at
+        v9/v14/v15/v16/v17/v18 before that.
+
+    sq_name and version are read from the HEARTBEAT CALL's own literal arguments (module docstring
+    point (f) of the operator's task, and see HEARTBEAT_CALL's import comment above) — NEVER derived
+    from `path`. The registry keys on `sq_name`, and a file's own name on disk (e.g. bigquery/
+    241_queue_driven_per_day_missed_fire.sql, which carries no substring "cadence_check" at all) has
+    no fixed relationship to it.
+
+    SILENT, ZERO BigQuery WORK, for the overwhelmingly common case: a file that does not define an
+    `ops.sp_sq_*` procedure carrying a heartbeat literal returns immediately, before either regex
+    result is used to build a query — e.g. bigquery/63's OWN MERGE (a DML file with no CREATE
+    PROCEDURE in it at all) must never trip this check, or applying the FIX for a lockstep drift
+    would itself print a lockstep reminder about applying the fix.
+
+    EXCEPTION-SAFE BY CONSTRUCTION: the entire body below runs inside one try/except that swallows
+    ANY exception (a network hiccup, a missing table, a malformed row — anything) and prints a short
+    "could not verify registry lockstep: <err>" note instead of letting it propagate. This function
+    is called AFTER main() has already printed "APPLIED" for a file whose apply genuinely succeeded;
+    a failure in this courtesy check must never retroactively make that apply look like it failed,
+    and main()'s return value is untouched either way — see main()'s own call site below.
+    """
+    try:
+        proc_m = PROC_DDL.search(sql)
+        if not proc_m:
+            return
+        hb_m = HEARTBEAT_CALL.search(sql)
+        if not hb_m:
+            return
+        name, version = hb_m.group(1), hb_m.group(2)
+
+        query = (
+            "SELECT expected_version FROM `%s.state.expected_scheduled_query_versions` "
+            "WHERE sq_name = '%s'" % (PROJECT, name)
+        )
+        rows = list(client.query(query).result())
+        expected = rows[0]["expected_version"] if rows else None
+
+        if expected == version:
+            print(f"  registry  : OK -- state.expected_scheduled_query_versions.sq_name='{name}' "
+                  f"expected_version='{expected}' already matches this apply's heartbeat literal.")
+            return
+
+        live_desc = (f"still reads expected_version={expected!r}" if rows
+                     else "has NO ROW AT ALL for this sq_name")
+        print("  " + "!" * 78)
+        print(f"  !! REGISTRY LOCKSTEP REMINDER -- {path} just applied `ops.sp_sq_{name}` live,")
+        print(f"  !! whose sp_beat_heartbeat literal reports version '{version}', but")
+        print(f"  !! state.expected_scheduled_query_versions.sq_name='{name}' {live_desc}.")
+        print("  !! These two are OUT OF LOCKSTEP.")
+        print("  !!")
+        print("  !! This is the SAME recurring trap bigquery/63_scheduled_query_version_registry.sql's")
+        print(f"  !! own git_note documents for '{name}' (cadence_check alone has hit it at v9, v14,")
+        print("  !! v15, v16, v17, v18 and v22): the registry row applied without the procedure, or")
+        print("  !! the procedure applied without the registry row.")
+        print("  !!")
+        print("  !! APPLY bigquery/63_scheduled_query_version_registry.sql's MERGE NEXT -- it must set")
+        print(f"  !! sq_name='{name}'.expected_version = '{version}' to match what just went live.")
+        print("  !!")
+        print("  !! IF YOU DO NOT: state.scheduled_query_version_drift goes drift=TRUE and")
+        print("  !! ops.sp_sq_cadence_check raises a nightly scheduled_query_version_drift WARNING")
+        print("  !! that emails the operator every night until the pair is reconciled.")
+        print("  " + "!" * 78)
+    except Exception as exc:  # noqa: BLE001 — a REMINDER must never fail an already-successful apply
+        print(f"  could not verify registry lockstep: {exc}")
+
+
 def main(argv):
     args = [a for a in argv if not a.startswith("--")]
     dry_only = "--dry-run" in argv
@@ -368,6 +506,13 @@ def main(argv):
             print(f"  APPLY FAILED: {exc}", file=sys.stderr)
             return 1
         print(f"  APPLIED   : job {job.job_id}  state={job.state}  errors={job.errors}")
+
+        # REGISTRY LOCKSTEP REMINDER (module docstring section, added 2026-09-16) — a courtesy
+        # check, never a gate: runs only here (never for --dry-run, never for a refused file, both
+        # already excluded above), reuses this SAME client, and cannot change this function's return
+        # value under any circumstance (see check_registry_lockstep()'s own exception-safety
+        # docstring paragraph).
+        check_registry_lockstep(client, path, sql)
 
     print("\nNow verify: python3 scripts/check_live_sql_parity.py")
     return 0
