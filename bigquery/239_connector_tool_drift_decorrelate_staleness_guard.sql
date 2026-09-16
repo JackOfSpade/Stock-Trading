@@ -65,6 +65,18 @@
 -- connector_tool_added alerts from 2026-09-13 (3c018514 cancel_job, 6db3f571 get_query_results) at
 -- 18:46:16 UTC, their manifest rows having landed in d958b8b.
 
+-- SUPERSEDED LIVE by bigquery/243_connector_enumeration_alert_closure.sql -- current single source
+-- of truth for this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO
+-- NOT re-apply this CREATE statement live in isolation.
+--
+-- WHY, IN ONE LINE: 243 carries this exact body forward unchanged (blocks (a)-(d) below and the
+-- three original DECLAREs are byte-for-byte identical) and adds exactly one new self-heal block (e)
+-- plus one new DECLARE: it resolves an open connector_tool_enumeration_failed alert once every
+-- connector it named has a clean (enumeration_ok=TRUE) reading on the newest ops.connector_tool_
+-- inventory run_date. That category (block (d) below, unchanged) had no closure path of any kind
+-- from 2026-08-08 through 2026-09-16 -- see 243's own header for the full defect and why the fix is
+-- condition-keyed rather than a 7-day cadence_check auto-age allowlist entry.
+
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_raise_connector_tool_drift`(in_source STRING)
 BEGIN
   DECLARE latest_run_date DATE;

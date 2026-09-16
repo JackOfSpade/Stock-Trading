@@ -178,6 +178,14 @@ END;
 -- 235's correlated NOT EXISTS against state.connector_tool_inventory_stale is rejected by BigQuery at
 -- CALL time ("Correlated subqueries ... not supported unless they can be de-correlated") and broke
 -- OPS1's drift step on the first run that called it. Blocks (a), (b) and (d) are unchanged in both.
+-- SUPERSEDED (2026-09-16) by bigquery/243_connector_enumeration_alert_closure.sql, the current
+-- canonical definition of this procedure. 243 carries 239's body forward BYTE-FOR-BYTE except for
+-- one new self-heal block (e) plus one new DECLARE: it resolves an open
+-- connector_tool_enumeration_failed alert (block (d), unchanged) once every connector it named has a
+-- clean (enumeration_ok=TRUE) reading on the newest ops.connector_tool_inventory run_date — that
+-- category had no closure path anywhere in this repo from this file's original 2026-08-08 landing
+-- through 2026-09-16. Blocks (a), (b), (c) and (d) are unchanged. Kept here, unmodified, for
+-- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_raise_connector_tool_drift`(in_source STRING)
 BEGIN
   DECLARE latest_run_date DATE;

@@ -122,6 +122,69 @@ manual re-enable was actually you. Resolve them by `alert_id` once you have conf
 
 ---
 
+# 2026-09-16 Tavily connector OAuth expiry — the fleet's primary web-research surface is down
+
+Found during an interactive alert-triage session, not by the routine that raised it: OPS1's
+2026-09-16 run raised BOTH `connector_tool_enumeration_failed` (`ops.alerts` `fa114bbc`) and
+`routine_run_warning` (`9e0eb082`) naming Tavily. This is the FIRST occurrence for this connector —
+`ops.alerts` has no prior `connector_tool_enumeration_failed` row in its whole history.
+
+## TV-1. URGENT — Re-consent the Tavily connector in the claude.ai connector settings — `[DONE 2026-09-16 — owner re-consented; verified live in-session, both alerts resolved]`
+
+**Action.** Re-authorize Tavily in your claude.ai connector settings, exactly as you did for IBKR
+(item V, 2026-07-19) and BigQuery (BQ-1). No code change, no `bq`/`gcloud`, nothing in this repo.
+There is nothing to re-apply afterwards and no catch-up replay to run.
+
+**Why only you can do it.** The failure is an **account-level OAuth token expiry, not a
+container-specific glitch** — MEASURED, not inferred: the interactive session that found this called
+`tavily_search` directly and got `MCP server "claude.ai Tavily" requires re-authorization (token
+expired)`. A session cannot run the OAuth consent flow for you. The same scope test is what
+distinguishes this from a routine-container fault, and it is the check worth repeating on any future
+connector alert (see `ops/RUNBOOK.md` §26 and BQ-1's own scope reasoning).
+
+**What it costs while it is down — real, but degradation, not danger.** Tavily is the fleet's primary
+external-content surface. Three of its five tools are `use: required` in `ops/connector_tools.yaml`
+(`tavily_search`, `tavily_extract`, `tavily_research`), and that manifest records `tavily_search` as
+**97.6% of the account's credit bill** — it IS the web-research surface, not a garnish. Routine text
+names it in D2, D2a, M4, AR_att, SL2, SL3 and Q2, and it is also the documented FALLBACK for the
+FMP-tier-denied content routes that M2/M3 were rewired onto. MEASURED from `ops.web_calls`: Tavily ran
+25-45 calls/day across the trailing three weeks (32 on 09-15, 45 on 09-14, 33 on 09-13) and **0 today**.
+
+**Nothing is unsafe while this is outstanding.** No order is staged, sized or gated on Tavily; both
+alerts are `severity='warning'`, and every trading gate counts `severity='critical'` only, so neither
+can contribute to `blocking_criticals` or halt order staging (the same property
+`bigquery/241_queue_driven_per_day_missed_fire.sql` verifies for its own categories). Affected
+routines degrade to `WebSearch` and to their IBKR/FMP primaries rather than halting. The real cost is
+research QUALITY and coverage on the affected steps, plus this: while Tavily cannot be enumerated,
+`state.connector_tool_drift` readings for Tavily are untrustworthy, so a genuine tool addition or
+removal on that connector would go unnoticed until the next clean run.
+
+**Close this item** when your own session can call a Tavily tool successfully and OPS1's next run
+enumerates it cleanly. No `verify` fence is attached — `scripts/verify_owner_actions.py` runs only
+hand-registered per-`id` probes and reads an unregistered id as OPEN forever.
+
+**CLOSED 2026-09-16, same day.** The owner re-consented Tavily. VERIFIED DIRECTLY IN THIS SESSION
+rather than inferred from a routine note: a live `tavily_search` call returned results
+(`auth_mode=keyed`, request_id `72b5b838-2954-4608-855b-e96061ea53f6`), where the identical call
+earlier in the same session had returned `requires re-authorization (token expired)`. Both alerts
+were resolved on that evidence — `fa114bbc` (`connector_tool_enumeration_failed`) and `9e0eb082`
+(`routine_run_warning`). No catch-up replay was needed; see the fallout assessment recorded with this
+pass. The defect noted below was fixed and applied live in the same pass, so it is no longer
+"being fixed separately".
+
+**A defect this exposed, being fixed in-repo separately (no owner action).**
+`connector_tool_enumeration_failed` had **no closure path of any kind**: nothing resolves it in
+`ops.sp_raise_connector_tool_drift`'s self-heal block (which lists only `connector_tool_added` and
+`connector_tool_removed`), it has no `ops.alert_policy` row, it is absent from the
+`ops.sp_sq_cadence_check` 7-day auto-age allowlist, and `ops.sp_auto_resolve_alerts` is hardcoded to
+an unrelated category set. So `fa114bbc` would have sat open forever even after Tavily recovered —
+and worse, because `ops.sp_raise_alert_once` dedups on exact `(category, message)` over UNRESOLVED
+rows, the stale row would have SUPPRESSED a later genuine re-raise naming the same connector set: the
+stuck row jams its own detector. This is the sixth instance of a bug class this repo has already fixed
+five times for sibling categories (`bigquery/63`'s cadence_check note, entries v14/v15/v16/v17/v21).
+
+---
+
 # 2026-09-04 Weekly-report deploy chain — cadence-aware data-trust banner, PARK v4 two-sleeve rendering, AI-era counterfactual anchor (`weekly_report.gs` v9 → v10 + `bigquery/43` MERGE, sequenced)
 
 Owner-authorized code-quality pass (2026-09-04): three display-only fixes to
