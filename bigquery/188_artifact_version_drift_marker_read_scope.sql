@@ -48,6 +48,14 @@
 -- freshly-recomputed live view, or off a full events.queue_events scan -- none of which a later
 -- status-transition row can hide. One adjacent (different-class) gap was found and fixed in the
 -- same commit: upstream_marker_mismatch named its close in prose but never stated the UPDATE.
+--
+-- CORRECTED IN PART by bigquery/242_echo_suspect_cooloff_marker_read_scope.sql (2026-09-15). The
+-- sweep result just above is INCOMPLETE and the sibling-marker sentence at lines 40-44 clears two
+-- SITES, not two MARKERS: echo_suspect_cooloff has a second reader -- AR_orc Step 4's ECHO-SUSPECT
+-- COOL-OFF RESOLVE -- whose UPDATE predicate is sound (which is why this sweep passed it) but whose
+-- entry condition named no query and was row-scoped by default. A resolve site is its entry
+-- condition AND its predicate. Read 242's header before trusting either claim; this file's body is
+-- left unmodified as the apply-in-order record.
 
 UPDATE `stock-trading-498512.ops.alert_policy`
 SET resolve_rule = CONCAT(
