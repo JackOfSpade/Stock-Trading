@@ -675,6 +675,14 @@ connectors:
           per call; failures never charged). Dedupe URLs before extracting -- that is the real
           saving. Batching is NOT a credit saving (prorated), only rate-limit headroom.
           Claude_Task_Plan.md — external-content extraction discipline.
+      - name: tavily_feedback
+        use: unused
+        note: >-
+          Auto-added by OPS1 2026-09-17. Vendor-added tool, first observed in the live connector's
+          tool inventory. `use: unused` is the conservative default — nothing in this fleet calls it
+          (mirrors the IBKR `whats_new` precedent, July 2026). Promoting it to required/optional and
+          adding routine prose that calls it is a separate, deliberate feature-adoption decision this
+          step never makes on its own.
       - name: tavily_map
         use: optional
         note: >-
