@@ -1110,9 +1110,15 @@ routines:
 # second schedule. Every daily-tier routine serves Sunday–Thursday only. Under MST each fixed-UTC slot
 # renders one hour earlier locally; `scripts/check_cron_dst_safety.py` enforces the relevant windows.
 #
-# Daily (MDT rendering): OPS1 06:30 · D1 16:00 · D2a 16:40 · D2 17:15 · AR_att 18:00 · AR_orc 18:35 ·
-# D3 18:45 · SL2 19:05 · SL5 19:25 · SL3 20:00 · OPS2 22:15 · OPS0 22:30. The post-close gaps are
-# runtime-derived; OPS2/OPS0 remain in the intended daily-miss visibility window in both DST seasons.
+# Daily (MDT rendering): OPS1 06:30 · M1R 07:00 · D1 16:00 · D2a 16:40 · D2 17:15 · AR_att 18:00 ·
+# AR_orc 18:35 · D3 18:45 · SL2 19:05 · SL5 19:25 · SL3 20:00 · OPS2 22:15 · OPS0 22:30. The
+# post-close gaps are runtime-derived; OPS2/OPS0 remain in the intended daily-miss visibility window
+# in both DST seasons. M1R ADDED TO THIS RECORD 2026-09-17 BY D3: it has carried a full
+# `expected_trigger` (cron_utc "0 13 * * 0,1,2,3,4", time_local "07:00") since 2026-09-05 but was the
+# one routine of 33 absent from this line, and D3's TRIGGER SELF-REGISTRATION step reads this block
+# on its fail-closed SLOT LOOKUP branch. Its 07:00 slot is a MORNING one, unlike every other entry
+# here -- that is deliberate (M1R drains a PENDING_REGIME_REFRESH item enqueued the prior evening),
+# not a typo to "correct" into the post-close cluster.
 #
 # Weekly Sunday (MDT rendering): W1 01:30 · W2 02:00 · W3 03:00 · W4 03:30 (early chain -- W4 must
 # land in time to feed Sunday's D2 run) · W5 23:00 (RETIMED 2026-08-17 from 04:00 -- late Sunday, on
