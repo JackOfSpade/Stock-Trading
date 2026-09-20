@@ -4054,3 +4054,54 @@ do not go looking for one. What is actionable:
   D2/D2a cannot be auto-refired at all.
 - On any future `missed_run`, run the recipe above **before** writing an incident record. A verdict of
   "platform-side trigger-delivery failure" is now only acceptable with a `list_runs` result behind it.
+
+### Addendum (2026-09-20) — the six routines a human is the only recovery for, and the alert that evaporates
+
+Tracing this incident surfaced a structural gap that the outage itself did not trigger but would have,
+had it landed a day later. **`D2`, `D2a`, `M4`, `Q4`, `A3` and `SL4` are excluded by name from auto-refire**
+(`bigquery/59_catchup_autofire.sql`), so they never enter `state.catchup_refire_readiness`, so OPS0 STEP 2's
+actionable `CATCH-UP NEEDED — manually re-run routine X` message is **structurally unreachable for exactly
+the six routines a human re-run is the only possible recovery for**. OPS2 and D3's watchdog-fallback both
+inherit the same guardrail; neither produces an operator instruction either.
+
+What those six get instead is their name inside `missed_run`'s comma-joined `STRING_AGG`, indistinguishable
+from the self-recovering routines listed beside them. And `ops.sp_auto_resolve_alerts` **Rule 2 clears that
+row once its payload date is merely `< CURRENT_DATE('America/Denver') - 1 day`, requiring ZERO completion
+evidence** — the same window-closed branch that legitimately closed this incident's critical on 2026-09-20.
+For a self-recovering routine that is correct. For these six it means the one alert naming the routine
+disappears in ~24 h whether or not anything was fixed, so **operator visibility into the cause degrades as
+the outage lengthens, while the halt itself persists**.
+
+Notification volume is not the gap — a missed D2a already alarms loudly the same night, three ways: a
+CRITICAL `staleness` from `ops.sp_sq_daily_freshness_check`, that procedure's `RAISE` failing the DTS job
+(which has its own email-on-failure), and the `missed_run` critical ~15 min later. **Naming and instruction
+are the gap.** None of those three says "D2a is the cause and only you can restart it."
+
+**Fix applied: OPS0 STEP 2b**, which reads `state.cadence_watch`/`state.cadence_period_watch` directly,
+keeps only the never-refire set, re-checks for a late completion, and raises the **existing** registered
+`catchup_refire_blocked` category with an explicit manual-rerun instruction. Reusing that category is the
+whole point: its Rule 3b (`bigquery/94_catchup_refire_blocked_policy.sql`) **re-raises nightly while the
+blockage persists and resolves on an actual `completed` row** — precisely the property `missed_run` lacks.
+
+**Do NOT "fix" Rule 2's age-out to close this.** It was considered and rejected: `ops.sp_auto_resolve_alerts`
+is called at the preamble of every routine in the fleet, making it the highest-blast-radius object in the
+observability plane, and the age-out is load-bearing for every other category that uses it. STEP 2b gets the
+same operator outcome — a nightly, named, actionable email that stops only on real recovery — with no change
+to that procedure. If a future audit re-raises "missed_run resolves without evidence", the answer is that
+this is true, deliberate, and compensated here.
+
+**Scope note — what was NOT built, and why the existing 30-hour check does not cover it.** An age-based
+escalation on `staged_order_awaiting_confirm` was considered and rejected: it would be a third detector for
+a condition already caught twice the same night, and it would need a threshold above the worst-case
+legitimate gap (an order staged Thursday waits for Sunday's D2a slot, ~71 h). Decisively, D2a's fill window
+is `GREATEST(7 days, days since D2a's own last successful completion)`, so **a late D2a already reconciles
+everything it missed** — the reconciliation is self-healing for an outage of any length; only a D2a that
+never runs again is not, and STEP 2b is what surfaces that.
+
+Note for anyone who greps and thinks an age check already exists: `state.staged_without_confirm`
+(`bigquery/148_audit_2026_08_08_fixes.sql`) does carry a 30-hour `staged_ts` threshold, but it is scoped
+`AND o.instruction_id IS NULL` — **manual-entry orders only**. A craftable order (instruction_id recorded at
+staging, e.g. the park re-risk pair of this incident) is exempt by construction, and that file says so
+outright: *"Liveness of the crafted instruction itself is NOT this view's job — that is owned by D2a's
+registry reconciliation + D3's instruction-verify/persist-and-wait re-craft."* So for crafted orders D2a is
+the single liveness owner, which is exactly why a D2a that stops running is the case worth paging about.

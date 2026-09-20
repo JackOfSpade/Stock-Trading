@@ -717,6 +717,25 @@ sources:
               FALSE means the criterion never recorded price_level_ref_date and entry_date was used as
               a lower-bound proxy.
 
+      - name: staged_order_reconciliation_overdue
+        description: >
+          Staged orders that have gone unreconciled past 120h (bigquery/244, 2026-09-20). Only D2a
+          STEP 0 can drain state.open_orders, and the worst-case legitimate wait is the 72h Thu->Sun
+          gap in D2a's own cron -- so a row here means D2a missed a slot or ran without resolving it.
+          Read by OPS0 STEP 2c, which owns both the raise and the fail-closed resolve. Declared
+          out-of-scope for now (not yet ported as a dbt model; it is a thin time-threshold view over
+          state.open_orders, which is itself not dbt-owned) -- added here so it stays off
+          scripts/check_dbt_view_coverage.py's advisory uncovered list.
+        columns:
+          - name: item_key
+            description: Staged-order identity; stable across a persist-and-wait re-craft.
+          - name: pending_hours
+            description: Elapsed hours since staged_ts. Payload-only -- never put it in an alert message.
+          - name: crafted_order
+            description: >
+              TRUE when instruction_id is set. Such a row has NO other liveness owner -- the 30h
+              state.staged_without_confirm check (bigquery/148) is scoped to manual-entry rows only.
+
   - name: analytics_external
     project: stock-trading-498512
     dataset: analytics
