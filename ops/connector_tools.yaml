@@ -357,6 +357,14 @@ connectors:
         use: unused
       - name: create_label
         use: unused
+      - name: delete_draft
+        use: unused
+        note: >
+          Auto-added by OPS1 2026-09-20. Vendor-added tool, first observed in the live
+          connector's tool inventory. `use: unused` is the conservative default — nothing
+          in this fleet calls it (mirrors the IBKR `whats_new` precedent, July 2026).
+          Promoting it to required/optional and adding routine prose that calls it is a
+          separate, deliberate feature-adoption decision this step never makes on its own.
       - name: delete_label
         use: unused
       - name: forward
