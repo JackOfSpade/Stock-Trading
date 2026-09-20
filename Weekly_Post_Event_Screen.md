@@ -1,12 +1,12 @@
-2026-W37
+2026-W38
 
 # Weekly Post-Event Screen — Strategy B (W2)
 
-**Run date:** 2026-09-13 (Sunday) · **Routine:** W2, deep research · **Marker:** 2026-W37
-**Intake watermark:** 2026-09-06T08:44:25Z (this routine's own prior completion) · **Catch-up window:** 6.97 days = 1.00x the weekly norm, so no `CATCHUP` token is owed.
-**Durable record:** `events.decision_log` `4d6a3ff8-41a7-4136-9e77-aa72a21f9aa6` (`entry_type='post-event-enrichment'`, strategy B) · one `ops.alerts` info row, `e1ff0ebc-c2fd-4249-8dbd-e50555b6b1c9`.
+**Run date:** 2026-09-20 (Sunday) · **Routine:** W2, deep research · **Marker:** 2026-W38
+**Intake watermark:** 2026-09-13T08:33:27Z (this routine's own prior completion) · **Catch-up window:** 6.98 days = 1.00x the weekly norm, so no `CATCHUP` token is owed.
+**Durable record:** `events.decision_log` (`entry_type='post-event-enrichment'`, strategy B) · two `ops.alerts` rows raised (`screen_move_measured_on_opens` warning, `b_intake_population_coverage_unquantified` info), one resolved (`e1ff0ebc` `screen_fields_schema_drift`), one `events.queue_events` item enqueued (`rescreen-ORCL-B-20260920`).
 
-**SCREEN MODE: INDEX (B router DO-NOT-ACTIVATE as of 2026-09-03).**
+**SCREEN MODE: INDEX (B router DO-NOT-ACTIVATE as of 2026-09-03).** Fourth consecutive index-mode cycle.
 
 ---
 
@@ -14,28 +14,28 @@
 
 W2 performs **zero market-wide discovery**. It does not pull broad price bars to find movers, does not enumerate a population, does not repeat an event search, and does not re-judge D1's §19 significance verdicts. Its intake is the durable D1 `research-screen` / `single-name-move` record since W2's own last completion; its job is B-specific eligibility, ranking and enrichment on top of that record.
 
-The 2026-09-11 (Friday) session is **deliberately uncovered** by this run and that is correct, not a gap in it. D1 runs Sun–Thu; the last D1 screen in this window covers the 2026-09-10 session, and D1's Sunday scan (tonight, after W2) owns 09-11. PART 1 forbids W2 covering that gap with its own bar pulls. Two names D1 explicitly handed forward sit in that session — **ORCL** (FQ1 FY27 printed after the 09-10 close) and **ADBE** — and they belong to the next D1, not to this file.
+The **2026-09-18 (Friday) session is deliberately uncovered** by this run and that is correct, not a gap in it. D1 runs Sun–Thu; its last screen covers the 2026-09-17 session, and D1's Sunday scan (tonight, after W2) owns 09-18. PART 1 forbids W2 covering that gap with its own bar pulls. One consequence is visible and recorded rather than acted on: SMR moved **−8.5177%** on 09-18 in a bar series this run already held, and that move belongs to the next D1, not to this file.
 
-**Router gate, read FIRST per the 2026-08-24 limb.** `state.current_regime` scope `STRATEGY_ACTIVATION` key `B` = **DO-NOT-ACTIVATE**, divergence `div-B-202608-1`, `as_of` 2026-09-03, theater-check DIVERGENT. Identical reading to the prior cycle — the 2026-09-03 divergence review re-adjudicated B and held it (M1b raw call ACTIVATE, overridden by the universal `shock_overlay=acute` rule for the second consecutive month). So PART 2 runs in **INDEX MODE**: per eligible item this file records only ticker, qualifying event date, event-day close-to-close move, window close date, sessions remaining, a one-line factual event description, the originating D1 decision id, and a rank. The mispricing direction/magnitude read, the retrieved-comparables step, the information-versus-sentiment analysis and the convergence-indicator enumeration are **deliberately skipped**. The cohort-level work is kept in full.
+**Router gate, read FIRST per the 2026-08-24 limb.** `state.current_regime` scope `STRATEGY_ACTIVATION` key `B` = **DO-NOT-ACTIVATE**, divergence `div-B-202608-1`, `as_of` 2026-09-03, theater-check DIVERGENT. Unchanged from the prior two cycles — no `STRATEGY_ACTIVATION` row of any kind has been written since 2026-09-03. So PART 2 runs in **INDEX MODE**: per eligible item this file records only ticker, qualifying event date, event-day close-to-close move, window close date, sessions remaining, a one-line factual event description, the originating D1 decision id, and a rank. The mispricing direction/magnitude read, the retrieved-comparables step, the information-versus-sentiment analysis and the convergence-indicator enumeration are **deliberately skipped**. The cohort-level work is kept in full, and this cycle it is the most informative part of the file.
 
-**No out-of-cycle flip is in flight.** MEASURED: zero open `PENDING_REGIME_REFRESH` items anywhere in `events.queue_events` (and none in that queue's whole history), and the standing `FUNDAMENTAL_AXIS` snapshot is `as_of` 2026-09-01 with `shock_overlay = acute` — nothing newer than the monthly M1a re-score. Both scheduled paths to a flip (M1a monthly; D2a's re-risking limb → M1R → D2's router review) remain open, but neither is currently moving.
-
-**B's capital, stated because it is a today-only fact, not a bar.** `analytics.strategy_nav` for B: nav 0, deployed_mv 0, available_funds 0. `state.regime_capital_debt` for B: swept out 4,973.25, restored 0, **outstanding 4,973.25** — restorable pro-rata on a flip with no gate. An ACTIVATE-but-unfunded B would still get full-depth analysis; the zero NAV is not why this run is in index mode. (The open W5 `regime_restore_shortfall` warning notes the donor set is currently empty; that is W5's item, not W2's.)
+**B's capital.** `state.strategy_capital_enablement` for B: `capital_disabled = TRUE`, `capital_enabled = FALSE`, latest activation 2026-09-03. Stated because it is a today-only fact and not a bar: an ACTIVATE-but-unfunded B would still get full-depth analysis. The zero funding is not why this run is in index mode; the router is.
 
 ---
 
 ## WINDOW ARITHMETIC
 
-Convention, unchanged and re-verified against the prior file's published closes: the qualifying event day counts as session 1, and the entry window closes on the **10th trading day inclusive**. 2026-09-07 was Labor Day; 2026-09-11 is the last completed session.
+Convention, re-verified against the prior file's own published closes: **the qualifying event day counts as session 1 and the window closes on the 10th trading day inclusive** — that is, event date **+ 9 further sessions**, not +10. Validated: qed 2026-09-04 → 2026-09-18 reproduces the prior cycle's table exactly. A first pass inside this run used +10 and was caught and corrected against that check before anything was written; it is recorded here because the error would have overstated every remaining window by one session.
 
 | Qualifying event date | Window closes | Sessions remaining after today |
 |---|---|---|
-| 2026-09-04 | 2026-09-18 | 5 |
-| 2026-09-08 | 2026-09-21 | 6 |
-| 2026-09-09 | 2026-09-22 | 7 |
-| 2026-09-10 | 2026-09-23 | 8 |
+| 2026-09-10 | 2026-09-23 | 3 |
+| 2026-09-11 | 2026-09-24 | 4 |
+| 2026-09-14 | 2026-09-25 | 5 |
+| 2026-09-15 | 2026-09-28 | 6 |
+| 2026-09-16 | 2026-09-29 | 7 |
+| 2026-09-17 | 2026-09-30 | 8 |
 
-Where a release preceded the reaction (COO, AEO, NAVN — reported after the 09-09 close, reacted 09-10), the **window** runs from the qualifying event date while the **measured magnitude** is the reaction session's close-to-close move. Two different clocks, deliberately not merged.
+Where a release preceded the reaction, the **window** runs from the qualifying event date while the **measured magnitude** is the reaction session's close-to-close move. Two different clocks, deliberately not merged. This cycle that separation binds six names: HPE, DELL, SMCI and ANET all carry `qualifying_event_date` 2026-09-10 (Oracle's capex disclosure, after the 09-10 close) and reacted on 09-11; SMR carries 09-16 and reacted 09-17; SRRK carries 09-11 (an after-hours FDA approval) and reacted 09-14. All six magnitudes reproduce D1's figure exactly on the reaction session, so the date offsets are the anchor convention working, not an error. The convention itself is still unwritten in D1's own spec — that is the already-open `d1_qualifying_event_date_anchor_unspecified` (`03b8f773`), not re-raised here.
 
 ---
 
@@ -43,225 +43,161 @@ Where a release preceded the reaction (COO, AEO, NAVN — reported after the 09-
 
 ## Intake source
 
-Five operative D1 `entry_type='research-screen'`, `screen='single-name-move'` rows landed after the watermark. Zero superseded rows in the window.
+Five D1 `single-name-move` screens landed since the watermark, carrying **57 passed rows across 44 distinct tickers**:
 
-| D1 entry id | D1 run date | Session screened | Passed | Rejected-notable |
+| D1 decision id | Run date | Session(s) screened | Passed rows | `universe_measured` |
 |---|---|---|---|---|
-| `8ba82a4c-a983-4d95-8fb1-a9fff9cf5159` | 2026-09-06 | 2026-09-04 | 10 | 10 |
-| `f9b75f38-a66b-4d98-822f-903aaad949f6` | 2026-09-07 | **none — Labor Day** | 0 | 0 |
-| `a4ce03b2-a971-4103-93b5-aabf7b8764b5` | 2026-09-08 | 2026-09-08 | 10 | 21 |
-| `acc31c4a-2889-4583-a76a-0177ecd34dcf` | 2026-09-09 | 2026-09-09 | 8 | 9 |
-| `7d717e9f-c609-4166-8487-e965a2faff13` | 2026-09-10 | 2026-09-10 | 16 | 8 |
+| `1f76f7cb-2a61-45ef-a6ae-f803923c0339` | 2026-09-13 | 2026-09-10 and 09-11 | 14 | 116 |
+| `46d69e8d-81fb-47b6-8afc-bb749d95a7f5` | 2026-09-14 | 2026-09-14 | 14 | 33 |
+| `13a0441f-fb4c-49e3-922c-bb806e83943e` | 2026-09-15 | 2026-09-15 | 13 | 23 |
+| `873b8fad-0111-43e9-a015-1d252bb59dce` | 2026-09-16 | 2026-09-16 | 5 | 18 |
+| `a913941a-3df1-43c5-916c-e77868c63da7` | 2026-09-17 | 2026-09-17 | 11 | 23 |
 
-**44 passed item-rows, 41 distinct tickers** (AAPL twice, INTC three times — three genuinely distinct sessions and events, not duplicates). The 2026-09-07 row is a **measured-empty** screen, not a degraded one: it records `no_session_in_window = true`, names the run that already screened 09-04, and states the once-only rule ("a session is screened once, by the run whose window contains it"). Reading it as a missed day would be wrong.
+**One further `single-name-move` row crossed the watermark and is deliberately NOT intake.** `6a3be1bd-2ff5-4493-bbcb-aa2c27814a87` (2026-09-14) is a D2-authored **correction** of the 2026-09-03 D1 screen `b606229e-…`, which **W2 2026-W36 already consumed** — W36's own `d1_source_ids` array names `b606229e` explicitly. Its qualifying event dates are 09-02/09-03, inside W36's window, and its only substantive change is appending BMNR to `rejected_notable`. Treating a supersession of an already-consumed row as new intake would have re-ranked SNOW, CIEN, HPE, DELL and five others a second time. Matched on the fields and excluded.
 
-Of the 44 passed rows, **31 clear B's frozen spec floor** (≥5% event-day move, `strategy/04_strategy_b.md` Entry criterion 1; `legacy_rule_pass = true`, `below_spec_floor = false`) and are rankable. The other **13 are context only** and are listed as such below.
+That correction also closes a loop this routine opened: W36 raised `ed5e2e24` (`screen_move_no_disposition`) because BMNR's +14.7008% on 2026-09-03 had no disposition anywhere; W37 noted it still open; D2 drained `rescreen-BMNR-B-20260914` on 09-14 and wrote the correction. The referral worked end to end with no human step.
 
 ## Four-part identity dedupe — CLEAN, matched on the FIELDS, never on the key string
 
-Per the 2026-08-23 KEY-FORMAT PIN, matched on `(analysis_type='thesis-construction', strategy='B', ticker, qualifying_event_date)` rather than on a constructed `thesis-<TICKER>-B-<YYYYMMDD>` string.
+The latest `thesis-construction` / strategy B identities anywhere in `events.queue_events` are the five of 2026-08-03 (AAPL, CARR, GDDY, LII, VRT), every one terminal `complete`. No `(analysis_type='thesis-construction', strategy='B', ticker, qualifying_event_date)` tuple exists for any 2026-09-10..09-17 event. **Zero collisions**, and no expired-window carry-in to exclude.
 
-MEASURED: `events.queue_events` holds 86 raw append-only Strategy-B thesis-construction rows resolving to **42 distinct identities, every one terminal** (`complete` is the max-`event_ts` row for all 42, zero exceptions). Every identity with an extractable date carries one of **2026-07-31 or earlier**, against an intake spanning 2026-09-04..09-10 — the sets cannot intersect.
+## PRICE-BASIS RECONCILIATION — ONE CORRECTION OWED, and it is the largest this lineage has recorded
 
-Six identities (ANF, AVGO, CPRI, CRWD, HPE, OKTA, all early June) have **no extractable date at all** — they have no `pending` row, only a `complete` row with a NULL payload. That gap does not bite this cycle for a reason worth stating plainly rather than assuming: **none of those six tickers appears anywhere in this intake**, so the dedupe verdict does not depend on dates that cannot be recovered. A future cycle whose intake does contain one of them cannot resolve it from `queue_events` and must fall back on `events.decision_log`.
+Every magnitude reaching PART 1 was re-measured on IBKR regular-session daily bars (`STK`, `ONE_DAY`, `outside_rth=false`) per Operating_Protocols.md §19 PRICE BASIS. **20 of 21 names reproduce D1's figure to ≤0.006pp.** One does not.
 
-The payload schema has **three** variants, not the two the prior cycle recorded: June-era items bury the date in `$.context` prose; a late-June batch carries it under `$.day0` or an `$.event` prose key; July-13-onward carries a structured `$.event_date`. `events.queue_events` has **no `qualifying_event_date` column** (confirmed against `INFORMATION_SCHEMA`, not inferred from a NULL result), so the field-based dedupe this routine is required to perform remains only partly machine-queryable. This sharpens, rather than repeats, the prior cycle's version of the same observation.
+**ORCL — D1 recorded −13.7912% for 2026-09-14; the true close-to-close move is −3.6532%.** The root cause is reproduced exactly rather than inferred: **−13.7912% is the OPEN-to-OPEN move** (2026-09-11 open 164.38 → 2026-09-14 open 141.71 = −13.7912%, matching digit for digit), where §19 requires close-to-close (150.28 → 144.79). D1 read the `open` array. The largest close-to-close move ORCL made anywhere in 2026-08-20..09-18 is +5.6878%, so no session in the window is within 8pp of the recorded figure.
 
-## Prior NO-GO records on names in this intake — context, not barriers
+Three things make this a finding rather than a suspicion:
 
-This is the first cycle in the lineage to check the intake against the full `events.decision_log` Strategy-B thesis history rather than the queue alone, and it changes what the file can say. MEASURED — eight prior B thesis-construction decisions exist on names in this intake, every identity distinct from this cycle's by event date:
+- **The series is authenticated.** D1's *own earlier* ORCL figure — +5.6878% for 2026-09-03 — reproduces **exactly** on closes from the same contract (272800, ORACLE CORP NYSE) and the same pull. A wrong contract or a contaminated series could not do that.
+- **D1's own text corroborates it.** Its ORCL reason says third-party sources "carry a 09-11 close of 150.28 against the IBKR 164.38, so their figures are unreliable". 150.28 **is** the true IBKR 09-11 close; 164.38 is that session's **open**. D1 had the right number in front of it, judged it unreliable against its own misread, and used the open.
+- **It is bounded, not systemic.** Five other names on the same 09-14 screen were re-measured on closes and all reproduce: ZS +16.5249, NOK −13.2974, SRRK −6.4248, BAC −5.1364 (all ≤0.0001pp) and GEV −8.6193 against a recorded −8.6189.
 
-| Ticker | Prior decision | Date | Ground recorded then |
-|---|---|---|---|
-| **FICO** | NO-GO | 2026-07-30 | criterion 4 — information-driven structural repricing of mortgage-scores pricing power |
-| **TSLA** | NO-GO | 2026-07-26 | criterion 4 — information-driven structural repricing |
-| **INTC** | NO-GO ×5 | 04-27, 05-12, 06-08, 06-21, 07-26 | criterion 4 on four of five; the most-screened B name in the record |
-| **LULU** | NO-GO | 2026-06-08 | — |
-| **META** | **GO** | 2026-05-01 | MEDIUM conviction — the only GO among these names |
-| MU / ORCL / RDDT | NO-GO | 06-28 / 06-21 / 08-03 | (all three are excluded this cycle on other grounds) |
+This is a **new variant** of the §19 violation: every prior instance on record (CVS, COIN, GLW, UPS) was `get_price_snapshot`-instead-of-bars. This one is the right tool with the wrong field, which no existing check catches.
 
-**FICO is the one that matters and it is nearly the same question.** Its 2026-07-30 NO-GO was reasoned on mortgage-score pricing power being *information-driven structural repricing*, and its 2026-09-04 qualifying event is the FHFA directive that ends FICO's GSE scoring exclusivity — the same thread, one level more concrete. Per the shared rule this is **context, not a barrier**: a prior NO-GO tells a future session what to look at, not what to conclude, and a decisive new fact can flip it. What it does mean is that FICO's criterion-4 step is not a fresh question, and a full-depth pass should start from that record rather than rediscover it. INTC's five-for-five NO-GO history is the same signal at lower intensity.
+**Consequence, applied in this file.** At −3.6532% ORCL falls below Strategy B's frozen Entry criterion 1 (≥5% event-day close-to-close) and is **not rankable**. D1 recorded it as the highest-conviction item of that session (75, "Largest mega-cap move on the board"); the error promoted a sub-floor move to the head of the B queue. Because B is router-gated nothing was staged and no capital was exposed — but on an ACTIVATE cycle this name would have been ranked first or second. Filed as `ops.alerts` `screen_move_measured_on_opens` (warning) with `events.queue_events` item `rescreen-ORCL-B-20260920` for the durable correction, which is D1/D2 surface and not W2's to write.
 
 ## Items preserved from D1
 
-Every field below is preserved from D1's own record. Where D1's record is silent the cell says so; nothing here is re-derived, and D1's significance verdicts are not revisited.
+### Rankable — passes BOTH D1's §19 significance judgment AND B's ≥5% frozen spec floor — 20 items
 
-### PRICE-BASIS RECONCILIATION — ZERO CORRECTIONS OWED, FOURTH CONSECUTIVE CYCLE
+Every field below is D1's own except the reconciled magnitude. Ranking basis is **absolute event-day close-to-close move, descending, and nothing else**; criterion 1 and eligibility are applied as upstream gates, not as tie-breaks.
 
-An independent IBKR pull (`STK`, `ONE_DAY`, `outside_rth=false`, batches of at most 4 per the 2026-08-20 shifted-response defect) covering all 22 eligible names returned a complete 7-session series each, every bar stamped 13:30:00Z, no missing bar, no ambiguous contract left unresolved, no two series identical. **All 22 event-day magnitudes reproduce D1's recorded figures**; the largest disagreement across the set is **0.0010 pp** (TSLA −5.9224% measured vs −5.9231% recorded). This run did not recompute the moves to second-guess D1 — the closes were pulled for the cohort work and the agreement fell out of them.
+| # | Ticker | Qualifying event | Move | Reaction session | Window closes | Sessions left | D1 origin | Event (one line) |
+|---|---|---|---|---|---|---|---|---|
+| 1 | SDGR | 2026-09-17 | +26.3766% | 09-17 | 2026-09-30 | 8 | `a913941a` | Tectora JV formed by contributing two early-stage programs for equity and royalties, no disclosed economics. |
+| 2 | ENVA | 2026-09-15 | −23.4254% | 09-15 | 2026-09-28 | 6 | `13a0441f` | Withdrew the regulatory applications for the Grasshopper Bancorp acquisition, abandoning the bank-charter strategy while reaffirming guidance. |
+| 3 | ALHC | 2026-09-15 | −19.8609% | 09-15 | 2026-09-28 | 6 | `13a0441f` | At the Baird healthcare conference management flagged rising medical-cost and hospital-billing headwinds and declined to discuss 2027 Star ratings. |
+| 4 | GNRC | 2026-09-17 | +18.3370% | 09-17 | 2026-09-30 | 8 | `a913941a` | Up to $8B Amazon data-centre generator supply deal disclosed via regulatory filing, plus a warrant to Amazon for ~3% of shares. |
+| 5 | VICR | 2026-09-17 | +17.6608% | 09-17 | 2026-09-30 | 8 | `a913941a` | Four quantified legs in one release: two NH sites for ChiP Fab-2/Fab-3, a VPD licence to a major AI OEM, a $150M buyback, backlog +145%. |
+| 6 | ZS | 2026-09-14 | +16.5249% | 09-14 | 2026-09-25 | 5 | `46d69e8d` | Fiscal Q4 revenue $898.2M vs $877.0M consensus, adj EPS $1.19 vs $1.09. |
+| 7 | SWKS | 2026-09-15 | +13.5503% | 09-15 | 2026-09-28 | 6 | `13a0441f` | CEO told an investor conference the $22B Qorvo merger has cleared all but two jurisdictions. |
+| 8 | JBHT | 2026-09-16 | −13.3016% | 09-16 | 2026-09-29 | 7 | `873b8fad` | Morgan Stanley Laguna Conference warning that Q3 earnings could fall 5–10% vs Q2 on rising purchased-transportation costs. |
+| 9 | NOK | 2026-09-14 | −13.2974% | 09-14 | 2026-09-25 | 5 | `46d69e8d` | Compound driver: AI-datacentre-capex slowdown hitting optical/networking, plus an exit from almost all mainland-China sites, plus a terminated business combination. |
+| 10 | HPE | 2026-09-10 | +12.4411% | **09-11** | 2026-09-23 | 3 | `1f76f7cb` | Re-rated on Oracle's capex disclosure — a second-order repricing of an unquantified share of a third party's spend. |
+| 11 | DELL | 2026-09-10 | +11.9776% | **09-11** | 2026-09-23 | 3 | `1f76f7cb` | Same Oracle read-through at $377B of market value, which is a far larger anomaly per unit of market cap than HPE. |
+| 12 | RIG | 2026-09-15 | +8.9908% | 09-15 | 2026-09-28 | 6 | `13a0441f` | Won a ~$300M two-year ultra-deepwater drillship contract with ONGC; D1 discounts it because crude rose 2.9% the same session. |
+| 13 | SMR | 2026-09-16 | +8.9157% | **09-17** | 2026-09-29 | 7 | `a913941a` | First-of-a-kind boron-oxide pellet fabrication for a passive emergency cooling system on an NRC-approved design. |
+| 14 | MRNA | 2026-09-17 | +8.5495% | 09-17 | 2026-09-30 | 8 | `a913941a` | Phase 3 progress on the intismeran personalised cancer vaccine presented at the Morgan Stanley Global Healthcare Conference. |
+| 15 | INTC | 2026-09-17 | +7.6695% | 09-17 | 2026-09-30 | 8 | `a913941a` | Analyst target hikes (Tigress $145, Northland Outperform) plus *reported* SK Hynix memory-production talks — the SK Hynix leg is a report, not a company announcement. |
 
-A second, larger reconciliation fell out of the panel pull: **all 37 residual figures published by the two prior cycles reproduce exactly** on an independent pull of the same names (cohort-1 at 08-28 and 09-04, cohort-2 at 09-04 — see the trajectory section). Two prior cycles' arithmetic is therefore independently confirmed, not merely carried forward.
+**BELOW THE CAP — 5 eligible items, carried with the same fields so nothing is lost**
 
-### Rankable — passes BOTH D1's §19 significance judgment AND B's ≥5% frozen spec floor (31 items)
+| Ticker | Qualifying event | Move | Reaction session | Window closes | Sessions left | D1 origin | Event (one line) |
+|---|---|---|---|---|---|---|---|
+| SMCI | 2026-09-10 | +7.2766% | **09-11** | 2026-09-23 | 3 | `1f76f7cb` | Same Oracle read-through, in a name whose native volatility makes a +7% day ordinary. |
+| SRRK | 2026-09-11 | −6.4249% | **09-14** | 2026-09-24 | 4 | `46d69e8d` | FDA approval of Isembyld (apitegromab-mstn, SMA) after the 09-11 close; gave back the entire approval pop while four brokers raised targets. |
+| ANET | 2026-09-10 | +5.6087% | **09-11** | 2026-09-23 | 3 | `1f76f7cb` | The networking leg of the Oracle read-through; cleanest evidence the bid extended beyond servers. |
+| BAC | 2026-09-14 | −5.1364% | 09-14 | 2026-09-25 | 5 | `46d69e8d` | CEO Moynihan guided Q3 investment-banking fees down >10% YoY and sales/trading flat against +33% in Q2. |
+| TLX | 2026-09-11 | −5.1261% | 09-11 | 2026-09-24 | 4 | `1f76f7cb` | Fell on its confirmed 2026-09-11 FDA PDUFA goal date for Pixclara/TLX101-Px; the date is established, **the outcome is not** and no post-decision primary source was obtained. |
 
-Listed by source screen. Magnitudes are D1's, confirmed on this run's independent bars.
+### Context only — `below_spec_floor = true`, never routable — 23 items
 
-**From the 2026-09-04 session** (`8ba82a4c`): FICO −16.68%, GWRE −19.93%, LULU −17.38%, TSLA −5.92%, MU +6.10%, IREN +7.27%.
-**From the 2026-09-08 session** (`a4ce03b2`): NVS −13.93%, ROIV +18.75%, GPCR −14.70%, AMGN −10.08%, INTC +9.05%, BKNG −6.72%, QBTS +6.57%.
-**From the 2026-09-09 session** (`acc31c4a`): META +6.55%, TTAN −29.98%, SIG +23.96%, TBBK −22.33%, BRZE −21.71%, CASY −14.24%, ASO +14.40%, CMCSA −6.61%.
-**From the 2026-09-10 session** (`7d717e9f`): COO −14.67%, AEO −13.97%, NAVN −21.75%, SCCO −7.23%, FCX −6.59%, INTC −5.57%, ORCL −5.38%, LRCX −5.65%, CIFR −5.68%, RDDT +6.08%.
+09-13 screen: MARA +4.8118, HAL −4.4267, QRVO +3.8180, STX −3.7297, GEV +3.6106, WDC −2.9835, UNH −2.3670.
+09-14: RIG −3.8801, TSM −3.5153, NVDA −3.3579, GOOGL +3.2171, ISRG +2.3814.
+09-15: GRAB −3.6424, SOFI −3.2860, PATH −2.9332, F −2.5974, AAL −2.5191, MARA −2.2609, AMZN −2.0194.
+09-16: GEV +4.7893, INTC +4.0251, BAC −2.7218.
+09-17: CRWV −4.1632.
 
-### Context only — `below_spec_floor = true` (<5% event-day move, not rankable per B's frozen spec) — 13 items
+### Identities EXCLUDED before enrichment — 13, every ground drawn from D1's own record, B's frozen spec, or this run's own measurement
 
-PCG +2.44%, AAPL −2.51%, INTC +4.51%, RIG −2.82% (09-04) · IONQ +2.40%, IONS −2.38%, RGTI +4.01% (09-08) · AAPL +3.56%, ELV +4.98%, M −4.70%, CHTR +4.98%, AVAV +4.45%, AGNC −3.04% (09-10).
+**Criterion 1 — no identified public event (4).** SMR −15.6709 on 09-11 (`qualifying_event_date` NULL; D1: "NO identifiable public event was found"); SIMO −16.7569 ("no catalyst established beyond the semis selloff"); CRWD +13.8531 ("a record high on NO company news"); MRVL −7.3189 (sector sympathy, no named event).
 
-Two are worth naming because they invert the usual reading. **IONQ** (+2.40%) is the name that actually *had* the event — a FY2026 revenue guide raised to $450–460M — while the names that cleared the floor on it (QBTS +6.57%, RGTI +4.01%) moved on sympathy. And **M** (Macy's) beat and raised guidance and still fell 4.70%, which is the shape B exists to look at, one third of a percentage point below the floor that would have made it rankable. Neither is eligible; B's floor is frozen spec and this run does not bend it.
+**Spec floor, on this run's own corrected measurement (1).** ORCL, true move −3.6532% — see PRICE-BASIS RECONCILIATION above.
 
-### Identities EXCLUDED before enrichment, with the ground — 9, every ground drawn from D1's own record or B's frozen spec
+**The recorded move is not the event-day reaction (1).** SWKS +5.1410 on the 09-13 screen — D1's own text: "the EVENT DAY was 09-10, so the 09-11 move is not an event-day reaction and cannot anchor a B identity." SWKS re-enters legitimately at rank 7 on its distinct 09-15 event.
 
-| Ticker | Move | Ground for exclusion |
-|---|---|---|
-| **NVS** | −13.93% | **Instrument eligibility.** Novartis AG is a Swiss issuer whose US line is a depositary receipt over shares trading primarily on SIX. `strategy/04_strategy_b.md` admits only US-listed common equity — the same ground as the standing AZN / NVO / JD / BABA / FUTU / ARGX exclusions. |
-| **ORCL** | −5.38% | **D1's own record.** Its FQ1 FY27 print landed *after* the 09-10 close; D1 states outright "ORCL IS DELIBERATELY NOT A STRATEGY-B CANDIDATE", its reaction session is 2026-09-11 and the next D1 owns it. The 09-10 decline is pre-earnings de-risking, not a reaction to a completed public event. |
-| **INTC** (09-10 leg) | −5.57% | **No issuer event.** D1 records profit-taking after a multi-session rally plus the rate-driven semi selloff. The 09-08 INTC leg (+9.05%, Bloomberg price-raise report) is a genuine event and is the one carried; this is a distinct identity and it fails criterion 1 on the event half. |
-| **LRCX** | −5.65% | **No issuer event.** D1: "same rate channel", deepest of the semi-cap-equipment complex. |
-| **CIFR** | −5.68% | **No issuer event.** D1: crypto/AI-DC complex risk-off, driver shared with MARA and IREN and counted once. |
-| **MU** | +6.10% | **No issuer event.** D1 types it "sector narrative" — the AI-memory / DRAM-HBM shortage anchor. |
-| **IREN** | +7.27% | **No issuer event.** D1: a re-rating/decoupling narrative (up while BTC fell ~2%), no discrete issuer item. |
-| **QBTS** | +6.57% | **No issuer event.** D1 types it "sympathy (quantum cluster)" to IonQ's investor-day raise. The event belongs to IONQ, which moved +2.40% and is below the floor. |
-| **RDDT** | +6.08% | **Analyst action only.** The driver is a Piper Sandler note on third-party monthly user growth, not an issuer disclosure — the ground on which QBTS and SRE were excluded on 2026-08-30, and the SP6 sub-pattern shape. Distinct from RDDT's 2026-08-25 identity; excluded on event type, not on dedupe. |
+**D1 explicitly declined to route (6).** HBAN −5.5522 — D1: "explicitly NOT routed as a Strategy B candidate: a macro-driven sector repricing carries no company-specific information for B to exploit". OPEN −5.0179, the same class (10Y through 5% → broad iBuyer selloff), excluded on the same ground. MU +5.4994, SMCI +9.4979 (the 09-17 leg), AMD +6.3590 and HL +5.3919 — all four declined for B indexing by D1's own 2026-09-17 OPPORTUNITY CHECK as sector narrative or commodity beta. Honouring D1's verdict rather than re-judging it is what PART 1 requires.
 
-**22 items survive to PART 2.**
+**Analyst-action-only, on the W36/W37 RDDT precedent (1).** GEV −8.6189 — a GLJ Research Sell initiation stacked on a sector-wide datacentre-power repricing, with D1 recording that "GEV disclosed nothing". Also a held Strategy-D name. Note the asymmetry with INTC, which is ranked 15th on a similar analyst-driven move: the difference is that D1's own OPPORTUNITY CHECK routed INTC to B and did not route GEV. Recorded explicitly because the two look alike and a later cycle should not read the pair as inconsistent.
 
-## Eligibility flags carried, NOT treated as exclusions — three names
-
-Per the MARKET CAP BASIS rule (Operating_Protocols.md §290), a name whose cap estimate sits within ~25% of the $2B floor is not decided until shares outstanding is re-derived from the issuer's own most recent filing. That is a metered / EDGAR path, and it is exactly the per-candidate research index mode does not spend. So these three are **ranked with the flag visible** rather than silently admitted or silently dropped:
-
-- **TBBK** — D1 measures $2.083B, ~4% above the floor, and flags it itself as wanting a second source before sizing. Rail clearance **UNVERIFIED this run**.
-- **AEO** — D1 measures $2.437B and states explicitly that it "sits inside the ~30% band around the $2B rail where FMP implied share count is not trustworthy". Rail clearance **UNVERIFIED this run**.
-- **GPCR** — D1 measures $2.32B and calls the rail call **provisional for that one name** in its own text.
-
-None of the three is excluded on this basis, because an unverified clearance is not a measured failure — the contrast is WOLF (2026-08-30), which was excluded only after being *measured* at $1.37B. If B flips inside any of these three windows, resolving the cap is the first step of the full-depth pass, not an optional one.
+**Prior-disposition consistency (1).** BMNR −8.3851 — ETH/crypto-treasury beta. The identical class on this same ticker was dispositioned `rejected_notable` by D2's 2026-09-14 correction on the ground that sector beta is not a B qualifying event.
 
 ## Criterion 5 binds nothing this cycle
 
-MEASURED: `state.current_positions` holds **12 open positions, every one Strategy D** (AMZN ×2, DIS ×2, GEV, GOOGL ×2, ISRG, RTX, TSM ×2, UBER). There are **zero open Strategy A positions and zero open Strategy B positions** — B has been flat since MSCI closed on 2026-08-18. No candidate is excluded by the A/B same-name rule, and none of the 22 overlaps the open D book in any case.
+`state.current_positions` holds 12 open lots, **all Strategy D** (AMZN, DIS, GEV, GOOGL, ISRG, RTX, TSM, UBER). Zero A positions, zero B positions. GEV, ISRG, GOOGL, AMZN and TSM appear in this week's intake but as **D** holdings, and the A/B mutual exclusion names A only.
 
 ## PRICE-LAYER COMPLETENESS BACKSTOP
 
-The verification pull returned full bar series for 22 eligible names plus the 37 panel names, and was scanned for any ≥3% session inside the window that no D1 screen reported. The material one is **HPE: +12.44% on 2026-09-11** (55.22 → 62.09), the largest single-session move anywhere in the 59-name pull and roughly two and a half times its own 2026-09-03 earnings reaction. It falls in the 09-11 session, which **no D1 screen has covered yet** — D1's Sunday scan tonight owns it — so this is a forward hand-off, not a miss, and it is named here so that the next cycle can check the disposition rather than rediscover the move. Nothing else in the pull clears 3% inside a screened session without a D1 disposition.
+Scanning the 21 reconciliation bar series for other ≥5% close-to-close sessions on days D1 screened found **24 such moves that appear in neither arm of that day's record** — 5 on 09-10, 2 on 09-11, 8 on 09-14, 2 on 09-15, 3 on 09-16, 4 on 09-17. Three further candidates were checked and discarded because they **are** recorded (INTC −5.5858 on 09-14 in `rejected_notable`; SMR −15.6709 on 09-11 and SMCI +9.4980 on 09-17 in `passed`).
 
-Note the second-order effect: HPE was a below-cap candidate of the prior cycle on a 2026-09-03 event whose window is still open to 2026-09-16, and its residual is now contaminated by a second, larger, unrelated event (see the trajectory section, where it is reported and then set aside).
+**This is not a rail failure and is deliberately not filed as one.** D1's declared `universe_measured` for those sessions is 116, 33, 23, 18 and 23 — a bounded scan by cost, not a sweep of the US ≥$2B universe, so a ≥5% move in a name the scan never measured is outside it rather than dropped by it.
+
+What it does establish is load-bearing for B, and is new: since the 2026-08-17 redesign W2's intake is *exclusively* D1's record, so **D1's bounded scan is the definition of B's candidate population** — and within a 21-name sample W2 already held, the ≥5% sessions absent from the record (24) outnumber those present (21). Filed as `b_intake_population_coverage_unquantified` (info), with the honest limit stated there: these 21 names were already selected as movers, so the 24 bounds nothing about the true population and must not be read as a coverage rate.
 
 ---
 
 ## POST-EVENT TRAJECTORY — the residual-thinness test
 
-Index mode skips per-candidate enrichment but **keeps the cohort work in full**, because it costs little and it is the evidence series a future divergence review reads when it re-tests B's convergence assumption.
+**This cycle's panel is better identified than any before it, and the reason is worth stating.** All four series below are measured on the **same date, 2026-09-18**, across four event vintages — 78 names in total. The market environment of that session is therefore common to every band, which removes the market-week confound the prior cycles could not remove. What remains confounded is cohort **composition**, and the data says that confound is the dominant one.
 
-`gap_intact_pct` = (close 2026-09-11 − pre-event close) / (event-day close − pre-event close) × 100. 100% means the whole event-day move is still in the price; 0% means it round-tripped exactly; negative means it reversed clean through; above 100% means it extended.
+`gap_intact_pct` = (close 2026-09-18 − pre-event close) ÷ (event-day close − pre-event close) × 100. 100% = the whole move is still there; 0% = fully round-tripped; negative = reversed through; >100% = extended.
 
-**This cycle is the first with a THREE-point panel.** Cohort-1 (the 2026-08-30 cycle's 17 names) has now been measured at 08-28, 09-04 and 09-11 — 1–6, 5–10 and 11–15 elapsed sessions. Cohort-2 (the 2026-09-06 cycle's 20 names) has two points, 09-04 and 09-11. Every prior published figure was recomputed from an independent pull and **all 37 reproduce exactly**, so the three series are on one arithmetic.
+### Series A — this cycle's 20 eligible names, first observation (1–5 elapsed sessions)
 
-### Series A — this cycle's 22 eligible names, measured at 2026-09-11
+| Ticker | Elapsed | Gap intact | | Ticker | Elapsed | Gap intact |
+|---|---|---|---|---|---|---|
+| SRRK | 4 | 246.1% | | INTC | 1 | 97.4% |
+| ALHC | 3 | 178.6% | | SWKS | 3 | 88.5% |
+| BAC | 4 | 154.0% | | SDGR | 1 | 80.7% |
+| ZS | 4 | 120.5% | | HPE | 5 | 80.6% |
+| VICR | 1 | 119.5% | | MRNA | 1 | 67.6% |
+| JBHT | 2 | 106.8% | | SMCI | 5 | 62.9% |
+| DELL | 5 | 101.3% | | RIG | 3 | 38.8% |
+| GNRC | 1 | 100.7% | | NOK | 4 | 30.4% |
+| ANET | 5 | 98.1% | | SMR | 1 | −4.1% |
+| ENVA | 3 | 97.9% | | TLX | 5 | −113.1% |
 
-| Ticker | Reaction session | Event-day move | Sessions elapsed | `gap_intact_pct` @ 09-11 |
-|---|---|---|---|---|
-| FICO | 09-04 | −16.68% | 4 | **72%** |
-| GWRE | 09-04 | −19.93% | 4 | **153%** |
-| LULU | 09-04 | −17.38% | 4 | **108%** |
-| TSLA | 09-04 | −5.92% | 4 | **49%** |
-| ROIV | 09-08 | +18.75% | 3 | **90%** |
-| GPCR | 09-08 | −14.70% | 3 | **125%** |
-| AMGN | 09-08 | −10.08% | 3 | **136%** |
-| BKNG | 09-08 | −6.72% | 3 | **149%** |
-| INTC | 09-08 | +9.05% | 3 | **82%** |
-| META | 09-09 | +6.55% | 2 | **86%** |
-| TTAN | 09-09 | −29.98% | 2 | **110%** |
-| SIG | 09-09 | +23.96% | 2 | **89%** |
-| TBBK | 09-09 | −22.33% | 2 | **96%** |
-| BRZE | 09-09 | −21.71% | 2 | **97%** |
-| CASY | 09-09 | −14.24% | 2 | **113%** |
-| ASO | 09-09 | +14.40% | 2 | **165%** |
-| CMCSA | 09-09 | −6.61% | 2 | **65%** |
-| COO | 09-10 | −14.67% | 1 | **103%** |
-| AEO | 09-10 | −13.97% | 1 | **79%** |
-| NAVN | 09-10 | −21.75% | 1 | **87%** |
-| SCCO | 09-10 | −7.23% | 1 | **104%** |
-| FCX | 09-10 | −6.59% | 1 | **103%** |
+n=20 · **mean 87.7%** · **median 97.7%** · sd 71.2 · min −113.1% (TLX) · max 246.1% (SRRK)
 
-Mean residual by elapsed session: **1 session 95.1%** (n=5) · **2 sessions 102.6%** (n=8) · **3 sessions 116.4%** (n=5) · **4 sessions 95.4%** (n=4). Cohort mean **102.7%**, sd **29.0**, range 49%–165% (116 pp).
+### Series B — cohort-3 (the 2026-09-13 cycle's 22 names), second observation (6–9 sessions)
 
-### Series B — cohort-2 (the 2026-09-06 cycle's 20 names), second observation
+n=22 · **mean 111.4%** · **median 96.0%** · sd 41.6 · min 54.3% (TSLA) · max 206.3% (CMCSA)
+Prior observation at 09-11: mean 102.7%, median 99.8%, sd 29.0. **All 22 of the prior cycle's published residuals reproduce within 0.5pp** on an independent pull (largest divergence FICO, 0.46pp).
 
-| Ticker | @ 09-04 (prior cycle) | @ 09-11 | Change |
-|---|---|---|---|
-| MRVL | 72% | **22%** | −50 |
-| ESTC | 50% | **−2%** | −52 |
-| GAP | 61% | **27%** | −34 |
-| PYPL | 83% | **99%** | +16 |
-| SOLS | 103% | **72%** | −31 |
-| EIX | 83% | **88%** | +5 |
-| PCG | 69% | **84%** | +15 |
-| BMNR | 77% | **81%** | +4 |
-| FRVO | 64% | **5%** | −59 |
-| CRK | 52% | **22%** | −30 |
-| DELL | 148% | **212%** | +64 |
-| CRDO | 87% | **106%** | +19 |
-| MDB | 111% | **122%** | +11 |
-| NU | 97% | **17%** | −80 |
-| SNOW | 62% | **46%** | −16 |
-| HPE | 7% | **393%** | *(contaminated — see below)* |
-| CIEN | 90% | **13%** | −77 |
-| VSXY | 83% | **82%** | −1 |
-| CPB | 145% | **168%** | +23 |
-| TTC | 86% | **95%** | +9 |
+### Series C — cohort-2 (the 2026-09-06 cycle's 20 names), third observation (10–14 sessions)
 
-**HPE is excluded from every statistic below.** Its 09-11 residual is not a measurement of its 09-03 earnings reaction at all — a second, larger, unrelated event moved it +12.44% that session (see the completeness backstop above). Leaving it in would have made this cycle's headline dispersion figure a report about one contaminated observation.
+n=19 (HPE excluded) · **mean 57.3%** · **median 61.6%** · sd 80.7 · min −100.0% (CRK) · max 212.9% (DELL)
+Prior observations: 85.4% @1–5, 71.5% @6–10. HPE stays excluded on the prior cycle's own grounds and this run confirms why — the +12.44% move contaminating its 09-03 residual is the very move that enters this file as rank 10. The hand-off worked.
 
-### Series C — cohort-1 (the 2026-08-30 cycle's 17 names), THIRD observation
+### Series D — cohort-1 (the 2026-08-30 cycle's 17 names), FOURTH observation (15–20 sessions)
 
-| Ticker | @ 08-28 | @ 09-04 | @ 09-11 |
-|---|---|---|---|
-| AAOI | 108% | 112% | **113%** |
-| BBWI | −3% | −21% | **38%** |
-| BJ | −14% | 37% | **4%** |
-| BTDR | 86% | 344% | **291%** |
-| CRM | 108% | 115% | **91%** |
-| CRWD | 75% | 62% | **45%** |
-| DKS | 80% | 73% | **81%** |
-| DNN | 69% | 78% | **−33%** |
-| MU | 60% | −88% | **−15%** |
-| NVDA | 43% | 113% | **47%** |
-| OKTA | 83% | 94% | **83%** |
-| RDDT | 3% | 18% | **52%** |
-| SNDK | 108% | −140% | **−36%** |
-| STX | 37% | 1% | **36%** |
-| TSLA | 20% | 50% | **115%** |
-| VEEV | 85% | 81% | **47%** |
-| WDC | 0% | −33% | **51%** |
+n=17 · **mean 58.0%** · **median 69.6%** · sd 128.5 · min −190.1% (SNDK) · max 417.5% (BTDR)
+Prior observations: 55.8% @1–6, 52.7% @5–10, 59.4% @11–15.
 
 ### What the cohort says
 
-**FINDING 1 — the coin flip REPLICATES on an independent cohort, and the 2026-08-30 "monotone decay" reading is now refuted twice.** MEASURED: over the five sessions from 09-04 to 09-11, cohort-2's residuals rose for **9** names and fell for **10** among the 19 uncontaminated names (including HPE, which rose, it is 10 and 10). The prior cycle found 9 up / 8 down on cohort-1 over a different four-session interval. Two independent cohorts, two different intervals, two coin flips. MEASURED on Series A as well: this cycle's own cross-section shows no gradient either — 95% → 103% → 116% → 95% across 1 to 4 elapsed sessions. The prior cycle established that the decay claim did not survive a panel; this one establishes that its absence is reproducible rather than a property of the particular four sessions it happened to measure.
+**FINDING 1 — the 2026-09-18 cross-section is NOT a decay curve, and the fourth series is what proves it.** Read by elapsed band the means run **87.7 → 111.4 → 57.3 → 58.0** and the standard deviations **71.2 → 41.6 → 80.7 → 128.5**. Neither is monotone. Three cohorts alone would have supported a tidy story — a residual decaying from ~111% to ~58% and a dispersion doubling each band — and adding the shortest-horizon series breaks both. Recorded as a refuted candidate finding so a later cycle does not re-derive it from three points.
 
-**FINDING 2 — dispersion widens in WEEK TWO and then stops, and the prior cycle's "4x" magnitude was outlier-driven.** This is a correction to a prior cycle's own headline, made on measurement, and it cuts two ways.
+**FINDING 2 — what actually dominates is cohort composition, not elapsed time, and this is now measurable.** At the same elapsed age of roughly one week the four cohorts' means were **55.8%, 85.4%, 102.7% and 87.7%** — a 47 pp spread. Each cohort's own change from its first observation to 2026-09-18 was **+2.2, −28.1, +8.7** and (for Series A) not yet observable: no consistent sign, and smaller than the spread between cohorts in every case but one. Cohort-1's four-point series, **55.8 → 52.7 → 59.4 → 58.0**, is flat across the full ~20 sessions. This is W37's FINDING 3 confirmed on a longer horizon and a new cohort, and it now has a stronger form: *which events are in the cohort* explains more of the residual than *how long you have held them*.
 
-MEASURED, standard deviation of `gap_intact_pct` by elapsed horizon:
+**FINDING 3 — the up/down coin flip replicates a third and fourth time.** From 09-11 to 09-18: cohort-3 split **11 rose / 11 fell** (exactly), cohort-2 **10 / 9** (HPE excluded), cohort-1 **9 / 8**. No cohort over any interval yet measured shows a directional tendency.
 
-| Cohort | 1–6 sessions | 5–10 sessions | 11–15 sessions |
-|---|---|---|---|
-| cohort-1 (n=17) | **41.7** (@08-28) | **104.1** (@09-04) | **74.8** (@09-11) |
-| cohort-2 (n=19, HPE excl.) | **27.0** (@09-04) | **57.0** (@09-11) | — |
-| this cycle (n=22) | **29.0** (@09-11, 1–4 sessions) | — | — |
+**FINDING 4 — a mean/median divergence that changes how this lineage should report the statistic.** Cohort-3's mean **rose** 102.7 → 111.4 while its median **fell** 99.8 → 96.0. A mean and a median moving in opposite directions is proof the mean move is outlier-driven (CMCSA 206.3%, BKNG 195.5%, GPCR 177.3%). Every prior cycle in this lineage reported the cohort **mean**; on distributions with sd up to 128 and a 600 pp range that is not the robust statistic. This file reports the median alongside the mean for every series and later cycles should continue to. Note what changes when you do: by median the four bands read **97.7 → 96.0 → 61.6 → 69.6**, far more orderly than the means, and consistent with a partial early give-back that then stops.
 
-The widening from week one to week two is **real and now replicated** — cohort-1 ×2.5, cohort-2 ×2.1 — and it survives removing the two extreme names the prior cycle named: with BTDR and SNDK dropped, cohort-1's sd still goes 41.2 → 60.2 (+46%). What does **not** survive is the magnitude and the implied monotonicity. The prior cycle reported the *range* widening from 122 pp to 484 pp, "roughly 4x"; measured a week later the same 17 names span **327 pp**, so the range **contracted by a third** while elapsed time went on increasing, and BTDR alone accounted for roughly half the 09-04 variance. Range is the wrong statistic for this question — one name moves it — and "widens with elapsed time" should be read as "widens through week two, then plateaus", not as a monotone law.
+**FINDING 5 — the decision-relevant synthesis for B, stated so a divergence review can test it.** B's fundamental question is whether event reactions show measurable mean reversion at 2–8 week horizons. Across 78 names measured on one date at horizons from 1 to 20 sessions, the **typical** name retains roughly 60–100% of its event move at every horizon, and the spread around that is enormous and not a clean function of time. That is evidence **against** a generic mean-reversion premise and **for** reading B as a selection problem: whatever reverts has reverted before W2's intake can reach the name, and holding longer buys variance rather than convergence. This is an evidence series, not a verdict. B's machinery is frozen and W2 proposes no change to it.
 
-**FINDING 3 — the durable result is that the cohort MEAN does not move at all, and this is the sharpest thing the lineage has said about B's mechanism.** MEASURED, mean `gap_intact_pct`:
-
-- cohort-1: **55.8%** @ 1–6 sessions → **52.7%** @ 5–10 → **59.4%** @ 11–15. Flat across fifteen sessions.
-- cohort-2 (HPE excl.): **85.4%** @ 1–5 → **71.5%** @ 6–10.
-- this cycle: **102.7%** @ 1–4 sessions.
-
-Within a cohort the average residual is essentially unchanged over every horizon measured, up to three weeks. Between cohorts the *level* differs a lot (56% / 85% / 103%), which is a statement about what kind of week produced the events, not about elapsed time.
-
-INFERRED, and this is the substantive point: **B's edge cannot come from generic mean-reversion of the event-day move, because on these three cohorts the event-day move does not on average revert at all.** Whatever fraction of the move is going to be given back is given back almost immediately — inside the first session or two, before W2's intake even reaches the candidate — and the remainder is sticky for at least three weeks. That makes B a **selection** problem rather than a **timing** problem: the strategy's return has to come from identifying *which individual names* mis-reacted, not from being long the average post-event residual. Criterion 2 (over- or under-sized *relative to fundamental implications*) already frames it that way; this is the first measurement in the lineage that says the alternative reading is unavailable. Three cohorts, 59 names, one regime — a direction, not a base rate.
-
-**FINDING 4 — a candidate finding, CHECKED AND REFUTED.** The obvious next hypothesis from Series B is that *negative* reactions persist while *positive* ones fade: cohort-2 at 09-11 splits **87.9% mean residual for the 10 down-movers against 53.3% for the 9 up-movers** (HPE excluded), a 35-pp gap in the direction the behavioural literature would predict. It does not replicate. Cohort-1 measured on the same date splits the **opposite** way — **38.3%** for its 7 down-movers against **74.2%** for its 10 up-movers. Two cohorts, same measurement date, opposite signs, 7–10 names per cell. Recorded as refuted so that a later cycle does not re-derive it from one cohort and report it as a signature.
-
-**FINDING 5 — criterion 3 forecloses "next earnings release" for exactly two-thirds of the ranked cohort again, but the FDA limb is live for the first time.** DEDUCED from event structure, not looked up: **10 of the 15 ranked candidates have their own quarterly report AS the qualifying event** — GWRE, LULU, TTAN, SIG, BRZE, CASY, ASO, COO, AEO, NAVN. A company that has just reported next reports roughly 90 days out, past criterion 3's 60-day convergence boundary, so for those ten the enumerated event "next earnings release" is structurally unavailable and each would require a **numerical price target**. That is 67%, identical to the prior cycle's fraction on a completely different cohort, which strengthens the structural reading: W2's intake is dominated by names that just reported *by construction*, not by where the calendar happens to sit.
-
-What is new is the other five. **Three of them are clinical-event names — ROIV, GPCR and AMGN — and "next FDA decision date" is on criterion 3's closed list.** This is the first cohort in the recorded lineage where that limb is even potentially reachable; the 2026-08-23 cycle's two biotech candidates (MRNA, AMLX) had no filed application and therefore no PDUFA date to name. Whether a *dated* decision actually exists for any of the three is per-candidate research index mode skips, so this is flagged as the highest-value outstanding fact in this file rather than asserted. The remaining two non-earnings names are TBBK (a customer's acquisition of a rival) and FICO (a regulatory directive) — neither is on the closed list, so both need a numerical target regardless.
+**A correction to this lineage's own record, carried forward.** The 2026-W35 file lists BTDR's event-day move as **+9.01%** in its PART 1 and PART 2 tables, while its own PRICE-BASIS RECONCILIATION paragraph and trajectory table give **+8.31%** from closes 9.63 → 10.43. The 9.63/10.43 pair is the one carried through all four observations and it reproduces exactly; **+8.31% is the correct figure** and +9.01% corresponds to no adjacent close-pair in BTDR's series. Recorded here rather than raised as an alert: the W2 output file is overwritten each cycle, so the stale figure survives only in git history and in this note.
 
 ---
 
@@ -269,89 +205,42 @@ What is new is the other five. **Three of them are clinical-event names — ROIV
 
 **SCREEN MODE: INDEX (B router DO-NOT-ACTIVATE as of 2026-09-03).**
 
-**Ranking rule, stated so it is reproducible:** rank is **absolute event-day magnitude**, nothing else. Eligibility flags are carried as a visible column rather than folded into the rank, so that the ordering can be checked against the measured moves without knowing this session's judgment. **Rank is a magnitude ordering, not a conviction ordering** — no candidate here has been evaluated against criteria 2, 3 or 4, because those are precisely the steps index mode skips.
-
-## TOP-5
-
-| # | Ticker | Qualifying event | Move | Window closes | Sessions left | D1 origin | Event (one line) | Flags |
-|---|---|---|---|---|---|---|---|---|
-| 1 | **TTAN** | 2026-09-09 | **−29.98%** | 2026-09-22 | 7 | `acc31c4a` | Beat on revenue and EPS, then −30% on a next-quarter guide below consensus. | — |
-| 2 | **SIG** | 2026-09-09 | **+23.96%** | 2026-09-22 | 7 | `acc31c4a` | Q2 EPS $2.19 vs ~$1.72 est, FY guide raised, SSS +2.2%. | — |
-| 3 | **TBBK** | 2026-09-09 | **−22.33%** | 2026-09-22 | 7 | `acc31c4a` | Chime to acquire rival BaaS partner Stride Bank for $590M — a structural client-loss event. | cap rail UNVERIFIED (~4% above floor) |
-| 4 | **NAVN** | 2026-09-09 | **−21.75%** | 2026-09-22 | 7 | `7d717e9f` | FQ2 FY27 beat-and-raise met with −21.7% on a widening GAAP loss; recent IPO. Reported after the 09-09 close, reacted 09-10. | — |
-| 5 | **BRZE** | 2026-09-09 | **−21.71%** | 2026-09-22 | 7 | `acc31c4a` | Revenue +26.2% YoY but FCF margin 12.7% → 9.6% and a weak Q3 guide. | — |
-
-## REST (ranked 6–15)
-
-| # | Ticker | Qualifying event | Move | Window closes | Sessions left | D1 origin | Event (one line) | Flags |
-|---|---|---|---|---|---|---|---|---|
-| 6 | **GWRE** | 2026-09-04 | −19.93% | 2026-09-18 | 5 | `8ba82a4c` | Q4 FY26 EPS $0.99 vs $0.85 est (a beat), −20% on guidance and valuation reset. | — |
-| 7 | **ROIV** | 2026-09-08 | +18.75% | 2026-09-21 | 6 | `a4ce03b2` | Positive Phase 2 mosliciguat data plus an HC Wainwright target raise to $47. | FDA limb may be live |
-| 8 | **LULU** | 2026-09-04 | −17.38% | 2026-09-18 | 5 | `8ba82a4c` | Comps −9%, revenue −4%, FY guide cut to $10.35–10.5B from $11–11.15B. | prior NO-GO 2026-06-08 |
-| 9 | **FICO** | 2026-09-04 | −16.68% | 2026-09-18 | 5 | `8ba82a4c` | FHFA directive opens GSE mortgage scoring to VantageScore, ending FICO's exclusivity. | prior NO-GO 2026-07-30 on the same thread |
-| 10 | **GPCR** | 2026-09-08 | −14.70% | 2026-09-21 | 6 | `a4ce03b2` | ACCG-2671 / aleniglipron Phase 1/2a readout judged underwhelming against incumbents. | cap rail PROVISIONAL (D1's own word); FDA limb may be live |
-| 11 | **COO** | 2026-09-09 | −14.67% | 2026-09-22 | 7 | `7d717e9f` | FQ3 revenue miss $1.066B vs ~$1.098B, FY guide cut on CooperVision destocking. Reported after the 09-09 close. | — |
-| 12 | **ASO** | 2026-09-09 | +14.40% | 2026-09-22 | 7 | `acc31c4a` | Net sales ~$1.60B, +3% YoY, a beat with the FY guide raised and buybacks. | — |
-| 13 | **CASY** | 2026-09-09 | −14.24% | 2026-09-22 | 7 | `acc31c4a` | Beat on revenue, EPS and EBITDA but inside-store SSS +3.2% missed. | cap by inspection, not measured |
-| 14 | **AEO** | 2026-09-09 | −13.97% | 2026-09-22 | 7 | `7d717e9f` | Comp-sales miss overwhelmed an EPS/revenue beat and a tariff-refund-boosted guide raise. Reported after the 09-09 close. | cap rail UNVERIFIED (inside the ±30% band) |
-| 15 | **AMGN** | 2026-09-08 | −10.08% | 2026-09-21 | 6 | `a4ce03b2` | Read-across: class peer of pelacarsen (olpasiran) repriced on Novartis's CV-outcomes failure. | FDA limb may be live |
-
-## BELOW THE CAP — seven eligible items, carried with the same fields so nothing is lost
-
-The 15-cap is a full-depth cost control; in index mode the marginal cost of one more row is close to zero and these seven are otherwise identical in kind to the fifteen above. They are recorded in full rather than dropped, and they are **not** ranked.
-
-| Ticker | Qualifying event | Move | Window closes | Sessions left | D1 origin | Event (one line) |
-|---|---|---|---|---|---|---|
-| INTC | 2026-09-08 | +9.05% | 2026-09-21 | 6 | `a4ce03b2` | Bloomberg report that Intel may raise chip prices next month. (Five prior B NO-GOs on this name.) |
-| SCCO | 2026-09-10 | −7.23% | 2026-09-23 | 8 | `7d717e9f` | Copper retreat on White House indecision over a refined-copper tariff. |
-| BKNG | 2026-09-08 | −6.72% | 2026-09-21 | 6 | `a4ce03b2` | Conservative forward guidance plus insider sales into a rate repricing. |
-| CMCSA | 2026-09-09 | −6.61% | 2026-09-22 | 7 | `acc31c4a` | CFO conference remarks: Q3 broadband subscriber losses unlikely to improve YoY. |
-| FCX | 2026-09-10 | −6.59% | 2026-09-23 | 8 | `7d717e9f` | Same copper-tariff driver as SCCO, the sector's other liquid pure-play. |
-| META | 2026-09-09 | +6.55% | 2026-09-22 | 7 | `acc31c4a` | Muse paid AI agent launched at $20 / $100 tiers — a revenue-model event. (Prior B **GO**, 2026-05-01.) |
-| TSLA | 2026-09-04 | −5.92% | 2026-09-18 | 5 | `8ba82a4c` | NHTSA audit query on Cybercab self-certification plus an underwhelming Cybercab update. (Prior NO-GO 2026-07-26.) |
-
----
+The ranked list is the table in PART 1 — TOP-15 by absolute event-day move, then the five below the cap. Index mode records the seven mandated fields per item and skips the four per-candidate research steps. It does **not** skip the cohort work above, which is this cycle's substantive output.
 
 ## ROUTING — no thesis-construction enqueue is owed, and W4 must not create one
 
-B is **DO-NOT-ACTIVATE**, so the router bars every new B entry for the whole of each candidate's 10-trading-day window. Per W4 §C this shortlist routes to `Watchlist.md`'s **"Strategy B watch overflow"** section marked **router-gated, not rank-gated**.
+Route the top tier to `Watchlist.md`'s "Strategy B watch overflow" marked **router-gated, not rank-gated**, exactly as W4 §C directs. Zero `PENDING_ANALYSIS` thesis-construction enqueues are owed.
 
-**THE DRAIN CANNOT REACH ANY OF THE 22, and the dates say so exactly.** Every window here closes between **2026-09-18 and 2026-09-23**. The next W4 is **today** and converts only the fresh intake it reads today — under a DO-NOT-ACTIVATE router that means routing to overflow, not enqueuing. M4's B-drain limb (added 2026-08-31) is `monthly_ftd` and next fires **~2026-10-01**, after the last of these windows has closed. So on today's arithmetic **zero** of the 22 can reach any consumer before expiry, and that holds even if the router flips tomorrow, because a flip changes activation and not the M4 cadence.
+**Every candidate in this file will expire ungraded, and this cycle that is provable rather than likely.** MEASURED:
 
-This is the **sixth consecutive router-gated cycle** and the **third consecutive index-mode cycle**. It SHARPENS the open `b_overflow_drain_cadence_gap` alert (`022d6490`, M4-owned, raised 2026-09-01) rather than being a new condition, so it is recorded here and in this run's decision row and **deliberately NOT re-alerted** — a second row for one standing condition is the alarm fatigue INCIDENT INHERITANCE exists to prevent. W2 proposes no fix: W4 §C assigns the router/window interaction to W5 and M1a.
+- The latest window in the intake closes **2026-09-30**.
+- The earliest reachable B activation write is **2026-10-01** — M1a, M1b and M4 fire on the first of the month (`ops/cadence.yaml` crons `0 11 1 * *`, `0 12 1 * *`, `0 15 1 * *`). Every window therefore closes **one session before** the only scheduled flip path can even begin, and a divergence-attached flip resolves later still (attacker +1 day, orchestrator +2).
+- The **out-of-cycle path is blocked on one falsifiable price condition**, not merely idle. `state.rerisking_limb_status` for B: `leg_a_dwell` **TRUE** (31 dwell trading days), `leg_c_technical` **TRUE** (VIX NORMAL, SPY UP, breadth HEALTHY), `leg_b_price_leg` **FALSE** — Brent 104.82 against a retrace trigger of **96.74** (peak 108.75, baseline 84.73), basis `not_retraced`, as of 2026-09-17. `sql_limbs_fired` FALSE, and `events.queue_events` holds **zero** `PENDING_REGIME_REFRESH` rows in its entire history. So the re-risking limb is armed on two of three legs and gated on exactly one thing: **front-month Brent closing at or below 96.74, a further −7.71% from 104.82, before 2026-09-30.**
+
+This is the first cycle able to state the blocker as a number rather than as "the router has not flipped". It is also worth recording that the *drain* half of this problem was genuinely fixed on 2026-09-14 — AR_orc now drains the B watch overflow the moment a divergence review binds B to ACTIVATE, rather than waiting for the next monthly M4 (`022d6490`, resolved). The remaining constraint is no longer the drain cadence; it is that nothing can flip the router inside a 10-trading-day window when the scheduled re-score is monthly and the only off-cycle path needs an 7.7% move in Brent.
 
 ---
 
-## FINDINGS FOR D1 — one, upstream, not fixed here
+## FINDINGS FOR D1 — two, upstream, not fixed here
 
-**F1 — `screen_fields_schema_drift` has recurred in a new shape, two days after D1 closed the old one.** The prior cycle raised `a9013b97` for item rows carrying NULL `ticker` / `conviction_pct` / `market_cap_usd` / `qualifying_event_date`; D1 acted on it, wrote an explicit `schema_conformance_note` into its 2026-09-06 screen, and that alert is now **resolved** (2026-09-07 — so the prior file's "open" framing was accurate when written and is simply stale now). MEASURED on the five screens in this intake:
+1. **`screen_move_measured_on_opens`** (warning) — the ORCL open-vs-close error, root-caused exactly, with `rescreen-ORCL-B-20260920` queued for the durable correction. A new variant of the §19 PRICE BASIS violation that no existing check catches.
+2. **`b_intake_population_coverage_unquantified`** (info) — D1's bounded scan is the definition of B's candidate population and its selection rule is unrecorded. Proposes recording the selection rule alongside `universe_measured`; explicitly does **not** propose widening the rail, which is a cost decision on D1/W5 surface.
 
-- the **2026-09-08** screen's `rejected_notable` array: **21 of 21** rows omit the `conviction_pct` and `below_spec_floor` keys *entirely* (not NULL — absent), **21 of 21** carry `qualifying_event_date = NULL`, and **11 of 21** carry `market_cap_usd = NULL`;
-- the **2026-09-09** screen: **3 of 8 passed** rows and **7 of 9 rejected** rows carry `market_cap_usd = NULL` (the three passed ones disclosed via a `market_cap_note` string, which is honest but is still a NULL on the numeric field);
-- the **2026-09-10** screen: clean at item level, but the top-level `degraded` key is **absent** where the other four rows carry it explicitly.
-
-Two things make this worth filing rather than absorbing. First, it is **structurally different from the closed defect** — missing keys and nulled dates rather than drifted spellings — so a check written against the old shape would pass. Second, it is concentrated almost entirely in `rejected_notable`, which W2 does not rank from; the consumer it actually reaches is **W5's RESEARCH-SCREEN SCORECARD** via `state.research_screen_calls`, whose agreement counts are computed over both arms. Filed as `ops.alerts` info row **`e1ff0ebc-c2fd-4249-8dbd-e50555b6b1c9`** (`screen_fields_schema_drift`, source W2, owner D1). **Not fixed here** — D1's screen-record schema is D1's surface, and this run has no authority over it.
-
-The previous cycle's second D1 finding, `screen_move_no_disposition` (`ed5e2e24`, the BMNR 09-03 case), is **still open** and is not re-raised. Nothing in this intake bears on it either way.
+**Resolved this run:** `e1ff0ebc` `screen_fields_schema_drift`, W2's own referral from 2026-W37. All five D1 screens since are clean on the four structural fields across both arms (77 item rows, zero missing). The one field still showing NULLs — `qualifying_event_date` on 10 rows — is correct: every one carries a reason string explicitly stating no public event was identified.
 
 ---
 
 ## HONEST LIMITS OF THIS RUN
 
-- **No candidate has been evaluated against criteria 2, 3 or 4.** Every rank is a magnitude ordering over items that passed criteria 1 and 5. It must not be read as a conviction ordering, and the prior-NO-GO flags on FICO, LULU, TSLA and INTC are context for a future full-depth pass, never a verdict reached here.
-- **Three market-cap rail clearances are UNVERIFIED or PROVISIONAL** (TBBK, AEO, GPCR) and three more are cleared **by inspection rather than measured** in D1's own record (META, CASY, CMCSA). Resolving the first three requires the issuer's own filed share count, which is a metered path index mode does not spend.
-- **The instrument-eligibility line decided one disposition again.** NVS is excluded as a depositary receipt; ROIV and GPCR are foreign-domiciled names admitted on the ONON / KLAR / CRDO / NU precedent. That precedent has never been written down (see the open question below).
-- **Sub-pattern routing was not performed.** It is part of the criterion-4 step index mode skips. RDDT's exclusion cites SP6 by shape, not by a taxonomy walk.
-- **The cohort findings are three cohorts in one regime, 59 names, not a base rate.** FINDING 3 in particular states a *direction* — the mean residual does not decay — over horizons of at most 15 sessions, on cohorts drawn from four consecutive weeks of a single acute-shock regime. It is evidence for a future divergence review to weigh, not a parameter to act on, and W2 claims no authority over B's machinery.
-- **One panel observation is contaminated and is excluded, not smoothed:** HPE's 09-11 residual (393%) measures a new event, not the decay of its 09-03 one.
-- **Per-name next-report and PDUFA dates are NOT established.** FINDING 5's claim that the FDA limb of criterion 3 is live for ROIV, GPCR and AMGN is a statement that the limb is *reachable in principle* for clinical-event names; whether a dated decision exists for any of the three is unestablished and is flagged as this file's highest-value outstanding fact.
+- **The 24 backstop moves are not a coverage rate.** The 21 names were already selected as movers. Nothing here establishes what fraction of the true ≥5% population D1 surfaces, and W2 makes no such claim.
+- **Four cohorts is not many.** FINDING 2 rests on four starting levels and three completed changes. It is consistent with "the level is set at the event and does not move" and also with "slow decay with large noise"; this run cannot separate them, and cohort-2's −28.1 is the case that keeps the second alive.
+- **Series A's residuals are 1–5 sessions old.** They are a first observation and should be read as a baseline for the next cycle, not as a result.
+- **Cross-cohort level comparisons remain confounded by composition** even though the measurement date is now common. That is the finding, but it also limits it: this panel cannot say *which* compositional feature drives the level.
+- **TLX's event outcome is still unestablished.** Its PDUFA goal date is confirmed and its −5.13% reaction is measured, but no post-decision primary source was obtained by D1 and W2 performs no discovery, so no event-dependent criterion is assessed for it.
+- **An IBKR data-integrity defect was live during this run's measurements** — `ibkr_price_history_parallel_cross_contamination` (`7cc25b71`), raised by W1 earlier today: `get_price_history` silently returns another ticker's series at concurrency ≥5. All four measurement passes were re-run or verified under a sequential/≤3-concurrency guard, and every one of the 79 measured names was cross-checked against an independently recorded event-day move plus a duplicate-statistic scan. **No contamination was found in any series**, and the two anomalies that did surface (ORCL, and the BTDR figure above) were both traced to the upstream record rather than the price feed. That is corroboration for W1's alert, not a refutation of it: the guard was applied precisely so the result would be interpretable either way.
 
 ---
 
-## OPEN QUESTION CARRIED FORWARD FOR THE OWNER — the ADR / ordinary-share line, fifth consecutive cycle
+## OPEN QUESTION CARRIED FORWARD FOR THE OWNER — the ADR versus US-listed-ordinary line, sixth consecutive cycle
 
-`strategy/04_strategy_b.md` says only **"US-listed common equity"**. It does not distinguish a foreign issuer's US-listed *ordinary or common shares* from a *depositary receipt* over shares trading primarily elsewhere. That unwritten distinction decided real dispositions again this week: **NVS excluded** (Swiss issuer, depositary receipt, −13.93% on a double clinical failure — a large, cleanly attributed move that would otherwise rank 10th), while **ROIV** and **GPCR** are admitted as US-listed shares of foreign-domiciled issuers on the same precedent that admitted ONON, KLAR, CRDO and NU and excluded BABA, FUTU, ARGX, JD, AZN and NVO.
-
-The test has now held five cycles and has never been written down, so every session re-derives it from precedent. Note also that the obvious mechanical proxy does **not** work: the 20-F filing form is not a usable diagnostic, since both the excluded ARGX and the admitted ONON file 20-F as foreign private issuers.
-
-Pinning it is a `Strategy.md` change, and Strategy B's machinery is spec-locked and immutable for the strategy's life, so it is an **owner or SL-path decision** and not one W2 may make.
+Unchanged and still unwritten. Strategy B's instrument eligibility says "US-listed common equity" and the operative test is where the **primary listing** is, not the filing form. It decided CRDO in the 2026-09-06 cycle and NU below the cap. It binds nothing this cycle — all 20 rankable names are US-primary — but the line is still not written down anywhere, and the next cycle that surfaces an ADR will decide it again from scratch.
