@@ -3938,3 +3938,119 @@ documented, intended tool behaviour rather than a defect, so the fix is ours. If
 long statements to stop handing back control at all, the lever is an explicit larger `timeoutMs` on the
 call rather than more polling; that was NOT changed here, because raising it fleet-wide would lengthen
 every routine's worst-case stall and none of the measured 867 occurrences is known to have caused harm.
+
+## 53. The weekly usage limit silently rejects four routine fires — the 2026-09-18 quota exhaustion *(platform dependency, new incident class)*
+
+**Window: 2026-09-18 01:16:06 UTC → 2026-09-19 08:00:00 UTC** (`resets_at=1789804800`, measured from the
+run log, not inferred). The Anthropic **seven-day (weekly) usage limit** for the account was exhausted
+mid-fleet. Every routine fire inside that window was rejected by the platform *before the routine could
+execute a single step*, and — this is the whole point of the section — **a rejected fire writes no
+`ops.run_log` row at all**, so it is indistinguishable, from inside BigQuery, from a trigger that never
+fired, a trigger that was deleted, or a run that halted at pre-flight.
+
+### What was lost (measured, per run session)
+
+| routine | session | fired → last event | lifetime | normal |
+|---|---|---|---|---|
+| SL5  | `cse_01Qv6xGfqWhLnxALesXV5YTv` | 01:25:17 → 01:25:32 | **15 s** | 20–26 min |
+| SL3  | `cse_017Tny2Z9fzvsWFU7uq6e95R` | 02:02:10 → 02:02:25 | **15 s** | 15–30 min |
+| OPS2 | `cse_01QsW2Spj5T8i7LKYFRUDAsj` | 04:16:05 → 04:16:18 | **13 s** | 7–10 min |
+| OPS0 | `cse_016ZnCvTqHX8uqcnS8SHWW6X` | 04:33:48 → 04:34:01 | **13 s** | 12–17 min |
+
+All four were the `run_date 2026-09-17` evening slots. Each session provisioned, cloned the repo, started
+Claude Code, and then logged exactly:
+
+```
+rate_limit: rejected (seven_day) resets_at=1789804800
+assistant: You've hit your weekly limit · resets Sep 19, 8am (UTC)
+result: success is_error=true turns=1 duration=0s
+```
+
+Note `result: success is_error=true` — **the fire is reported as a successful session, not an error**. Do
+not expect a failed-run signal anywhere.
+
+**SL2 was cut mid-run, and that is the more dangerous shape.** Its session (`cse_01RzvJLqyrxs72B3UfxrXU8d`)
+fired 01:05:43, did real work, committed `8eb8008` and pushed at 01:13:36 — and then took the first
+rejection at **01:16:06**, with its Sonnet sub-agent dying on `HTTP 429 (error type rate_limit)`. It never
+wrote its terminal `ops.run_log` row. `ops.sp_backfill_run_log_from_markers` then backfilled that row as
+`'completed'` from the commit marker at 05:15:38. So the durable record says SL2 completed; what actually
+happened is that it landed its commit and was killed before it could finish. Cf. §48's
+`run_log_backfill_masked_halt` — the same masking mechanism, a different upstream cause.
+
+### Nothing else was lost — check the day-sets before declaring an outage
+
+The fleet then looked dark for ~51 h, which is alarming and mostly an illusion. 2026-09-18 was a **Friday**
+and 2026-09-19 a **Saturday**; the two fleet crons are `* * 0,1,2,3,4` (Sun–Thu UTC) and `* * 1,2,3,4,5`
+(Mon–Fri UTC, = the previous Denver evening). **Neither day-set covers Friday daytime or Saturday.** The
+only fires actually due in the window were the four above. Count the *scheduled* fires in the window before
+concluding the fleet is down — `next_run_at` on each trigger is the cheap check.
+
+### Detection worked; diagnosis did not
+
+Both nets fired correctly and between them covered all four misses:
+- `missed_run` (critical, 09-18 05:16) named OPS0, OPS2, SL3 — the `daily_sun_thu` monitor class.
+- `queue_driven_missed_fire` (warning, 09-19 05:15) named SL5 — which sits **outside** `state.cadence_watch`
+  by design and is caught only by `bigquery/241`'s per-day net.
+
+What did *not* exist was any way to say **why**. The `queue_driven_missed_fire` message tells the reader to
+"check the routine run log in claude.ai before assuming the trigger is broken, and check whether BigQuery
+was reachable in that slot" — it enumerates two hypotheses and the true one was neither. §48 (2026-08-16)
+hit the same wall and could only conclude "this looks like a platform-side trigger-delivery failure",
+a verdict that was unfalsifiable at the time. It no longer has to be.
+
+### Diagnostic recipe — run this FIRST on any no-fire / missed_run
+
+`RemoteTrigger` is callable from an interactive session and is present in **all 36 enabled triggers'**
+`allowed_tools` (measured 2026-09-20). Trigger ids are in `ops/trigger_ids.json`.
+
+```
+RemoteTrigger list_runs    trigger_id=trig_...      # did a session exist for that slot?
+RemoteTrigger get_run_log  session_id=cse_...       # what killed it?
+```
+
+Read `created_at → last_event_at` as the session lifetime, then classify:
+
+| signature | cause | recovery |
+|---|---|---|
+| **no session row** for the slot | trigger never fired: disabled, deleted, or scheduler drop | re-enable / re-register; OPS0 STEP 2 self-registers |
+| session, **~15 s**, `rate_limit: rejected (seven_day)` | **weekly quota exhausted** (this section) | none possible until `resets_at`; wait it out |
+| session, ~15 s, other `rate_limit` kind | shorter-window limit | usually self-clears within the hour |
+| session runs **minutes**, commits land, **no `run_log` row** | BigQuery connector de-auth / token expiry mid-run | re-consent; cf. §26, §48 Part A |
+| session runs, `run_log` row `'halted'` | routine halted itself on a gate | read `error_msg`; ordinary in-band halt |
+
+`list_runs` shows only fires that created a session — a fire refused *before* session creation leaves no
+row, so an empty list is evidence of "never fired", not proof the trigger is broken. Both cases are in the
+table above; do not collapse them.
+
+### What self-heals and what does not
+
+- `missed_run` clears via `ops.sp_auto_resolve_alerts()` Rule 2 once every named routine completes again
+  **or the payload date goes >1 day stale** — the latter is what closed this one (2026-09-20 04:08).
+- `queue_driven_missed_fire` has **no verified-heal rule at all**; it closes only by the 7-day age-out in
+  `ops.sp_sq_cadence_check` #14. **Do not hand-resolve it while its missed date is still inside the 5-day
+  detector lookback** — `ops.alert_policy`'s own `resolve_rule` spells out why: the open row is what
+  suppresses the re-raise, so an early manual close re-mints a byte-identical message and sends the
+  operator a fresh email *and* ntfy push.
+- **SL3** re-entered `state.catchup_refire_readiness` (`SL3|2026-09-17`) and is picked up by OPS2's next
+  slot. **OPS0, OPS2 and SL5 are `catchup_safe: false`** and are simply skipped — a missed day stays missed.
+- Anything staged before the outage keeps its own clock. Here, D2's two 2026-09-17 park re-risk legs filled
+  normally at Friday's open (they were already at IBKR), but **D2a — the only routine that can mark them
+  reconciled — is excluded from auto-refire by name** in `bigquery/59_catchup_autofire.sql`. Had D2a's own
+  slot been inside the window, those rows would have stayed `pending` until a human re-ran it. That is the
+  real blast radius of a quota outage: not the missed runs, but the reconciliation that only one
+  non-refireable routine can perform.
+
+### Prevention
+
+There is **no API to read remaining weekly quota**, so this cannot be pre-detected from inside the repo —
+do not go looking for one. What is actionable:
+
+- **The fleet and interactive sessions share one weekly pool.** A long interactive session (this
+  investigation included) spends the same budget the autonomous fleet needs. When quota is known to be
+  tight, that is a reason to keep interactive work short, not merely a nuisance.
+- **Timing is luck, and it was good this time.** The window opened 01:16 UTC Friday and closed before
+  Sunday's slots, so it cost four low-consequence evening routines. The same outage starting a Monday
+  would have taken D1/D2/D2a — the routines that price the book, stage orders and reconcile fills — and
+  D2/D2a cannot be auto-refired at all.
+- On any future `missed_run`, run the recipe above **before** writing an incident record. A verdict of
+  "platform-side trigger-delivery failure" is now only acceptable with a `list_runs` result behind it.
