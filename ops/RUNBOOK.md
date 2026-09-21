@@ -4016,11 +4016,26 @@ Read `created_at → last_event_at` as the session lifetime, then classify:
 | session, **~15 s**, `rate_limit: rejected (seven_day)` | **weekly quota exhausted** (this section) | none possible until `resets_at`; wait it out |
 | session, ~15 s, other `rate_limit` kind | shorter-window limit | usually self-clears within the hour |
 | session runs **minutes**, commits land, **no `run_log` row** | BigQuery connector de-auth / token expiry mid-run | re-consent; cf. §26, §48 Part A |
+| session runs **minutes**, real work lands, dies on `403 authentication_failed` | **Claude subscription / entitlement lapse** — not a connector | §54; only the owner can restore plan access |
 | session runs, `run_log` row `'halted'` | routine halted itself on a gate | read `error_msg`; ordinary in-band halt |
 
 `list_runs` shows only fires that created a session — a fire refused *before* session creation leaves no
 row, so an empty list is evidence of "never fired", not proof the trigger is broken. Both cases are in the
 table above; do not collapse them.
+
+**Two rows share the runs-for-minutes shape and must NOT be collapsed** (added 2026-09-21, §54). A **BigQuery
+connector** de-auth leaves the Claude session alive and failing on its MCP tool calls — the run keeps going,
+commits can still land, and the recovery is to re-consent the connector. A **subscription/entitlement** lapse
+kills the session itself: `status=403 error=authentication_failed` on the API retry line, followed by
+*"Your organization has disabled Claude subscription access for Claude Code · Use an Anthropic API key
+instead, or ask your admin to enable access"*. Nothing in this repo can fix the second one. **Read the error
+text, not the duration** — the durations are identical and the recoveries are opposites.
+
+**A one-call shortcut to the same verdict.** `RemoteTrigger get <trigger_id>` returns a `last_run` object
+carrying `status` (`ROUTINE_RUN_STATUS_SUCCEEDED` / `_FAILED`), `fired_at`, `finished_at` and `session_id`.
+That is one call instead of `list_runs` + `get_run_log`, it names the session to pull the log for, and its
+`status` is the platform's own verdict on the run — measured 2026-09-21: W5's last run read `_FAILED` while
+every healthy sibling read `_SUCCEEDED`. Use it to triage first and reach for `get_run_log` only for the why.
 
 ### What self-heals and what does not
 
@@ -4105,3 +4120,123 @@ staging, e.g. the park re-risk pair of this incident) is exempt by construction,
 outright: *"Liveness of the crafted instruction itself is NOT this view's job — that is owned by D2a's
 registry reconciliation + D3's instruction-verify/persist-and-wait re-craft."* So for crafted orders D2a is
 the single liveness owner, which is exactly why a D2a that stops running is the case worth paging about.
+
+## 54. A mid-run 403 kills a routine that has already done its work — the 2026-09-21 subscription-entitlement flap *(platform dependency, new incident class)*
+
+**Window: 2026-09-21 04:42:53 → 04:44:01 UTC.** OPS0's `run_date 2026-09-20` fire started normally at
+04:36:44 on its own cron (`30 4 * * 1,2,3,4,5`, `trig_018zZNYXYmgkqbmcfzss1YjU`), ran for 512 s, did most of
+its job — and was then killed by the platform, not by anything in this repo or in BigQuery. Session
+`session_018PSVPSpDSmHZAcakA9RGYQ` logged, verbatim:
+
+```
+api_retry 1/10: status=403 error=authentication_failed retry_in=1s
+api_retry 2/10: status=403 error=authentication_failed retry_in=1s
+assistant: Your organization has disabled Claude subscription access for Claude Code · Use an Anthropic API key instead, or ask your admin to enable access
+result: success is_error=true turns=50 duration=512s
+```
+
+Three further session restarts inside the same run each re-issued the same 403 within two seconds and gave
+up. Note `result: success is_error=true` again — the same misleading shape §53 documents.
+
+### This is NOT §53's class, and keeping them apart is the point of this section
+
+§53's quota rejections killed each fire **before step one**: 13–15 s lifetimes, `rate_limit: rejected
+(seven_day)`, and **no `ops.run_log` row at all**. This one ran 8½ minutes and had already passed connector
+pre-flight, called `ops.sp_routine_start` (so a `started` row DOES exist), called `ops.sp_auto_resolve_alerts`,
+and completed **STEP 1** (`state.catchup_refire_readiness` = 0 rows), **STEP 2** (established that OPS0's own
+2026-09-17 miss was already on the record in §53, and correctly filed no duplicate), **STEP 4** (git landing
+sweep — 1494 commits, zero `claude/*` refs on origin, clean) and **STEP 5** (telemetry sweep).
+
+**Exactly one thing was lost: STEP 3.** The kill landed on the sentence *"Now STEP 3, which is due today
+(Denver Sunday)"*. 2026-09-20 was a Sunday, so the **weekly trigger-config sweep** — OPS0's only once-a-week
+duty, and the mechanism CLAUDE.md's trigger-`updated_at` note names as the question that CAN be answered —
+never ran. The terminal `ops.run_log` row was never written either.
+
+**W5 died the same night from a DIFFERENT cause, which is why "the fleet was down" is the wrong summary.**
+
+| routine | session | fired → died | lifetime | killed by |
+|---|---|---|---|---|
+| OPS0 | `session_018PSVPSpDSmHZAcakA9RGYQ` | 04:36:44 → 04:42:53 | 512 s | `403 authentication_failed` — entitlement |
+| W5   | `session_019pznUXugXVA83j7kQxXTUG` | 05:13:51 → 05:17:20 | 300 s | `rate_limit: rejected (five_hour) resets_at=1789984200` |
+
+W5's kill was the **five-hour** session limit (reset 2026-09-21 09:50 UTC), with a Sonnet sub-agent dying on
+HTTP 429 in the same second — §53's "other `rate_limit` kind" row. And W5 ran *successfully for four minutes
+starting 31 minutes AFTER* OPS0's 403, which proves the 403 was a flap, not a clean cutoff. Do not merge these
+two into one "outage": they have different causes, different recoveries, and different durations.
+
+### The context that was already on the record 3h 45m earlier
+
+D3's 2026-09-20 run raised `fleet_subscription_state_unwatched` (info, `ops.alerts b683172e`) at **00:57:44
+UTC** — recording that **no `ops.*` table, `state.*` view or CI workflow reads subscription, plan or
+entitlement state**, so the fleet can only ever see the *consequence* of a lapsed plan, never the cause. It
+found that gap because the owner's calendar carries an all-day event dated **2026-09-21**: *"Claude Max plan
+expires — Claude Max plan subscription is set to be canceled on this date."* (created 2026-08-21, confirmed
+live 2026-09-21).
+
+**That observation bit, in production, 3 hours 45 minutes after it was filed.** Treat `fleet_subscription_state_unwatched`
+as a realized gap, not a theoretical one — and note it is still open, correctly: nothing here closes it.
+
+### Detection worked — all of it. Diagnosis was again the only gap
+
+- `missed_run` (critical, 05:15:46, `e391193d`) named OPS0 correctly. `state.cadence_watch.needs_attention`
+  keys on the absence of a **`completed`** row, so the orphaned `started` row did not mask it.
+- `state.stalled_runs` (`bigquery/148_audit_2026_08_08_fixes.sql`, STATEMENT 3) covers the orphaned-`started`
+  case at per-routine thresholds — OPS0 6 h, W5 18 h. Measured against the live rows: it would have raised
+  `routine_stalled` at **10:36 UTC** for OPS0 and **23:13 UTC** for W5. The interactive repair below
+  pre-empted both; the coverage is real and was verified by replaying the view's own predicate with the clock
+  advanced, not assumed.
+
+Neither could say **why**, which is what §53's signature table now answers — see the new `403` row there.
+
+### The repair nothing in the repo could have done
+
+Both runs left an `ops.run_log` row stuck at `status='started'` with no terminal sibling. **In the entire
+history of the table — 888 `started` rows since 2026-06-19 — these two are the only orphans that have ever
+existed.** No path in the repo could clear them: `ops.sp_routine_start` is INSERT-only, nothing UPDATEs
+`ops.run_log`, and `ops.sp_backfill_run_log_from_markers` (via `state.run_log_selfheal_candidates`,
+`bigquery/210_selfheal_inflight_guard.sql`) can only synthesize a `completed` row when the dead session
+**landed a git commit** — neither of these did, so that path was structurally unreachable. They would have sat
+`started` forever.
+
+An interactive session therefore appended the missing terminal rows by hand via `ops.sp_routine_end`, status
+`failed` (not `halted` — neither routine halted itself on a gate), with the platform cause in `error_msg` and
+the full account in `note`. `error_msg` is an ordinary populated field on this row class, not a novelty — measured
+2026-09-21, **53 of the 54 `failed`/`halted` rows in the table carry one, and 0 of the 887 `completed` rows
+do**. That split is the real shape of the field, and it is why the 2026-09-08 design of `ops.sp_log_run`'s
+write-time escalation could not key its completed-with-warnings branch on it. What is true of `error_msg`
+generally is that **nothing reads it**: it is a record for a human, not an input to a detector.
+
+**That repair is itself a notifying event, by design.** `ops.sp_log_run` raises `routine_run_failed` (warning)
+synchronously on any `failed`/`halted` write (`bigquery/230_run_outcome_notification.sql`, carried forward in
+`bigquery/241`), so the two repair rows produced two owner emails and will auto-age closed after 7 days via the
+`#14` allowlist. That is correct behaviour and was not suppressed: two runs did fail, and the record should say
+so out loud. Severity is a hard-coded `warning`, and `state.trading_enabled`'s `blocking_criticals` counts
+`severity = 'critical'` only, so neither row can reach a trading gate.
+
+### What was NOT built, and why
+
+1. **No subscription / plan / entitlement detector.** There is no API to read it — the same finding §53
+   records for the weekly quota, and `do not go looking for one` applies identically. The compensating control
+   is the owner's own calendar reminder, which is not a workaround but the thing that actually worked: it is
+   what put the expiry date in front of D3 in the first place.
+2. **No new orphaned-`started`-row detector.** `state.stalled_runs` already owns this, with per-routine
+   thresholds tuned for it. A naive alternative ("a `started` row with no terminal row, past its run_date's
+   21:00 America/Denver deadline") was backtested over all 888 historical `started` rows and would have fired
+   **26 times** — late catch-ups, interactive re-runs, and commit-marker backfills, every one a false positive.
+   Strictly worse than what exists. Do not build it.
+3. **No change to `ops.sp_sq_cadence_check`.** Adding a companion alert there would mean carrying an 84 KB
+   procedure body forward to v24, bumping `bigquery/63_scheduled_query_version_registry.sql` in lockstep, and
+   re-pointing the supersede markers in all 18 files that have ever defined it — to duplicate a detector that
+   already fires. The cost is real and the benefit was zero.
+4. **`fleet_subscription_state_unwatched` was left OPEN and was not escalated.** It is an accurate description
+   of a gap that still exists and that cannot be closed from inside the repo. Resolving it would be a receipt
+   for work nobody did; raising it to warning/critical would add a recurring page for a condition with no
+   in-band remedy. It routes to W5 SPEC-DEFECT NOTICE INTAKE, which is the right owner.
+
+### What the operator actually has to do
+
+Nothing in this repo restores plan access. If routine sessions start dying on `403 authentication_failed`,
+**check the Claude subscription state directly** — that is an account/billing action, outside every surface
+described anywhere in this RUNBOOK. Everything else in the fleet (BigQuery, the scheduled queries, the
+DTS dead-man's switches, `alert_emailer.gs`, the GitHub Actions relay) keeps running without Claude and will
+keep alerting; what stops is every routine that produces the data they watch.
