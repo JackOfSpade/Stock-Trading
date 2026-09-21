@@ -41,6 +41,8 @@
 --                        check_live_sql_parity.py or the dbt port changes>,
 --     "legacy_rule": "move>=5%"|"sector>=2%"|"corr>=0.5",
 --     "passed": [ {"name":"<TICKER | L/S pair | SECTOR>", "metric_pct": <number — the move %/corr>,
+--                  "prior_close": <number — the PRIOR session's `close`, the move's denominator>,
+--                  "event_close": <number — the EVENT session's `close`, the move's numerator>,
 --                  "conviction":"low|medium|high", "conviction_pct": <30|45|60|75>,
 --                  "reason":"<one sentence>", "below_spec_floor": <bool>,
 --                  "legacy_rule_pass": <bool>} ],
@@ -48,6 +50,15 @@
 --                            rejected ],
 --     "agreement": {"both": n, "ai_only": n, "rule_only": n}
 --   }
+--
+-- `prior_close` / `event_close` (added 2026-09-20, closing `screen_move_measured_on_opens`) are the
+-- two `close` values the move was actually computed from — see Operating_Protocols.md §19 PRICE
+-- BASIS / RECORD THE TWO PRICES. REQUIRED on every `single-name-move`/`sector-move` item; OMITTED on
+-- `pair-divergence`, whose `metric_pct` is a correlation and has no two-price form. `metric_pct` must
+-- equal (event_close/prior_close − 1) × 100. ADDITIVE and backward-compatible, same as the
+-- `surfaced_count` correction above: this file parses the payload with per-key JSON_VALUE, one row per
+-- {call, item}, and never a strict schema or a `SELECT *` — so a pre-existing row written before this
+-- date simply carries no such key, and every view below keeps working unchanged against it.
 -- `rationale` (the screen's judgment narrative) is the decision_log row's native `body_md` column, not
 -- a fields key — same "exactly one payload is authoritative, never split redundantly across native
 -- columns and JSON" discipline bigquery/95_capital_allocator.sql's header states for its own `rationale`.

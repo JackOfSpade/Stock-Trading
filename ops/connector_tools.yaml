@@ -80,6 +80,27 @@
 # proof that a cloud routine can actually call a given tool — only the claude.ai connector
 # UI's per-tool matrix is that proof (RUNBOOK §15a).
 
+# SESSION-SCOPE NOTE (added 2026-09-20 — read this before "discovering" a missing connector).
+# This manifest's scope is the connector set a SCHEDULED ROUTINE session sees, which is NOT the
+# same set an INTERACTIVE session sees. Measured 2026-09-20 from an interactive triage session:
+# its own tool inventory carried a **Claude-Docs** connector (`mcp__claude_ai_Claude_Docs__*`,
+# 8 tools: batch, create, delete, export, guide, query, read, update) that appears NOWHERE in
+# ops.connector_tool_inventory — not on 2026-09-20 and not on any prior run. That absence is
+# positive evidence rather than an unchecked assumption: OPS1 records the UNION of observed and
+# manifest tools every morning and DOES flag tools it sees that the manifest lacks (it raised
+# `connector_tool_added` for Gmail.delete_draft on that very run), so had Claude-Docs been present
+# in OPS1's session it would have produced 8 added-drift rows. It produced none.
+# CONSEQUENCE — do NOT add Claude-Docs (or any other interactive-only connector) to this file.
+# Adding it would declare 8 tools the routine fleet never sees, and since every one of them would
+# sit at `use: unused`, `state.connector_tool_drift` would not even report the mismatch: its
+# `removed` arm is scoped to `manifest_use IN ('required','optional')`. The result is a manifest
+# that silently disagrees with the fleet it describes, and the CI tool count drifting away from
+# what any routine can actually reach. If a future interactive session diffs its own tool list
+# against this file, expect that connector to show up as "missing" and leave it alone — the
+# authoritative enumeration is OPS1's, from a routine session, landing in
+# ops.connector_tool_inventory. This is the same trap in a new place as the NAMESPACE NOTE above:
+# what an interactive session can see is not what a cloud routine can see, in either direction.
+
 connectors:
   - name: FMP                       # display name used in alerts and run_log notes
     connector_uuid: f4bd1992-c70e-4b23-b617-271b19976e92
@@ -683,14 +704,6 @@ connectors:
           per call; failures never charged). Dedupe URLs before extracting -- that is the real
           saving. Batching is NOT a credit saving (prorated), only rate-limit headroom.
           Claude_Task_Plan.md — external-content extraction discipline.
-      - name: tavily_feedback
-        use: unused
-        note: >-
-          Auto-added by OPS1 2026-09-17. Vendor-added tool, first observed in the live connector's
-          tool inventory. `use: unused` is the conservative default — nothing in this fleet calls it
-          (mirrors the IBKR `whats_new` precedent, July 2026). Promoting it to required/optional and
-          adding routine prose that calls it is a separate, deliberate feature-adoption decision this
-          step never makes on its own.
       - name: tavily_map
         use: optional
         note: >-
@@ -716,8 +729,44 @@ connectors:
           issuing a second. include_usage=true should be ON for every call (free, and it returns
           real consumption for ops.web_calls.credits_reported).
           Claude_Task_Plan.md — external-content extraction discipline.
-    absent: []
-
+    absent:
+      - name: tavily_feedback
+        verified: unconfirmed
+        note: >
+          DEMOTED FROM `tools:` TO `absent:` 2026-09-20 by an interactive triage session, resolving the
+          OPS1 `routine_run_warning` [manifest_row_for_vanished_unused_tool] raised the same day. OPS1
+          auto-added it to `tools:` on 2026-09-17 under the added-drift AUTO-ADD rule, on a SINGLE sighting.
+          THE ENTIRE OBSERVATION RECORD IS TWO ROWS. `SELECT run_date, present FROM ops.connector_tool_inventory
+          WHERE tool_name = 'tavily_feedback'` returns exactly: 2026-09-17 present=TRUE, 2026-09-20 present=FALSE.
+          Nothing else, over the table's whole history.
+          **THERE IS NO EVIDENCE OF ABSENCE BEFORE 2026-09-17, and an earlier draft of this note wrongly claimed
+          ~18 runs of it.** That claim confused "OPS1 ran ~18 times in that window" with "OPS1 checked this tool
+          ~18 times". It did not: OPS1 writes the UNION of tools OBSERVED and tools IN THE MANIFEST, so a tool
+          that is in neither produces NO ROW AT ALL. Before the 2026-09-17 auto-add this name was in neither,
+          so its pre-09-17 status is genuinely UNKNOWN - a missing row here means "never checked", never
+          "checked and absent". That is the same inference-from-a-missing-row error that
+          bigquery/151_connector_tool_inventory.sql's STATEMENT 1 comment forbids, made inside the manifest
+          this time; read it as a worked example before trusting any absence argument built on row counts.
+          WHAT IS ACTUALLY ESTABLISHED: on 2026-09-20 the name was not callable, confirmed by THREE independent
+          reads - OPS1's session tool listing, OPS1's targeted ToolSearch probe naming `feedback`, and an
+          interactive session's own ToolSearch probe in the `mcp__claude_ai_Tavily__` namespace, which returned
+          the five real Tavily tools and no sixth. That is one DAY of confirmed absence, not a retirement history.
+          WHY `verified: unconfirmed` AND NOT A DATE. The two-state rule in this file's header is explicit:
+          `unconfirmed` means "not yet proven gone, and reappearing is the expected resolution", while a dated
+          `verified` means a CONFIRMED retirement. A tool observed present exactly once, with no prior history,
+          cannot have a confirmed retirement dated against it - there is nothing established to have retired FROM.
+          Whether the vendor shipped and pulled it inside three days, or the 09-17 sighting was an enumeration
+          artifact, is undetermined and both remain live. This mirrors the four Hugging-Face entries, which sat
+          `unconfirmed` until eight consecutive clean OPS1 enumerations justified dating them 2026-08-19; the
+          same promotion is available here once the runs accumulate, and a future session should make it on
+          evidence rather than on elapsed time.
+          WHY DEMOTED RATHER THAN DELETED. No CI check distinguishes the two (nothing in the repo references this
+          name), but OPS1's union-write rule, pinned 2026-08-27, records a per-run row for every `absent:` entry -
+          so as an `absent:` row this name now starts generating the evidence it never had, every morning. A
+          delete generates nothing, and a reappearance would be auto-added as a brand-new tool with no memory of
+          this episode, reproducing this ticket. Under `unconfirmed`, a reappearance is handled exactly as the
+          header prescribes: OPS1 deletes this entry and re-adds the `tools:` row, which is the correct outcome
+          if 09-17 was real.
   - name: Hugging-Face
     connector_uuid: fff8d981-37df-4721-97af-9e0fdf5238e7
     settings_prefix: mcp__Hugging_Face__
