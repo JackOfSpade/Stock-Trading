@@ -4,6 +4,13 @@
 This file changes no live BigQuery object and no trigger. It exists so that the writes D1 could not
 make survive `Daily.md`'s next overwrite.
 
+> **SAME INCIDENT, SECOND FILE (added by the D2a slot, 2026-09-21 ~16:5x MT).** The D2a slot halted on
+> this same OAuth expiry ~35 minutes later. It deferred no composed write — it never got far enough to
+> compose one — so it did not extend this ledger; its halt record, the perishable connector evidence it
+> captured (NAV / cash / positions, which are not re-readable after the day passes), and its measured
+> cost account are in the sibling file **`bigquery-deauth-2026-09-21-d2a-halt-record.md`**. Recovery
+> step 2 of that file is step 2 of this one. Work them together, not separately.
+
 **Read first:** `ops/RUNBOOK.md` §26 (the 2026-06-26 precedent — same failure, same branch),
 `Claude_Task_Plan.md` §Observability → connector pre-flight (the BigQuery-unreachable branch that
 put D1 in degraded mode), and `Daily.md` for 2026-09-21 (the run itself, while it is still current).

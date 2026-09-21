@@ -301,6 +301,14 @@ One HF `hf_fs` paper search, the **Monday** rotation slot (**cross-session consi
 
 **Consequence to expect, stated so it is not mistaken for a new fault:** `state.web_spend_month.has_unreported_runs` will read TRUE for D1 on 2026-09-21 until write 9 lands, so any fleet spend total drawn from `ops.web_calls` is a **FLOOR, not a total**, and must be reported as one. The `research-screen` rows are the sole Strategy-B intake for W2 — **if they are still unlanded when W2 next fires, W2's intake for this session is empty**, and that is an absence of record, not an absence of candidates.
 
+### APPENDED BY THE D2a SLOT (16:40 MT, same incident)
+
+**D2a HALTED — it did not degrade, and it wrote nothing anywhere** (no `ops.run_log` row, not even `started`; no `events.*` row; no `ops.alerts` row; no order crafted). Per the connector pre-flight branch, a routine that requires canonical state and crafts orders halts; and Step 0's "RUNS UNCONDITIONALLY" invariant is scoped to the *trading-enable gate*, not to a dead connector — Step 0's entire output is BigQuery writes, so there is nothing for it to run unconditionally into. **The full halt record, the perishable connector evidence, and the measured cost account are in `ops/spikes/bigquery-deauth-2026-09-21-d2a-halt-record.md`** — durable, because this file is wholesale-overwritten by the next D1 run.
+
+**What the halt cost, measured from IBKR rather than assumed:** nothing was stranded by not crafting (`get_account_orders` = `[]`, `get_order_instructions` = `[]`, so the registry's unconditional daily re-craft had nothing to re-craft); the §13.E park sweep/cover was a **no-op on its own thresholds anyway** (settled cash 15.70 against a +$25 sweep bar and a −$5 cover bar); and **zero trades executed on 2026-09-21**, most recent fill 2026-09-18. **The real cost is one trading day of the engine and snapshot layer** — 2026-09-21 was a full regular session (SPY closed 773.50) — specifically today's `ops.account_snapshot` row (**D2a is its sole writer and it has no backfill loop**, `bigquery/153`), the marks and signal-marks ingest, `sp_daily_refresh()`, the four `TECHNICAL_SIGNAL` router rows, and a blind day on every tripwire. Marks and the engine are exactly recoverable from immutable IBKR daily bars on replay; the NAV/cash/TWR read is not, and is captured verbatim in the halt record. **`ops.web_calls`: nothing owed — this run made zero metered calls.**
+
+**No duplicate calendar event.** D1's `[Claude] ATTENTION — RE-AUTH BigQuery connector` event was **amended in place** with the blast-radius escalation, per INCIDENT INHERITANCE — one incident, one thread. Its alarm had not yet fired when the D2a slot ran (16:49 MT against a 17:00 MT event), so the amended text is what the owner sees on the first notification.
+
 ---
 
 ## PLAN EDITS LANDED THIS RUN
