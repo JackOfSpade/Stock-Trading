@@ -35,7 +35,11 @@
 -- completed an expected day, never on elapsed time -- the same shape as spec_defect_notice_stalled,
 -- and for the same reason: ageing out a watchdog notice would silently discard the one signal that
 -- the fleet's own cadence watchdog stopped running. Do NOT add this category to
--- ops.sp_auto_resolve_alerts.
+-- ops.sp_auto_resolve_alerts. `latching` is a FUNCTIONAL gate here, not documentation:
+-- bigquery/34_alert_lifecycle.sql's table description states the allowlist is fail-closed -- the
+-- procedure only ever queries `WHERE category IN (SELECT category FROM ops.alert_policy WHERE NOT
+-- latching)`, so TRUE means no generic rule can ever sweep this category up, now or later. D3's
+-- clear limb performs its own UPDATE directly and is unaffected by that gate.
 --
 -- THIS FILE IS DML-ONLY AND DELIBERATELY CREATES NO OBJECT. It adds one guarded row and nothing
 -- else, so scripts/check_live_sql_parity.py never sees it: that checker compares CREATE
@@ -57,7 +61,7 @@ INSERT INTO `stock-trading-498512.ops.alert_policy` (category, latching, resolve
 SELECT * FROM UNNEST([
   STRUCT('ops0_missed_fallback' AS category, TRUE AS latching,
     'Closed by D3 OWN OPS0 WATCHDOG-FALLBACK bullet, on the inverse of the predicate that raises it: when D3 computes ops0_last_expected_day and finds COUNT(*) FROM ops.run_log WHERE routine = OPS0 AND status = completed AND run_date = that day is greater than 0, it resolves every unresolved ops0_missed_fallback row with a resolved_note naming the run_date that supplied the evidence. Positive evidence only -- a completed OPS0 row for an expected day. NEVER aged out and NEVER closed by elapsed time, because a watchdog notice that expires on its own would silently discard the signal that the fleet cadence watchdog itself stopped running; this category must NOT be added to ops.sp_auto_resolve_alerts. If OPS0 trigger is genuinely broken OPS0 never runs, D3 never sees a completed row, and the row correctly stays open.' AS resolve_rule,
-    'Registered 2026-09-21 by an interactive triage session (bigquery/245), closing a structural gap found while triaging alert ccd0e848. The category was created by D3 and raised at least twice (2026-08-02, 2026-09-20) with NO policy row, NO auto-resolver arm and NO resolving code anywhere in the repo -- a grep for the name returned only the raise site and its generated slice -- so every instance latched open permanently while the condition it reported had already cleared. The 2026-09-20 instance reported OPS0 missing only its 2026-09-17 slot to the seven-day quota exhaustion recorded in RUNBOOK section 53; OPS0 fired normally on 2026-09-20. Same undeclared-semantics class as the spec_defect_notice_stalled row below. The closing mechanism lives in D3 routine prose, not in a procedure.' AS note)
+    'Registered 2026-09-21 by an interactive triage session (bigquery/245), closing a structural gap found while triaging alert ccd0e848. The category was created by D3 and raised at least twice (2026-08-02, 2026-09-20) with NO policy row, NO auto-resolver arm and NO resolving code anywhere in the repo -- a grep for the name returned only the raise site and its generated slice -- so every instance latched open permanently while the condition it reported had already cleared. The 2026-09-20 instance reported OPS0 missing only its 2026-09-17 slot to the seven-day quota exhaustion recorded in RUNBOOK section 53; OPS0 fired normally on 2026-09-20. Same undeclared-semantics class as the spec_defect_notice_stalled row, whose own note records the identical complaint. The closing mechanism lives in D3 routine prose, not in a procedure.' AS note)
 ])
 WHERE NOT EXISTS (
   SELECT 1 FROM `stock-trading-498512.ops.alert_policy` WHERE category = 'ops0_missed_fallback'
