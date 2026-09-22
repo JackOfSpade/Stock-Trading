@@ -1751,6 +1751,58 @@ Concretely, every run:
     the same "never sweep cash a pending buy needs" rule §13 applies to the park sweep). A ≥$25 de-minimis
     movement floor applies (same figure as the regime sweep); below it the balance simply waits.
   - ONE MOVEMENT PER READ, same discipline as REGIME-CAPITAL SYNC above.
+- NOMADIC STRATEGY CAPITAL — BORROW-CAPACITY WATCH (found and built 2026-09-22, interactive session
+  investigating a Strategy C spec-defect notice — owner-approved same day; canonical rails
+  Operating_Protocols.md §16 NOMADIC STRATEGY CAPITAL; schema `bigquery/246_nomadic_borrow_blocked_alert.sql`).
+  A standing, daily EARLY-WARNING monitor over the on-demand nomadic-BORROW mechanism — it does not itself
+  borrow anything and does not touch the crafting-time NOMADIC-BORROW CHECK
+  (`analytics.fn_nomadic_capital_restore_plan`), which remains on-demand at order-craft time only, exactly as
+  the SWEEP-half bullet above states ("this view never carries a BORROW row; borrowing is on-demand at
+  order-craft time, not a daily standing check"). This substep does not change that — it answers a different
+  question daily, before any craft is attempted: does a currently-nomadic, capital-enabled strategy have ANY
+  funded donor to draw from right now, so a genuine zero-donor state is visible in advance rather than only
+  discoverable the moment a routine tries and fails to borrow. Runs immediately after NOMADIC STRATEGY CAPITAL
+  — SWEEP half above, same Step 0 position. `SELECT * FROM state.nomadic_borrow_capacity_watch` (one row per
+  currently-nomadic + capital-enabled strategy; `donor_capacity_total` sums every OTHER capital-enabled,
+  non-nomadic strategy's available funds; `borrow_blocked = TRUE` when that total is `<= 0`, i.e. every other
+  capital-enabled strategy is itself at $0 or capital-disabled).
+  **HEAL FIRST, FROM THIS SAME READ, BEFORE YOU BRANCH (same discipline as the SWEEP-half heal immediately
+  above, for the same reason: `nomadic_borrow_blocked` is registered `latching = FALSE` with a `resolve_rule`
+  naming no resolver but D2a, since D2a is the only routine that reads this view).** If **no row has
+  `borrow_blocked = TRUE`** and an unresolved `nomadic_borrow_blocked` alert exists → `UPDATE ops.alerts SET
+  resolved=TRUE, resolved_ts=CURRENT_TIMESTAMP(), resolved_note='condition healed:
+  state.nomadic_borrow_capacity_watch no longer reports any borrow_blocked=TRUE row — <name what actually
+  cleared it: a capital-enabled non-nomadic strategy regained funded capacity, a router re-enable, or a roster
+  change>' WHERE category='nomadic_borrow_blocked' AND NOT resolved`. Read the FLAG (whether ANY row is
+  `borrow_blocked = TRUE`), never the row count, same "Empty branch" trap as the SWEEP-half heal: a genuinely
+  healed state does not necessarily return zero rows, it returns rows with the flag flipped FALSE.
+  Empty or all `borrow_blocked = FALSE` (the steady state) → no-op, nothing to log — apart from the heal
+  above, which is evaluated either way.
+  - Any row with **`borrow_blocked = TRUE`** → `CALL ops.sp_raise_alert_once('warning','D2a',
+    'nomadic_borrow_blocked', <the EXACT STABLE message below>, <JSON payload>)` — ONE call per run,
+    aggregating every `borrow_blocked = TRUE` row into the payload, never one call per row:
+    `sp_raise_alert_once` dedups on `(category, message)` by exact string equality and this message is
+    pinned with no interpolation, so a second call this run would simply be swallowed by the first and
+    silently drop every strategy after it from the payload. This row exists so a blocked borrow-capacity
+    state is distinguishable from the healthy steady state; do NOT treat it as a no-op.
+    **PIN THE MESSAGE, same rule as every sibling in this substep.** Use verbatim, with no interpolation:
+    `'Nomadic borrow-capacity watch: a nomadic strategy currently has zero funded donor capacity to draw an
+    on-demand capital borrow from, because every other capital-enabled strategy is itself at $0 available
+    funds or capital-disabled. Strategies and capacity in payload.'` Deliberately DISTINCT wording from
+    `nomadic_sweep_blocked` and both regime-blocked messages, for the reason `bigquery/223` gives for
+    splitting `regime_restore_blocked` out: a shared message would let an already-open row of a different
+    category silently swallow this one. The varying figures — `strategy`, `donor_capacity_total`,
+    `donor_count` per blocked strategy — go in the PAYLOAD, never the message.
+  - WARNING, never critical, same reason as `nomadic_sweep_blocked`'s own registration (`bigquery/168`):
+    a critical enters `blocking_criticals` (`bigquery/176_decouple_embedding_health_from_trading_gate.sql` —
+    NOT `bigquery/107`, which carries a live `SUPERSEDED LIVE (2026-08-17)` banner pointing at 176) and halts
+    ALL order staging fleet-wide. A capacity WATCH must never halt trading: no capital has moved, none is at
+    risk, and no borrow has even been attempted — this is advance notice that a future on-demand borrow would
+    currently fail, nothing more.
+  - This bullet raises a WATCH only — it never moves money and never gates a craft. The actual borrow event,
+    when a nomadic strategy's order notional exceeds its `available_funds`, is still decided solely at
+    craft-time by the existing NOMADIC-BORROW CHECK against `analytics.fn_nomadic_capital_restore_plan`'s
+    live result, not by this daily view's reading (which can go stale intraday as capital moves).
 - RE-RISKING LIMB EVALUATION (owner directive 2026-09-05 — shock-override fix package; canonical rails Strategy.md
   § "Pre-mortem: Regime router" → §6 Misclassification scenarios, scenario 3 → the **Re-risking limb** (Rev 46,
   dwell clock corrected Rev 48); schema
