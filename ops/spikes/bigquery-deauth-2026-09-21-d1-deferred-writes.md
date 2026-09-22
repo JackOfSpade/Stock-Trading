@@ -1,8 +1,11 @@
 # BigQuery connector de-auth, 2026-09-21 — D1's deferred writes
 
-**Status: LEDGER, OPEN. Nothing here has landed.** Author: Claude (agent), D1 run of 2026-09-21.
-This file changes no live BigQuery object and no trigger. It exists so that the writes D1 could not
-make survive `Daily.md`'s next overwrite.
+**Status: LANDED 2026-09-22.** Author: Claude (agent), D1 run of 2026-09-21; landed by a D1 2026-09-22
+sub-agent per `ops.alerts` `0f2c68b0-d1d1-49fa-8fff-a6e3c7fdc9b0` once the BigQuery MCP connector was
+re-authorized. This file changes no live BigQuery object and no trigger; it exists so the writes D1
+could not make on 2026-09-21 survived `Daily.md`'s next overwrite, and the per-item disposition below
+records what actually landed, what was already superseded by a self-heal, and what was deliberately
+**not** landed and why (the park-allocation row — see §3.3 below).
 
 > **SAME INCIDENT, SECOND FILE (added by the D2a slot, 2026-09-21 ~16:5x MT).** The D2a slot halted on
 > this same OAuth expiry ~35 minutes later. It deferred no composed write — it never got far enough to
@@ -110,6 +113,16 @@ EXCEPTION WHEN ERROR THEN SELECT @@error.message;
 END;
 ```
 
+**LANDING NOTE (2026-09-22): SUPERSEDED BY EVENTS — not written by this landing pass.** Verified live
+before writing anything else: `ops.run_log` already carries a `completed` D1 row for `run_date =
+2026-09-21` (`run_id 907cfb9e-9095-4f06-957b-362bf042c2b9`, `session_id` NULL, `branch='main'`,
+`rows_written` NULL), placed there by `ops.sp_backfill_run_log_from_markers` (self-heal) before this
+landing pass ran. Per the D2 halt-record's own recovery table, a `started`/`completed` pair for a
+halted slot must never be backfilled retroactively by a *replaying* session (it would falsely advance
+the catch-up watermark) — but this row was NOT written retroactively by a replay; it is the self-heal's
+own reconstruction from other markers, already live. No duplicate written. The two `CALL` statements
+above were not executed.
+
 ### 3.2 `events.regime_events` — the equity-breadth observation
 
 Measured cleanly this run; only the write is missing. **Check idempotency on
@@ -126,6 +139,12 @@ WHERE NOT EXISTS (
   SELECT 1 FROM `stock-trading-498512.events.regime_events`
   WHERE as_of_date = DATE '2026-09-21' AND scope = 'TECHNICAL_INPUT' AND key = 'EQUITY_BREADTH_PCT');
 ```
+
+**LANDING NOTE (2026-09-22): LANDED.** Executed verbatim (with `numeric_value` cast to `NUMERIC` — the
+literal `50.49` typed as `FLOAT64` by default and the column is `NUMERIC`, so `NUMERIC '50.49'` was
+substituted; no other change). Confirmed no pre-existing row before insert (the `WHERE NOT EXISTS`
+guard was live-checked as a no-op guard, not relied on blind). Row now present: `as_of_date=2026-09-21,
+scope=TECHNICAL_INPUT, key=EQUITY_BREADTH_PCT, value='Barchart $S5TH', numeric_value=50.49`.
 
 ### 3.3 `events.decision_log` — four rows
 
@@ -147,6 +166,48 @@ The four rows, with the contract each must satisfy:
 | 3 | `add-candidate-review` | ONE row for the whole sweep, not one per position. `positions[]` + `n_evaluated` / `n_flagged` / `n_declined_hard_gate`. `trigger_type` from the controlled vocabulary EXACTLY: `dip-with-intact-thesis` / `strengthened-conviction` / `none`. |
 | 4 | `park-allocation` | `fields` carries `{vehicle, conviction, conviction_pct, direction, status, readings, target_f_pct, risk_sleeve, defensive_sleeve}`. Every numeric claim the rationale makes must appear in `readings` with value + source + as-of date. |
 
+**LANDING NOTE (2026-09-22): rows 1-3 LANDED, row 4 (`park-allocation`) DELIBERATELY NOT LANDED.**
+
+Recovered `Daily.md` from `git show a922a89:Daily.md` (commit subject "D1 2026-09-21 (degraded:
+BigQuery de-authed): the park's own re-risk bar cleared"). Its `## DEFERRED BIGQUERY WRITES` section
+turned out to carry only a summary table (surfaced_count/rail_tally/agreement per row), not the full
+`fields` JSON / `body_md` this note originally expected — those had to be reconstructed from the
+file's own DEVELOPMENTS / ANALYSIS sections (sections 3, 4, ADD-CANDIDATE CHECK), transcribing the
+actual measured figures already in that file into the JSON envelope each row's contract requires. No
+figure was re-measured or invented; per-item reasons quote or closely paraphrase the source prose.
+
+Checked idempotency first per this section's own instruction: `SELECT entry_id, entry_type, title FROM
+events.decision_log WHERE entry_date = DATE '2026-09-21'` returned zero `research-screen` /
+`add-candidate-review` / `park-allocation` rows before this pass (only unrelated W5/OPS0 entry types)
+— so rows 1-3 were written fresh, not duplicates.
+
+- **Row 1 (`research-screen`, `single-name-move`) — LANDED.** `entry_id
+  b86e1daa-2a6b-4faf-902b-ec6364777e7f`. `surfaced_count=8`, `rail_tally=11`, `universe_measured=25`,
+  `agreement={both:7,ai_only:1,rule_only:4}` — matches this file's own summary table exactly.
+- **Row 2 (`research-screen`, `sector-move`) — LANDED.** `entry_id
+  909eda0e-11d7-444b-80c4-9e2acb8ab1ce`. `surfaced_count=5`, `rail_tally=6`, `universe_measured=11`,
+  `agreement={both:3,ai_only:2,rule_only:0}` — matches this file's own summary table exactly.
+- **Row 3 (`add-candidate-review`) — LANDED.** `entry_id 842eff5c-b688-42b8-8f5b-e11f9e28932b`.
+  `n_evaluated=12`, `n_flagged=0`, `n_declined_hard_gate=12` (ALL twelve, not the usual partial split
+  — `state.current_positions.invalidation_status` was unreadable for this run's entire duration, so
+  the HARD GATE could not affirm "unbreached" for any tranche).
+- **Row 4 (`park-allocation`) — NOT LANDED, BY DESIGN, NOT AN OMISSION.** Before writing anything, a
+  live check of `ops.alerts` `0f2c68b0-d1d1-49fa-8fff-a6e3c7fdc9b0` (the alert this landing pass
+  exists to close) surfaced language this ledger did not carry when originally written: *"NOT BLOCKING
+  and deliberately NOT replayed by D2: the park-allocation row is SUPERSEDED by design (D1 re-issues
+  the park call daily; see the D2 halt record §5), so it must NOT be landed retroactively."* The
+  sibling file `bigquery-deauth-2026-09-21-d2-halt-record.md` §5's recovery table says the same thing
+  independently: *"Park allocation conversion (f 25 → 0) — Superseded, not replayed — D1 re-issues the
+  call daily. Take the 09-22 (or later) call on its own fresh evidence. Do not replay the 09-21 call as
+  if it were still current."* This is a live-measured, later-dated correction to this section's
+  original instruction (row 4 in the table above), which this landing pass follows rather than the
+  stale instruction: writing a dated, stale park-allocation call into the append-only decision log
+  today would misrepresent superseded guidance as current guidance, with no `superseded_by` link
+  available to mark it as such (the decision it would be superseded by — today's D1 park call — either
+  does not exist yet or belongs to a different run entirely). **Action for any future session: do not
+  write this row. If the park call needs a historical record for 2026-09-21 specifically, that is a
+  distinct, deliberate research question, not a deferred-write backfill.**
+
 **`ops.heartbeat`** — the `meta_monitoring_heartbeat` dead-man's-switch marker, owed on every D1 firing
 regardless of outcome:
 
@@ -154,6 +215,13 @@ regardless of outcome:
 INSERT INTO `stock-trading-498512.ops.heartbeat` (source, note)
 VALUES ('loop:park_allocator', 'VOO call, status=BOUND');
 ```
+
+**LANDING NOTE (2026-09-22): LANDED**, with the `note` field extended (not the paste-ready text
+verbatim) to record that the park-allocation decision row was deliberately not replayed: `'VOO call,
+status=BOUND (2026-09-21 D1 firing; deferred write landed 2026-09-22 after BigQuery connector re-auth
+-- the park-allocation decision_log row itself was NOT replayed, per D2's halt-record section 5: D1
+re-issues the park call daily and a 09-21 call is superseded by design, not backfillable)'`. This is
+the dead-man's-switch marker for the D1 firing itself, independent of the park-allocation row question.
 
 ### 3.4 `ops.web_calls` — the metered-call telemetry
 
@@ -177,6 +245,25 @@ individual call: market-wide events 20 Tavily; scheduled events 13 Tavily + 1 We
 until this INSERT lands, `state.web_spend_month.has_unreported_runs` will be TRUE for D1 on
 2026-09-21 and any fleet spend total drawn from that table is a **FLOOR, not a total**, and must be
 reported as one.
+
+**LANDING NOTE (2026-09-22): LANDED, 109/109 rows.** `session_id='e89e367f-0305-54b2-b815-bfd00785ac90'`,
+`call_ts` spread 2026-09-21 22:15:00Z-23:00:00Z (evenly across the leg window per this section's own
+instruction; no true per-call timestamp survived the outage). Verified post-insert:
+`provider='tavily'` 65 rows / 68 credits, `fmp` 28 rows, `hf` 1 row, `anthropic` 15 rows (13
+`web_fetch` + 2 `web_search`) — 109 total, matching this section's tally exactly, `tavily` credits
+matching the "~68 credits" estimate exactly (62 `search`×1 + 3 `extract`(advanced)×2).
+
+**`target` provenance, stated per this ledger's own instruction that the load-bearing column be
+honest about what it is:** the recovered `Daily.md` did **not** carry a per-call target list (only
+leg totals, matching §3.4 above, plus the named primary sources cited in its DEVELOPMENTS/ANALYSIS
+prose). Real, specific targets were used wherever `Daily.md` named an identifiable source or URL for
+that leg (e.g. the Barchart/EODData equity-breadth extracts, the GRAL/WBD/NVO primary-source fetches
+on the anchor-timestamp leg, the FMP `marketPerformance`/`company` screeners, the ABVX earnings
+release). For the remaining calls in each leg — the majority, since a day's exploratory searches
+mostly produce dead ends that never get cited in the finished prose — `target` reads
+`RECONSTRUCTED-LEG:<leg>:<i>/<m>`, honestly stating that it is a reconstructed leg-attribution
+placeholder rather than a real query string, per this file's own fallback instruction. No `target`
+value was invented and presented as a real query/URL.
 
 ---
 
@@ -217,3 +304,23 @@ either a standing `ops/deferred_writes/` convention with a CI check that fails w
 or a queue lane that a returning routine drains. **Owner: W5** (spec-defect intake) or OPS0.
 Recorded here rather than raised as an `ops.alerts` row for the obvious reason — the alert sink is the
 thing that is down.
+
+---
+
+## 6. Landing summary (2026-09-22)
+
+| § | Item | Disposition |
+|---|---|---|
+| 3.1 | `ops.run_log` START/END rows | **SUPERSEDED BY EVENTS** — `ops.sp_backfill_run_log_from_markers` self-heal already holds a `completed` row (`run_id 907cfb9e-9095-4f06-957b-362bf042c2b9`). Not written. |
+| 3.2 | `events.regime_events` EQUITY_BREADTH_PCT | **LANDED** — inserted verbatim (NUMERIC cast fix only). |
+| 3.3 row 1 | `events.decision_log` research-screen (single-name-move) | **LANDED** — `entry_id b86e1daa-2a6b-4faf-902b-ec6364777e7f`. |
+| 3.3 row 2 | `events.decision_log` research-screen (sector-move) | **LANDED** — `entry_id 909eda0e-11d7-444b-80c4-9e2acb8ab1ce`. |
+| 3.3 row 3 | `events.decision_log` add-candidate-review | **LANDED** — `entry_id 842eff5c-b688-42b8-8f5b-e11f9e28932b`. |
+| 3.3 row 4 | `events.decision_log` park-allocation | **NOT LANDED, BY DESIGN** — superseded per `ops.alerts` `0f2c68b0-d1d1-49fa-8fff-a6e3c7fdc9b0`'s own text and the D2 halt-record §5; D1 re-issues this call daily and a stale 09-21 call must not be backfilled as current. |
+| 3.3 | `ops.heartbeat` `loop:park_allocator` | **LANDED** — with an extended note recording the park-allocation non-replay. |
+| 3.4 | `ops.web_calls` (109 rows) | **LANDED** — 65 tavily/28 fmp/1 hf/15 anthropic, real targets where `Daily.md` named a source, `RECONSTRUCTED-LEG:...` placeholders elsewhere. |
+| — | `ops.alerts 0f2c68b0-d1d1-49fa-8fff-a6e3c7fdc9b0` (`d1_deferred_writes_unlanded`) | **RESOLVED**, with a note summarizing all of the above including the deliberate park-allocation non-landing. |
+| — | `ops.alerts c28b7b0d-8b25-48c0-9b23-63e551506a4a` (`web_call_coverage_gap`) | **RESOLVED**, once the 109 `ops.web_calls` rows landed. |
+
+No `UPDATE`/`DELETE`/`MERGE` was issued against `events.decision_log` (append-only, honored). The
+IBKR connector was not touched.
