@@ -278,6 +278,12 @@ ORDER BY strategy, counterparty_strategy;
 
 -- ===== FIX 3 + FIX 6. analytics.fn_nomadic_capital_restore_plan — clamped plan_total, exact residual.
 -- SUPERSEDES bigquery/167_nomadic_capital.sql's definition of this table function.
+-- SUPERSEDED LIVE (2026-09-22) by bigquery/246_nomadic_borrow_blocked_alert.sql — current single
+-- source of truth for this table function. Kept here, unmodified, for DR-rebuild apply-in-order
+-- reference only. DO NOT re-apply this CREATE statement live in isolation. 246 adds an explicit
+-- blocked_no_donor=TRUE row when the donor pool is entirely empty; this definition silently returns
+-- ZERO ROWS in that case (the `funded` CTE's WHERE dt.total > 0 guard drops the whole result),
+-- indistinguishable to any caller from a request that was never made.
 CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_nomadic_capital_restore_plan`(
   p_strategy STRING, p_amount_needed NUMERIC
 )

@@ -251,6 +251,10 @@ DROP TABLE FUNCTION IF EXISTS `stock-trading-498512.analytics.fn_capital_dormanc
 -- fully funded (audit finding 5, CRITICAL). 168 makes plan_total the clamped figure and adds
 -- requested_amount + is_fully_funded, and also ports the last-row-absorbs-the-penny rule and NUMERIC
 -- typing from its sibling sweep-view fix.
+-- 168, IN TURN, IS SUPERSEDED LIVE (2026-09-22) by bigquery/246_nomadic_borrow_blocked_alert.sql —
+-- 246 is the CURRENT single source of truth for this table function, not 168. 246 adds an explicit
+-- blocked_no_donor=TRUE row when the donor pool is entirely empty; both this definition and 168's
+-- silently returned ZERO ROWS in that case, indistinguishable from a request that was never made.
 CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_nomadic_capital_restore_plan`(
   p_strategy STRING, p_amount_needed NUMERIC
 )
