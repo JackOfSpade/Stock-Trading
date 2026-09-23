@@ -109,3 +109,35 @@ Measured 2026-09-21 ~18:0x MT:
 | Queue drain for 2026-09-21 | **UNKNOWN** — never recorded as empty |
 | Quiet day reported? | **No.** All three grounds for one were unevaluated. |
 | Repo changes | this record + the AR_att CONNECTOR-DOWN DISPOSITION limb |
+
+---
+
+## 9. CLOSED BY MEASUREMENT — what the halt actually cost (appended 2026-09-22 by the AR_att slot of the same Denver day's canonical evening fire)
+
+**Appended, not rewritten.** Nothing above is edited: §3 and §8 were correct *as written on the night*, when the lane was genuinely unreadable. This section records only what became measurable afterwards. The distinction matters — a halted slot's refusal to assert an empty lane was right, and being vindicated after the fact is not evidence it should have guessed.
+
+**THE REPLAY RAN, AND IT RAN IN THE ORDERED SEQUENCE.** §7 step 4 required AR_att then AR_orc, in that order. Both fired out-of-band on the morning of **2026-09-22 Denver**: AR_att `started` 03:48 / `completed` 03:53 MT (`ops.run_log` run_id `0177d473-aeff-47c2-abf5-cffd27a9f22b`), AR_orc `started` 03:56 / `completed` 04:01 MT (`5ab7650d-333e-468c-be8e-61f6cf015634`). Both logged a measured quiet day. The ordering constraint was honored.
+
+**THE THREE UNEVALUATED OBLIGATIONS ALL MEASURE ZERO.** §3 recorded the due-entry scan, STEP 0 and the RESIDUAL SWEEP as *unevaluated*, and the due-date discipline as *slipped, not recoverable*. Reconstructed from `events.queue_events`, which is append-only and therefore answers this retrospectively with no loss of fidelity — latest row per `item_key` for `queue='PENDING_REVIEW'` as of the window's end (UTC `2026-09-22 09:48`, the replay's own pre-flight):
+
+| | Measured |
+|---|---|
+| Distinct `item_key` in the lane | **39** |
+| Actionable during the outage (status outside the six-value terminal set) | **0** |
+| Outside the `{pending, attacker-complete}` pair (the RESIDUAL SWEEP's target) | **0** |
+| `PENDING_REVIEW` transitions of any kind since 2026-09-20 | **0** |
+
+The lane was **already fully drained before the outage began** — its last terminal transition was `otr-router-shock-override-2026` → `complete` on **2026-09-09** (Denver), twelve days earlier. So:
+
+- **Due-entry scan:** nothing was due on 2026-09-21. No attack was skipped.
+- **Due-date discipline:** §3 lists this as the one *unrecoverable* cost. For this outage it is **vacuous** — no entry existed to slip, and no paired `orchestrator_due_date` moved. The unrecoverability claim remains correct in general; it simply had nothing to bite on here.
+- **RESIDUAL SWEEP:** §3's caveat was that the sweep is condition-keyed and heal-resolved, so a stray row that became drainable *during* the outage would never be flagged, making that window "permanently a gap rather than merely deferred." **That gap is now measured empty**: zero rows were actionable at any point in the window, so there was no stray row to miss. The caveat's reasoning stands for a future outage; its realized cost here was nil.
+- **STEP 0:** nothing stranded, confirmed both by the replay and by the reconstruction.
+
+**§8's `UNKNOWN` IS NOW ANSWERED: the queue drain for 2026-09-21 was EMPTY** — established by evidence after the fact, never asserted at the time. That is the intended lifecycle of an honest UNKNOWN.
+
+**THE NEVER-BACKFILL DISCIPLINE HELD, VERIFIED ON BOTH SURFACES.** (1) `ops.run_log` carries **no AR_att row of any status** for `run_date = 2026-09-21` — the slot is still a clean permanent gap. (2) No commit subject leading with the token `AR_att` carries that date: this record's own commit `92f3c56` leads with "Halt record", which `marker_routine_from_subject` correctly parses to no routine token, so `sp_backfill_run_log_from_markers()` had nothing to mint. §7 step 5's precaution worked exactly as designed.
+
+**THE CASCADE §3 PREDICTED WAS REALIZED, EXACTLY AND NO FURTHER.** AR_orc halted at its dependency gate for 2026-09-21 (`6b78f184-cb51-49ce-af2d-306ebf811ef8`, `error_msg`: "missing completed upstream: AR_att") — at the *gate*, not at pre-flight, its own connectors having recovered by then — and raised `missing_dependency` critical `5e7c9bdc` (since resolved). That propagated one hop further than §3 anticipated: **SL5** then halted on *its* dependency on AR_orc (`missing_dependency` critical `2fd2a966`, also since resolved). Both criticals are closed; neither reached `state.trading_enabled` in a way that outlived the outage. The cascade cost two downstream slots, not one — worth pinning for the next AR_att halt, because §3 names only AR_orc.
+
+**THE ONE SEAM THIS LEAVES IS ALREADY FILED, AND IS NOT RE-FILED HERE.** A connector-outage halt writes no `ops.run_log` row, so a downstream dependency gate cannot distinguish "upstream halted on a documented outage" from "upstream silently never ran". AR_orc's own slot filed exactly this on 2026-09-21 as the open `ops.alerts` info row **`dependency_gate_misreads_upstream_halt_record`** (`d8da6e78-f4f3-4549-8389-91d3be3c3551`, owner W5 SPEC-DEFECT NOTICE INTAKE), noting the git-evidence fallback would mint a phantom completed row while the dependency-wait futility test reads the same absence the opposite way. **Cited, deliberately not re-filed** — the AR_att section's standing rule for an already-open notice on someone else's surface.
