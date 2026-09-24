@@ -138,6 +138,38 @@ SET resolve_rule = CONCAT(
       'inflate it into a realised mis-park, and do not close it by having AR_att replicate or stop '
       'replicating -- the 37-of-59 measurement is evidence FOR the read-side refusal exactly as the '
       '22-of-59 was. A FUTURE SWEEP OF THIS CLASS MUST CHECK THE UNIT OF EACH TALLY, NOT ONLY THE '
-      'SCOPE OF EACH READ.')
+      'SCOPE OF EACH READ.'),
+    updated_ts = CURRENT_TIMESTAMP()
 WHERE category = 'artifact_version_drift'
   AND resolve_rule NOT LIKE '%CORRECTION 2026-09-23%';
+
+-- UPDATED_TS IS BUMPED HERE, AND 187 / 188 / 242 EACH FAILED TO (noticed 2026-09-23 by the fire
+-- that wrote this file, on re-reading the live row it had just changed). ops.alert_policy.updated_ts
+-- carries a CURRENT_TIMESTAMP() default, which fires on INSERT and never on UPDATE, so a resolve_rule
+-- amendment leaves it reading the row's CREATION date unless the statement sets it. The repo
+-- convention is to set it: bigquery/228 bumps it on all seven of its UPDATEs, for documentation prose
+-- with exactly this audience ("only documentation prose that humans and triage sessions read"), and
+-- where a no-bump IS wanted an author says so explicitly -- bigquery/94 writes `updated_ts =
+-- updated_ts` because that statement is a deliberate never-matching drift guard. The
+-- artifact_version_drift lineage is the outlier: 187 inserted the row on 2026-09-06, 188 and 242 then
+-- amended resolve_rule without touching the stamp, and as of this fire the LIVE row read
+-- `updated_ts = 2026-09-06 03:34:02 MT` over text containing "CORRECTION 2026-09-15".
+--
+-- WHY IT IS WORTH A LINE RATHER THAN A SHRUG. It is self-undercutting in the narrowest possible way:
+-- 242's stated reason for writing to the policy row at all -- restated by this file -- is that the row
+-- is a TRIAGE SURFACE read by a session looking at an alert board rather than at AR_orc's section. A
+-- session that sorts or filters that table by updated_ts to find recently-changed policy would not see
+-- this row, which is precisely the discoverability the whole lineage exists to buy. The staleness is
+-- not silent (the correction dates are in the text a reader is already reading), so this is hygiene
+-- and not a gate, and the three prior stamps are deliberately NOT backfilled: their dates are gone,
+-- inventing them would be worse than the gap. THE LIVE ROW WAS BUMPED BY A SEPARATE ONE-OFF STATEMENT
+-- this same run, because by the time the omission was noticed this file's own guard had already
+-- consumed -- the CORRECTION text was present, so re-applying the file is the intended no-op and would
+-- never have reached the stamp: `UPDATE ops.alert_policy SET updated_ts = CURRENT_TIMESTAMP() WHERE
+-- category = 'artifact_version_drift' AND resolve_rule LIKE '%CORRECTION 2026-09-23%' AND updated_ts <
+-- TIMESTAMP('2026-09-23 00:00:00', 'America/Denver')`, 1 row affected. That statement is deliberately
+-- NOT reproduced as a second executable block below: on a clean DR replay the UPDATE above does both
+-- halves in one statement, so a second bump would be dead code guarded on a condition replay can never
+-- satisfy. DO NOT add an updated_ts bump to 187, 188 or 242 retroactively -- each is guarded on
+-- its own appended text being absent, so an edit to their literals can never reach the live row again
+-- and would only desynchronise the landed record from what was actually applied.
