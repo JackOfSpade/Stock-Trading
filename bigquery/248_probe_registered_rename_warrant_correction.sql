@@ -1,0 +1,84 @@
+-- bigquery/248_probe_registered_rename_warrant_correction.sql (2026-09-24)
+-- Project: stock-trading-498512. Apply after bigquery/134_roster_change_notifications.sql.
+--
+-- ONE UPDATE, NO NEW OBJECTS. Corrects the `note` prose on the `strategy_probe_registered` row of
+-- ops.alert_policy, which bigquery/134 registered on 2026-08-04 with a warrant that was already
+-- doubtful then and is plainly false now. Redefines nothing; no SUPERSEDED marker is owed.
+-- Same class and same shape as bigquery/165_restore_shortfall_note_correction.sql -- read that file's
+-- WHY UPDATE RATHER THAN A SECOND INSERT header, which applies here verbatim.
+--
+-- ============================ WHAT WAS WRONG =====================================================
+-- The row justified renaming this category from `strategy_adopted` with "Safe to rename: SL5 had
+-- never fired, so no historical ops.alerts row carries the old value."
+--
+-- The CONCLUSION is right and the WARRANT is false, which is the worse of the two failure modes: a
+-- future session re-deriving the rename's safety from the stated reason checks ops.run_log, sees a
+-- large number, and cannot tell a drifted warrant from a broken invariant.
+--
+-- Measured live 2026-09-24 (SL5 diligence sweep, MEASURED not reasoned):
+--   ops.run_log, routine='SL5'  -> 61 started / 52 completed / 8 halted.
+-- SL5 has fired sixty-one times. What it has never done is MUTATE THE ROSTER, and that -- not the
+-- fire count -- is the property the rename actually rests on, because SL5 raises this category only
+-- when it performs a PAPER->PROBE registration. Measured the same day, all three still zero:
+--   ops.roster_change_log                                        -> 0 rows
+--   events.strategy_lifecycle WHERE driver_routine = 'SL5'       -> 0 rows
+--   ops.alerts WHERE category = 'strategy_adopted'               -> 0 rows
+--
+-- This is not a new finding. Claude_Task_Plan.md's SL5 section corrected the identical sentence in
+-- its own prose on 2026-08-30 ("The warrant as originally written read 'SL5 has never fired', and
+-- that is FALSE -- and grows falser every cycle"), and that sweep never propagated the correction
+-- across the PROSE/LIVE boundary to this registry row, which is the canonical copy an alert triage
+-- session actually reads. The section's own characteristic defect -- the sweep that fixed the
+-- neighbouring clause did not re-run its own test one clause over -- landing for the first time
+-- between the plan and the warehouse rather than between two clauses of the same paragraph.
+--
+-- WHY THE REPO-SIDE LITERAL IN bigquery/134 IS DELIBERATELY LEFT ALONE. That file's PART 1 INSERT is
+-- guarded `WHERE NOT EXISTS (... ap.category = p.category)`, so editing its string literal would not
+-- reach the already-live row -- it would only make the repo disagree with the warehouse while fixing
+-- nothing. An apply-in-order DR rebuild replays 134 then 248, so the UPDATE below lands last and the
+-- rebuilt row carries the corrected prose. 134 stays as the historical record, exactly as bigquery/164
+-- was left standing by bigquery/165.
+
+UPDATE `stock-trading-498512.ops.alert_policy`
+SET
+  note = 'ROSTER-CHANGE NOTICE (owner directive 2026-08-04). SL5: PAPER->PROBE, the first time an autonomously-adopted strategy takes REAL capital. Renamed from strategy_adopted on 2026-08-04 -- that name fired here, at PROBE registration, while ADOPTED is a strictly later state reached at the 30-trade gate, so the old category name would have told the operator a strategy had graduated when it had merely taken its first stake. SAFE TO RENAME BECAUSE SL5 HAS NEVER MUTATED THE ROSTER -- corrected 2026-09-24, bigquery/248. This row previously warranted the rename with the claim that SL5 had never fired at all, which is false and grows falser every cycle: measured 2026-09-24, ops.run_log holds 61 SL5 started rows (52 completed, 8 halted). The rename was and remains safe, but on the property that actually carries it -- SL5 raises this category ONLY when it performs a PAPER->PROBE registration, and it has performed no roster mutation of any kind. Verified the same day: ops.roster_change_log 0 rows, events.strategy_lifecycle rows with driver_routine=SL5 0 rows, ops.alerts rows carrying the retired category 0 rows. Re-measure THOSE THREE, never the fire count -- a session re-deriving the safety of this rename from a fire count reads ops.run_log, sees a large number, and cannot tell a drifted warrant from a broken invariant. Claude_Task_Plan.md SL5 corrected the same sentence in its own prose on 2026-08-30 and did not propagate it here; this row is the canonical copy an alert-triage session reads.',
+  updated_ts = CURRENT_TIMESTAMP()
+WHERE category = 'strategy_probe_registered';
+
+-- VERIFICATION (run after apply; read-only).
+-- NOTE: double-dash line comments only. A trailing C-style block comment placed after this file's
+-- last statement causes permanent live-sql-parity drift -- never introduce one here.
+--
+-- 1. Exactly one row updated, and the retracted warrant is gone.
+--    DO NOT grep for 'never fired' -- the corrected note RETRACTS that claim in prose ("previously
+--    warranted the rename with the claim that SL5 had never fired at all, which is false"), so a
+--    naive search matches the retraction and reports the defect as still present. This is the same
+--    false positive bigquery/165 records hitting while it was being written. Test the ASSERTION,
+--    not the words:
+--    SELECT category, latching,
+--           REGEXP_CONTAINS(note, r'HAS NEVER MUTATED THE ROSTER')      AS carries_correction,
+--           REGEXP_CONTAINS(note, r'Safe to rename: SL5 had never')     AS still_asserts_warrant,
+--           REGEXP_CONTAINS(note, r'Re-measure THOSE THREE')            AS names_right_property,
+--           updated_ts
+--    FROM `stock-trading-498512.ops.alert_policy` WHERE category='strategy_probe_registered';
+--    -> expect 1 row, latching=false, carries_correction=TRUE, still_asserts_warrant=FALSE,
+--    names_right_property=TRUE. ('Safe to rename: SL5 had never' is the ORIGINAL claim's distinctive
+--    wording from bigquery/134 and appears nowhere in the replacement.)
+--
+-- 2. The other five categories bigquery/134 registered are untouched:
+--    SELECT category, latching, updated_ts FROM `stock-trading-498512.ops.alert_policy`
+--    WHERE category IN ('strategy_shadow_registered','strategy_graduated','retirement_proposed',
+--                       'strategy_deregistered','roster_below_floor') ORDER BY category;
+--
+-- 3. The three zero-properties the corrected warrant now rests on still hold:
+--    SELECT (SELECT COUNT(*) FROM `stock-trading-498512.ops.roster_change_log`) AS rcl,
+--           (SELECT COUNT(*) FROM `stock-trading-498512.events.strategy_lifecycle`
+--             WHERE driver_routine='SL5') AS sl5_lifecycle,
+--           (SELECT COUNT(*) FROM `stock-trading-498512.ops.alerts`
+--             WHERE category='strategy_adopted') AS retired_category;
+--    -> expect 0, 0, 0. A non-zero on the first two means SL5 has now mutated the roster and this
+--    note's warrant needs re-deriving; a non-zero on the third means the rename was NOT safe.
+--
+-- 4. No governance violation was raised by the UPDATE (ops is outside the watched dataset):
+--    SELECT * FROM `stock-trading-498512.state.append_only_integrity`;
+--    -> expect zero rows.
