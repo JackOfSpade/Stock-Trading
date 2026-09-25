@@ -1818,10 +1818,14 @@ Concretely, every run:
   funding SELL lands, so the raw figure reads a debit of order the full switch notional, and covering it would SELL the
   brand-new policy vehicle and partially unwind the switch D2 just made.
   `comm_buffer` per Operating_Protocols.md §13's Commission model — SGOV: `min(1% × trade_value, $0.35)`
-  (empirically confirmed); VOO: UNVERIFIED, use the SGOV formula as a conservative placeholder until confirmed
-  from the first live VOO park fills in `get_account_trades` (do not assume $0 commission just because IBKR often
-  charges nothing on whole-share ETF trades — these are fractional-share orders, which may route through a
-  different fee schedule; confirm, don't guess). Otherwise no action (a $0…−$5 debit is left on margin). This sweep/cover is now the BACKSTOP for BOTH legs of a switch (D2 crafts both in-session): it re-crafts either leg whose DAY order expired unfilled and deploys whatever residual the haircut left behind. Order:
+  (empirically confirmed); VOO: **the SAME formula, CONFIRMED 2026-09-25** — both arms of it are now directly
+  observed on VOO (cap arm across 21 park orders, order-level gross $38.48–$15,340.63, all at $0.35 plus a small
+  positive residual; 1% arm by `sweep-VOO-20260924`, $33.554223 gross → $0.335798 = 1.0008%, the first VOO order
+  ever below the ~$35 arm boundary). A sweep is by construction a $25–$35 order, so it lands on the **1% arm**, not
+  the cap. Still take the LARGER of this estimate and the connector's latest per-order commission from
+  `get_account_trades`: every measured residual is positive, so the formula slightly under-states. Do NOT revive the
+  retired 2026-07-15 reading that VOO is on a different (≈0.0038%, "tiered per-share") schedule — that was a cap-arm
+  observation misread; see Operating_Protocols.md §13's **Commission model — VOO** note. Otherwise no action (a $0…−$5 debit is left on margin). This sweep/cover is now the BACKSTOP for BOTH legs of a switch (D2 crafts both in-session): it re-crafts either leg whose DAY order expired unfilled and deploys whatever residual the haircut left behind. Order:
   contract_id per the current vehicle (above), TIF **DAY**, `order_type='MARKET'` (no `limit_price` argument
   transmitted); record the live reference price (last, or bid/ask mid) in the staged payload's `limit_price` field
   for cash-reservation/notional purposes only; record the

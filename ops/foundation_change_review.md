@@ -70,8 +70,12 @@ in the decision-log entry.
       mechanical price/size backstop (the confirm-tap is the only backstop left), not to re-checking
       a guard band that no longer exists.
 - [ ] **Cash-tripwire / dwell economics** — the §13 $25 sweep floor rationale + the commission model
-      (`Operating_Protocols.md` §13; VOO commission still UNVERIFIED as of 2026-07-15 — keep the
-      larger-of fallback) and the $1 reconciliation tolerance (a higher per-share price is a tighter
+      (`Operating_Protocols.md` §13; VOO commission **CONFIRMED 2026-09-25** as the SAME
+      `min(1% × trade_value, $0.35)` schedule as SGOV — both arms directly observed, superseding the
+      "UNVERIFIED as of 2026-07-15" state this row used to record — and keep the larger-of fallback
+      anyway, since every measured residual is positive. Disposition of the row itself is unchanged and
+      already recorded: `events.decision_log`'s 2026-07-18 foundation-change review closed it at item A5,
+      "§13 $25 sweep floor kept") and the $1 reconciliation tolerance (a higher per-share price is a tighter
       share-count margin — expected, not a retune).
 - [ ] **Benchmark/park-beta assumptions** downstream of the park vehicle (see B).
 

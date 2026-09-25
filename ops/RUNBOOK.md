@@ -3070,7 +3070,21 @@ time — D2a's 2026-07-15 VOO daily mark hadn't run yet mid-session; expected, r
 cycle, not a discrepancy. Also recorded VOO's first live commission data point (Operating_Protocols.md
 §13's Commission-model note, previously UNVERIFIED): ≈0.0038% of trade value — not SGOV's ~1% schedule,
 not $0 either; only one order so far, so `comm_buffer` still falls back to the connector's actual
-per-order commission until more fills accumulate. → `events.decision_log`
+per-order commission until more fills accumulate.
+**CORRECTED 2026-09-25** (interactive triage of the `staged_order_awaiting_confirm` warning for
+`sweep-VOO-20260924`) — the "not SGOV's ~1% schedule" conclusion in the sentence above is **WRONG** and is
+kept only as history. VOO is on the SAME `min(1% × trade_value, $0.35)` schedule as SGOV. The $0.352978
+recorded here is what that formula **predicts exactly** at a $9,253.74 notional: it is the CAP arm, so it
+was never evidence against the model — a capped fee expressed as a percentage of a large notional always
+looks tiny, which is what a cap does. The "≈$0.0272/share … ordinary tiered per-share pricing" gloss fails
+independently: IBKR's tiered rate is $0.0035/share, so the 13-share lot would have cost $0.0455, not
+$0.3529; $0.0272/share is just the order-level $0.35 divided by the share count. Note too that the SGOV
+SELL leg of this very same cutover ($9,254.912436 gross → $0.559149) sits on the identical cap-plus-
+regulatory-fee line (+0.00226% of gross, SEC §31 / FINRA TAF), so the two legs were structurally the same,
+not different. Confirmation took until 2026-09-25 only because every VOO order from here through
+2026-09-24 was also ≥ $38.48 and therefore also on the cap arm; `sweep-VOO-20260924` is the first VOO order
+below the ~$35 boundary ($33.554223 gross → $0.335798 = 1.0008%) and it lands dead on SGOV's sub-$35 line.
+Canonical text now lives in Operating_Protocols.md §13's **Commission model — VOO** note. → `events.decision_log`
 851e579a-efba-4a72-840e-889f185bbc17 "SGOV->VOO parking-vehicle cutover executed live (2026-07-15)".
 
 ## 43. Keyless-SA / WIF-binding audit findings had no durable record — 2026-07-15 (self-improvement audit)

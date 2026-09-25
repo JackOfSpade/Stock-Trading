@@ -28,6 +28,30 @@
 --     never reach state.current_positions, so a park leg has NO backstop whatsoever. The 2026-09-17 park
 --     re-risk pair that prompted this file is precisely that class.
 --
+--     PRECISION CORRECTION 2026-09-25 (interactive triage of the staged_order_awaiting_confirm alert for
+--     sweep-VOO-20260924; this file's conclusion is UNCHANGED and this view is still needed -- only the
+--     phrase "NO backstop whatsoever" above is too strong, and it is left in place so this correction reads
+--     against it). That phrase is right about state.position_reconciliation, which is what the bullet is
+--     about, but wrong read as a system-wide claim, and a future session must not conclude from it that park
+--     drift is unmonitored and go build a second monitor for it. Operating_Protocols.md section 13.A's
+--     balance tripwire DOES cover park: its EXPECTED side reads state.park_reconciliation
+--     (events_park_shares / events_park_market_value, park_mark_fresh as the staleness guard) and compares it
+--     against the connector's live get_account_positions, with any unexplained residual over ~$1 a hard STOP
+--     raising a CRITICAL cash_tripwire. Verified live 2026-09-25: state.park_reconciliation returns a
+--     populated VOO row (events_park_shares 17.7177, market value 12526.24, park_mark_fresh TRUE).
+--
+--     WHAT 13.A DOES NOT COVER -- and therefore why this view still has to exist -- is the OTHER half of the
+--     failure mode. Split it in two:
+--       (a) D2a never records the fill at all. Events-side park shares then lag the connector, 13.A's
+--           tripwire fires, and the drift is caught. For today's order that gap would be 0.0474 sh ~ $33.51,
+--           roughly 33x the ~$1 threshold -- comfortably detected.
+--       (b) D2a writes the events.parking_events row but never appends the terminal events.queue_events row
+--           for the item_key. Park shares now MATCH, so 13.A is clean by construction and can never fire,
+--           while state.open_orders keeps the row `pending` forever. NOTHING else escalates (b) -- that is
+--           precisely this view's remit, and 13.A's existence does not narrow it.
+--     Note also that 13.A runs inside D2 Step 0 (cron Sun-Thu), so on a whole-fleet outage neither mechanism
+--     fires; they share that limitation rather than backstopping each other through it.
+--
 -- THRESHOLD -- 120 hours, derived, not guessed. D2a's cron is `40 22 * * 0,1,2,3,4` (Sun-Thu; 22:40 UTC is
 -- the same America/Denver calendar day year-round). Its inter-run gaps are 24h Sun->Mon..Wed->Thu and
 -- 72h Thu->Sun, the Friday/Saturday skip being the only multi-day one. So the WORST-CASE LEGITIMATE wait
