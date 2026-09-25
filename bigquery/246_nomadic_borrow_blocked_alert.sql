@@ -12,6 +12,25 @@
 -- W3 alert (nomadic_borrow_blocked_unsignalled) that has since been retired, not a repeatable
 -- mechanism. Tracing the borrow path found the actual gap, in two parts:
 --
+-- CORRECTION 2026-09-24 (interactive triage of the 2026-09-23 alert cluster, after this monitor's
+-- FIRST firing; re-measured against events.decision_log rather than against this header's own summary).
+-- Two claims above are wrong, and both OVERSTATE what the borrow side has cost:
+--   (a) THREE of the five rejections declined against an already-priced-in near-certainty -- 2026-06-08
+--       (96.7% hold), 2026-06-15 (~98%), 2026-07-20 (86.7%) -- not four. The 2026-07-27 rejection faced
+--       a genuinely two-sided 62-67% hold / 33-38% hike and declined on different reasoning entirely:
+--       "the oil move is already priced in -- there is no informational lag to exploit."
+--   (b) The 2026-09-08 entry did NOT turn on a borrow-capacity read. Its own decision_log row records
+--       that the gates "were not the reason and were all open," and its candidate structures priced at
+--       $5-$14 per contract -- inside C's own $23.64, so no borrow was ever required. The zero-capacity
+--       measurement belongs to the SEPARATE 2026-09-07 `correction` entry ("nomadic-borrow recheck for
+--       Strategy C: reachable borrow capacity is ZERO at every requested size").
+-- NET: criterion 2, not funding, is the proximate cause of 5 of 5 rejections; C has never opened a
+-- position (zero rows in events.position_events) and the REALIZED cost of the blocked borrow is $0.
+-- This does NOT make the monitor redundant -- the exposure is forward-looking, since a criterion-2 GO
+-- could still be capped out of the richer $26-$65 structures this history has twice priced, while the
+-- cheapest deep-OTM wings remain affordable on C's own cash. But do NOT cite this file as evidence
+-- that a trade has been lost to zero donor capacity. None has.
+--
 --   1. analytics.fn_nomadic_capital_restore_plan (bigquery/167, redefined 168) returns ZERO ROWS when
 --      a nomadic strategy has NO eligible donor at all (the `donors` CTE is empty, so `dt.total` is
 --      NULL, so the `WHERE dt.total > 0` guard on `funded` drops the whole result). A real borrow
