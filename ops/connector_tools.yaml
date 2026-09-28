@@ -214,6 +214,16 @@ connectors:
           rail at all. CAVEAT on `profile-symbol`: FMP's implied share count can lag a recent issuance
           — it put SMR at $2.77B against ~$3.81–3.99B from two independent sources, a ~30% gap. No
           binary >=$2B call among the 12 changed, but second-source any name within ~30% of the rail.
+          SILENT SYMBOL OMISSION ON `batch-market-cap`, MEASURED not inferred (alert
+          13311534-5636-474e-a203-d364db19303a, direct three-step probe 2026-09-13): a request scoped
+          to forward-earnings-calendar symbols returned all 77 requested; a request scoped to A-queue
+          and energy symbols returned only 8 of 47 -- exactly the ones that also sit on the calendar
+          allow-list -- with no error, no warning and no null row for the other 39; single-symbol
+          `market-cap` returned ACCESS DENIED outright. Same failure shape as the open
+          `treasury_range_call_silently_truncates` finding on a different FMP endpoint. W1, W2, W3 and
+          any universe-screening step are at risk, since the natural use is a screen: ALWAYS diff the
+          requested symbol list against the returned one and treat the difference as unknown-not-absent
+          -- never as zero market cap and never as a screen that covered the full requested universe.
       - name: crypto
         use: unused
         prose_ambiguous: true
@@ -637,7 +647,15 @@ connectors:
         use: unused
       - name: get_option_data
         use: required
-        note: D2 options marks / Strategy C dual-path max-loss
+        note: >-
+          D2 options marks / Strategy C dual-path max-loss.
+          CAVEAT (alert d06c5299-0da9-4ffe-a32e-e81417048fa7, MEASURED 2026-09-13 across every ticker
+          and strike in a 33-name option sweep): the `option_midpoint_iv` field returns a FIXED INVALID
+          NEGATIVE SENTINEL (-15.874507866387544) with `isValid` false, identically and wholesale — this
+          is NOT a per-name data gap. `implied_vol` is the usable field and returned valid,
+          contract-specific quotes for 30 of the 33 names. Read `implied_vol`, and never consume
+          `option_midpoint_iv` without checking `isValid` — the entire Strategy C entry test is an
+          implied-versus-realized comparison, so an unchecked sentinel is ingested as a real negative IV.
       - name: get_option_parameters
         use: required
         note: D2 options chain resolution
@@ -654,7 +672,19 @@ connectors:
           `ops.account_snapshot`'s twr_1d/7d/mtd/ytd/1y columns.
       - name: get_price_history
         use: required
-        note: EQUITY_BREADTH / SPY_TREND price leg (Claude_Task_Plan.md:1808 ("**`SPY_TREND`** — from `state.signal_marks_curated` SPY closes"), D2a TECHNICAL_SIGNAL block; corrected 2026-08-23 from a stale ":1336 area" anchor that now lands in the unrelated strategy idle-balance-deficit passage); D1/W-tier research
+        note: >-
+          EQUITY_BREADTH / SPY_TREND price leg (Claude_Task_Plan.md:1808 ("**`SPY_TREND`** — from
+          `state.signal_marks_curated` SPY closes"), D2a TECHNICAL_SIGNAL block; corrected 2026-08-23
+          from a stale ":1336 area" anchor that now lands in the unrelated strategy idle-balance-deficit
+          passage); D1/W-tier research.
+          FUTURES CALLS NEED AN EXPLICIT EXCHANGE (alert d5b9e263-5c1c-4246-aafc-e5f3b5f30de6, MEASURED
+          2026-09-14): a FUTURES `get_price_history` call that omits `exchange` defaults to SMART and
+          fails with the non-specific error "Details currently unavailable. Please try again later." —
+          indistinguishable from a transient outage. Passing the explicit `exchange` from the matching
+          `search_futures` row fixes it DETERMINISTICALLY. Consumers at risk: D1 shock-axis and D2a STEP
+          1d Brent mark. For a futures history call, always pass the explicit `exchange` from the
+          `search_futures` row, and do NOT classify that error text as transient when `exchange` was
+          omitted.
       - name: get_price_snapshot
         use: required
         note: OPS1-adjacent live-quote surface; D2/D2a intraday pricing
@@ -668,7 +698,16 @@ connectors:
         use: unused
       - name: search_contracts
         use: required
-        note: contract_id resolution for every order craft + park-menu ticker verification
+        note: >-
+          contract_id resolution for every order craft + park-menu ticker verification.
+          A STALE CONTRACT ID CITED IN A PRIOR RUN RECORD PRESENTS AS A REPEATING CONNECTOR FAULT
+          (alert 799b0388-f725-4f62-b039-a2254b338966, MEASURED 2026-09-14): a prior D1 run
+          (2026-09-13) recorded 14 consecutive SRRK `get_price_history` failures as a connector fault,
+          citing contract_id 319099330 — two off the 319099332 that `search_contracts` resolves today —
+          and SRRK resolved and priced on the FIRST attempt on 2026-09-14 once re-resolved. Before
+          concluding a repeated price-history failure is a connector fault, re-resolve the contract id
+          via `search_contracts` rather than reusing an id cited in an earlier run record. This is the
+          forward fix; the 2026-09-13 run record itself is history and is not being corrected.
       - name: search_futures
         use: unused
       - name: search_investment_topics

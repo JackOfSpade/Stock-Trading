@@ -822,12 +822,14 @@ Each entry is a YAML-style block (the LOGICAL shape; fields map to `queue_events
   prior_state: <free-form text describing what state the system is in pending review — e.g., for divergence-review: "Strategy A activation state held at DO-NOT-ACTIVATE pending review"; for m2m-termination: "Strategy D continues trading pending review">
   attacker_due_date: <YYYY-MM-DD; the next trading day after queue creation, on the pinned `America/Denver` OPERATING plane — `state.trading_day_today.next_trading_day`, never a session-local or UTC clock. (Corrected 2026-09-27 by AR_orc: this field read "in the experiment's reference timezone per Experiment_Parameters.md" from its creation, and `Experiment_Parameters.md` has NEVER stated a timezone — 0 occurrences of `timezone` / `America/Denver` / `America/New_York` in that file, measured 2026-09-27. This paragraph is the one both AR_att and AR_orc inherit their queue-date convention from, per the PENDING_DRAFT LANE CONTRACT's inheritance note in §SL2, so the dangling reference was the whole lane's only stated anchor. The plane itself is `bigquery/20_user_prefs.sql`'s pin.)>
   orchestrator_due_date: <YYYY-MM-DD; one trading day after attacker_due_date>
-  status: <pending | attacker-complete | complete | superseded>
+  status: <pending | attacker-complete | complete | superseded | dropped | abandoned>
   cycle_number: <integer; 1 for first cycle of a given artifact, incremented per re-review after revision; n/a for non-cycling review types>
   notes: <free-form, optional — e.g., for cycle 5+ pre-mortem, the forcing-question answer; for revision-induced cycles, the prior cycle's id>
 ```
 
 (There is no `.md` queue file; reads/writes go through `state.open_queue` / `events.queue_events` as above.)
+
+**STATUS ENUM RECONCILED AGAINST THE LIVE TERMINAL SET (added 2026-09-27, W5 SPEC-DEFECT NOTICE INTAKE, closing AR_att's `review_queue_status_enum_vs_view_divergence`, alert `d3decbba-a8b5-438c-8c30-1f1d02ae4d62`).** MEASURED 2026-09-13: `state.open_queue_detail` treats SIX statuses as terminal (`COMPLETE`, `SUPERSEDED`, `DROPPED`, `FILLED`, `EXPIRED`, `ABANDONED`) and therefore ACTIONABLE-FOREVER any other value, documented or not; live `PENDING_REVIEW` data already carries `dropped` and `abandoned` (the latter only the `TEST-REVIEW-CC2-DRYRUN` fixture), which the enum above now documents as terminal alongside the original four. **`FILLED` and `EXPIRED` are ORDER_STAGED statuses and this lane must NEVER carry them even though the view's terminal set names them** — do not widen this enum to include them just because the view does. A producer that writes a status OUTSIDE this enum (live data already shows `OPEN`, from a 2026-08 batch) makes that row actionable-forever rather than harmlessly ignored; `OPEN` must not be written here. This edit is the schema half only — AR_att's RESIDUAL SWEEP + `review_queue_undrainable_status` warning already covers the runtime half, naming any actionable `PENDING_REVIEW` row outside the attacker pending-phase predicate.
 
 ## Adversarial Review Attacker — regular routine
 

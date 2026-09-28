@@ -1892,11 +1892,19 @@ twr_7d, twr_mtd, twr_ytd, twr_1y, source)`:
   gap days, 2026-07-23/24, this exact failure mode produced) — and `state.account_snapshot_gap` (bigquery/153,
   live) would then flag that permanent hole EVERY week by design, forever, not just once.
 - the `get_account_summary`
-  fields; the CURRENT park vehicle's market value from `get_account_positions` (contract_id per
-  `state.park_policy_current` — SGOV 424099317, VOO 136155102) written into the `sgov_market_value` column
-  (column name kept as-is post-2026-07-15 cutover — it holds whichever vehicle is currently parked in, not
-  literally SGOV; renaming it is a separate, lower-priority schema cleanup, not required for correctness);
-  and the cps-array TWRs.
+  fields; **the FULL park book market value, summed ACROSS BOTH SLEEVES, from `get_account_positions`**
+  (contract_ids SGOV 424099317 and VOO 136155102) written into the `sgov_market_value` column
+  (column name kept as-is post-2026-07-15 cutover — it holds the whole park book, not literally SGOV;
+  renaming it is a separate, lower-priority schema cleanup, not required for correctness);
+  and the cps-array TWRs. **TWO-SLEEVE CORRECTION (added 2026-09-27, W5 SPEC-DEFECT NOTICE INTAKE, closing
+  D2a's `snapshot_park_value_ambiguous_under_graded_book`, alert `2cdee4b4-41ba-4886-b1d6-0a2f8aa07299`).**
+  The prior "CURRENT park vehicle's market value" wording was unambiguous only while the park was
+  single-vehicle; since graded allocation went live 2026-09-04 the park is a TWO-SLEEVE book and
+  `state.park_policy_current` names only the MAJORITY sleeve — it is a majority-sleeve LABEL, never the
+  value source, and a literal single-vehicle reading writes one sleeve and silently drops the other.
+  MEASURED 2026-09-09: majority sleeve (VOO) $11,290.72, minority sleeve (SGOV) $3,760.08, full two-sleeve
+  book $15,050.80 (target minority weight 25%) — a majority-sleeve-only write would have understated the
+  park by 24.98%.
 - **`source`** (bug fix, 2026-08-08 — this column already exists, `source STRING DEFAULT 'D2-connector'`,
   `bigquery/14_weekly_report.sql:107`; NO schema change). **Write `source = 'D2a-connector'` EXPLICITLY for a
   genuine same-day read (`snapshot_date = today`) — do NOT fall through to the column DEFAULT (wording

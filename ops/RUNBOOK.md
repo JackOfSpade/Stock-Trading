@@ -556,6 +556,10 @@ cutover is ever wanted, it must FIRST wire an operational dbt runner (e.g. a sch
 into a scratch dataset, with the CI SA granted dataEditor only on that scratch dataset) and validate
 byte-parity — only then remove the DDL. See `dbt/README.md`.
 
+**Before applying a view change LIVE, read §55 first.** Applying live ahead of its dbt mirror merging
+can turn every OTHER in-flight branch's parity check red, naming a view that branch never touched —
+land the live apply and its dbt mirror together, or hold the live apply until the mirror has merged.
+
 ## 15. Operational identity & credential resilience *(C3)*
 **Finding (2026-06-19):** 30 days of BigQuery job history ran under a SINGLE principal —
 `jacksterwu@gmail.com` (owner OAuth). There is no autonomous service identity; the only service
@@ -4254,3 +4258,36 @@ Nothing in this repo restores plan access. If routine sessions start dying on `4
 described anywhere in this RUNBOOK. Everything else in the fleet (BigQuery, the scheduled queries, the
 DTS dead-man's switches, `alert_emailer.gs`, the GitHub Actions relay) keeps running without Claude and will
 keep alerting; what stops is every routine that produces the data they watch.
+
+## 55. Applying a view live before its dbt mirror merges reddens every peer branch's parity check — the 2026-09-14 race *(CI/process, new incident class)*
+
+**MEASURED 2026-09-14, not inferred** (alert `381c9513-f691-48bb-85bb-2b264cee975a`; CI run 34883329375,
+job 104107715942, branch `claude/vibrant-babbage-56d30f`). `ci.yml`'s `warehouse-validation` job Row-level
+parity step (`scripts/dbt_parity.py`, the dbt-parity check described in §14/§25 Theme C) FAILED —
+`"NOT VERIFIED analytics.forecast_bias (parity query failed on a schema-shaped error) ... Name
+pct_above_band not found inside parity_src"` — on a branch whose own commit under test (`6b31982`)
+replaces ONE PROCEDURE (`ops.sp_raise_connector_tool_drift`) and touches no view, no dbt model, and
+nothing named `forecast_bias`. Corroboration that the red was isolated to this one comparison: job 1 (48
+blocking checks incl. pytest) passed, and OPS1's own SQL dry-run gate passed on all 3 changed files in the
+same job.
+
+**Mechanism.** A concurrent session on a different branch, `claude/alert-board-2026-09-14` (commit
+`4c8d06d`, pushed 18:55 UTC), added `pct_above_band` to a live view and — per its own commit message —
+"Applied live, dbt mirrors in step," landing the dbt mirror only on THAT branch. Live BigQuery is shared
+and changed the instant the live apply ran; every OTHER in-flight branch still compiles the pre-change dbt
+port. `dbt_parity.py` compares THIS branch's compiled dbt against SHARED live BigQuery, so its EXCEPT query
+references a column the peer branch's port doesn't have yet, and errors out on the schema mismatch. The
+parity check is correct to fail closed here — it cannot distinguish this race from a genuinely stale port —
+but the failure is attributed to the INNOCENT branch and names a view its own diff never touched, so a
+session reading only its own red CI is pointed at someone else's work with no hint of the real cause.
+
+**Operating rule.** Land a live view apply and its dbt mirror TOGETHER in the same push, or hold the live
+apply until the dbt-mirror branch has actually merged to `main`. If a peer branch goes parity-red naming a
+view it never touched, the diagnosis is this ordering race, not that branch's own diff — do NOT "fix" it on
+the peer branch (porting the other branch's mirror in would duplicate in-flight work and conflict when both
+land). The correct resolution is ordinary: once the mirror-owning branch merges to `main`, merge `main` into
+the affected branch and re-push, and parity goes green.
+
+**Disposition on the 2026-09-14 instance.** NOT actioned and deliberately no fix attempted (`capital_affected:
+false`) — recorded here (nearest owning routine W5, SPEC-DEFECT NOTICE INTAKE) so the next session reading a
+red branch does not re-derive this diagnosis from scratch.
