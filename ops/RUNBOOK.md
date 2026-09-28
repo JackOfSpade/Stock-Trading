@@ -2831,7 +2831,7 @@ approval step; since 2026-08-04 (owner directive) every roster-MEMBERSHIP change
 `bigquery/134_roster_change_notifications.sql`; dedicated rendering lane in `alert_emailer.gs` v5).
 **Correction to this section's pre-2026-08-04 wording,** which said to "watch for the `info`-severity
 `strategy_adopted` / retirement rows in `ops.alerts`": those rows were raised at `info`, and BOTH
-`alert_emailer.gs` (`SEVERITIES = ['critical','warning']`) and `scripts/alert_relay.py` filter `info` out —
+`alert_emailer.gs` (whose `SEVERITIES` array is `['critical', 'warning']`) and `scripts/alert_relay.py` filter `info` out —
 so a roster change reached no push channel whatsoever, and that instruction described a pull that only ever
 worked if you happened to go looking. The category `strategy_adopted` was also renamed
 `strategy_probe_registered`, because it fired at PAPER→PROBE rather than at the ADOPTED state. The weekly W5
