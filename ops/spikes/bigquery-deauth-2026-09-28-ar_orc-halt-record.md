@@ -32,3 +32,14 @@
 ## 4. Operator action
 
 Re-authorize the Google-Cloud-BigQuery connector in claude.ai connector settings, then resolve per RUNBOOK §26. BigQuery-dependent slots that fire before then (D3 tonight, OPS2/OPS0, D2a/D2 tomorrow) will halt under their own limbs.
+
+---
+
+## D3 (Calendar Hygiene) slot, 2026-09-28: HALTED
+
+- **Clock at pre-flight:** UTC `2026-09-29 00:45`, **Denver `2026-09-28 18:45` (Monday)**. D3 fired on its regular schedule. **Nothing was written to BigQuery.** There is no `ops.run_log` row, and the SAME-DAY DOUBLE-RUN GUARD, the queue terminal-entry sweep, self-heal, CI-findings adjudication, the golden-scenario prose-regression check and every other step were not run.
+- **Signature (different from AR_orc's 36 minutes earlier):** the BigQuery MCP server was **not exposed at all** in this session. The harness listed `Google-Cloud-BigQuery` as "requires authentication", which is the 2026-09-21 signature and not AR_orc's "sign in again" one. As a second check, a direct REST `jobs.query` using the session's ambient `CLOUDSDK_AUTH_ACCESS_TOKEN` returned `401 UNAUTHENTICATED / CREDENTIALS_MISSING`. That token is not the connector's credential and D3 would not write through it, so the call was only a diagnostic probe. Both results put this in the re-auth class, which is non-waitable, so no retry ladder was run.
+- **Disposition:** under §Observability connector pre-flight, "D2/D2a/D3 require canonical state → HALT cleanly". D3's only other connector is Calendar, and its routine calendar writes depend on BigQuery state, so no partial run was attempted.
+- **Calendar:** no second event was created. The existing event `lm3n7i64nso4babvjk9vn22nm8` was amended in place with one short `UPDATE 18:48 MDT` line (about 1.6 KB in total, well under the 8,192 cap), and the notification level was set to NONE.
+- **After re-auth:** do NOT backfill a `completed` `run_log` row for this slot. The cadence and freshness dead-man switches record the miss. D3's next regular fire picks up the queue sweep, since its predicates are `<= today`, and the golden-scenario check will cover the missed day, because its `git log --since=` window keys off D3's last *completed* run.
+- **No new finding filed.** The fleet-wide disposition-table gap is already owned by W5 SPEC-DEFECT NOTICE INTAKE / OPS0 (see §3 above).
