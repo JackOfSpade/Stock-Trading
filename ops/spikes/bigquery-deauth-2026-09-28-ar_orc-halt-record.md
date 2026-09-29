@@ -66,3 +66,11 @@ Re-authorize the Google-Cloud-BigQuery connector in claude.ai connector settings
 - **Calendar:** no second event. The existing event `lm3n7i64nso4babvjk9vn22nm8` was amended in place with one `UPDATE 20:15 MDT` line (about 2.4 KB total, re-read and intact), notification level NONE.
 - **After re-auth:** do NOT backfill a `completed` `run_log` row for this slot; the cadence and freshness dead-man switches record the miss.
 - **No new finding filed.** SL3's section already carries its own connector/dependency-halt limb, and the fleet-wide disposition-table gap is owned by W5 SPEC-DEFECT NOTICE INTAKE / OPS0 (see §3 above); `ops.alerts` is unreachable anyway.
+
+## OPS2 (Catch-up Executor) slot, 2026-09-28: BigQuery REACHABLE again, catch-up path running
+
+- **Connector state at 22:16 MDT:** the Google-Cloud-BigQuery MCP tools were exposed and answered `state.trading_day_today` on the first call (no retry, no auth error). IBKR, Calendar and Gmail also answered. So the connector was re-authorized, or recovered, at some point between SL3's 20:15 MDT halt and 22:16 MDT. This record cannot say which, or who did it.
+- **Miss feed:** `state.catchup_refire_readiness` held two rows, `D3|2026-09-28` and `SL3|2026-09-28`. It held no AR_orc, SL2 or SL5 rows, which is correct: those three are not `catchup_safe` and their next regular fire picks up. The AR_att row the calendar event lists as UNKNOWN is resolved: `ops.run_log` shows AR_att `completed` at 18:16 MDT, before the de-auth.
+- **SL3: CAUGHT UP INLINE by OPS2.** Both gates passed. There are 0 SHADOW/PAPER members, so no transition and no cull. The heartbeat was written, and the completion was verified before the `ops.catchup_refire_log` row was written.
+- **D3: DEFERRED, not run.** D3's own section calls `create_order_instruction`, so OPS2's order-craft slice-scan excludes it by design. It is left for OPS0's 22:30 MT `catchup_refire_blocked` email: the operator re-runs D3 through its own trigger.
+- **AR_orc, SL2, SL5:** no replay is owed (per the disposition table). Their next regular fires pick up the queue.
