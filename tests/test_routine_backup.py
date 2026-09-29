@@ -101,15 +101,20 @@ TEST_PROFILES = {
 _UNSET = object()
 
 
-def _wire(tmp_path, monkeypatch, *, backup_doc=_UNSET):
+def _wire(tmp_path, monkeypatch, *, backup_doc=_UNSET, routine_model=_UNSET):
     """Point every rb path constant at tmp_path fixtures. cadence.yaml/triggers.json/trigger_ids.json
     describe two routines (D1 -- normal, carries ADDENDUM; OPS2 -- the documented no-addendum
     exception). backup_doc controls the starting ops/routine_backup.json: omitted (_UNSET) writes a
     minimal doc seeded with TEST_PROFILES; explicit None writes nothing (the missing-file case,
     load_backup() then falls back to the real DEFAULT_PROFILES skeleton); an explicit dict is written
-    verbatim."""
+    verbatim. routine_model is the fixture cadence.yaml's top-level model-of-record: omitted, it is the
+    REAL rb.DEFAULT_PROFILES["fleet"]["model"] (so _good_backup_doc(), which derives from the real
+    profiles, is consistent by construction); an explicit str overrides it; explicit None omits the key."""
+    if routine_model is _UNSET:
+        routine_model = rb.DEFAULT_PROFILES["fleet"]["model"]
     cadence = tmp_path / "cadence.yaml"
     cadence.write_text(
+        (f"routine_model: {routine_model}\n" if routine_model is not None else "") +
         "routines:\n"
         "  - id: D1\n"
         "    monitor_class: daily_trading\n"
@@ -1966,6 +1971,103 @@ def test_check_rejects_malformed_one_shot_timestamp(tmp_path, monkeypatch, capsy
     _wire(tmp_path, monkeypatch, backup_doc=_one_shot_backup_doc("not-a-timestamp"))
     assert rb.check() == 1
     assert "timezone-qualified RFC3339" in capsys.readouterr().out
+
+
+# ---- check() (8): model-of-record lockstep (2026-09-28) ------------------------------------------------
+# The fixture cadence.yaml's routine_model comes from _wire(routine_model=...); the backup file's
+# profiles come from the doc; DEFAULT_PROFILES is monkeypatched. All paths are tmp_path fixtures.
+_MOR_LIVE = "claude-opus-5-5"
+_MOR_STALE = "claude-opus-5"
+
+
+def _mor_doc(model=_MOR_LIVE):
+    doc = _good_backup_doc()
+    doc["profiles"]["fleet"]["model"] = model
+    return doc
+
+
+def _mor_defaults(monkeypatch, model):
+    profiles = copy.deepcopy(rb.DEFAULT_PROFILES)
+    profiles["fleet"]["model"] = model
+    monkeypatch.setattr(rb, "DEFAULT_PROFILES", profiles)
+
+
+def test_check_model_of_record_ok_when_all_three_agree(tmp_path, monkeypatch, capsys):
+    _mor_defaults(monkeypatch, _MOR_LIVE)
+    doc = _mor_doc(_MOR_LIVE)
+    doc["routines"]["D1"]["overrides"] = {"model": _MOR_LIVE}  # a redundant-but-equal override is fine
+    _wire(tmp_path, monkeypatch, backup_doc=doc, routine_model=_MOR_LIVE)
+    assert rb.check() == 0
+    assert "ROUTINE BACKUP CHECK: OK" in capsys.readouterr().out
+
+
+def test_check_fails_when_backup_fleet_profile_model_differs_from_routine_model(tmp_path, monkeypatch, capsys):
+    """The 2026-09-28 defect: cadence.yaml still says the old model while the ingested backup already
+    carries the live one -- CI used to stay green."""
+    _mor_defaults(monkeypatch, _MOR_STALE)  # isolate: only the backup-file profile disagrees
+    _wire(tmp_path, monkeypatch, backup_doc=_mor_doc(_MOR_LIVE), routine_model=_MOR_STALE)
+    assert rb.check() == 1
+    out = capsys.readouterr().out
+    assert "ROUTINE BACKUP CHECK: FAIL" in out
+    assert f"profiles.fleet.model='{_MOR_LIVE}' != ops/cadence.yaml routine_model='{_MOR_STALE}'" in out
+    assert "DEFAULT_PROFILES" not in out.split("WHICH SIDE TO FIX")[0]  # only the backup side flagged
+    # the message names which side to fix and forbids hand-editing the snapshot
+    assert "WHICH SIDE TO FIX" in out and "RemoteTrigger" in out and "Never hand-edit" in out
+
+
+def test_check_fails_when_default_profiles_fleet_model_differs_from_routine_model(tmp_path, monkeypatch, capsys):
+    _mor_defaults(monkeypatch, _MOR_STALE)  # DEFAULT_PROFILES lags; the backup file and routine_model agree
+    _wire(tmp_path, monkeypatch, backup_doc=_mor_doc(_MOR_LIVE), routine_model=_MOR_LIVE)
+    assert rb.check() == 1
+    out = capsys.readouterr().out
+    assert "ROUTINE BACKUP CHECK: FAIL" in out
+    assert (f"DEFAULT_PROFILES['fleet']['model']='{_MOR_STALE}' != ops/cadence.yaml "
+            f"routine_model='{_MOR_LIVE}'") in out
+    assert "profiles.fleet.model=" not in out  # the backup-file profile is consistent, so not flagged
+
+
+def test_check_fails_when_a_fleet_override_model_differs_from_routine_model(tmp_path, monkeypatch, capsys):
+    _mor_defaults(monkeypatch, _MOR_LIVE)
+    doc = _mor_doc(_MOR_LIVE)
+    doc["routines"]["D1"]["overrides"] = {"model": _MOR_STALE}
+    _wire(tmp_path, monkeypatch, backup_doc=doc, routine_model=_MOR_LIVE)
+    assert rb.check() == 1
+    out = capsys.readouterr().out
+    assert (f"D1: model of record: " in out and f"overrides.model='{_MOR_STALE}' != "
+            f"ops/cadence.yaml routine_model='{_MOR_LIVE}'" in out)
+    assert "OPS2: model of record" not in out  # only the pinned routine is named
+
+
+def test_check_model_of_record_ignores_the_personal_profile_model(tmp_path, monkeypatch, capsys):
+    """'personal' targets a different repo and is deliberately not tied to routine_model -- neither its
+    profile model, its DEFAULT_PROFILES model, nor a personal routine's overrides.model may fail check()."""
+    profiles = copy.deepcopy(rb.DEFAULT_PROFILES)
+    profiles["fleet"]["model"] = _MOR_LIVE
+    profiles["personal"]["model"] = "claude-sonnet-4-5"
+    monkeypatch.setattr(rb, "DEFAULT_PROFILES", profiles)
+    doc = _mor_doc(_MOR_LIVE)
+    doc["profiles"]["personal"]["model"] = "claude-haiku-4-5"
+    doc["routines"]["personal_x"] = {
+        "name": "Personal X", "cron_expression": "0 9 * * 1", "enabled": False, "profile": "personal",
+        "instruction": "Do a personal thing.", "overrides": {"model": "claude-sonnet-4-5"},
+    }
+    _wire(tmp_path, monkeypatch, backup_doc=doc, routine_model=_MOR_LIVE)
+    assert rb.check() == 0
+    assert "ROUTINE BACKUP CHECK: OK" in capsys.readouterr().out
+
+
+def test_check_fails_when_cadence_routine_model_is_missing(tmp_path, monkeypatch, capsys):
+    """No routine_model means the comparison could pass vacuously -- that must be reported, not skipped."""
+    _wire(tmp_path, monkeypatch, backup_doc=_good_backup_doc(), routine_model=None)
+    assert rb.check() == 1
+    assert "no usable top-level 'routine_model'" in capsys.readouterr().out
+
+
+def test_check_model_of_record_does_not_touch_real_repo_files(tmp_path, monkeypatch):
+    """Guard against the known repo trap (tests clobbering real files): check() must run against the
+    tmp_path fixtures only."""
+    _, _, _, backup = _wire(tmp_path, monkeypatch, backup_doc=_good_backup_doc())
+    assert rb.BACKUP_PATH == str(backup) and rb.CADENCE_PATH.startswith(str(tmp_path))
 
 
 # ---- CLI wiring (main()) -----------------------------------------------------------------------------

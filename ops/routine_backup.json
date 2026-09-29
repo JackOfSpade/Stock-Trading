@@ -3,9 +3,9 @@
     "caveats": "cron_expression may read 'TO_POPULATE' for a routine whose live cron could not yet be confirmed from a trustworthy source (see the initial-bootstrap commit message / session report) -- ingest against a real `list`/`get` response overwrites it. OPS2's instruction deliberately omits ONLY the Sonnet-delegation ADDENDUM every other routine carries (see ADDENDUM / OPS2_NO_ADDENDUM_ID in this module and ops/cadence.yaml's OPS1/OPS2 block) -- this is a documented exception, not drift. OPS2 DOES carry SCOPE_ADDENDUM (2026-08-17), which has no OPS2 exception. The 2 'personal' profile routines target a different repo (JackOfSpade/Image-and-Video-Generation-Pipeline) and are out of the trading fleet's scope -- kept here only because they live on the same claude.ai account and are equally vulnerable to an accidental deletion.",
     "how_to_refresh": "In a session with the RemoteTrigger tool: call `list` (paginated, ~20 at a time -- see ops/trigger_ids.json _meta) and/or `get` on specific trigger ids, save the response body as JSON, then run `python scripts/routine_backup.py ingest <file>`. Re-running ingest on the same or overlapping data is safe and idempotent -- it cleanly overwrites each routine's stored fields (including cron_expression) with the freshly ingested values.",
     "how_to_restore": "`python scripts/routine_backup.py restore <routine_id ...>` (or no args for every routine) prints ready-to-use RemoteTrigger create bodies with freshly generated UUIDs. It refuses past or malformed one-shot schedules rather than emitting API-invalid bodies. Call RemoteTrigger create with each accepted body, then record the returned trig_... id in ops/trigger_ids.json for that routine id (this script cannot call RemoteTrigger itself and never invents live API data).",
-    "last_ingested": "2026-08-17",
+    "last_ingested": "2026-09-29",
     "purpose": "Versioned snapshot of every claude.ai RemoteTrigger routine (schedule + instruction + connectors), profile-based so a diff shows real config changes instead of restating shared boilerplate. Exists so a future accidental trigger deletion (2026-08-01 incident: 13 routines deleted from the web UI, hand-reconstructed from scattered repo prose) is a mechanical `restore`, not a research project.",
-    "sl_environment_2026_08_01": "2026-08-01 owner directive: the ENTIRE fleet is normalised to environment 'Full Network Access' (env_01DXtTeywLPpNoXku8rGNEie), autofix_on_pr_create=true and notifications all-off. This retired the separate 'sl' profile SL1-SL5 used to carry (distinct 'Default' environment, autofix=false, push notifications on). That split was preserved by every prior change but its rationale was never written down anywhere -- searched RUNBOOK 39, CLAUDE.md's SISA section, autonomy_levels.yaml and the SISA commit. It was NOT a network restriction: SL5 git-pushes and SL3 completed 19 runs on 'Default'. Two profiles remain: 'fleet' (32 trading routines) and 'personal' (2 non-trading routines targeting a different repo)."
+    "sl_environment_2026_08_01": "2026-08-01 owner directive: the ENTIRE fleet is normalised to environment 'Full Network Access' (env_01DXtTeywLPpNoXku8rGNEie), autofix_on_pr_create=true and notifications all-off. This retired the separate 'sl' profile SL1-SL5 used to carry (distinct 'Default' environment, autofix=false, push notifications on). That split was preserved by every prior change but its rationale was never written down anywhere -- searched RUNBOOK 39, CLAUDE.md's SISA section, autonomy_levels.yaml and the SISA commit. It was NOT a network restriction: SL5 git-pushes and SL3 completed 19 runs on 'Default'. Two profiles remain: 'fleet' (33 trading routines -- 32 when this note was written; M1R was added 2026-09-05) and 'personal' (2 non-trading routines targeting a different repo)."
   },
   "_unmatched": {},
   "profiles": {
@@ -60,7 +60,7 @@
           "url": "https://mcp.tavily.com/mcp"
         }
       ],
-      "model": "claude-opus-5",
+      "model": "claude-opus-5-5",
       "notifications": {
         "channel": {
           "email": false,
@@ -106,7 +106,7 @@
           "url": "https://mcp.tavily.com/mcp"
         }
       ],
-      "model": "claude-opus-5",
+      "model": "claude-opus-5-5",
       "notifications": {
         "channel": {
           "email": false,
@@ -201,6 +201,66 @@
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform M1R — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "M1R — regular routine",
+      "overrides": {
+        "mcp_connections": [
+          {
+            "clear_tool_policy_overrides": false,
+            "connector_uuid": "f4bd1992-c70e-4b23-b617-271b19976e92",
+            "name": "FMP",
+            "permitted_tools": [],
+            "tool_policy_overrides": [],
+            "url": "https://financialmodelingprep.com/mcp"
+          },
+          {
+            "clear_tool_policy_overrides": false,
+            "connector_uuid": "8118e26a-1613-4cf8-b1cd-9a794b8d357b",
+            "name": "Gmail",
+            "permitted_tools": [],
+            "tool_policy_overrides": [],
+            "url": "https://gmailmcp.googleapis.com/mcp/v1"
+          },
+          {
+            "clear_tool_policy_overrides": false,
+            "connector_uuid": "c91ddbb2-ced9-4011-9838-15e5239e83e9",
+            "name": "Google-Calendar",
+            "permitted_tools": [],
+            "tool_policy_overrides": [],
+            "url": "https://calendarmcp.googleapis.com/mcp/v1"
+          },
+          {
+            "clear_tool_policy_overrides": false,
+            "connector_uuid": "64f9594a-0ed8-4081-883c-df850f1c8fcd",
+            "name": "Google-Cloud-BigQuery",
+            "permitted_tools": [],
+            "tool_policy_overrides": [],
+            "url": "https://bigquery.googleapis.com/mcp"
+          },
+          {
+            "clear_tool_policy_overrides": false,
+            "connector_uuid": "fff8d981-37df-4721-97af-9e0fdf5238e7",
+            "name": "Hugging-Face",
+            "permitted_tools": [],
+            "tool_policy_overrides": [],
+            "url": "https://huggingface.co/mcp"
+          },
+          {
+            "clear_tool_policy_overrides": false,
+            "connector_uuid": "d9d4ad11-d734-4c05-8302-9fd84698ef46",
+            "name": "Interactive-Brokers--IBKR-",
+            "permitted_tools": [],
+            "tool_policy_overrides": [],
+            "url": "https://api.ibkr.com/v1/api/mcp"
+          },
+          {
+            "clear_tool_policy_overrides": false,
+            "connector_uuid": "715856f0-b776-4037-b2a3-a0c9531d965f",
+            "name": "Tavily",
+            "permitted_tools": [],
+            "tool_policy_overrides": [],
+            "url": "https://mcp.tavily.com/mcp"
+          }
+        ]
+      },
       "profile": "fleet",
       "trigger_id": "trig_01R6YpUzw3pk7UEeWB5Bdtvq"
     },
@@ -271,7 +331,7 @@
     "OPS2": {
       "cron_expression": "15 4 * * 1,2,3,4,5",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform OPS2 — regular routine.\n\nNOTE — OPS2 deliberately does NOT carry the standing Sonnet-delegation paragraph that every other routine has (\"Spawn Sonnet 5 model sub-agents to do the grunt work...\"). That omission is intentional and owner-confirmed (2026-07-28): OPS2 hosts missed routines INLINE and must execute their judgment-heavy steps at full claude-opus-5 fidelity (task_plan/OPS2.md hosting requirement (a), NO MODEL DOWNGRADE), which a blanket instruction to push grunt work onto Sonnet sub-agents would contradict. Do not \"fix\" this difference.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform OPS2 — regular routine.\n\nNOTE — OPS2 deliberately does NOT carry the standing Sonnet-delegation paragraph that every other routine has (\"Spawn Sonnet 5 model sub-agents to do the grunt work...\"). That omission is intentional and owner-confirmed (2026-07-28): OPS2 hosts missed routines INLINE and must execute their judgment-heavy steps at full model-of-record fidelity (task_plan/OPS2.md hosting requirement (a), NO MODEL DOWNGRADE), which a blanket instruction to push grunt work onto Sonnet sub-agents would contradict. Do not \"fix\" this difference.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "OPS2 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_01YSwsMubckdarNX9Z8yb4eX"

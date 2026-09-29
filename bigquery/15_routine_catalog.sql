@@ -128,7 +128,9 @@ FROM UNNEST([
 -- row reported under its canonical (catalog) id. Durable root-cause discussion + alternatives: RUNBOOK §28.
 -- ADDENDUM-INVARIANT FIRST-LINE COMPARISON (2026-07-20, wording updated 2026-07-26 -- owner switched the
 -- addendum's model references from Fable 5 to Opus 5, and the routines' own `model` field to
--- claude-opus-5): the live web-UI trigger message is now ALWAYS the canonical heading line PLUS a standing
+-- claude-opus-5 [model-id-exempt: historical, the 2026-07-26 value; fleet is now claude-opus-5-5, since
+-- 2026-09-28, per ops/cadence.yaml routine_model]): the live web-UI trigger message is now ALWAYS the
+-- canonical heading line PLUS a standing
 -- operator addendum (as of 2026-07-26: "Spawn Sonnet 5 model sub-agents to do the grunt work. Save your
 -- processing (Opus 5) for design/analysis/orchestration work only."), separated from the heading by a
 -- blank line. sp_routine_start logs that FULL

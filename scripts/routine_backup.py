@@ -155,7 +155,7 @@ DEFAULT_PROFILES = {
         "environment_id": "env_01DXtTeywLPpNoXku8rGNEie",
         "autofix_on_pr_create": True,
         "notifications": copy.deepcopy(NOTIFY_SILENT),
-        "model": "claude-opus-5",
+        "model": "claude-opus-5-5",
         "allowed_tools": list(_FLEET_TOOLS),
         "sources": [{"git_repository": {"url": FLEET_REPO_URL}}],
         "mcp_connections": _conns(*CONNECTORS_BY_NAME),
@@ -163,7 +163,7 @@ DEFAULT_PROFILES = {
     "personal": {
         "environment_id": "env_01DXtTeywLPpNoXku8rGNEie",
         "autofix_on_pr_create": True,
-        "model": "claude-opus-5",
+        "model": "claude-opus-5-5",
         "notifications": copy.deepcopy(NOTIFY_SILENT),
         "allowed_tools": list(_PERSONAL_TOOLS),
         "sources": [{"git_repository": {
@@ -1197,6 +1197,61 @@ def _schedule_errors(rid, entry):
     return []
 
 
+def _model_of_record_errors(rel, cadence_doc, backup_profiles, routines):
+    """(8) MODEL-OF-RECORD LOCKSTEP (2026-09-28): the fleet model recorded in this backup must equal
+    ops/cadence.yaml's top-level `routine_model`.
+
+    WHY THIS EXISTS: scripts/lib/model_of_record.py's check_model_of_record() (run by
+    scripts/check_cadence_consistency.py) enforces that every prose/config MIRROR of routine_model
+    agrees with it, but ops/routine_backup.json (profiles.fleet.model) and this module's own
+    DEFAULT_PROFILES["fleet"]["model"] sit OUTSIDE that mirror set, and check() (6) above only ever
+    validated that the resolved model is a non-empty string -- never its VALUE. Demonstrated
+    2026-09-28: the live fleet moved claude-opus-5 -> claude-opus-5-5 and CI stayed green while the
+    backup and routine_model disagreed with each other. A restore from a stale backup would silently
+    recreate the whole fleet on the wrong model.
+
+    Three comparisons, all against routine_model (read with the same load_yaml() + `.get("routine_model")`
+    that check_model_of_record() itself uses -- its well-formedness rules stay THERE, not duplicated
+    here): the backup file's fleet profile, DEFAULT_PROFILES["fleet"] (what ingest seeds a fresh backup
+    with), and any per-routine `overrides.model` on a fleet-profile entry. The 'personal' profile
+    targets a different repo and is deliberately NOT tied to routine_model.
+
+    Reads DEFAULT_PROFILES as a bare global so a test can monkeypatch it."""
+    model = cadence_doc.get("routine_model")
+    if not (isinstance(model, str) and model):
+        return [f"model of record: ops/cadence.yaml has no usable top-level 'routine_model' "
+                f"({model!r}) -- cannot verify that {rel}'s fleet model matches it"]
+    errs = []
+    fleet_profile = backup_profiles.get("fleet")
+    have = fleet_profile.get("model") if isinstance(fleet_profile, dict) else None
+    if have != model:
+        errs.append(f"model of record: {rel} profiles.fleet.model={have!r} != ops/cadence.yaml "
+                    f"routine_model={model!r}")
+    default_have = (DEFAULT_PROFILES.get("fleet") or {}).get("model")
+    if default_have != model:
+        errs.append(f"model of record: scripts/routine_backup.py DEFAULT_PROFILES['fleet']['model']="
+                    f"{default_have!r} != ops/cadence.yaml routine_model={model!r} (the profile a "
+                    f"fresh backup is seeded with)")
+    for rid, entry in sorted(routines.items()):
+        if entry.get("profile") != "fleet":
+            continue
+        ov = entry.get("overrides")
+        if isinstance(ov, dict) and "model" in ov and ov["model"] != model:
+            errs.append(f"{rid}: model of record: {rel} overrides.model={ov['model']!r} != "
+                        f"ops/cadence.yaml routine_model={model!r} (a fleet routine pinned off the "
+                        f"fleet model)")
+    if errs:
+        errs.append("model of record -- WHICH SIDE TO FIX: the backup is an ingested snapshot of LIVE "
+                    "truth, so a mismatch means EITHER the live fleet model changed and ops/cadence.yaml "
+                    "routine_model was not updated, OR routine_model changed without the live fleet "
+                    "being switched. Check live (RemoteTrigger list/get), then bring the STALE side "
+                    "forward: update routine_model (and its mirrors, see scripts/check_cadence_"
+                    "consistency.py check N) if live moved, or switch the fleet if routine_model moved; "
+                    f"then re-ingest {rel} and update DEFAULT_PROFILES to match. Never hand-edit the "
+                    "snapshot's model just to make this check pass.")
+    return errs
+
+
 # ---- check ------------------------------------------------------------------------------------------
 def check():
     """Validate ops/routine_backup.json with NO network: (1) valid JSON, every ops/cadence.yaml
@@ -1214,9 +1269,11 @@ def check():
     see that warning's own inline comment below for why it stops short of being an error); (6) every
     entry's EFFECTIVE resolved fields (profile + overrides) are real, non-empty recovery data, not
     just a profile name that happens to exist (B3) -- including the two fields stored ON the entry
-    rather than resolved through a profile, `name` and `instruction` (see _fields_errors); and (7) a
+    rather than resolved through a profile, `name` and `instruction` (see _fields_errors); (7) a
     fleet routine can never retain a
-    TO_POPULATE schedule that restore refuses.
+    TO_POPULATE schedule that restore refuses; and (8) MODEL-OF-RECORD lockstep -- the fleet profile's
+    model, DEFAULT_PROFILES["fleet"]["model"] and every fleet-profile `overrides.model` must equal
+    ops/cadence.yaml's routine_model (see _model_of_record_errors).
     Prints per-error ' - ' bullet lines, any WARNINGS block, and a FAIL/OK
     summary, mirroring scripts/check_cadence_consistency.py's conventions. Returns 0/1 (warnings never
     affect the return code)."""
@@ -1281,6 +1338,9 @@ def check():
             errors.append(f"{rid}: cron_expression is still {CRON_UNCONFIRMED} -- fleet recovery is "
                           "incomplete and restore will refuse it")
 
+    # (8) fleet model in the backup / DEFAULT_PROFILES / fleet overrides == cadence.yaml routine_model
+    errors.extend(_model_of_record_errors(rel, cadence_doc, profiles, routines))
+
     # (2) instruction == triggers.json instruction (+ ADDENDUM, except OPS2) (+ SCOPE_ADDENDUM, always)
     for rid in cad_ids:
         entry = routines.get(rid)
@@ -1333,7 +1393,9 @@ def check():
             for w in warnings:
                 print(" - " + w)
         print(f"\nFix {rel} (hand-edit, or re-run `python scripts/routine_backup.py ingest <file>` "
-              f"against a fresh RemoteTrigger list/get response) so all checks pass, then re-run.")
+              f"against a fresh RemoteTrigger list/get response) so all checks pass, then re-run. "
+              f"Exception: a 'model of record' error is never fixed by hand-editing the snapshot's "
+              f"model -- follow its WHICH SIDE TO FIX line.")
         return 1
 
     if warnings:

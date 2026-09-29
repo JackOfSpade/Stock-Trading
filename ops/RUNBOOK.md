@@ -1616,6 +1616,12 @@ so this is the real miss the guard is designed to let through — not a pre-dead
      AND source   IN ('scheduled.cadence', 'scheduled.freshness')
      AND category IN ('missed_run', 'staleness');
    ```
+4. **File the outage's unfiled findings (added 2026-09-28).** Every slot that halted while `ops.alerts` was
+   unreachable was told to park its findings under an `## Unfiled findings` heading in that incident's
+   `ops/spikes/bigquery-deauth-*-halt-record.md` (`Claude_Task_Plan.md` §Observability → "FLEET CONNECTOR-DOWN
+   DISPOSITION TABLE"). File every bullet as an `ops.alerts` info row (the OUT-OF-SCOPE FINDINGS convention),
+   then mark the heading `FILED <date>`. OPS0's first run after the outage does the same if it is not yet
+   marked, so this step is the human backstop, not the only reader.
 
 A `[Claude] ATTENTION` calendar event was already created during the 6/26 D1 degraded run to surface the
 outage for re-authorization (per `Daily.md`), so the two `ops.alerts` rows are a redundant — and correct —

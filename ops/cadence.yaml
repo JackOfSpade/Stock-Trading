@@ -76,7 +76,11 @@ timezone: America/Denver
 # KEEP IN SYNC: when the owner changes the model on the triggers, update this key in the same pass.
 # A1/Q3 read it as the in-use model of record; if it ever disagrees with the live trigger config,
 # the live trigger config wins and this key is the thing that is stale.
-routine_model: claude-opus-5
+#
+# 2026-09-28: the fleet was switched live to claude-opus-5-5 (Claude Opus 5.5) between 22:19Z and
+# 22:25Z, verified 33/33 by direct RemoteTrigger reads; the repo record caught up the same night.
+# The prior value, claude-opus-5 (model-id-exempt — historical), had been the record since 2026-07-26.
+routine_model: claude-opus-5-5
 
 # Cadence-watch deadline guard (added 2026-06-25, RUNBOOK §1 step 3). state.cadence_watch.needs_attention
 # only alarms a missed DAILY routine (D1/D2/D3) AFTER this America/Denver wall-clock time — past the
@@ -470,7 +474,7 @@ routines:
                                     # DST-robustness -- this comment itself read "~21:15 MT" until
                                     # 2026-08-18, contradicting the time_local field 11 lines above that
                                     # the 2026-08-01 normalization had already corrected;
-                                    # model claude-opus-5); trig_id recorded in ops/trigger_ids.json.
+                                    # model claude-opus-5 at creation [model-id-exempt: historical; fleet is now claude-opus-5-5]); trig_id recorded in ops/trigger_ids.json.
                                     #
                                     # STANDING ADDENDUM DELIBERATELY OMITTED (owner-confirmed 2026-07-28).
                                     # Every OTHER routine's live trigger carries the operator's standing
@@ -537,7 +541,7 @@ routines:
       NOTE — OPS2 deliberately does NOT carry the standing Sonnet-delegation paragraph that every other
       routine has ("Spawn Sonnet 5 model sub-agents to do the grunt work..."). That omission is
       intentional and owner-confirmed (2026-07-28): OPS2 hosts missed routines INLINE and must execute
-      their judgment-heavy steps at full claude-opus-5 fidelity (task_plan/OPS2.md hosting requirement
+      their judgment-heavy steps at full model-of-record fidelity (task_plan/OPS2.md hosting requirement
       (a), NO MODEL DOWNGRADE), which a blanket instruction to push grunt work onto Sonnet sub-agents
       would contradict. Do not "fix" this difference.
     notes: >

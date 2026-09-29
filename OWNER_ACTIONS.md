@@ -57,7 +57,7 @@ routines always run the SAME model; that is a standing invariant, not a per-rout
 
 **Why this is written down.** Steps 1–2 used to be a comment inside the file that goes stale, addressed
 to someone who had already opened it — and that manual sync has failed in practice at least once
-(commit `f347b8f`, 2026-07-26: you switched all 31 routines to `claude-opus-5` and the in-repo comment
+(commit `f347b8f`, 2026-07-26: you switched all 31 routines to `claude-opus-5` [model-id-exempt: historical] and the in-repo comment
 "was already stale even before that"). **Step 3's gap is now closed (cadence audit 2026-07-29).** It
 used to exist because detection was quarterly at best while the only write path was annual, and that
 gap was real and measured, not hypothetical: the in-use-model field sat wrong for 94 days in 2026
@@ -769,6 +769,75 @@ this notice — an `ops.alerts` row at `severity='info'`, `source='M1R'`, catego
 outage routes through the other" gap the 08-23 entry records one paragraph above. It is written here so it
 survives D3's deletion of the calendar event; **file it as the info row once BigQuery returns.**
 
+**RECURRED AGAIN 2026-09-21 (Mon) — fourth occurrence in this log; RESOLVED.** First detected by D1's
+connector pre-flight at ~16:10 MT, on the BigQuery server's own OAuth grant (`MCP server
+"Google-Cloud-BigQuery" needs you to sign in again`; the BigQuery tools were then not exposed at all to the
+later slots). The 09-14 occurrence above did resolve, so this is annotated here rather than duplicated by a
+competing entry. Four slots were lost that evening: D1 ran DEGRADED (research-only, ten BigQuery writes
+deferred), and D2a, D2 and AR_att HALTED cleanly. Nothing traded on stale state and nothing was corrupted. The
+IBKR connector stayed live throughout and confirmed an empty staged-order registry three times. Per-slot
+records, all in `ops/spikes/`: `bigquery-deauth-2026-09-21-d1-deferred-writes.md`,
+`bigquery-deauth-2026-09-21-d2a-halt-record.md`, `bigquery-deauth-2026-09-21-d2-halt-record.md` and
+`bigquery-deauth-2026-09-21-ar_att-halt-record.md`. The incident's calendar event was
+`09q69g3odvhhbiom3drf15uc60` (2026-09-21 17:00 MT, email + popup at event time, created by the D1 slot).
+
+- **Closed 2026-09-22.** The connector was re-authorized overnight, and the replay ran on the morning of
+  2026-09-22 Denver: D1's deferred writes landed, and AR_att then AR_orc were re-fired in that order
+  (03:48 and 03:56 MT), both logging a measured quiet day. The AR_att record's closing section (its §9,
+  "CLOSED BY MEASUREMENT") has the ledger: the review lane held zero actionable rows at any point in the
+  window, so its `UNKNOWN` resolved to EMPTY by evidence after the fact and no due-date slipped.
+- **The cascade was realised and went one hop further than predicted.** AR_orc halted at its dependency gate
+  (`missing_dependency` critical `5e7c9bdc`, since resolved) and SL5 then halted on AR_orc
+  (`2fd2a966`, since resolved) — two downstream slots, not one.
+- **The never-backfill discipline held** on both surfaces: no `ops.run_log` row of any status exists for
+  AR_att on 2026-09-21, and no commit subject leading with `AR_att` carries that date.
+
+**RECURRED AGAIN 2026-09-28 (Mon) — fifth occurrence in this log; OPEN, AWAITING OWNER RE-AUTH.** Detected by
+the AR_orc slot's dependency gate at 18:36 MDT (UTC 2026-09-29 00:36); recorded from commits `c3fac96`,
+`2ad077e`, `4ec35b4` and `c717da2` (the AR_orc, D3, SL5 and SL3 halt records). **The connector was NOT
+re-authorized as of the last of them (SL3, 20:11 MDT). Nothing below is resolved; there is no
+`[DONE]` for this occurrence.** The per-incident record, to which later slots append one `## <slot>` section
+each, is `ops/spikes/bigquery-deauth-2026-09-28-ar_orc-halt-record.md`.
+
+- **Expiry window bounded to ~75 minutes: 17:21 – 18:36 MDT (23:21 – 00:36 UTC).** D2 landed `6747d44` on
+  `origin/main` at 23:21:21 UTC, which needs canonical BigQuery state, so the grant was live then; AR_orc
+  found it dead at 18:36 MDT. This is tighter than the 09-14 bound above (~7 hours), which was itself the
+  tightest to date. The live fleet-wide model switch to `claude-opus-5-5` (22:19–22:25 UTC) sits an hour
+  BEFORE the last known-good write, so it does not bracket the onset.
+- **Failure shape differed between slots.** AR_orc's session had the BigQuery tools loaded but every call,
+  including a bare `SELECT 1`, returned "needs you to sign in again". D3, SL5 and SL3 saw the server not
+  exposed at all ("requires authentication"), and D3 and SL3 each got `401 UNAUTHENTICATED` from a
+  diagnostic-only REST probe with the session's ambient token (not the connector's credential, and not
+  written through). All are the re-auth class, non-waitable, so no retry ladder ran. None is the RUNBOOK §54
+  platform `403 authentication_failed` class: the sessions stayed alive and Calendar worked.
+- **Slots halted so far (five): AR_orc (18:36 MDT), D3 (18:45), SL2 (19:05), SL5 (19:26), SL3 (20:11).** All
+  halted cleanly with no BigQuery write and no `ops.run_log` row. SL2 has no repo record on `origin/main`;
+  its halt is known only from the 19:06 line it added to the calendar event. **AR_att's 18:00 MDT status is
+  UNKNOWN** — git cannot distinguish a healthy quiet fire from a halt that failed to land its record, and
+  nothing should be read as either. The review lane, the roster-mutation queue and the SHADOW/PAPER
+  incubation state are all UNKNOWN, not quiet.
+- **The notification channel is LIVE.** The calendar event **`lm3n7i64nso4babvjk9vn22nm8`**
+  (`[Claude] ATTENTION — RE-AUTH BigQuery connector`, 2026-09-28 19:00–19:30 MDT, popup + email reminders) was
+  created by the AR_orc slot after a full-text search found none for 09-27 to 09-30. D3, SL2, SL5 and SL3
+  each amended it in place with one short `UPDATE` line (notification level NONE, about 2.4 KB in total, well
+  under the ~8,192-character cap). **Close-out has ONE event to delete:** `lm3n7i64nso4babvjk9vn22nm8`.
+- **Still to come while it stays down:** OPS2 and OPS0 tonight, then D2a and D2 on 2026-09-29, will halt under
+  their own limbs. The quarterly proactive re-consent reminder is next due 2026-10-01.
+- **Recovery is the same as BQ-1 above:** re-consent the connector, then resolve per `ops/RUNBOOK.md` §26.
+  Never backfill a `completed` `ops.run_log` row for any halted slot. SL3 is `catchup_safe: true` and
+  re-covers the day itself; AR_orc, D3 and SL5 need no OPS0/OPS2 replay (their due predicates are
+  `<= today`); the next AR_att -> AR_orc pair picks up whatever the lane holds.
+
+**THE CADENCE, now measured over six occurrences (dates checked against this log and `ops/RUNBOOK.md` §26):**
+2026-06-26 (Fri) -> 08-16 (Sun) -> 08-23 (Sun) -> 09-14 (Mon) -> 09-21 (Mon) -> 09-28 (Mon), i.e. gaps of
+51, 7, 22, 7 and 7 days. **09-21 -> 09-28 is exactly 7 days, as were 08-16 -> 08-23 and 09-14 -> 09-21** —
+so the last two gaps are back-to-back 7-day gaps and all three of the 7-day pairs are the same length to the
+day. That fits a short-lived grant that lapses about a week after each re-consent, but it is a pattern over
+three pairs, not an established expiry interval; it is the input `ops/RUNBOOK.md` §15b's expiry-interval
+question needs, and it says the quarterly reminder cadence is far too slow for this failure. Numbering note:
+this log counts 08-16 as the first occurrence; the 2026-09-21 AR_att record's "now at four" list
+(06-26, 08-23, 09-14, 09-21) omits 08-16, so it counts one fewer.
+
 ---
 
 # 2026-08-04 SISA roster-change notifications — `alert_emailer.gs` v4 → v5 + `bigquery/43` MERGE (sequenced)
@@ -992,14 +1061,14 @@ you can). Create it in claude.ai (Code → Routines → New, or `RemoteTrigger c
 
 - **Instruction (verbatim, from `ops/triggers.json`):** `Read Claude_Task_Plan.md. Perform OPS2. Catch-up Executor — regular routine.`
 - **Schedule:** daily, ~21:00 America/Denver (after SL3's 20:00, before OPS0's 22:30 — OPS2 runs what it can, OPS0 emails the residual). Native daily picker if available (DST-aware); else a fixed cron ~03:00 UTC.
-- **Model:** `claude-opus-5` — REQUIRED. OPS2 runs missed routines at full fidelity; a weaker model would degrade a caught-up regime score or foundation re-derivation.
+- **Model:** `claude-opus-5-5` (the fleet model of record, `ops/cadence.yaml` `routine_model`) — REQUIRED. OPS2 runs missed routines at full fidelity; a weaker model would degrade a caught-up regime score or foundation re-derivation.
 - **Branch:** a `claude/ops2-*` branch (same auto-merge flow as every routine).
 - **Connectors / tools — grant READ-only, NO order-craft:** BigQuery (read+write, for run-logging), FMP, Google Calendar, Gmail, and **IBKR scoped to READ tools only** via the connection's per-connector `permitted_tools` — include the `get_*` / `search_*` reads; **EXCLUDE `create_order_instruction`, `delete_order_instruction`, and any order/watchlist WRITE tool** (OPS2 must never be able to place an order). Plus the standard harness tools (Bash, Read, Write, Edit, Glob, Grep, WebFetch, WebSearch) and `RemoteTrigger`.
 
 THEN: (1) record the returned `trig_...` id in `ops/trigger_ids.json` (provenance `'api'`), and (2) flip `ops/cadence.yaml`'s OPS2 `expected_trigger.enabled` from `false` → `true`; commit both. Until you do (1)+(2), OPS2 stays correctly invisible to cadence monitoring (no false missed-run alarm), and OPS0's actionable email keeps covering all catchup_safe misses exactly as it does today — so there's no rush and nothing breaks in the interim.
 
 **DONE 2026-07-27:** trigger created (`trig_01DLrkbtpDvox1N7meiFMXYe`, cron `0 3 * * *` = ~21:00 MT, model
-`claude-opus-5`, connectors BigQuery/FMP/Calendar/Gmail/IBKR); (1) trig_id recorded in `ops/trigger_ids.json`
+`claude-opus-5` [model-id-exempt: historical; the fleet has run `claude-opus-5-5` since 2026-09-28], connectors BigQuery/FMP/Calendar/Gmail/IBKR); (1) trig_id recorded in `ops/trigger_ids.json`
 and (2) `expected_trigger.enabled` flipped to `true` in this commit. **IBKR: full access, SETTLED — no action, no recurring warning.** The claude.ai connector GUI is all-or-nothing
 per connector (no read-only tool-scoping), so OPS2 carries full IBKR access; owner directive 2026-07-27 accepts
 this and the OPS2 spec no longer flags "read-only scoping" on any run. The guardrails (never inline-execute an
