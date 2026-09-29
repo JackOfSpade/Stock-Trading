@@ -63,6 +63,15 @@ assert_not_contains() {   # assert_not_contains <description> <haystack> <needle
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
+# Run from the scratch dir, never from the checkout. Every git command below targets a fixture repo
+# under $TMP, so none may depend on the checkout being a healthy repo -- and under the global
+# `act push` pre-push hook it is not: the hook checks the pushed SHA out as a `git worktree`, whose
+# `.git` is a pointer file to a host path the container cannot see, so ANY git call whose cwd is that
+# checkout (even `git config --global`) dies `fatal: not a git repository: (null)` (exit 128). That
+# failed this step under the hook while passing on GitHub's real clone (2026-09-29). $ROOT/$HOOK are
+# already absolute, so nothing below needs the old cwd.
+cd "$TMP"
+
 # Keep the fixture repos out of the developer's own git identity/config.
 export GIT_CONFIG_NOSYSTEM=1
 export HOME="$TMP/home"
