@@ -54,3 +54,15 @@ Re-authorize the Google-Cloud-BigQuery connector in claude.ai connector settings
 - **Calendar:** no second event was created. The existing event `lm3n7i64nso4babvjk9vn22nm8` was amended in place with one `UPDATE 19:27 MDT` line (about 2.0 KB in total, re-read and intact), with notification level NONE. That thread shows that SL2 (19:05 MDT) also halted and added a 19:06 line. SL2 has no repo record on `origin/main`.
 - **After re-auth:** do NOT backfill a `completed` `run_log` row for this slot. SL5 is queue-driven and `catchup_safe: false`, so no OPS0/OPS2 replay is owed. Its next regular fire (Tue 2026-09-29, 19:25 MT) picks up any due item, because the `PENDING_ROSTER` scan's due predicate is `due_date <= today`. `state.stalled_runs` records the miss.
 - **No new finding filed.** SL5's section has no CONNECTOR-DOWN DISPOSITION limb of its own. That is one more instance of the fleet-wide disposition-table gap, which is already owned by W5 SPEC-DEFECT NOTICE INTAKE / OPS0 (see §3 above), and `ops.alerts` is unreachable anyway.
+
+---
+
+## SL3 (Incubation Monitor & Graduation) slot, 2026-09-28: HALTED
+
+- **Clock at pre-flight:** UTC `2026-09-29 02:11`, **Denver `2026-09-28 20:11` (Monday)**. SL3 fired on its regular Sun–Thu schedule. **Nothing was written to BigQuery.** There is no `ops.run_log` row. The arsenal kill-switch read, the dependency gate on D2a, STEP 1's marks catch-up loop, the SHADOW→PAPER graduation evaluation, the STEP 3 `ops.roster_change_log` marker, the STEP 4 `cooldown_until` stamp and the STEP 5 regime-coverage read were not run.
+- **Signature:** the same as D3's and SL5's. The Google-Cloud-BigQuery MCP server was **not exposed at all** (harness listed it as "requires authentication"; a tool search for BigQuery tools returned nothing). A diagnostic-only REST `jobs.query` `SELECT 1` with the session's ambient token returned `401`. Re-auth class, non-waitable, so no retry ladder was run.
+- **Disposition: HALTED, and the SHADOW/PAPER incubation state is UNKNOWN, not quiet.** SL3 promotes nothing and reports no graduations without a passed gate and fresh readiness views. It touches no capital, so the halt carries no order-side exposure.
+- **Recoverable, unlike AR_orc/SL5:** SL3 is `catchup_safe: true` and owns STEP 1's multi-day catch-up loop, so its next fire with BigQuery live re-covers 2026-09-28, provided a `state.daily_marks_curated` row exists for that day (D2a ran before the 17:21 MDT D2 commit, so it should). No manual replay is owed.
+- **Calendar:** no second event. The existing event `lm3n7i64nso4babvjk9vn22nm8` was amended in place with one `UPDATE 20:15 MDT` line (about 2.4 KB total, re-read and intact), notification level NONE.
+- **After re-auth:** do NOT backfill a `completed` `run_log` row for this slot; the cadence and freshness dead-man switches record the miss.
+- **No new finding filed.** SL3's section already carries its own connector/dependency-halt limb, and the fleet-wide disposition-table gap is owned by W5 SPEC-DEFECT NOTICE INTAKE / OPS0 (see §3 above); `ops.alerts` is unreachable anyway.
