@@ -127,7 +127,7 @@
     "A1": {
       "cron_expression": "0 17 1 1 *",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform A1 — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform A1 — deep research.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "A1 — deep research",
       "profile": "fleet",
       "trigger_id": "trig_01GhUQNuRvefpziCGz44NaKz"
@@ -135,7 +135,7 @@
     "A2": {
       "cron_expression": "15 20 1 1 *",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform A2 — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform A2 — deep research.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "A2 — deep research",
       "profile": "fleet",
       "trigger_id": "trig_01FagAoazkE4GsxF5EaC3cPy"
@@ -143,7 +143,7 @@
     "A3": {
       "cron_expression": "0 21 1 1 *",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform A3 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform A3 — regular routine.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "A3 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_01WJrA74ehQhzVbbwNS7rX9w"
@@ -151,7 +151,7 @@
     "AR_att": {
       "cron_expression": "0 0 * * 1,2,3,4,5",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform Adversarial Review Attacker — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform Adversarial Review Attacker — regular routine.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "Adversarial Review Attacker — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_01KQWESvxCXWVGU18K6Cao5G"
@@ -159,7 +159,7 @@
     "AR_orc": {
       "cron_expression": "35 0 * * 1,2,3,4,5",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform Adversarial Review Orchestrator — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform Adversarial Review Orchestrator — regular routine.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "Adversarial Review Orchestrator — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_01J2qHCC1ABZdwM2R1UqwDSQ"
@@ -167,7 +167,7 @@
     "D1": {
       "cron_expression": "0 22 * * 0,1,2,3,4",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform D1 — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform D1 — deep research.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "D1 — deep research",
       "profile": "fleet",
       "trigger_id": "trig_016gmftbKkEi7zDqDrA3u97o"
@@ -175,7 +175,7 @@
     "D2": {
       "cron_expression": "15 23 * * 0,1,2,3,4",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform D2 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform D2 — regular routine.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "D2 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_014eoNf1qNZZ8Ec5n2s6KxRP"
@@ -183,7 +183,7 @@
     "D2a": {
       "cron_expression": "40 22 * * 0,1,2,3,4",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform D2a — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform D2a — regular routine.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "D2a — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_015kDvXCKiDRd5Z2bXwaRny3"
@@ -191,7 +191,7 @@
     "D3": {
       "cron_expression": "45 0 * * 1,2,3,4,5",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform D3 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform D3 — regular routine.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "D3 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_01B9Dw1E8DqucUVWTmafstcR"
@@ -199,7 +199,7 @@
     "M1R": {
       "cron_expression": "0 13 * * 0,1,2,3,4",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform M1R — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform M1R — regular routine.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "M1R — regular routine",
       "overrides": {
         "mcp_connections": [
@@ -267,7 +267,7 @@
     "M1a": {
       "cron_expression": "0 11 1 * *",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform M1a — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform M1a — deep research.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "M1a — deep research",
       "profile": "fleet",
       "trigger_id": "trig_01Jfx7KZRACgSUSQBnwSz7wC"
@@ -275,7 +275,7 @@
     "M1b": {
       "cron_expression": "0 12 1 * *",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform M1b — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform M1b — regular routine.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "M1b — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_01SWhTsnjXMCfcbm9YxC2tWt"
@@ -283,7 +283,7 @@
     "M2": {
       "cron_expression": "0 13 1 * *",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform M2 — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform M2 — deep research.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "M2 — deep research",
       "profile": "fleet",
       "trigger_id": "trig_01NBdVcixbddnv3kv8ZPpfM3"
@@ -291,7 +291,7 @@
     "M3": {
       "cron_expression": "0 14 1 * *",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform M3 — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform M3 — deep research.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "M3 — deep research",
       "profile": "fleet",
       "trigger_id": "trig_019FRQHZV9e7cmtHEc6yoeqG"
@@ -299,7 +299,7 @@
     "M4": {
       "cron_expression": "0 15 1 * *",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform M4 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform M4 — regular routine.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "M4 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_015YrWDDNLYZN1wzmG38MT5Y"
@@ -307,7 +307,7 @@
     "M5": {
       "cron_expression": "0 16 1 * *",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform M5 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform M5 — regular routine.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "M5 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_01EVgnRg1F8VcfZfpwTpUzCK"
@@ -315,7 +315,7 @@
     "OPS0": {
       "cron_expression": "30 4 * * 1,2,3,4,5",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform OPS0 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform OPS0 — regular routine.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "OPS0 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_018zZNYXYmgkqbmcfzss1YjU"
@@ -323,7 +323,7 @@
     "OPS1": {
       "cron_expression": "30 12 * * 0,1,2,3,4",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform OPS1 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform OPS1 — regular routine.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "OPS1 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_012jxpUDFsrTR5FnSRmnxej4"
@@ -331,7 +331,7 @@
     "OPS2": {
       "cron_expression": "15 4 * * 1,2,3,4,5",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform OPS2 — regular routine.\n\nNOTE — OPS2 deliberately does NOT carry the standing Sonnet-delegation paragraph that every other routine has (\"Spawn Sonnet 5 model sub-agents to do the grunt work...\"). That omission is intentional and owner-confirmed (2026-07-28): OPS2 hosts missed routines INLINE and must execute their judgment-heavy steps at full model-of-record fidelity (task_plan/OPS2.md hosting requirement (a), NO MODEL DOWNGRADE), which a blanket instruction to push grunt work onto Sonnet sub-agents would contradict. Do not \"fix\" this difference.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform OPS2 — regular routine.\n\nNOTE — OPS2 deliberately does NOT carry the standing Sonnet-delegation paragraph that every other routine has (\"Spawn Sonnet 5.5 model sub-agents to do the grunt work...\"). That omission is intentional and owner-confirmed (2026-07-28): OPS2 hosts missed routines INLINE and must execute their judgment-heavy steps at full model-of-record fidelity (task_plan/OPS2.md hosting requirement (a), NO MODEL DOWNGRADE), which a blanket instruction to push grunt work onto Sonnet sub-agents would contradict. Do not \"fix\" this difference.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "OPS2 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_01YSwsMubckdarNX9Z8yb4eX"
@@ -339,7 +339,7 @@
     "Q1": {
       "cron_expression": "0 17 2 1,4,7,10 *",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform Q1 — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform Q1 — deep research.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "Q1 — deep research",
       "profile": "fleet",
       "trigger_id": "trig_01Nx9NSc325swQTYdLrAZqCB"
@@ -347,7 +347,7 @@
     "Q2": {
       "cron_expression": "0 18 2 1,4,7,10 *",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform Q2 — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform Q2 — deep research.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "Q2 — deep research",
       "profile": "fleet",
       "trigger_id": "trig_013Mn9xxPut54ZbsjwivK5Eo"
@@ -355,7 +355,7 @@
     "Q3": {
       "cron_expression": "0 19 2 1,4,7,10 *",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform Q3 — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform Q3 — deep research.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "Q3 — deep research",
       "profile": "fleet",
       "trigger_id": "trig_01BKd6KmcriLTR2u1hhebtrt"
@@ -363,7 +363,7 @@
     "Q4": {
       "cron_expression": "0 20 2 1,4,7,10 *",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform Q4 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform Q4 — regular routine.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "Q4 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_01JMweJiKsWc3CWD8C7kK6qG"
@@ -371,7 +371,7 @@
     "SL1": {
       "cron_expression": "0 21 2 1,4,7,10 *",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform SL1 — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform SL1 — deep research.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "SL1 — deep research",
       "profile": "fleet",
       "trigger_id": "trig_01FcK8PZ9tw4nceNoH1nJiTb"
@@ -379,7 +379,7 @@
     "SL2": {
       "cron_expression": "5 1 * * 1,2,3,4,5",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform SL2 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform SL2 — regular routine.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "SL2 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_01VrC8TjY3GRxHUrS16vfHUo"
@@ -387,7 +387,7 @@
     "SL3": {
       "cron_expression": "0 2 * * 1,2,3,4,5",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform SL3 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform SL3 — regular routine.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "SL3 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_01U1oHM1KfLY5ManmAnda3gg"
@@ -395,7 +395,7 @@
     "SL4": {
       "cron_expression": "30 16 1 * *",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform SL4 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform SL4 — regular routine.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "SL4 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_01JuMzHVRdom4c2KdWLtnx2v"
@@ -403,7 +403,7 @@
     "SL5": {
       "cron_expression": "25 1 * * 1,2,3,4,5",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform SL5 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform SL5 — regular routine.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "SL5 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_019WdiFqtyjRh5uatMXQe789"
@@ -411,7 +411,7 @@
     "W1": {
       "cron_expression": "30 7 * * 0",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform W1 — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform W1 — deep research.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "W1 — deep research",
       "profile": "fleet",
       "trigger_id": "trig_01HDRhBsGHS4pQFJuz1cranP"
@@ -419,7 +419,7 @@
     "W2": {
       "cron_expression": "0 8 * * 0",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform W2 — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform W2 — deep research.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "W2 — deep research",
       "profile": "fleet",
       "trigger_id": "trig_01MXjDUrfVnHtpPoFBDirScG"
@@ -427,7 +427,7 @@
     "W3": {
       "cron_expression": "0 9 * * 0",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform W3 — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform W3 — deep research.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "W3 — deep research",
       "profile": "fleet",
       "trigger_id": "trig_018nnRWbq5JJsrnxavdpJ26B"
@@ -435,7 +435,7 @@
     "W4": {
       "cron_expression": "30 9 * * 0",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform W4 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform W4 — regular routine.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "W4 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_01CVuxETpeuAKZ3rS5gWESDf"
@@ -443,14 +443,14 @@
     "W5": {
       "cron_expression": "0 5 * * 1",
       "enabled": true,
-      "instruction": "Read Claude_Task_Plan.md. Perform W5 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
+      "instruction": "Read Claude_Task_Plan.md. Perform W5 — regular routine.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "W5 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_014vYVaPVpHqjkQWKEsaXBdr"
     },
     "personal_research_leading_omnireference_video_platforms": {
       "enabled": false,
-      "instruction": "Deep Research current leading platforms in video generation that allows reference inputs in image, video, and audio, aka \"omnireference\" (it doesn't have to be named that).  Don't consider lite/flash/mini versions of models even if they are higher in versioning, only consider the latest full version models. Rank them.\n\nPut the conclusion of your research in \"Leading_Omnireference_Video_Platforms.md\". Do not append. Replace all existing text in \"Leading_Omnireference_Video_Platforms.md\". Create if it doesn't exist.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have solved ALL issues during your run. For new issues found outside of the scope of this prompt, go with your best recommendation and fix.",
+      "instruction": "Deep Research current leading platforms in video generation that allows reference inputs in image, video, and audio, aka \"omnireference\" (it doesn't have to be named that).  Don't consider lite/flash/mini versions of models even if they are higher in versioning, only consider the latest full version models. Rank them.\n\nPut the conclusion of your research in \"Leading_Omnireference_Video_Platforms.md\". Do not append. Replace all existing text in \"Leading_Omnireference_Video_Platforms.md\". Create if it doesn't exist.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have solved ALL issues during your run. For new issues found outside of the scope of this prompt, go with your best recommendation and fix.",
       "name": "Research Leading Omnireference Video Platforms",
       "profile": "personal",
       "run_once_at": "2026-08-01T12:52:00Z",
@@ -458,7 +458,7 @@
     },
     "personal_update_image_generation_in_the_pipeline": {
       "enabled": false,
-      "instruction": "Read \"Current_Pipeline.md\". The last node is always the video generation platform. Do not alter that one.\n\nDeep Research current leading platforms in image generation in these categories: prompt adherence, visual quality, composition & structure, style & creative control, text rendering, image-to-image editing capabilities. (one platform can be leading in multiple categories). Analyze the current pipeline. Should it stay the same, or new platforms need to be added (happens if adding another platform into the pipeline get rid of current deficiencies or improves final image), or updated (new models of the same platform, don't just update because of new version, but actually check that the new model's capabilities are indeed better than the old model) or deleted (happens if simplification of the pipeline can occur due to improvements of a platform's capability such that it overtakes another platform in both categories). Don't consider each pipeline step as independent steps, but builds upon one another. e.g. Putting a model that is leading at pure text-to-image with no references in step 3 would not make sense because that spot would not utilize its leading capability. Don't consider lite/flash/mini versions of models even if they are higher in versioning, only consider the latest full version models.\n\nPut the conclusion of your research in \"Pipeline_Recommendations.md\". Do not append. Replace all existing text in \"Pipeline_Recommendations.md\". Create if it doesn't exist. Do not alter \"Current_Pipeline.md\".\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n\nDo not give final response until you have solved ALL issues during your run. For new issues found outside of the scope of this prompt, go with your best recommendation and fix.",
+      "instruction": "Read \"Current_Pipeline.md\". The last node is always the video generation platform. Do not alter that one.\n\nDeep Research current leading platforms in image generation in these categories: prompt adherence, visual quality, composition & structure, style & creative control, text rendering, image-to-image editing capabilities. (one platform can be leading in multiple categories). Analyze the current pipeline. Should it stay the same, or new platforms need to be added (happens if adding another platform into the pipeline get rid of current deficiencies or improves final image), or updated (new models of the same platform, don't just update because of new version, but actually check that the new model's capabilities are indeed better than the old model) or deleted (happens if simplification of the pipeline can occur due to improvements of a platform's capability such that it overtakes another platform in both categories). Don't consider each pipeline step as independent steps, but builds upon one another. e.g. Putting a model that is leading at pure text-to-image with no references in step 3 would not make sense because that spot would not utilize its leading capability. Don't consider lite/flash/mini versions of models even if they are higher in versioning, only consider the latest full version models.\n\nPut the conclusion of your research in \"Pipeline_Recommendations.md\". Do not append. Replace all existing text in \"Pipeline_Recommendations.md\". Create if it doesn't exist. Do not alter \"Current_Pipeline.md\".\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have solved ALL issues during your run. For new issues found outside of the scope of this prompt, go with your best recommendation and fix.",
       "name": "Update Image Generation in the Pipeline",
       "profile": "personal",
       "run_once_at": "2026-08-01T12:52:00Z",

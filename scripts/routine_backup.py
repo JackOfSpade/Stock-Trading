@@ -71,8 +71,8 @@ CADENCE_PATH = os.path.join(ROOT, "ops", "cadence.yaml")
 # and a blanket "push grunt work to a weaker sub-agent model" instruction is in direct tension with
 # that job; see ops/cadence.yaml's OPS1/OPS2 block and bigquery/15_routine_catalog.sql's header for
 # the full rationale). check()'s check (2) enforces this exception explicitly.
-ADDENDUM = ("\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing "
-            "(Opus 5) for design/analysis/orchestration work only.")
+ADDENDUM = ("\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing "
+            "(Opus 5.5) for design/analysis/orchestration work only.")
 OPS2_NO_ADDENDUM_ID = "OPS2"
 
 # The operator's standing scope-completion directive, appended verbatim to EVERY live routine

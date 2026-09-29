@@ -478,8 +478,8 @@ routines:
                                     #
                                     # STANDING ADDENDUM DELIBERATELY OMITTED (owner-confirmed 2026-07-28).
                                     # Every OTHER routine's live trigger carries the operator's standing
-                                    # second paragraph ("Spawn Sonnet 5 model sub-agents to do the grunt
-                                    # work. Save your processing (Opus 5) for design/analysis/orchestration
+                                    # second paragraph ("Spawn Sonnet 5.5 model sub-agents to do the grunt
+                                    # work. Save your processing (Opus 5.5) for design/analysis/orchestration
                                     # work only."). OPS2's does NOT, on purpose: OPS2 HOSTS other routines
                                     # inline at full fidelity, and its own slice's hosting requirement (a)
                                     # NO MODEL DOWNGRADE ("execute X's judgment-heavy steps at that
@@ -539,7 +539,7 @@ routines:
     # the SINGLE SOURCE OF TRUTH note above) -- this is the ONLY routine with an instruction_note today.
     instruction_note: >-
       NOTE — OPS2 deliberately does NOT carry the standing Sonnet-delegation paragraph that every other
-      routine has ("Spawn Sonnet 5 model sub-agents to do the grunt work..."). That omission is
+      routine has ("Spawn Sonnet 5.5 model sub-agents to do the grunt work..."). That omission is
       intentional and owner-confirmed (2026-07-28): OPS2 hosts missed routines INLINE and must execute
       their judgment-heavy steps at full model-of-record fidelity (task_plan/OPS2.md hosting requirement
       (a), NO MODEL DOWNGRADE), which a blanket instruction to push grunt work onto Sonnet sub-agents

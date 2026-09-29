@@ -72,7 +72,7 @@
     "monitor_class": "daily_sun_thu"
   },
   "OPS2": {
-    "instruction": "Read Claude_Task_Plan.md. Perform OPS2 — regular routine.\n\nNOTE — OPS2 deliberately does NOT carry the standing Sonnet-delegation paragraph that every other routine has (\"Spawn Sonnet 5 model sub-agents to do the grunt work...\"). That omission is intentional and owner-confirmed (2026-07-28): OPS2 hosts missed routines INLINE and must execute their judgment-heavy steps at full model-of-record fidelity (task_plan/OPS2.md hosting requirement (a), NO MODEL DOWNGRADE), which a blanket instruction to push grunt work onto Sonnet sub-agents would contradict. Do not \"fix\" this difference.",
+    "instruction": "Read Claude_Task_Plan.md. Perform OPS2 — regular routine.\n\nNOTE — OPS2 deliberately does NOT carry the standing Sonnet-delegation paragraph that every other routine has (\"Spawn Sonnet 5.5 model sub-agents to do the grunt work...\"). That omission is intentional and owner-confirmed (2026-07-28): OPS2 hosts missed routines INLINE and must execute their judgment-heavy steps at full model-of-record fidelity (task_plan/OPS2.md hosting requirement (a), NO MODEL DOWNGRADE), which a blanket instruction to push grunt work onto Sonnet sub-agents would contradict. Do not \"fix\" this difference.",
     "monitor_class": "daily_sun_thu"
   },
   "Q1": {
