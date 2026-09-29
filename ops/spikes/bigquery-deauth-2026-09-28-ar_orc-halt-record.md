@@ -74,3 +74,10 @@ Re-authorize the Google-Cloud-BigQuery connector in claude.ai connector settings
 - **SL3: CAUGHT UP INLINE by OPS2.** Both gates passed. There are 0 SHADOW/PAPER members, so no transition and no cull. The heartbeat was written, and the completion was verified before the `ops.catchup_refire_log` row was written.
 - **D3: DEFERRED, not run.** D3's own section calls `create_order_instruction`, so OPS2's order-craft slice-scan excludes it by design. It is left for OPS0's 22:30 MT `catchup_refire_blocked` email: the operator re-runs D3 through its own trigger.
 - **AR_orc, SL2, SL5:** no replay is owed (per the disposition table). Their next regular fires pick up the queue.
+
+## D3 (Calendar Hygiene) re-run, 2026-09-28: COMPLETED
+
+- **Clock:** started 22:27 MDT on 2026-09-28 (04:27 UTC on 2026-09-29). This was the re-run through D3's own trigger that OPS2 deferred it to. The BigQuery MCP answered on the first call. `sp_assert_deps('D3', ['D2'])` passed and the SAME-DAY DOUBLE-RUN GUARD read 0, so this session is the day's only D3 completion. It does not backfill the halted 18:45 slot.
+- **Calendar:** both leftover `[Claude] ATTENTION — RE-AUTH BigQuery connector` events were deleted, because this session's own pre-flight is the evidence the D3 bullet requires. They are `lm3n7i64nso4babvjk9vn22nm8` (this incident) and `09q69g3odvhhbiom3drf15uc60` (the 2026-09-21 incident, still on the calendar a week later). Both deletes used notification NONE.
+- **Result:** IBKR has no instructions and no working orders, and `state.open_orders` is empty. The queue has no past-due items. All check views (ops0 fallback, CI findings, promotion ladder, sq drift) are clean.
+- **One real action:** the Tier-M model-of-record sync `claude-opus-5` → `claude-opus-5-5` in `AI_Trading_Foundation.md`, at rev 10. This is the sync that commit `8bcaba5` deliberately left for D3. See `events.decision_log` `foundation-change-review` 2026-09-28.
