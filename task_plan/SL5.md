@@ -840,7 +840,7 @@ Queue-driven (fires Sun-Thu; no-ops unless a roster-mutation task is due). The D
 ```
 Read access scope: daily (queue-driven), full repo + SQL write access (the D2a self-execute model). Read `state.strategy_adoption_readiness`, `state.strategy_roster`, `strategy/roster.yaml`, `ops.roster_change_log`, `events.queue_events` / `state.open_queue_detail`, `events.strategy_lifecycle`, `ops.arsenal_control`, `ops.trading_control`, `analytics.theater_judge` (via `ops.sp_score_theater()`, ITEM 7).
 
-Observability: connector pre-flight, `ops.sp_auto_resolve_alerts()`, run-logging, failure alerts — per the shared Observability section. Queue-driven → monitored via `state.stalled_runs` + `ops/triggers.json` (NOT cadence/period watch).
+Observability: connector pre-flight, `ops.sp_auto_resolve_alerts()`, run-logging, failure alerts — per the shared Observability section. Queue-driven → monitored via `state.stalled_runs` + `ops/triggers.json` + `state.queue_driven_missed_fire_watch` (NOT cadence/period watch). `state.queue_driven_missed_fire_watch` (`bigquery/241`) is the per-day missed-slot detector (warning `queue_driven_missed_fire`, one per routine-date); `state.stalled_runs` sees only a run that wrote a `started` row, so a pre-flight halt (no `run_log` row at all) is invisible to it.
 
 **ARSENAL KILL-SWITCH GATE — SEPARATE and FATAL, do NOT wrap — `CALL ops.sp_assert_arsenal_enabled('SL5')` before the dependency gate.** RAISEs + `critical` alert (abort) if the arsenal loop is disabled/frozen.
 

@@ -686,7 +686,9 @@ routines:
       cycle-5 soft cap), and authors events.strategy_postmortems on a TERMINATED transition. INDEPENDENT
       context from SL1 and the AR reviewers. Gated by ops.sp_assert_arsenal_enabled('SL2'). NEVER stages
       orders, NEVER touches capital, NEVER edits the live roster (SL5 does that). queue_driven: registers in
-      bigquery/15 + ops/triggers.json + bigquery/18 stalled_runs only (NOT 12/24).
+      bigquery/15 + ops/triggers.json + bigquery/18 stalled_runs + bigquery/241 per-day missed-fire watch
+      (NOT 12/24). stalled_runs sees only a run that wrote a started row; a pre-flight halt writes none and
+      is caught by bigquery/241 (queue_driven_missed_fire) instead.
   - id: SL5
     name: Strategy Register & Roster Sync
     schedule: "Sun-Thu; if a SUFFICIENT strategy-adoption verdict, an SL3 PAPER->PROBE enqueue, or a TERMINATED transition is due"
@@ -717,7 +719,8 @@ routines:
       register into the existing probe-stake funding queue), TERMINATED deregister (the reverse). Idempotent
       via ops.roster_change_log (the ops.d2a_cutover_log analog, keyed by change_key). Gated by
       ops.sp_assert_arsenal_enabled('SL5'); FATAL sp_assert_deps(['AR_orc']). Never a chat question, ever.
-      queue_driven: registers in bigquery/15 + ops/triggers.json + bigquery/18 stalled_runs only (NOT 12/24).
+      queue_driven: registers in bigquery/15 + ops/triggers.json + bigquery/18 stalled_runs + bigquery/241
+      per-day missed-fire watch (NOT 12/24). A pre-flight halt writes no started row, so only 241 sees it.
 
   # ---- WEEKLY (Sunday) ----
   - id: W1
@@ -900,7 +903,8 @@ routines:
       later run reproduces the same work (a pure re-score off dated series, no live-quote or order crafting) —
       inert in practice, since queue_driven routines are outside the calendar catch-up nets entirely.
       queue_driven: registers in bigquery/15 + ops/triggers.json + bigquery/105 + bigquery/132 +
-      state.stalled_runs only (NOT 12/24).
+      state.stalled_runs + bigquery/241 per-day missed-fire watch (NOT 12/24). A pre-flight halt writes no
+      started row, so only 241 sees it.
   - id: SL4
     name: Discretionary Retirement Proposer
     schedule: "monthly after M4"

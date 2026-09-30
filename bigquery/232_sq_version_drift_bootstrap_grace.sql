@@ -123,6 +123,13 @@ SELECT
   -- MON H5 (2026-07-17) beat-AGE dead-man. GRACE_FACTOR = 1.5 (a daily query tolerates one missed run
   -- before flagging; weekly ~10.5d; monthly ~46d — the monthly restore_drill is additionally covered by
   -- restore_stale's own >40d critical, so a generous grace here just avoids false fires on the backstop).
+  -- CORRECTED 2026-09-30 (bigquery/249; comment-only, no code change): the "a daily query tolerates one
+  -- missed run" clause above is FALSE for the daily queries. ops.sp_sq_cadence_check runs at 05:15 UTC,
+  -- BEFORE the 05:25-05:40 beats of the daily queries, so at 05:15 a daily query's newest beat is
+  -- yesterday's, and a SINGLE skipped daily run is seen at ~47.75h old at the next 05:15 pass -- past the
+  -- 36h limit (24h x 1.5) -- and DOES raise the next morning (backup_events_export, 2026-09-29 run skipped,
+  -- alert 715b5439 raised 2026-09-30 05:17). That is intended and unchanged: one missed backup SHOULD
+  -- warn. Only this sentence was wrong. The weekly/monthly figures are unaffected.
   --   * stale_beat: a query that HAS beaten (monitored) but whose last beat is older than interval x grace
   --     — it was running and silently stopped. NULL expected_interval_hours (unseeded) can never fire.
   (COALESCE(lb.ever_reported_version, FALSE)

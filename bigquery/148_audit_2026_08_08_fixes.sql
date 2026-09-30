@@ -246,6 +246,13 @@ WHERE t.routine IS NULL
 -- 2026-08-08: the payload keys are exactly marks_fresh, engine_fresh, embeddings_healthy and
 -- position_drift_detected (all four spelled as expected below; no rename needed). See the WHY section
 -- above for the full defect.
+-- SUPERSEDED FURTHER (2026-09-30) by bigquery/249_scheduled_query_stale_recovery_resolve.sql, which is now
+-- the CURRENT single source of truth for ops.sp_auto_resolve_alerts (chain: 94 -> 97 -> 107 -> 130 -> 134
+-- -> 148 -> 249). Any pointer above that names bigquery/148 as "current" is now one hop stale. 249 carries
+-- Rules 1, 2, 3, 3b, 4 and 5 byte-identical to bigquery/148 and appends Rule 6 (scheduled_query_stale
+-- resolves on RECOVERY, not only on the 7-day age-out). Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only. DO NOT re-apply this CREATE OR REPLACE PROCEDURE statement live in
+-- isolation -- that would silently remove Rule 6.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_auto_resolve_alerts`()
 BEGIN
   DECLARE eligible_dep, eligible_run, eligible_stalled, eligible_stale, eligible_refire_blocked ARRAY<STRING>;

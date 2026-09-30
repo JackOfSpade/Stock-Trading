@@ -27,6 +27,13 @@
 -- connector identity, while the 14:00 hour has 185 -- bounding recovery to 13:21-14:00 UTC. The
 -- durable record is OWNER_ACTIONS.md BQ-1 and commit bd81376. ops.alerts 1e57700b is resolved on that
 -- correction and superseded by 3caa7e7b.
+-- CORRECTED 2026-09-30 (interactive alert triage; appended, the sentence above is left as written): the
+-- "185 jobs in the 14:00 hour" were gh-ci-runner jobs, not the connector identity. Filtering
+-- INFORMATION_SCHEMA.JOBS_BY_PROJECT on the connector's own label (goog-mcp-server = 'true', user
+-- jacksterwu@gmail.com) shows ZERO connector jobs in the 14:00 hour on 2026-09-14; the first connector job
+-- after M1R's halt is 17:53:26 UTC. So recovery is bounded to 13:21-17:53 UTC, not 13:21-14:00. Any
+-- future connector-outage bracket must filter on that label -- the owner's email alone also matches the
+-- Apps Script emailer poll, the bq CLI, Looker Studio and DTS.
 --
 -- So the defect is NOT "a queue-driven trigger can silently fail to fire". It is that a routine whose
 -- slot falls inside an outage leaves NO durable BigQuery trace, and for this one class nothing

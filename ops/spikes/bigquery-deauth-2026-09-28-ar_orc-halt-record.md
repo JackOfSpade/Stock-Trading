@@ -81,3 +81,14 @@ Re-authorize the Google-Cloud-BigQuery connector in claude.ai connector settings
 - **Calendar:** both leftover `[Claude] ATTENTION — RE-AUTH BigQuery connector` events were deleted, because this session's own pre-flight is the evidence the D3 bullet requires. They are `lm3n7i64nso4babvjk9vn22nm8` (this incident) and `09q69g3odvhhbiom3drf15uc60` (the 2026-09-21 incident, still on the calendar a week later). Both deletes used notification NONE.
 - **Result:** IBKR has no instructions and no working orders, and `state.open_orders` is empty. The queue has no past-due items. All check views (ops0 fallback, CI findings, promotion ladder, sq drift) are clean.
 - **One real action:** the Tier-M model-of-record sync `claude-opus-5` → `claude-opus-5-5` in `AI_Trading_Foundation.md`, at rev 10. This is the sync that commit `8bcaba5` deliberately left for D3. See `events.decision_log` `foundation-change-review` 2026-09-28.
+
+## Correction (2026-09-30, interactive triage)
+
+Appended; nothing above is edited.
+
+- **The SL5 section's "`state.stalled_runs` records the miss" is wrong for a pre-flight halt.** `state.stalled_runs` keys on a `started` row with no terminal row. A run that halts at connector pre-flight writes no `ops.run_log` row at all (run-logging is itself a BigQuery write), so that view never sees it. The plan's Observability lines for M1R, SL2 and SL5 carried the same stale monitor list and were corrected the same day to name `state.queue_driven_missed_fire_watch` (`bigquery/241`).
+- **What did record the misses.** The 2026-09-28 slots of AR_orc, SL2 and SL5 were recorded by `queue_driven_missed_fire` alerts `52a472fd`, `20a69cad` and `f4b612b9` respectively, raised on 2026-09-30 at about 05:15 UTC by the daily cadence check. That category closes by 7-day age-out (about 2026-10-08) and must not be hand-resolved before about 2026-10-05 05:15 UTC, when 2026-09-28 leaves the detector's 5-day lookback. An earlier resolve is re-minted by the next nightly run, as a fresh email and push.
+- **The de-auth onset is bracketed tighter than section 2's 17:21 to 18:36 MDT.** AR_att's connector jobs ran to `00:16:08 UTC`, and AR_orc's first failure was at `00:36 UTC`, so onset falls between 18:16 and 18:36 MDT (2026-09-28).
+- **First post-recovery connector job:** `04:16:22 UTC` (22:16 MDT).
+- **SL2 also fired and halted on the same de-auth.** It started at `01:05:44 UTC` (session `cse_01NrzFjMevJyhc4aDRNNTVWk`) and left no repo record, which is why it has no slot section above.
+- **Section 3's "the missed slot is recorded by the freshness and cadence dead-man switches" is also wrong for AR_orc.** AR_orc is `queue_driven`, so it is structurally absent from `state.cadence_watch` / `state.cadence_period_watch`. Its miss was recorded only by `queue_driven_missed_fire` (`52a472fd`), as above. The same sentence in the D3 section is correct, because D3 is a calendar-tier routine that `cadence_watch` does cover.
