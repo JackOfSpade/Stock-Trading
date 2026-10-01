@@ -1,355 +1,330 @@
-2026-09
+2026-10
 
-# E Pair Divergence Screen — September 2026
+# E Pair Divergence Screen — October 2026
 
-**Run 2026-09-01 (M2, deep research). Every correlation, beta, volatility and spread below was re-measured this session from IBKR daily closes — nothing is carried over from the August edition.** The catch-up evidence window resolved to 28.95 days (`state.routine_catchup_window`, back to M2's own last completed run at 2026-08-03) — cadence-normal for a monthly routine, single-period, so no missed-period sub-sections are owed and no `CATCHUP` token is due.
+**Run 2026-10-01 (M2, deep research). Every correlation, beta, volatility and spread below was re-measured this session from IBKR regular-session daily closes — nothing is carried over from the September edition.** The catch-up evidence window resolved to 29.95 days (`state.routine_catchup_window`, back to M2's own last completed run at 2026-09-01 14:11 UTC) — cadence-normal for a monthly routine, single-period, so no missed-period sub-sections are owed and no `CATCHUP` token is due.
 
-## The gate that blocked this shortlist in August has been REMOVED
+## Activation state — E is BLOCKED on BOTH halves of its router this month
 
-The August edition closed by saying that "what blocks entry is no longer execution — it is E's fundamental DO-NOT-ACTIVATE call (divergence review pending), `state.trading_enabled = FALSE`, and the open Tier-1 defect on E's pre-mortem." **Two of those three have since changed, and the August text is now stale on the first one.**
+The September edition was written while E's binding state was still `ACTIVATE`. **That changed three days later and is still in force.**
 
-- **Strategy E's binding activation state is `ACTIVATE`**, set 2026-08-05 by divergence review `div-E-202607-1` — **two days after the August screen was written**, which is why that edition could not see it. The orchestrator lifted the standing `execution-feasibility-deferred` qualifier **in full**, and it did so partly on evidence this very screen produced: M2's August measurement that 60-day correlation exceeded 252-day in 66 of 89 pairs empirically refuted M1b's stationarity ground. Measured this session from `events.regime_events` (scope `STRATEGY_ACTIVATION`, key `E`); no later row supersedes it.
-- **E's technical gate also reads ACTIVATE on today's inputs**: SPY Trend `UP` (767.05 > 50d 754.36 > 200d 710.27), VIX Regime `LOW` (14.92), Equity Breadth `HEALTHY` (66.2). E's technical rule requires SPY ≠ DOWN **and** VIX ≠ HIGH **and** Breadth = HEALTHY; all three hold.
-- **The pre-mortem Tier-1 defect is still open, and it has moved on since the August edition's description of it.** `state.open_queue` still carries `premortem-E-2026-a3` as `PENDING_REVIEW`, due today. But it is now at **cycle 13** (attacker verdict `TIER 1 DEFECT — REVISION REQUIRED`, theater-check `MIXED`, dated 2026-08-31), with **no orchestrator ruling yet**. Both the August edition and the `state.current_regime` rationale text still describe it as "cycle 6" — that is stale by seven cycles. The live cycle-13 Tier-1 item is narrow and methodological: a `grep` sweep the rev-15 artifact claims is "mechanically reproducible" does not in fact reproduce the artifact's own enumeration, so a method-level discharge claim is false as literally stated.
+- **Binding state: `DO-NOT-ACTIVATE` since 2026-09-04** — divergence review `div-E-202608-1` (cycle 2, theater-check DIVERGENT) converted E from ACTIVATE on the universal `shock_overlay = acute → DO-NOT-ACTIVATE` override, which fired on E for the first time. The orchestrator upheld the override on four grounds, one of them this screen's own August measurement (60d correlation above 252d in 66 of 89 pairs) read as directional evidence of rising within-industry correlation. Measured from `events.regime_events` (scope `STRATEGY_ACTIVATION`, key `E`, event_ts 2026-09-04 01:03 UTC); no later row supersedes it.
+- **Technical gate also FAILS on today's inputs.** E requires SPY ≠ DOWN **and** VIX ≠ HIGH **and** Breadth = HEALTHY. As of 2026-09-30: SPY Trend `NEUTRAL` (762.63, 0.11 below its 50d 762.74 — passes ≠ DOWN), VIX `NORMAL` (16.34 — passes), **Equity Breadth `WEAK` (40.55%, Barchart $S5TH) — FAILS**. Breadth has fallen from 66.2 at the September screen to 40.55. That is exactly the narrow-participation condition E's spec says compresses within-industry spreads.
+- **Pre-mortem: CLEARED.** The September edition described `premortem-E-2026-a3` cycle 13 as open with no orchestrator ruling. AR_orc ruled the same day, 2026-09-01: **SUFFICIENT**, the attacker's Tier-1 defect not sustained, the pre-mortem unblocked for first-trade gating (`events.decision_log` `8d15c8e3-6c57-43fd-baf0-d4338ac336a2`). That stale description is corrected here.
+- **What happened to September's shortlist.** M4 2026-09-01 enqueued two pairs for thesis construction, and D2 drained both on 2026-09-03. **DY/EME was NO-GO on the merits**: criterion 2 failed on four fresh sell-side target cuts (`e04dc017-b375-49f2-bb48-230a6365d88a`). **EFX/TRU was GO on the merits (60) but NO ENTRY**, because the then-pending `div-E-202608-1` review fired the item's conservative default (`3540112c-ccb3-46fb-bf9a-106975e1f910`). Neither pair entered. On 2026-09-13 D2 declined a D1-routed **DELL/STX** E pair at the router and referred it here (`8d6a402d-dd92-4496-822d-87befd097112`). It is measured below: **corr 0.2675, below the 0.30 population rail, out of population.**
 
-**Consequence for this screen.** E is activated and executable; the residual blockers are the open pre-mortem defect and the trading-enable gate, neither of which M2 can clear and neither of which is a reason to weaken the screen. **This PART 2 is still research feedstock for M4, not a queue to drain into orders** — but for a different and weaker reason than in August.
-
-> **AMENDMENT, same day, after M1b completed.** M2 read the activation state before M1b's September run landed; M1b then completed at 2026-09-01 and its September call materially changes the *framing* above without changing the binding state. Recorded here rather than left for M4 to reconcile:
->
-> - **The binding state is still `ACTIVATE`** — M1b wrote **no** new `STRATEGY_ACTIVATION`/`E` row, so the 2026-08-05 row remains the latest and everything above stands as measured. Re-verified after M1b's commit.
-> - **But M1b's September post-reconciliation call for E is DO-NOT-ACTIVATE**, and it is **override-manufactured for the first time**: M1b's *raw* fundamental call **flipped to ACTIVATE** — a genuine flip, and one it credits substantially to *this screen's own August measurement* (60d correlation exceeding 252d in 66 of 89 pairs, 74%) — and then the universal rule `shock_overlay = acute → override ACTIVATE → DO-NOT-ACTIVATE for ANY strategy` fired. **This is the first time that rule has ever fired on E.**
-> - **So only the mechanical shock override now stands between E and activation.** M1b's own raw grounds no longer argue against E; they agree with `div-E-202607-1`. M1b flags the raw-to-override inversion as materially new information for the incoming divergence review, and notes the net call is unchanged so there is no router flip for M4 to action.
-> - **This does not weaken any disposition in this screen** — no pair was advanced or dropped on activation state, and the technical gate reads ACTIVATE on all three legs either way. It does mean **M4 should read PART 2 as feedstock for a live divergence review on E**, not as a shortlist blocked by a settled fundamental DNA.
-
-**`state.trading_enabled` reads FALSE as of this run**, on `halt_reason = 'state.freshness marks_fresh/engine_fresh not both TRUE'`. This is the ordinary pre-close state on a trading day, not an incident: `state.freshness` shows `marks_current = TRUE` and `engine_current = TRUE` with marks through 2026-08-31 and `marks_due_through` 2026-08-31 — the flag is FALSE only because `last_trading_day` has already rolled to today and today's D2a has not yet run. Stated as fact; M2 stages no orders and is not gated by it.
+**Consequence.** PART 2 is research feedstock for M4 and for the next divergence review, **not a queue to drain into orders**. Nothing here can stage until both the binding fundamental state and the breadth leg of the technical gate change. The screen is not weakened on that account. Activation state was read only after every pair's disposition was set, and no disposition turns on it.
 
 ## Cross-strategy conflicts and the E book
 
-**Strategy E's own book is empty** — `state.current_positions` holds 12 open positions and **every one is Strategy D** (AMZN ×2, DIS ×2, GEV, GOOGL ×2, ISRG, RTX, TSM ×2, UBER). `events.shadow_positions` holds no E legs either. So the rule "exclude pairs where either leg is in the open E book" excludes nothing this month.
+**Strategy E's own book is empty.** `state.current_positions` holds 12 open positions and every one is Strategy D (AMZN ×2, DIS ×2, GEV, GOOGL ×2, ISRG, RTX, TSM ×2, UBER), unchanged from September. The rule "exclude pairs where either leg is in the open E book" therefore excludes nothing.
 
-The open D book still creates one genuine conflict:
+- **GEV remains open long in the D book** (`D:GEV:2026-08-03`), so **VRT/GEV** (0.6394) stays recorded and not advanced. An E short of GEV would largely net out against D at book level.
 
-- **GEV is open long in the D book** (`D:GEV:2026-08-03`). This continues to kill **VRT/GEV** (measured 0.6252 this cycle) — an E short of GEV against a D long of GEV largely nets out at book level. Recorded, not advanced, same as August.
-- **MTZ is no longer in the B book.** August dropped MTZ/PWR partly because MTZ had just been staged long in B; that position is not in the current book. The drop nevertheless **stands on its independent merits** (see PART 1E) — the cross-strategy reason has lapsed, the earned-divergence reason has not, and it has since gotten worse, not better.
+## Structurally invalid or compromised pairs
 
-## Structurally invalid pairs — permanent exclusion list
+The permanent exclusion list is unchanged: **SYF/DFS** (DFS delisted, Capital One merger), **SPR/HWM** (SPR delisted, Boeing), **JNPR/ANET** (JNPR delisted, HPE), **EA/TTWO** (EA deregistered after going private, Form 15-12G 2026-08-14). None was re-probed.
 
-Four pairs are not data failures but structurally dead and must never be re-probed. **EA/TTWO is new to this list this cycle.**
+**Three legs are newly flagged this cycle as compromised by a pending or reported control transaction.** That makes them unsuitable as pair legs whatever their correlation:
 
-| Pair | Reason |
-|---|---|
-| **SYF/DFS** | DFS delisted by the Capital One / Discover merger; no live IBKR listing (only a frozen `VALUE`-exchange reference entry) |
-| **SPR/HWM** | SPR delisted by Boeing's acquisition of Spirit AeroSystems |
-| **JNPR/ANET** | JNPR delisted by HPE's acquisition of Juniper Networks |
-| **EA/TTWO** | **NEW — Electronic Arts was taken private and deregistered in August 2026.** Confirmed independently on two sides: (i) SEC EDGAR shows EA filed a **Form 15-12G on 2026-08-14** (termination of registration), preceded by a SCHEDULE 13D/A on 2026-08-05 and a burst of insider Form 4s on 2026-08-04 — the signature of a going-private close; (ii) IBKR `search_contracts` returns exactly one exact-symbol EA row, conid 268995 on exchange `VALUE` with no `country_code`, and `get_price_history` on it errors "Details currently unavailable" — the identical frozen-placeholder signature that SYF/DFS shows. EA/TTWO was already out of population on correlation (0.204 in August), so this changes no disposition; it is recorded because "structurally dead, never re-probe" is a more useful permanent record than "below the rail this month." |
-
-Ticker/entity notes carried forward and re-verified: **BK lists as BNY**; **PARA's successor is PSKY** (Paramount Skydance) — and contrary to the August note that PSKY's short IBKR history is a "benign 3-day merger offset," PSKY returned a **full 251-bar series** this cycle, so no truncation applies to the 2025-09-02 → 2026-08-31 window at all.
+| Leg | Pairs affected | What was found (public sources) | Disposition |
+|---|---|---|---|
+| **WDAY** | WDAY/NOW (0.7507) | Reuters reported on 2026-08-13 that Silver Lake is in talks to take Workday private (~$43B); the stock rose ~17% that day. As of late September no deal had been announced and none had been abandoned. A short leg carrying an undated binary take-private premium is not a narrative-divergence short. | **Rejected this cycle**: September's #3 pair is dropped. |
+| **KMB** | KMB/PG (0.5354) | The Kimberly-Clark–Kenvue transaction is still pending as of 2026-10-01. Shareholders approved it 2026-01-29 and the HSR waiting period expired 2026-02-04. EU remedies were offered 2026-09-23 and the EC deadline was extended to 2026-10-13 (press-reported, ESTIMATE). KMB trades on deal and financing risk. | Rejected (structural). |
+| **WBD** | WBD/NFLX (−0.0322) | IBKR closes pinned at 30.76–30.95 for the last 7 sessions after a jump from 28.07 to 30.80 on 2026-09-21; `search_contracts` lists a `WBD.TEN` tender row. This is a takeover-peg signature. | Already out of population on correlation; recorded so it is not mistaken for a live leg. |
 
 ---
 
 # PART 1 — measured population
 
-All figures measured this session from **IBKR daily closes, 251 bars per ticker, window 2025-09-02 → 2026-08-31** (250 aligned daily log-return observations per pair). Pearson correlation on log returns; beta = OLS slope of A on B; vol annualised ×√252. **"1M" = 2026-08-03 → 2026-08-31** (deliberately anchored to the August screen's own run date, so the 1M column reads as "what happened since the last screen"). **"3M" = 2026-06-01 → 2026-08-31.** Spread = A minus B in percentage points. Prices are full-precision closes as returned.
+All figures were measured this session from **IBKR regular-session daily closes** (`get_price_history`, `step=ONE_DAY`, `outside_rth=false`, the `close` array), **250 bars per ticker, window 2025-10-02 → 2026-09-30**. That gives 249 aligned daily log-return observations per pair. Pearson correlation is computed on log returns; beta is the OLS slope of A's returns on B's; vol is annualised ×√252. **"1M" = 2026-08-31 → 2026-09-30**, anchored to the September screen's last close so the column reads "what happened since the last screen". **"3M" = 2026-06-30 → 2026-09-30.** Spread = A's total return minus B's, in percentage points. 172 tickers and 91 pairs were measured. The 91 are September's 89 measurable pairs plus **DELL/STX** (the D2 referral) and **WDC/STX** (new; the other half of the HDD duopoly).
 
-**Layer-1 population rail (mechanical, a cost bound):** same 6-digit GICS industry, 252-day correlation ≥ 0.30, large-cap with adequate ADV, both legs reported earnings or filed a 10-Q/10-K within 90 days (i.e. on or after **2026-06-03**).
-**Spec floor (mechanical, derived from Strategy E's spec_hash-frozen Entry criterion 3):** 252-day correlation ≥ 0.50 to be eligible to advance. This number derives from the frozen spec, not from a screen tune, and is not negotiated at the third decimal.
+**Window length, stated rather than papered over.** The spec names a trailing **252**-day correlation. IBKR's `ONE_YEAR` period returns 250 bars. A dedicated re-pull with `step_count=253` returned at most 252 bars (19 of 24 tickers), so the longest window this feed supplies here is **251 returns**. Every pair within ±0.02 of the 0.50 floor was **re-measured on that 251-return window**, along with five high-stakes pairs. **No disposition changes**:
 
-**Population this cycle: 81 pairs** — 61 above the spec floor and eligible, 20 in the 0.30–0.49 context band. A further 6 fall below the 0.30 rail (out of population), 2 are measured but withheld, and 1 (EA/TTWO) is structurally dead. 90 pairs defined, 89 measurable.
+| Pair | 249-return | 251-return | Side of the 0.50 floor |
+|---|---|---|---|
+| CMI/PCAR | 0.5012 | 0.5019 | above (both) |
+| EFX/VRSK | 0.5121 | 0.5040 | above (both) |
+| MRVL/AVGO | 0.5084 | 0.5085 | above (both) |
+| ZBH/SYK | 0.5131 | 0.5119 | above (both) |
+| BEN/TROW | 0.5159 | 0.5191 | above (both) |
+| **CVS/CI** | **0.4979** | **0.4992** | **below (both) — misses by 0.0008 and is not rounded up** |
+| BAX/BDX | 0.4946 | 0.4966 | below (both) |
+| MAS/CARR | 0.4922 | 0.4910 | below (both) |
+| AAP/ORLY | 0.4911 | 0.4881 | below (both) |
+| WDC/STX · PANW/CRWD · AAL/DAL | 0.8777 · 0.8461 · 0.8231 | 0.8788 · 0.8455 · 0.8226 | above (all) |
 
-## The 90-day recency gate was resolved against SEC EDGAR, not aggregators — and it changed three dispositions
+**Layer-1 population rail (mechanical, a cost bound):** same 6-digit GICS industry, 252-day correlation ≥ 0.30, large-cap with adequate ADV, and both legs reported earnings or filed a 10-Q/10-K within 90 days (on or after **2026-07-03**).
+**Spec floor (mechanical, derived from Strategy E's spec_hash-frozen Entry criterion 3):** 252-day correlation ≥ 0.50 to be eligible to advance. Not negotiated at the third decimal.
 
-**Method change this cycle, and it is the single biggest quality improvement in the run.** The August screen resolved earnings/filing recency name-by-name through FMP and web search. That path failed again this cycle exactly as it did last: FMP served 5 of 7 date-range sweeps as ACCESS DENIED, the 2 that succeeded returned implausibly few rows (6 and 2 — partial results, not empty ones), and `earnings-company` was denied on every attempt; a fallback path then hit its Tavily budget with **99 of 122 tickers still unresolved**. That is not a usable gate.
+**Population this cycle: 85 pairs clear the rail.** Of these, 64 are above the spec floor and eligible, 20 sit in the 0.30–0.49 context band, and 1 (FITB/HBAN) is withheld on data quality. A further 5 fall below the 0.30 rail. **TMUS/CMCSA is measured but excluded**: its legs are not in the same GICS industry group (see the defect notes).
 
-The gate was therefore re-run against **SEC EDGAR's own submissions API** (`data.sec.gov/submissions/CIK##########.json`, joined to `sec.gov/files/company_tickers.json`), taking for each ticker the later of (a) its most recent 10-Q/10-K filing date and (b) its most recent 8-K carrying **Item 2.02 (Results of Operations)**. This is the primary source, it is free and unmetered, it needed no credentials, and it resolved **171 of 172 tickers in seconds**. Result: **168 PASS, 2 FAIL, 1 structurally not applicable.**
+## The 90-day recency gate — SEC EDGAR primary filings, 171 of 172 resolved
 
-Three dispositions turn on it:
+The gate ran again on **SEC EDGAR's submissions API**, the standing method recommended last cycle. For each ticker the date taken is the later of its latest 10-Q/10-K and its latest 8-K carrying **Item 2.02**. All 172 tickers resolved (BNY via CIK 1390777; `company_tickers.json` lists it as BNY, not BK). **Result: 171 PASS, 0 FAIL, 1 structurally not applicable.**
 
-- **MDB/SNOW — FAILS the gate, out of population despite clearing the correlation floor at 0.6250.** MongoDB's last earnings 8-K is 2026-05-28 and its last 10-Q 2026-05-29; Snowflake's are 2026-05-27 and 2026-05-29. At 94–96 days both legs are outside the window. Both report again in early September — days after this run — which is precisely the situation that made the August screen reject PGR/ALL. Recorded in PART 1D, not advanced.
-- **ROST/TJX — PASSES, but only on the earnings limb.** Ross Stores' most recent 10-Q is 2026-06-02 (91 days, would fail), but it filed an Item 2.02 8-K on **2026-08-20**. The gate reads "reported earnings **or** filed 10-Q/10-K," so ROST clears on the first limb. Stating which limb carried it, because the two limbs disagree here.
-- **ALL/PGR — back in population.** Allstate failed this gate in August at 96 days; it filed its Q2 10-Q on **2026-08-05** and now clears with room. Measured 0.7032 this cycle.
+- **The closest-to-cutoff name is DAL** (last qualifying filing 2026-07-10, 83 days), followed by ELV (07-15), NFLX/TRV (07-17) and a cluster on 07-21. Nobody is on the boundary this cycle. **Q3 earnings season, starting ~mid-October, will refresh the whole population before November's run.**
+- **MDB/SNOW is back in population.** Both legs failed the gate in September at 94–96 days. MongoDB has since filed an Item 2.02 8-K and 10-Q on 2026-09-01, and Snowflake filed its 8-K on 09-02 and 10-Q on 09-04.
+- **SPOT is still a foreign private issuer** (last filing a 6-K, 2026-09-03; never a 10-Q). LYV/SPOT is out of population on correlation (0.1673), so nothing turns on it.
 
-**PANW clears at exactly zero margin, and the margin is worth naming rather than rounding away.** Palo Alto Networks' most recent 10-Q was filed **2026-06-03** — precisely 90 days before this run date, i.e. on the boundary and inside "within the last 90 days." Its last earnings release (Item 2.02 8-K) was 2026-06-02, which at 91 days would **fail**. So PANW is in the population only because the gate has a filing limb and the 10-Q landed one day after the release. Next cycle this resolves either way on its own — see PART 2 §7, PANW reports tonight.
+## Data integrity — four checks, all on the full population
 
-**One structural non-applicability, stated rather than papered over.** SPOT (Spotify) is a foreign private issuer: it files 20-F/6-K and never files a 10-Q, so the filing limb of this gate is structurally unsatisfiable for it and EDGAR returns no 10-Q/10-K at all. LYV/SPOT is out of population on correlation anyway (0.1429), so nothing turns on it, but a future screen that reaches for a foreign-private-issuer leg needs to handle the earnings limb explicitly rather than treat an EDGAR miss as a failure.
+1. **Swap detector** (no two tickers may share a close series): **CLEAN**, run pairwise across all 172.
+2. **Frozen-print detector** (≥3 identical consecutive closes): one hit, the known one. **FITB again returns 53.42 for six sessions (2026-06-12 → 06-22) and is missing the 2026-06-11 bar** (249 bars against 250 for every other ticker). This is the same value, the same run length and the same window as the September pull. The window had shifted between the August and September fetches; between September and October it did not move. **FITB/HBAN stays withheld on data quality, not thesis.** It would otherwise rank seventh in the population at 0.8736.
+3. **Independent re-pull transcription audit — NEW, and it closes a gap.** This cycle the closes were transcribed from tool responses by eight separate workers, so a mid-series copying slip was a real risk that a last-close check cannot see. 24 tickers were re-pulled by a different worker with a different request (`step_count=253`) and compared close by close over the overlapping dates. **Zero mismatches across all 24 series** (~6,000 closes). This is the strongest integrity evidence this screen has produced, and it should be a standing check.
+4. **Single-day jumps >25%** (corporate-action and split screen). Six hits, all consistent with disclosed earnings reactions and not with unadjusted splits: SNOW +36.5% (2026-05-28), MRVL +32.5% (06-02), DELL +32.8% (05-29), DY +25.8% (05-27), NXPI +25.5% (04-29), MOH −25.5% (02-06). Split-adjusted series were confirmed internally consistent for NOW, NFLX, CRWD and CMG. FDX, CMCSA and BDX carry back-adjusted early closes (spin-off adjustments), which leaves returns valid.
 
-## PART 1A - ABOVE the 0.50 spec floor (61 pairs, eligible to advance)
+## PART 1A — ABOVE the 0.50 spec floor (64 pairs, eligible to advance)
 
 ### Technology
 
 | GICS | Pair (A/B) | 252d | 60d | beta | vol A | vol B | 1M spr | 3M spr | Last A | Last B |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 453010 Semis | QRVO/SWKS | 0.9643 | 0.9892 | 0.7636 | 36.66% | 46.3% | -1.97 | 7.34 | 96.08 | 67.01 |
-| 453010 Semi Equip | LRCX/KLAC | 0.8706 | 0.9033 | 0.918 | 63.55% | 60.27% | 6.33 | 4.63 | 301.49 | 175.45 |
-| 451030 Software | PANW/CRWD | 0.82 | 0.897 | 0.6848 | 43.65% | 52.27% | -3.97 | 9.04 | 382.13 | 231.0 |
-| 453010 Semis | MCHP/ADI | 0.8049 | 0.8882 | 1.1184 | 49.28% | 35.47% | -2.42 | -9.67 | 73.45 | 362.14 |
-| 453010 Semi Equip | TER/AMAT | 0.7545 | 0.854 | 0.9713 | 75.93% | 58.98% | 7.18 | -5.36 | 349.83 | 458.39 |
-| 451030 Software | WDAY/NOW | 0.7527 | 0.7441 | 0.7053 | 53.02% | 56.58% | -9.97 | 16.65 | 197.45 | 147.99 |
-| 453010 Semis | ON/NXPI | 0.7352 | 0.8194 | 0.9696 | 62.67% | 47.52% | -8.06 | -10.87 | 74.09 | 224.64 |
-| 451030 Software | FTNT/CRWD | 0.6967 | 0.802 | 0.5338 | 40.05% | 52.27% | -9.32 | -1.96 | 170.93 | 231.0 |
+| 453010 Semis | QRVO/SWKS | 0.9762 | 0.9950 | 0.7505 | 39.49% | 51.37% | -8.41 | -3.34 | 114.48 | 85.48 |
+| 452020 Tech Hardware | WDC/STX | 0.8777 | 0.8387 | 0.9424 | 79.49% | 74.03% | -10.47 | -24.43 | 454.46 | 922.34 |
+| 453010 Semi Equip | LRCX/KLAC | 0.8743 | 0.8685 | 0.9229 | 64.57% | 61.17% | -2.14 | 11.2 | 328.51 | 194.93 |
+| 451030 Software | PANW/CRWD | 0.8461 | 0.9049 | 0.7415 | 47.55% | 54.25% | -10.64 | -22.26 | 397.31 | 264.75 |
+| 453010 Semis | MCHP/ADI | 0.8126 | 0.8259 | 1.1164 | 50.0% | 36.39% | -3.66 | -14.61 | 77.77 | 396.71 |
+| 453010 Semi Equip | TER/AMAT | 0.7635 | 0.7907 | 0.9883 | 77.22% | 59.65% | 3.04 | 12.13 | 400.91 | 511.38 |
+| 451030 Software | WDAY/NOW | 0.7507 | 0.6835 | 0.6921 | 53.54% | 58.07% | 5.91 | 20.6 | 190.46 | 134.01 |
+| 451030 Software | FTNT/CRWD | 0.7427 | 0.8661 | 0.5697 | 41.62% | 54.25% | -10.03 | -22.4 | 178.76 | 264.75 |
+| 453010 Semis | ON/NXPI | 0.7388 | 0.7714 | 0.9823 | 64.59% | 48.58% | -1.99 | -3.21 | 76.87 | 237.53 |
+| 451030 Software | MDB/SNOW | 0.6005 | 0.5282 | 0.6851 | 71.19% | 62.4% | -25.56 | -29.64 | 348.61 | 339.56 |
+| 453010 Semis | MRVL/AVGO | 0.5084 | 0.4942 | 0.8444 | 77.85% | 46.87% | 30.0 | -4.28 | 264.21 | 351.19 |
 
 ### Financials
 
 | GICS | Pair (A/B) | 252d | 60d | beta | vol A | vol B | 1M spr | 3M spr | Last A | Last B |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 401010 Banks | RF/KEY | 0.8798 | 0.8307 | 0.9004 | 24.05% | 23.5% | 0.18 | 5.89 | 29.88 | 21.61 |
-| 401010 Banks | USB/PNC | 0.8665 | 0.8902 | 0.8915 | 22.16% | 21.53% | 1.11 | 4.09 | 61.58 | 239.63 |
-| 401010 Banks | TFC/MTB | 0.8416 | 0.7821 | 0.9373 | 24.03% | 21.57% | 1.72 | -4.77 | 49.58 | 233.94 |
-| 402030 Capital Markets | STT/BNY | 0.7986 | 0.8498 | 0.9257 | 24.82% | 21.41% | 0.95 | 6.66 | 191.38 | 161.28 |
-| 402020 Consumer Finance | COF/AXP | 0.7727 | 0.7536 | 0.9298 | 32.43% | 26.95% | 2.76 | 10.92 | 214.51 | 330.17 |
-| 403010 Insurance | TRV/CB | 0.7157 | 0.7313 | 0.7633 | 20.67% | 19.38% | 0.65 | 17.35 | 365.93 | 338.6 |
-| 402010 Capital Markets | RJF/LPLA | 0.7058 | 0.7439 | 0.489 | 25.4% | 36.67% | -2.44 | -12.39 | 178.17 | 370.13 |
-| 403010 Insurance | ALL/PGR | 0.7032 | 0.7499 | 0.6406 | 25.02% | 27.46% | -5.48 | 11.23 | 257.8 | 218.08 |
-| 403010 Insurance | MET/PRU | 0.7011 | 0.7648 | 0.73 | 23.66% | 22.72% | 3.19 | -0.74 | 95.17 | 117.6 |
-| 401010 Banks | WFC/C | 0.6921 | 0.6716 | 0.6284 | 26.52% | 29.21% | -0.25 | 9.99 | 86.39 | 131.62 |
-| 403010 Insurance | AIG/HIG | 0.546 | 0.749 | 0.6878 | 24.45% | 19.41% | 0.78 | -4.58 | 76.36 | 137.38 |
-| 402030 Capital Markets | BEN/TROW | 0.517 | 0.3861 | 0.5744 | 27.8% | 25.03% | -1.13 | 3.29 | 34.15 | 111.28 |
+| 401010 Banks | RF/KEY | 0.8869 | 0.8892 | 0.9015 | 24.66% | 24.26% | -2.91 | 1.94 | 26.88 | 20.07 |
+| 401010 Banks | USB/PNC | 0.8847 | 0.9186 | 0.9045 | 22.59% | 22.09% | 1.05 | 5.36 | 57.76 | 222.26 |
+| 401010 Banks | TFC/MTB | 0.8481 | 0.8006 | 0.9524 | 24.69% | 21.99% | 0.37 | 1.51 | 46.3 | 217.6 |
+| 402030 Capital Markets | STT/BNY | 0.8098 | 0.8643 | 0.9332 | 25.11% | 21.79% | 1.55 | 2.93 | 174.59 | 144.63 |
+| 402020 Consumer Finance | COF/AXP | 0.7711 | 0.7035 | 0.9268 | 32.5% | 27.04% | -2.1 | 6.33 | 193.07 | 304.1 |
+| 403010 Insurance | ALL/PGR | 0.7186 | 0.6721 | 0.6549 | 25.43% | 27.9% | -9.0 | -1.66 | 221.86 | 207.31 |
+| 403010 Insurance | TRV/CB | 0.7158 | 0.6949 | 0.7615 | 20.81% | 19.57% | 1.37 | 12.54 | 356.51 | 325.25 |
+| 403010 Insurance | MET/PRU | 0.7091 | 0.7597 | 0.7360 | 23.81% | 22.94% | 2.36 | 6.05 | 94.16 | 113.58 |
+| 402010 Capital Markets | RJF/LPLA | 0.7032 | 0.7343 | 0.4832 | 25.15% | 36.6% | 6.07 | -4.62 | 158.02 | 305.8 |
+| 401010 Banks | WFC/C | 0.6874 | 0.7414 | 0.6271 | 26.83% | 29.41% | -5.71 | 4.35 | 80.05 | 129.48 |
+| 403010 Insurance | AIG/HIG | 0.5221 | 0.6065 | 0.6433 | 24.45% | 19.84% | 8.39 | 7.52 | 74.42 | 122.36 |
+| 402030 Capital Markets | BEN/TROW | 0.5159 | 0.3948 | 0.5907 | 28.02% | 24.48% | 0.55 | 5.02 | 32.12 | 104.05 |
 
 ### Energy/Materials/Utilities
 
 | GICS | Pair (A/B) | 252d | 60d | beta | vol A | vol B | 1M spr | 3M spr | Last A | Last B |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 151010 Chemicals | DOW/LYB | 0.8791 | 0.9243 | 0.8993 | 44.36% | 43.36% | -5.25 | -8.95 | 30.52 | 65.08 |
-| 101020 E&P | DVN/EOG | 0.8485 | 0.8922 | 1.0347 | 35.14% | 28.82% | 9.33 | -1.35 | 48.51 | 144.96 |
-| 101020 E&P | APA/FANG | 0.787 | 0.8366 | 1.1329 | 46.47% | 32.28% | 16.16 | 13.58 | 43.15 | 200.48 |
-| 151030 Packaging | IP/PKG | 0.7338 | 0.8548 | 1.1542 | 43.83% | 27.86% | -1.66 | 7.05 | 37.93 | 233.94 |
-| 151010 Chemicals | PPG/SHW | 0.7324 | 0.7681 | 0.8116 | 30.4% | 27.43% | 2.74 | -14.82 | 112.17 | 338.81 |
-| 101010 Energy Equip | HAL/SLB | 0.7019 | 0.7295 | 0.7147 | 36.15% | 35.51% | -6.33 | -16.12 | 36.85 | 60.1 |
-| 551010 Utilities | EXC/AEP | 0.6911 | 0.8133 | 0.6963 | 19.29% | 19.15% | 0.4 | -1.12 | 43.72 | 122.43 |
-| 151010 Chemicals | EMN/CE | 0.6337 | 0.6414 | 0.3956 | 33.21% | 53.19% | -2.98 | 13.69 | 72.44 | 45.48 |
-| 101010 Energy Equip | HAL/BKR | 0.6078 | 0.5657 | 0.6701 | 36.15% | 32.79% | 11.05 | -7.27 | 36.85 | 63.55 |
-| 151040 Metals | CLF/NUE | 0.5322 | 0.641 | 1.1783 | 69.78% | 31.52% | 7.4 | -14.21 | 11.55 | 249.64 |
+| 151010 Chemicals | DOW/LYB | 0.8808 | 0.8998 | 0.8926 | 43.98% | 43.39% | 1.93 | -8.5 | 27.54 | 57.47 |
+| 101020 E&P | DVN/EOG | 0.8533 | 0.9063 | 1.0235 | 34.72% | 28.95% | -0.12 | 5.23 | 46.04 | 137.76 |
+| 101020 E&P | APA/FANG | 0.7954 | 0.8283 | 1.1094 | 45.75% | 32.8% | 4.58 | 22.97 | 41.54 | 183.81 |
+| 151030 Packaging | IP/PKG | 0.7365 | 0.8080 | 1.1697 | 44.74% | 28.17% | -10.55 | -9.15 | 33.17 | 229.26 |
+| 151010 Chemicals | PPG/SHW | 0.7364 | 0.7427 | 0.8200 | 30.59% | 27.47% | -2.4 | -7.87 | 104.33 | 323.27 |
+| 101010 Energy Equip | HAL/SLB | 0.7000 | 0.6218 | 0.6783 | 35.09% | 36.21% | 5.23 | -11.13 | 31.8 | 48.72 |
+| 551010 Utilities | EXC/AEP | 0.6943 | 0.8031 | 0.7139 | 19.54% | 19.0% | -4.5 | -0.06 | 40.4 | 118.64 |
+| 151010 Chemicals | EMN/CE | 0.6132 | 0.4954 | 0.3792 | 32.57% | 52.66% | -8.05 | 0.35 | 64.84 | 44.37 |
+| 101010 Energy Equip | HAL/BKR | 0.6017 | 0.4105 | 0.6331 | 35.09% | 33.35% | -0.09 | -5.25 | 31.8 | 54.9 |
+| 151040 Metals | CLF/NUE | 0.5581 | 0.6139 | 1.2211 | 70.13% | 32.06% | 1.69 | 12.31 | 11.01 | 233.75 |
 
 ### Consumer
 
 | GICS | Pair (A/B) | 252d | 60d | beta | vol A | vol B | 1M spr | 3M spr | Last A | Last B |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 252010 Homebuilders | KBH/DHI | 0.8565 | 0.8536 | 0.9308 | 38.7% | 35.61% | -3.86 | 5.93 | 53.3 | 144.56 |
-| 302020 Food | CAG/GIS | 0.7853 | 0.7966 | 0.8596 | 30.45% | 27.81% | -7.0 | -0.31 | 16.02 | 41.2 |
-| 253020 Hotels | H/MAR | 0.7422 | 0.6664 | 0.9194 | 33.79% | 27.28% | -1.22 | 0.26 | 166.97 | 341.76 |
-| 252010 Homebuilders | TOL/NVR | 0.7201 | 0.8272 | 0.906 | 34.5% | 27.42% | -6.45 | 0.5 | 143.45 | 6315.23 |
-| 255030 Broadline Retail | DLTR/DG | 0.6124 | 0.6435 | 0.6871 | 41.4% | 36.9% | -1.37 | -1.61 | 126.59 | 126.75 |
-| 255040 Specialty Retail | ROST/TJX | 0.5829 | 0.6347 | 0.7511 | 26.22% | 20.35% | 5.34 | 14.33 | 228.54 | 133.91 |
-| 251020 Automobiles | F/GM | 0.5707 | 0.6496 | 0.6386 | 37.52% | 33.53% | -1.84 | -20.58 | 13.94 | 86.32 |
-| 303010 Household Prod | CLX/CHD | 0.5559 | 0.6592 | 0.744 | 31.16% | 23.28% | -0.36 | 4.94 | 97.68 | 99.78 |
-| 303010 Household Prod | KMB/PG | 0.5295 | 0.6803 | 0.7511 | 27.73% | 19.55% | 0.26 | 6.76 | 107.95 | 145.12 |
+| 252010 Homebuilders | KBH/DHI | 0.8544 | 0.8844 | 0.9359 | 38.94% | 35.55% | -7.34 | -9.65 | 46.47 | 136.65 |
+| 302020 Food | CAG/GIS | 0.8045 | 0.7662 | 0.8523 | 30.44% | 28.73% | 5.84 | 7.44 | 13.44 | 32.16 |
+| 253020 Hotels | H/MAR | 0.7341 | 0.6338 | 0.9138 | 33.88% | 27.21% | -9.11 | -14.17 | 158.56 | 355.67 |
+| 252010 Homebuilders | TOL/NVR | 0.7131 | 0.7648 | 0.8982 | 34.47% | 27.37% | -3.52 | -8.54 | 134.75 | 6154.39 |
+| 255030 Broadline Retail | DLTR/DG | 0.6240 | 0.6413 | 0.6900 | 41.19% | 37.25% | -4.27 | -9.61 | 114.02 | 119.58 |
+| 251020 Automobiles | F/GM | 0.5903 | 0.6638 | 0.6478 | 38.44% | 35.02% | -2.69 | -13.13 | 12.06 | 77.0 |
+| 255040 Specialty Retail | ROST/TJX | 0.5766 | 0.5369 | 0.7158 | 26.25% | 21.15% | 3.32 | 22.32 | 233.4 | 132.31 |
+| 303010 Household Prod | CLX/CHD | 0.5511 | 0.5873 | 0.7784 | 31.97% | 22.64% | -11.49 | -12.37 | 81.01 | 94.22 |
+| 303010 Household Prod | KMB/PG | 0.5354 | 0.5698 | 0.7641 | 28.19% | 19.75% | -9.86 | -10.31 | 97.43 | 145.28 |
 
 ### Industrials
 
 | GICS | Pair (A/B) | 252d | 60d | beta | vol A | vol B | 1M spr | 3M spr | Last A | Last B |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 202020 Prof Services | EFX/TRU | 0.8462 | 0.8729 | 0.8006 | 39.08% | 41.3% | 2.48 | -6.54 | 189.16 | 84.91 |
-| 203020 Airlines | AAL/DAL | 0.8167 | 0.8592 | 0.9992 | 47.47% | 38.8% | -1.43 | -2.09 | 13.43 | 78.0 |
-| 203040 Ground Transport | XPO/ODFL | 0.7458 | 0.809 | 0.8528 | 42.8% | 37.43% | 3.93 | 0.2 | 193.99 | 199.96 |
-| 201030 Constr & Eng | MTZ/PWR | 0.7443 | 0.6747 | 0.8973 | 52.37% | 43.44% | 2.54 | -22.09 | 239.78 | 607.09 |
-| 201010 Aero & Defense | NOC/LMT | 0.7036 | 0.73 | 0.6855 | 27.21% | 27.93% | 2.68 | -8.57 | 539.7 | 561.23 |
-| 201040 Electrical Equip | VRT/NVT | 0.7015 | 0.8332 | 1.0096 | 64.98% | 45.15% | 3.79 | -7.87 | 258.72 | 150.75 |
-| 201060 Machinery | DOV/IR | 0.6457 | 0.5343 | 0.5177 | 26.16% | 32.62% | 6.64 | -15.0 | 194.23 | 77.05 |
-| 201060 Machinery | SWK/ITW | 0.6376 | 0.5677 | 1.1265 | 37.67% | 21.32% | 2.77 | 11.26 | 96.37 | 275.37 |
-| 201040 Electrical Equip | HUBB/NVT | 0.6368 | 0.6957 | 0.4498 | 31.89% | 45.15% | 0.59 | 9.98 | 453.0 | 150.75 |
-| 203010 Air Freight | FDX/UPS | 0.633 | 0.5625 | 0.5948 | 28.05% | 29.85% | 8.34 | 1.12 | 327.4 | 104.23 |
-| 201040 Electrical Equip | VRT/GEV | 0.6252 | 0.7021 | 0.7833 | 64.98% | 51.86% | 9.1 | -14.53 | 258.72 | 898.53 |
-| 201020 Bldg Products | LII/TT | 0.6214 | 0.6302 | 0.9266 | 42.59% | 28.56% | -8.39 | -22.07 | 382.64 | 444.4 |
-| 201030 Constr & Eng | ACM/J | 0.5824 | 0.4775 | 0.662 | 37.83% | 33.28% | -17.3 | -27.83 | 67.43 | 149.05 |
-| 201040 Electrical Equip | VRT/HUBB | 0.5769 | 0.6815 | 1.1755 | 64.98% | 31.89% | 3.19 | -17.85 | 258.72 | 453.0 |
-| 201030 Constr & Eng | DY/EME | 0.5534 | 0.6656 | 0.6345 | 51.69% | 45.08% | -19.69 | -29.44 | 291.21 | 734.54 |
-| 201060 Machinery | CMI/PCAR | 0.5029 | 0.3912 | 0.6722 | 36.72% | 27.47% | -7.01 | -25.68 | 564.4 | 124.13 |
+| 202020 Prof Services | EFX/TRU | 0.8515 | 0.8664 | 0.8138 | 38.8% | 40.59% | 0.57 | 1.74 | 137.24 | 61.12 |
+| 203020 Airlines | AAL/DAL | 0.8231 | 0.8417 | 1.0021 | 47.67% | 39.16% | -7.45 | -15.12 | 13.37 | 83.46 |
+| 203040 Ground Transport | XPO/ODFL | 0.7490 | 0.7417 | 0.8430 | 42.8% | 38.03% | 3.78 | 5.46 | 175.98 | 173.84 |
+| 201030 Constr&Eng | MTZ/PWR | 0.7367 | 0.6214 | 0.9027 | 53.56% | 43.71% | -16.74 | -37.89 | 213.62 | 642.51 |
+| 201040 Electrical Equip | VRT/NVT | 0.7135 | 0.7702 | 0.9961 | 65.64% | 47.01% | -13.11 | -22.48 | 241.31 | 160.37 |
+| 201010 Aero&Defense | NOC/LMT | 0.7038 | 0.6217 | 0.6878 | 27.74% | 28.39% | -1.16 | -5.03 | 483.48 | 509.25 |
+| 203010 Air Freight | FDX/UPS | 0.6541 | 0.5258 | 0.6165 | 29.04% | 30.81% | -2.57 | 4.12 | 285.09 | 93.44 |
+| 201060 Machinery | DOV/IR | 0.6499 | 0.4512 | 0.5200 | 26.22% | 32.77% | -1.18 | -8.21 | 187.05 | 75.11 |
+| 201040 Electrical Equip | HUBB/NVT | 0.6459 | 0.6360 | 0.4422 | 32.19% | 47.01% | -6.25 | -7.85 | 453.6 | 160.37 |
+| 201040 Electrical Equip | VRT/GEV | 0.6394 | 0.6125 | 0.8010 | 65.64% | 52.39% | -12.51 | -8.83 | 241.31 | 950.49 |
+| 201060 Machinery | SWK/ITW | 0.6156 | 0.4554 | 1.0574 | 37.57% | 21.88% | -1.5 | -1.0 | 88.59 | 257.28 |
+| 201020 Bldg Products | LII/TT | 0.6149 | 0.5986 | 0.9065 | 42.37% | 28.74% | -8.92 | -30.06 | 355.02 | 451.98 |
+| 201040 Electrical Equip | VRT/HUBB | 0.5961 | 0.6246 | 1.2156 | 65.64% | 32.19% | -6.86 | -14.63 | 241.31 | 453.6 |
+| 201030 Constr&Eng | ACM/J | 0.5919 | 0.5383 | 0.6759 | 38.32% | 33.56% | -3.33 | -22.9 | 58.95 | 135.27 |
+| 201030 Constr&Eng | DY/EME | 0.5542 | 0.6831 | 0.6388 | 52.2% | 45.29% | -10.32 | -37.69 | 269.08 | 754.49 |
+| 202020 Prof Services | EFX/VRSK | 0.5121 | 0.7126 | 0.5468 | 38.8% | 36.34% | -14.07 | -7.03 | 137.24 | 167.85 |
+| 201060 Machinery | CMI/PCAR | 0.5012 | 0.0739 | 0.6891 | 36.88% | 26.82% | 3.06 | -18.99 | 516.57 | 109.81 |
 
 ### Health Care
 
 | GICS | Pair (A/B) | 252d | 60d | beta | vol A | vol B | 1M spr | 3M spr | Last A | Last B |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 351020 HC Distributors | COR/MCK | 0.7116 | 0.8197 | 0.757 | 32.51% | 30.56% | -2.1 | 1.78 | 323.6 | 885.32 |
-| 352030 Life Sci Tools | RVTY/TMO | 0.6955 | 0.6928 | 0.8732 | 38.02% | 30.28% | 4.17 | 3.1 | 128.67 | 617.1 |
-| 351020 Managed Care | ELV/UNH | 0.6637 | 0.6228 | 0.6491 | 35.8% | 36.61% | 8.8 | -5.03 | 392.54 | 389.41 |
-| 351020 Managed Care | CNC/MOH | 0.5487 | 0.6449 | 0.4836 | 49.21% | 55.84% | -1.14 | -4.7 | 64.34 | 198.77 |
-| 351010 HC Equipment | BAX/BDX | 0.5134 | 0.5801 | 0.9062 | 44.34% | 25.12% | -17.99 | 11.87 | 26.0 | 188.11 |
-| 351010 HC Equipment | ZBH/SYK | 0.5043 | 0.752 | 0.5835 | 32.56% | 28.14% | 8.25 | 12.49 | 100.04 | 323.8 |
+| 351020 HCDistributors | COR/MCK | 0.7047 | 0.8101 | 0.7570 | 32.2% | 29.98% | -3.66 | -6.89 | 300.25 | 853.81 |
+| 352030 Life Sci Tools | RVTY/TMO | 0.6936 | 0.6330 | 0.9358 | 38.73% | 28.71% | 9.43 | 2.77 | 152.89 | 675.05 |
+| 351020 Managed Care | ELV/UNH | 0.6734 | 0.4482 | 0.6692 | 35.46% | 35.68% | 4.79 | 12.22 | 388.82 | 367.08 |
+| 351020 Managed Care | CNC/MOH | 0.5448 | 0.7100 | 0.4713 | 48.02% | 55.51% | 1.41 | 14.09 | 62.12 | 189.1 |
+| 351010 HCEquipment | ZBH/SYK | 0.5131 | 0.7004 | 0.5701 | 33.29% | 29.96% | 3.75 | 15.71 | 88.83 | 275.39 |
 
-## PART 1B - 0.30-0.49 band, BELOW the spec floor (20 pairs) - context / SL1 ideation only
-
-| GICS | Pair (A/B) | 252d | 60d | beta | vol A | vol B | 1M spr | 3M spr | Last A | Last B |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 202020 Prof Services | EFX/VRSK | 0.4974 | 0.7406 | 0.5555 | 39.08% | 34.99% | 8.3 | 3.64 | 189.16 | 193.78 |
-| 201020 Bldg Products | MAS/CARR | 0.4874 | 0.6223 | 0.479 | 35.08% | 35.7% | 4.4 | 15.19 | 72.16 | 58.22 |
-| 351020 Managed Care | CVS/CI | 0.4873 | 0.4825 | 0.4597 | 31.49% | 33.38% | -8.76 | 2.94 | 93.91 | 276.08 |
-| 452020 Tech Hardware | HPQ/DELL | 0.4801 | 0.1354 | 0.3 | 43.02% | 68.85% | 4.4 | 4.45 | 30.02 | 456.01 |
-| 352020 Pharma | BMY/MRK | 0.4773 | 0.5797 | 0.4334 | 27.41% | 30.19% | -13.6 | -6.71 | 66.81 | 147.76 |
-| 255040 Specialty Retail | AAP/ORLY | 0.4772 | 0.5001 | 1.1128 | 59.88% | 25.68% | -23.18 | -31.36 | 42.18 | 88.8 |
-| 201010 Aero & Defense | TXT/GD | 0.4744 | 0.5614 | 0.5778 | 27.01% | 22.18% | -3.85 | -19.56 | 80.56 | 371.35 |
-| 453010 Semis | MRVL/AVGO | 0.4706 | 0.6652 | 0.7495 | 77.02% | 48.36% | 14.81 | 15.95 | 211.66 | 370.34 |
-| 453010 Semis | AMD/NVDA | 0.47 | 0.5463 | 0.8751 | 70.67% | 37.96% | -9.72 | -6.13 | 470.72 | 220.78 |
-| 352010 Biotech | GILD/AMGN | 0.4665 | 0.5555 | 0.4521 | 26.55% | 27.39% | -1.88 | -18.99 | 146.34 | 429.88 |
-| 201060 Machinery | CR/ITW | 0.4661 | 0.3824 | 0.7046 | 32.23% | 21.32% | -1.95 | 0.62 | 205.07 | 275.37 |
-| 352010 Biotech | BIIB/VRTX | 0.4567 | 0.4702 | 0.5621 | 34.88% | 28.34% | -8.33 | -11.5 | 216.65 | 544.52 |
-| 351010 HC Equipment | MDT/BSX | 0.4553 | 0.6559 | 0.2761 | 23.37% | 38.54% | 4.85 | 21.87 | 90.65 | 48.3 |
-| 453010 Semis | INTC/TXN | 0.4323 | 0.7315 | 0.8006 | 77.32% | 41.75% | 1.38 | -7.12 | 89.51 | 260.91 |
-| 352020 Pharma | PFE/LLY | 0.4318 | 0.5076 | 0.2892 | 23.84% | 35.61% | 10.55 | 4.15 | 28.46 | 1156.73 |
-| 302010 Beverages | KDP/MNST | 0.371 | 0.5707 | 0.3836 | 27.07% | 26.18% | 4.9 | 2.42 | 31.86 | 45.92 |
-| 551010 Utilities | PCG/NEE | 0.3605 | 0.2748 | 0.5908 | 35.07% | 21.4% | -19.0 | -16.26 | 13.27 | 82.34 |
-| 402030 Capital Markets | NDAQ/CME | 0.327 | 0.5375 | 0.3799 | 27.71% | 23.85% | -2.51 | -4.51 | 98.61 | 285.5 |
-| 352030 Life Sci Tools | ILMN/DHR | 0.3091 | 0.19 | 0.4626 | 46.99% | 31.41% | -0.32 | 11.22 | 213.63 | 213.56 |
-| 253020 Restaurants | YUM/QSR | 0.3063 | 0.4594 | 0.3044 | 23.84% | 23.98% | -3.74 | -2.96 | 153.31 | 77.88 |
-
-## PART 1C - BELOW the 0.30 population rail (6 pairs) - OUT OF POPULATION
+## PART 1B — 0.30–0.49 band, BELOW the spec floor (20 pairs + TMUS/CMCSA shown but excluded) — context / SL1 ideation only
 
 | GICS | Pair (A/B) | 252d | 60d | beta | vol A | vol B | 1M spr | 3M spr | Last A | Last B |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 502020 Media | PSKY/FOXA | 0.1987 | 0.2266 | 0.2846 | 52.05% | 36.34% | 17.99 | -1.45 | 10.91 | 67.35 |
-| 502020 Media | LYV/SPOT | 0.1429 | 0.2741 | 0.1022 | 31.54% | 44.13% | -12.77 | -1.52 | 179.89 | 543.62 |
-| 501010 Telecom | TMUS/CMCSA | 0.0945 | 0.419 | 0.0908 | 30.33% | 31.58% | -5.25 | -8.75 | 180.69 | 26.62 |
-| 253020 Restaurants | SBUX/CMG | 0.0025 | -0.0712 | 0.0036 | 42.58% | 29.4% | -0.37 | 27.86 | 38.03 | 180.44 |
-| 351010 HC Equipment | PODD/DXCM | -0.0175 | 0.0892 | -0.0289 | 46.12% | 27.87% | -15.18 | -9.73 | 148.66 | 106.25 |
-| 502020 Media | WBD/NFLX | -0.1262 | 0.0192 | -0.1417 | 40.07% | 35.67% | -1.18 | 10.29 | 28.53 | 81.05 |
+| 351020 Managed Care | CVS/CI | 0.4979 | 0.5500 | 0.4656 | 31.65% | 33.85% | -7.21 | -15.77 | 85.69 | 271.83 |
+| 351010 HCEquipment | BAX/BDX | 0.4946 | 0.4562 | 0.8528 | 43.99% | 25.52% | -2.85 | -5.71 | 24 | 179 |
+| 201020 Bldg Products | MAS/CARR | 0.4922 | 0.5683 | 0.4837 | 35.36% | 35.98% | -0.83 | 8.04 | 67.4 | 54.86 |
+| 255040 Specialty Retail | AAP/ORLY | 0.4911 | 0.5199 | 1.1364 | 60.11% | 25.98% | -3.93 | -30.21 | 38.91 | 85.41 |
+| 352010 Biotech | GILD/AMGN | 0.4839 | 0.5169 | 0.4425 | 26.45% | 28.93% | 3.8 | 1.57 | 149.05 | 421.51 |
+| 452020 Tech Hardware | HPQ/DELL | 0.4748 | 0.2269 | 0.2970 | 45.35% | 72.5% | -13.77 | 17.89 | 31.28 | 537.95 |
+| 201010 Aero&Defense | TXT/GD | 0.4738 | 0.4839 | 0.5687 | 26.91% | 22.42% | 5.23 | -10.6 | 76.2 | 331.83 |
+| 453010 Semis | AMD/NVDA | 0.4708 | 0.4048 | 0.8974 | 71.94% | 37.74% | 26.52 | -8.83 | 611.76 | 228.38 |
+| 201060 Machinery | CR/ITW | 0.4601 | 0.2882 | 0.6822 | 32.44% | 21.88% | 6.06 | -3.66 | 204.02 | 257.28 |
+| 352010 Biotech | BIIB/VRTX | 0.4581 | 0.4585 | 0.5453 | 33.69% | 28.3% | 8.25 | -0.71 | 225.88 | 522.81 |
+| 351010 HCEquipment | MDT/BSX | 0.4558 | 0.5248 | 0.2726 | 23.74% | 39.69% | 4.82 | 8.03 | 86.29 | 43.65 |
+| 453010 Semis | INTC/TXN | 0.4480 | 0.5596 | 0.8138 | 76.08% | 41.88% | 26.97 | -7.86 | 120.23 | 280.09 |
+| 352020 Pharma | BMY/MRK | 0.4434 | 0.4997 | 0.4146 | 26.82% | 28.68% | -4.94 | -4.79 | 62.4 | 145.31 |
+| ~~501010 Telecom~~ NOT SAME GROUP (501020 vs 502010) — excluded from population, see defect note | TMUS/CMCSA | 0.4254 | 0.6996 | 0.3948 | 30.49% | 32.85% | 8.64 | 8.59 | 163.08 | 21.76 |
+| 351010 HCEquipment | PODD/DXCM | 0.4197 | 0.4958 | 0.4874 | 46.22% | 39.81% | -7.0 | -42.43 | 130.47 | 86.29 |
+| 352020 Pharma | PFE/LLY | 0.3917 | 0.5374 | 0.2465 | 21.62% | 34.36% | 0.18 | 21.97 | 28.52 | 1157.08 |
+| 302010 Beverages | KDP/MNST | 0.3826 | 0.5264 | 0.3942 | 27.11% | 26.32% | 4.59 | 6.1 | 30.34 | 41.62 |
+| 551010 Utilities | PCG/NEE | 0.3597 | 0.2616 | 0.6262 | 36.46% | 20.94% | 0.33 | -13.46 | 12.25 | 75.74 |
+| 253020 Restaurants | SBUX/CMG | 0.3495 | 0.2772 | 0.2236 | 27.63% | 43.18% | 4.42 | -2.02 | 93.96 | 31.95 |
+| 402030 Capital Markets | NDAQ/CME | 0.3440 | 0.3972 | 0.3950 | 27.96% | 24.35% | 1.55 | -1.9 | 92.01 | 261.98 |
+| 253020 Restaurants | YUM/QSR | 0.3433 | 0.5118 | 0.3494 | 24.6% | 24.17% | -2.34 | -12.74 | 136.34 | 71.08 |
 
-## PART 1D - measured but WITHHELD (2 pairs)
+## PART 1C — BELOW the 0.30 population rail (5 pairs) — OUT OF POPULATION
 
 | GICS | Pair (A/B) | 252d | 60d | beta | vol A | vol B | 1M spr | 3M spr | Last A | Last B |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 401010 Banks | FITB/HBAN | 0.8672 | 0.8031 | 0.8364 | 25.78% | 26.73% | -1.58 | 5.36 | 53.77 | 16.68 |
-| 451030 Software | MDB/SNOW | 0.625 | 0.7058 | 0.6769 | 65.21% | 60.22% | 18.88 | -6.05 | 453.37 | 331.43 |
-## PART 1B notes — why these three sub-floor pairs are recorded
+| 352030 Life Sci Tools | ILMN/DHR | 0.2905 | 0.2342 | 0.4566 | 47.35% | 30.12% | 24.37 | 39.34 | 273.68 | 221.55 |
+| 452020 Tech Hardware | DELL/STX | 0.2675 | 0.3859 | 0.2620 | 72.5% | 74.03% | 6.63 | 29.1 | 537.95 | 922.34 |
+| 502020 Media | PSKY/FOXA | 0.2153 | 0.3786 | 0.2979 | 49.44% | 35.74% | 1.66 | -15.34 | 10.33 | 62.65 |
+| 502020 Media | LYV/SPOT | 0.1673 | 0.3849 | 0.1167 | 31.21% | 44.75% | 4.46 | -13.69 | 169.3 | 487.38 |
+| 502020 Media | WBD/NFLX | -0.0322 | 0.2462 | -0.0235 | 26.7% | 36.65% | 22.63 | 18.64 | 30.95 | 69.58 |
 
-Per §19 the 0.50 bar **derives from** Strategy E's spec_hash-frozen Entry criterion 3 and is **not** a screen tune. Sub-floor pairs are recorded `below_spec_floor=true`, are SL1 ideation evidence only, and are **never** entry candidates. §19 caps the record at **3 per call**, binding both the fields-JSON `passed` items and this note — the same three pairs appear in both.
+## PART 1D — measured but WITHHELD (1 pair)
 
-| Pair | 252d | 60d | Why it is recorded anyway |
+| GICS | Pair (A/B) | 252d | 60d | beta | vol A | vol B | 1M spr | 3M spr | Last A | Last B |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 401010 Banks | FITB/HBAN | 0.8736 | 0.8562 | 0.8291 | 26.27% | 27.68% | 2.58 | 3.66 | 50.58 | 15.26 |
+
+
+## PART 1B notes — the three sub-floor pairs recorded
+
+Per §19 the 0.50 bar **derives from** Strategy E's spec_hash-frozen Entry criterion 3 and is **not** a screen tune. Sub-floor pairs are recorded `below_spec_floor=true` as SL1 ideation evidence only and are **never** entry candidates. The cap is **3 per call**, and the same three pairs appear in this note and in the fields-JSON `passed` items.
+
+| Pair | 252d | 60d | Why it is recorded |
 |---|---|---|---|
-| **AMD/NVDA** (453010) | **0.4700** | 0.5463 | **Fourth consecutive month below the floor** — 0.49 (June), 0.4933 (July), 0.492 (August), **0.4700 now** — and for the first time it is moving *away* from the floor rather than hovering. August recorded this as "an established sub-floor pattern, not a monthly novelty." A fourth reading that decays rather than converges upgrades that from a pattern to a settled finding: this is not a pair whose correlation is about to qualify, and it should stop being re-litigated as a near-miss. |
-| **AAP/ORLY** (255040) | **0.4772** | 0.5001 | August recorded this at **0.499**, missing by 0.001, and deliberately refused to round it up. **That discipline is now vindicated by the data**: a month later it sits at 0.4772, materially further below the floor, with a −31.36pp 3M spread that would have looked like an enormous opportunity to anyone who had rounded. The single cleanest live argument in the whole screen for why the floor is mechanical. |
-| **EFX/VRSK** (202020) | **0.4974** | 0.7406 | Misses by **0.0026**, and is the *dominated* expression of a thesis that IS advancing: EFX/TRU measures 0.8462 and carries the same long leg. Recorded to make the point that the screen advanced the better-hedged expression of the Equifax idea and rejected the weaker one on a mechanical number, not on narrative preference. Its 60d/252d gap (+0.243) is the widest in the band and worth re-checking next cycle. |
+| **CVS/CI** (351020) | **0.4979** (0.4992 on 251 returns) | 0.5500 | **Closest miss in the population on both windows.** It misses by 0.0008 on the longer window and is not rounded up. Same discipline as AAP/ORLY in August (0.499, not rounded, then 0.4772 a month later). |
+| **AMD/NVDA** (453010) | **0.4708** | 0.4048 | **Fifth consecutive month below the floor**: 0.49, 0.4933, 0.492, 0.4700, now 0.4708. The 60d has fallen to 0.40. September called this a settled finding, and this reading confirms it. AMD's +26.5pp 1M outperformance is a two-stock AI-accelerator divergence that is not a pair by E's own definition, so it stays on record as SL1 material and nothing more. |
+| **BAX/BDX** (351010) | **0.4946** (0.4966 on 251 returns) | 0.4562 | **Second-closest miss on both windows**, with a 3M spread of −5.71pp. The 60d (0.46) is below the 252d, so this hedge is weakening, not converging. Recorded with CVS/CI as the two boundary names, so W5's recurrence check can watch whether either crosses. |
 
-## PART 1E — reconciliation of the 2026-08-03 shortlist
+## PART 1E — reconciliation of the 2026-09-01 shortlist
 
-**Five of the ten pairs the August screen advanced are dropped this cycle.** That is high turnover and it is not churn: each drop is carried by dated public evidence gathered this session, and two of them are corrections to factual errors in the August edition rather than changes in the world.
+**Six of September's eight pairs are dropped. Two are kept, and both are promoted into the top three.** The turnover is high because the evidence moved. Every drop rests on dated public information gathered this session, and two also correct statements in the September edition.
 
-| Prior pair | Prior tier | Status | Reason (public-information only) |
+| Prior pair | Prior tier | Status | Reason (public information only) |
 |---|---|---|---|
-| **COR/MCK** (0.7116) | TOP | **DROP — the catalyst fired and falsified the thesis** | The most decisive reconciliation in the screen. Both legs reported **2026-08-05** as predicted, and the thesis was wrong directionally. MCK posted adj EPS $9.93, **+20% YoY**, revenue $105.4B (+8%), raised FY27 adj EPS guidance to $44.20–45.00 and lifted the dividend 15%; it closed **+5.64%** on the print. COR beat too — adj EPS $4.48 vs $4.35, revenue $84.8B (+5.1%), FY26 guidance raised a second time to $17.75–17.95 — but closed only **+3.57%**. Since 2026-08-03 MCK has gained 6.61% against COR's 5.66%, so the gap the thesis said would close instead **widened slightly in the leader's favour**. The premise — that MCK's multiple rested on narrative rather than the quarter — is refuted by a quarter that grew adjusted EPS 20%. Cardinal Health's 2026-08-11 print is a useful control: it beat by 20% but **$0.31/share of that was a one-time IEEPA tariff refund**, and the stock moved only +1.3%, i.e. this market demonstrably does discount non-repeating drivers in this sub-industry — which undercuts the "the market is being fooled by MCK's optics" reading. Recorded honestly as a **falsified thesis**, not a timing miss. *(Separately noted, not relied upon: MCK disclosed a cybersecurity incident in an 8-K filed 2026-08-28, discovered 2026-08-25, not yet deemed material.)* |
-| **CB/TRV** (0.7157) | TOP | **KEEP — demoted to REST, reduced conviction** | The mispricing the thesis was built on has largely closed **without the catalyst firing**. Forward P/E is now **CB 12.10 vs TRV 12.19** — near-parity, where the August thesis rested on TRV's forward multiple having been pushed *above* Chubb's. Meanwhile the named mechanical catalyst has become less likely, not more: the Atlantic season through 2026-08-31 has produced only four **tropical storms** (Arthur, Bertha, Cristobal, Dolly) with **no hurricane-strength landfall**, and CSU's below-normal seasonal forecast is holding. Retained only because the structure remains the safest in the screen (vols 20.7%/19.4%, the lowest of any candidate) and cat-loss normalisation still has Q3/Q4 to run. |
-| **EFX/TRU** (0.8462) | REST (top of stack) | **KEEP — PROMOTED TO TOP** | The only carry-forward that did what it was supposed to. See PART 2 §2. |
-| **MCHP/ADI** (0.8049) | REST | **KEEP — REST, substantially realised** | See PART 2 §4. Both catalysts fired; the pair reconverged from −13.30pp to −9.67pp on the 3M measure. |
-| **PPG/SHW** (0.7324) | REST | **DROP** | The August demotion was the right call and the evidence has only accumulated. The shared end-market deteriorated for **both** legs — July housing starts −12.4% MoM to a 1.239M SAAR (Census, released 2026-08-18), NAR existing-home sales −1.7% MoM (released 2026-08-11), 10Y at 4.75%, its highest since January 2025 — so the macro does not discriminate between the legs. What *does* discriminate cuts against the thesis: SHW picked up a fresh **Guggenheim initiation at Buy, $400 PT, 2026-08-03**, with no comparable fresh bullish action on PPG, and SHW's Paint Stores Group grew same-store sales 4.2% against that same weak tape while pushing through an 8% price increase effective 2026-09-01. That is channel insulation, i.e. the two businesses are less comparable than "same 6-digit GICS" implies, and the gap is earned. |
-| **VRT/NVT** (0.7015) | REST | **DROP** | Two independent reasons. **(i) It has already substantially reconverged**: the 3M spread narrowed from −23.22pp in August to **−7.87pp** now, and VRT out-performed by +3.79pp over the last month — most of the gap the thesis existed to harvest is gone. **(ii) The earned case strengthened on new public information**: on **2026-08-24** nVent announced a definitive agreement to acquire **Maverick Power for $1.75B** (+ up to $550M earnout), a data-centre power-distribution platform, funded from cash plus a BofA bridge and guided EPS-accretive in year one — a company expanding into the exact contested end-market from balance-sheet strength. Vertiv meanwhile spent August absorbing shareholder-litigation overhang stemming directly from the execution miss. *(Discipline note: those "investigations" are standard plaintiff-firm solicitation releases issued after almost any sharp drop — no complaint has been filed and no findings exist. Their existence is a fact and is recorded as overhang; their allegations are not evidence and are not relied on.)* |
-| **PANW/CRWD** (0.8200) | REST | **KEEP — REST, EVENT-PENDING** | See PART 2 §7. Two date corrections apply; the pair is genuinely unresolvable today. |
-| **FTNT/CRWD** (0.6967) | REST | **DROP — decisive, on a factual error in the August edition** | The thesis's central tell does not survive verification. August argued that on **2026-07-29** CRWD rose "as much as +11%" and PANW +7% **on Fortinet's news** — a sympathy re-rating with no name-level information. Close-to-close, **both legs fell that day**: CRWD $181.80 → $179.38 (**−1.33%**) and PANW $319.00 → $314.15 (**−1.52%**). The +11%/+7% figures appear to belong to an entirely different, later event — **CRWD's own 2026-08-26 earnings reaction**. The August screen relied on an intraday move that fully reversed, and attributed magnitudes from one event to another. With the tell removed there is no differentiating case for this pair over §7, which has both the better hedge and the live catalyst. |
-| **COF/AXP** (0.7727) | REST, flagged | **KEEP — REST, decayed by success** | See PART 2 §5. The pair has been working: +10.92pp over 3M, so much of the thesis is realised. |
-| **WFC/C** (0.6921) | REST, reduced | **DROP** | Every remaining support has now been retired. **(i)** The hedge is still weakening — 60d **0.6716** below the 252d **0.6921**, the same relationship August flagged, now for a second consecutive month. **(ii)** August's one open factual question is closed: **Citigroup filed its Q2 2026 10-Q on 2026-08-06** (SEC EDGAR, CIK 0000831001) — the "first detailed look still pending" is no longer pending, and it landed on Citi's ordinary cadence, so there was never an anomaly. **(iii)** The catalyst August flagged as "unverified as to date" is now pinned and is **stale by fifteen months**: the Federal Reserve removed Wells Fargo's asset cap on **2025-06-03** (Fed press release; confirmed by Wells Fargo's own newsroom), with the underlying enforcement action closed in March 2026. Goldman's Conviction List addition dates to **2026-07-01**. Neither is a forward catalyst. Both banks report Q3 on **2026-10-13** (CONFIRMED, each issuer's own IR page). Nothing is left but a residual valuation sliver on a decaying hedge. |
+| **DY/EME** (0.5542) | TOP | **NOT RE-ADVANCED — D2's NO-GO stands** | D2 judged it NO-GO on the merits on 2026-09-03. A NO-GO is context, not a barrier, so it was re-examined, and nothing new and decisive turned up. Raymond James cut its target to $375 from $610 on 09-03, one of the four cuts behind the NO-GO. KeyBanc nudged its target to $429 from $423 on 09-21, and no further cuts were found. The Q3 EPS guide midpoint (~$4.56 against $4.68 consensus) and the margin/deferral risk are unchanged. The spread widened further, to −37.69pp 3M and −10.32pp 1M, but a gap that keeps widening on the earned mechanism a NO-GO identified is not new evidence against that NO-GO. Re-test at DY's FQ3 (~late November, ESTIMATE). |
+| **EFX/TRU** (0.8515) | TOP | **DROP — the thesis's spread no longer exists** | Both legs fell ~27–28% since 2026-08-31 (EFX 189.16 → 137.24, TRU 84.91 → 61.12), so the pair spread is **+0.57pp 1M / +1.74pp 3M**, essentially closed. The cause was **one shared policy shock, not the mortgage-cycle reconvergence the thesis named**. On 2026-09-03 FHFA Director Pulte said the credit bureaus overcharge, put "bi-merge" (two bureaus per mortgage instead of three) under serious consideration, and ordered Fannie/Freddie to accept VantageScore 4.0 for all lenders. On 09-04 TRU fell ~9% and EFX ~8% (Reuters, via secondary). BMO cut EFX's target to $160 from $179 on 09-30. A regulatory event that hits both bureaus equally carries no pair view. The pair kept its 0.85 hedge and lost its divergence. |
+| **NOW/WDAY** (0.7507) | REST (top) | **DROP — structurally compromised short leg** | See the Structurally compromised table: WDAY is a reported Silver Lake take-private target (Reuters, 2026-08-13). **Two September statements are corrected.** (i) WDAY's 2026-08-27 print did not plainly "miss" its subscription guide. FY27 subscription was guided to $9.94–9.95B and the operating-margin guide was raised to 31%. (ii) The 2026-09-29 Item 2.02 8-K is a **restructuring** (~2.5% of the workforce, ~525 roles, $65–80M of charges), not a pre-announcement. NOW fell in September on valuation (~85× earnings after a ~30% run), layoffs and insider sales. The 3M spread widened to +20.6pp in WDAY's favour, partly on the deal premium. |
+| **MCHP/ADI** (0.8126) | REST | **KEEP — PROMOTED to #1** | The reconvergence September called "substantially realised" has **reversed**: the 3M spread re-widened from −9.67pp to **−14.61pp**, with no MCHP-specific negative event found. See PART 2 §1. |
+| **COF/AXP** (0.7711) | REST | **DROP** | No pair-specific September event and no narrative-vs-fundamental gap. Both legs drifted lower: 1M −2.10pp, and the 3M lead has shrunk to +6.33pp, so what remained of a "decayed by success" trade has decayed further. COF's August credit-metrics 8-K was not located this session. **Correction: AXP's 2026-10-23 Q3 date, called "issuer-confirmed" in September, could not be re-verified against AXP IR this session and is downgraded to ESTIMATE.** |
+| **CB/TRV** (0.7158) | REST | **KEEP — PROMOTED to #3** | The divergence reopened: TRV has led by +12.54pp over 3M. Both legs' Q3 dates are now issuer-confirmed. See PART 2 §3. |
+| **PANW/CRWD** (0.8461) | REST, event-pending | **DROP — resolved against the long leg** | September made this resolve-or-decline at PANW's FQ4. **It resolved, and against the thesis.** PANW beat (revenue $3.41B vs $3.35B, EPS $1.02 vs $0.98), but headline NGS-ARR growth of 63% is inflated by the CyberArk and Chronosphere acquisitions. The FY27 guide implies ~22–23% organic NGS-ARR growth, and gross margin fell 100bp to 74.8%. PANW fell ~5% after the print, took a Bernstein downgrade on 09-18 and fell 3.9% on 09-25. CRWD rose ~33% in 30 days on record net-new ARR (~$333M), the DOJ closing its inquiry, and Fal.Con launches. The −22.26pp 3M gap is largely **earned**. *(Unresolved detail: September recorded PANW as reporting "2026-09-01 after close"; this session's sources show the drop in the 09-01 regular session. The 8-K was not opened, so the exact timing is left open rather than asserted.)* |
+| **F/GM** (0.5903) | REST (bottom) | **DROP — the long leg deteriorated** | Ford's September worked against the long. It halted F-150 output at Dearborn in the quarter's final week, August US sales fell 10.3%, it recalled 148,663 vehicles (F-150 campaign 26V578), it warned on USMCA costs, and Cox forecasts ~12.5% share (−1pt). Together these are a guide-cut risk against the $10–11B adj-EBIT guide. GM also fell ~7% in September (truck changeover, ~35k fewer Q4 deliveries), so the 1M spread is only −2.69pp. **Correction to September's framing:** that edition called Ford's Q2 GAAP loss "pre-announced"; this session confirms only that Ford reported a $1.3B GAAP net loss on $4.2B of pre-tax EV charges on 2026-07-28, not that the loss was pre-announced. |
 
 ---
 
 # PART 2 — Ranked shortlist of divergence theses (public-information-only)
 
-**How this ranking was produced.** The ten August pairs were reconciled against dated public evidence (PART 1E); six new candidates drawn from this cycle's measured population were researched from public sources. **Three of the six new candidates were killed** and five of the ten carry-forwards dropped. Every surviving pair carries an explicit **earned-divergence counter-argument** — a pair with no stated counter-argument was not allowed to advance. All eight meet the ≥ 0.50 spec floor on measured 252-day correlation and both legs clear the 90-day recency gate.
+**How this ranking was produced.** September's eight pairs were reconciled against dated public evidence (PART 1E). Fourteen further candidates were researched from public sources: the largest spreads in this cycle's eligible population, plus September's rejects where the spread had moved materially. Six research workers made 83 metered web calls in total. **The evidence base is thinner than September's and is labelled that way.** Most of it is secondary or aggregator reporting rather than filings or transcripts. Tavily returned HTTP 429 (rate-limited) on several calls, and **no short-interest figure was retrievable for any short leg**. All four pairs meet the ≥ 0.50 spec floor, and both legs of each clear the 90-day gate and the ADV floor by more than 30×.
 
-**Tier coding.** **TOP** = highest-conviction narrative-outpaces-fundamental thesis with a dated public catalyst and a correlation comfortably above the floor. **REST** = supportive but carrying a correlation, realisation-decay, catalyst-timing or thesis-purity caveat. M4 reads this section verbatim.
+**Tier coding.** **TOP-3** = the three highest-priority pairs for M4. **REST** = advanced with a stated caveat. M4 reads this section verbatim. **No pair is rated above 45.** September's top pair (DY/EME) went NO-GO two days after the screen, and its other TOP (EFX/TRU) lost its spread to a shared policy shock within a month. The conviction ladder should reflect that.
 
-**A calibration note this cycle earned.** August assigned its top pair `conviction_pct = 75` and that thesis was **falsified two days later** by the very catalyst it named. No pair is rated above 60 this month. That is a deliberate response to a measured miss, not false modesty — the screen's conviction ladder should reflect that a dated, imminent, binary catalyst raises the *variance* of a thesis, not only its attractiveness.
+### 1) Long MCHP / Short ADI — Semiconductors (453010) — **TOP-3 #1 (carry-forward, promoted)**
+- **(a) L/S.** **ADI = leader/short** (396.71). **MCHP = laggard/long** (77.77). Both are analog/mixed-signal and share the industrial/auto cycle.
+- **(b) Divergence thesis.** Corr **0.8126**, 60d **0.8259**: the best hedge on the shortlist, stable. Beta 1.1164, vols 50.0% / 36.4%, so beta-adjusted sizing matters. The 3M spread is **−14.61pp**, **re-widened** from −9.67pp at the September screen, and 1M is −3.66pp. The fundamentals point the other way to the price. MCHP's FQ1 (2026-08-06): sales $1.485B (+38% y/y), non-GAAP GM 63.8%, inventory days down from 185 to 175, September-quarter guide **+7–9% sequential**; the stock rose ~14% on the print. ADI's FQ3 (2026-08-19): a record $4.02B (+40%), 72.5% GM, $4.3B guide; the stock went −0.9% the next day, and ADI then collected target raises (JPMorgan $500, Morgan Stanley $458, Needham $450; TD Cowen reiterated $460 on 09-08). **No MCHP-specific negative event was found for September.** The re-widening came as sell-side enthusiasm accrued to the leader while the laggard's recovery data went unrewarded. That is the narrative-outpacing-fundamental shape, but it is inferred from the absence of a found event, not measured.
+- **(c) Reconvergence indicators.** (i) **MCHP FQ2 FY27 — ESTIMATE ~early November.** The direct test of the +7–9% sequential guide and further inventory-day normalisation. (ii) ADI FQ4 — ESTIMATE ~late November. (iii) Both companies' qualitative book-to-bill and channel-inventory language. Neither discloses a numeric book-to-bill, so this indicator is directional only.
+- **(d) Borrow/cost fit.** No short-interest data was retrieved. ADI is a ~$1.44B/day mega-cap with no evidence of special borrow, so general collateral (GC) is presumed (ESTIMATE). At GC (~0.25–0.5% p.a.) over a 3–6 month hold, financing is ~0.1–0.25% of notional, far inside criterion 5's 15%-of-thesis-return ceiling. Re-quote at execution.
+- **(e) Execution.** Individual stocks on both legs. ADV: MCHP ~$741M, ADI ~$1.44B (IBKR `avg_90d_usd_volume`).
+- **(f) Tier: TOP-3 #1, conviction 45.** **Honest risk:** ADI's AI-data-center mix and its structurally higher margin (72.5% GM, against MCHP's 63.8% with GAAP EPS still depressed by restructuring) justify part of the premium. September recorded this pair as half-realised, and that realisation proved temporary.
 
-### 1) Long DY / Short EME — Construction & Engineering (201030) — **TOP, NEW**
-- **(a) L/S.** **EME = leader/short** (~$734.54). Its Q2 print on 2026-07-30 was a clean beat-and-raise: revenue $5.15B (+19.8%), FY26 EPS guidance raised to $32.00–33.25 from $28.25–29.75; the stock closed **+19.3%** on the day ($672.48 → $802.37, verified close-to-close from IBKR daily bars). **DY = laggard/long** (~$291.21). Dycom's fiscal Q2 2027 was, on the numbers, a *record*: revenue $2.01B **+45.6% YoY**, backlog **+53.2% to $12.24B**, and full-year revenue guidance **raised** to $7.48–7.66B from $6.85–7.15B. It closed **−11.6%** on 2026-08-26 ($351.80 → $310.91, verified close-to-close) and kept sliding to roughly −17% on the week.
-- **(b) Divergence thesis.** Corr **0.5534**, 60d **0.6656** — above the floor and strengthening, though the weakest hedge of any advanced pair, which is the main reason this is not a higher-conviction call. **3M spread −29.44pp — the largest divergence in the entire 81-pair population** — and 1M **−19.69pp**, so the divergence is recent and accelerating rather than stale. The asymmetry is the point: a company that raised full-year revenue guidance and posted a record backlog was marked down 11.6% in a session, while its same-industry peer that also beat was marked *up* 19.3%. What DY actually delivered against what the tape did to it is the widest such gap this screen has measured.
-- **(c) Reconvergence indicators.** (i) **DY fiscal Q3 2027 results — ESTIMATE, ~mid-to-late November 2026**; not issuer-scheduled yet, and the prior-year comparable was 2025-11-19. The direct test is whether the ~$150M of wireless-replacement revenue that shifted into FY28 shows up as guided. (ii) **EME Q3 2026 — ESTIMATE ~2026-10-29**, aggregator-sourced, not IR-confirmed. (iii) Further sell-side target revisions on DY: post-print, KeyBanc, BofA, Cantor and B.Riley all *raised* targets into the $610–654 range while only Wells Fargo cut (to $550), against a ~$291 close.
-- **(d) Borrow/cost fit.** EME short interest ~**2.1% of float** (~0.9–0.94M shares) — low, no squeeze signal; aggregator-sourced and therefore an ESTIMATE, not exchange-confirmed. No evidence of special borrow. DY's own short interest was not sourced. Re-quote at execution.
-- **(e) Execution.** Individual-stock, both legs. **DY's ~$173.1M average daily dollar volume is the lowest of any advanced leg** (IBKR `avg_90d_usd_volume`) — still more than 17× the $10M floor, so not a constraint, but it is the thinnest name in the shortlist and worth naming. DY vol 51.7% / EME 45.1%: beta-adjusted sizing matters here.
-- **(f) Tier: TOP** on divergence magnitude and freshness. **Honest risk — and it is not small.** The margin compression and the deferral are *real, disclosed facts*, not rumour: communications-segment adjusted EBITDA margin fell to 13.6% from 14.9% YoY, the Q3 EPS guide ($4.33–4.79) missed the ~$4.68 consensus midpoint, and ~$150M of revenue moved out of the fiscal year. A ~$637 consensus target against a ~$291 price can mean the sell-side is slow to reprice a genuine deceleration just as easily as it can mean the market overreacted. **This pair should be re-tested for further target cuts before it is sized**, and the "raised guidance" headline must not be allowed to obscure that the raise was on revenue while the miss was on margin.
+### 2) Long MDB / Short SNOW — Software (451030) — **TOP-3 #2, NEW (back in population)**
+- **(a) L/S.** **SNOW = leader/short** (339.56). **MDB = laggard/long** (348.61).
+- **(b) Divergence thesis.** Corr **0.6005**, 60d **0.5282**: above the floor but **the weakest and a weakening hedge**. Vols are 71.2% / 62.4%, the highest on the shortlist. 1M spread **−25.56pp**, 3M **−29.64pp**: the largest live divergence among the advanced pairs. It has **two components, and they must be kept apart**:
+  - **The earnings leg (1–2 Sep) is largely EARNED.** MDB's Q2 (2026-09-01) was strong: revenue $771.8M (+30%), Atlas +29%, FY27 revenue guide raised to $2.99–3.03B. It still fell ~12% after hours on a guided **sequential Q3 revenue decline**. SNOW (2026-09-02) posted product revenue $1.49B (+37%), its **third straight acceleration**, with NRR 126% and FY product guide raised to $6.07B. It rose ~22%.
+  - **The 09-28 leg is NARRATIVE.** MDB closed **−18%** on 2026-09-28 (410.44 → 334.68, IBKR bars; ~−26% intraday) when CEO CJ Desai resigned after about a year to lead Meta's new enterprise platform. Former CEO Dev Ittycheria returned as interim. **The next day MDB held its scheduled investor day (2026-09-29, confirmed by MDB press release)**. It **raised** its 3-year targets (revenue growth >20% from high-teens, Atlas mid-20s, 100–200bp/yr margin expansion), authorised a **$1B buyback**, and launched Atlas Infinite and Atlas Agent Engine. The stock recovered only to 348.61 by 09-30. An 18% move on a leadership change, followed the next day by raised long-term targets from the board-backed interim team, is the textbook E setup on the second component only.
+- **(c) Reconvergence indicators.** (i) **Permanent CEO appointment** (undated; board search). This is the single largest catalyst. (ii) MDB Q3 FY27 — ESTIMATE ~early December. This is the test of the sequential-decline guide, which is what earned the first leg. (iii) SNOW FQ3 FY27 — ESTIMATE ~late Nov/early Dec.
+- **(d) Borrow/cost fit.** SNOW short interest was not retrieved. It is a ~$1.67B/day name; GC is presumed but **not verified**, and SNOW's +22% post-print move makes a squeeze check worthwhile. Must be re-quoted before sizing.
+- **(e) Execution.** Individual stocks. ADV: MDB ~$736M, SNOW ~$1.67B.
+- **(f) Tier: TOP-3 #2, conviction 45.** Ranked above #3 on divergence size and a clean narrative component, and below #1 on hedge quality. **Honest risk, and it is large:** the hedge is the weakest advanced (60d 0.53, on a pair whose 252d is only 0.60), so E's correlation-breakdown exit (rolling 60d < 0.3) is closer than for any other pair. SNOW's acceleration is real. A CEO leaving abruptly for a potential competitor (Meta) is a governance and competitive fact, not a misreading. **The thesis targets ONLY the post-earnings 09-28 increment and must be sized with that in mind, not against the full −29.6pp.**
 
-### 2) Long EFX / Short TRU — Professional Services (202020) — **TOP (carry-forward, promoted)**
-- **(a) L/S.** **TRU = leader/short** (~$84.91; Q2 2026-07-28, revenue $1.31B +14.9% YoY, beat, raised full-year guidance on financial-services strength). **EFX = laggard/long** (~$189.16; Q2 2026-07-21, revenue $1.70B in line, adj EPS $2.25 vs $2.20 — a beat — but Q3 EPS guidance below consensus and a sharp de-rating).
-- **(b) Divergence thesis.** Corr **0.8462**, 60d **0.8729** — **the highest measured correlation of any live thesis in this screen, and strengthening**, i.e. structurally the best-hedged pair on the list. Both are consumer-credit-bureau businesses in the same 6-digit industry with heavily overlapping end-markets. **This is the one carry-forward that has done what it was supposed to do**: since 2026-08-03 EFX has gained **+8.6%** against TRU's **+6.2%**, and the 3M spread has narrowed from −12.18pp in August to **−6.54pp** now. It is reconverging, on schedule, in the predicted direction.
-- **(c) Reconvergence indicators.** (i) **NAR August existing-home sales — CONFIRMED 2026-09-10**, the next direct read on the shared driver and the nearest dated catalyst in the entire shortlist. (ii) EFX Q3 2026 (~late October, ESTIMATE, not issuer-confirmed) — the direct test of the Q3 guide that caused the de-rating. (iii) TRU Q3 2026 (~late October, ESTIMATE).
-- **(d) Borrow/cost fit.** TRU measured live last cycle at **0.25% fee rate with 1,800,000 shares available** — GC, ample, no hard-to-borrow flag; on a $150 short leg held three months that is roughly $0.09. Immaterial against the 15%-of-thesis-return ceiling. Not re-measured this session; re-quote at execution.
-- **(e) Execution.** Both legs far above any commission break-even; ADV $600M+ and $370M+ respectively.
-- **(f) Tier: TOP.** Promoted from REST on realised behaviour plus the best hedge in the screen. **The public macro corroborates the laggard's own framing rather than contradicting it**: EFX attributed its guide-down to a tough mortgage market, and July existing-home sales fell 1.7% MoM with the 30-year fixed near a one-year high and the refi index still ~22% below year-ago — that is a cycle condition, not an EFX-specific failure, and it is the condition TRU carries far less of. **Honest risk (unchanged and material):** that asymmetry cuts both ways — TRU genuinely has less mortgage exposure, so part of the gap is a real difference in end-market mix. **A second, newer counter:** TRU's +5.1% single-day move on 2026-08-19 was attributed to its own consumer-credit-score system overhaul — a company-specific growth initiative unrelated to the mortgage cycle, meaning some of TRU's relative strength is idiosyncratic and earned.
+### 3) Long CB / Short TRV — Insurance (403010) — **TOP-3 #3 (carry-forward, promoted)**
+- **(a) L/S.** **TRV = leader/short** (356.51). **CB = laggard/long** (325.25).
+- **(b) Divergence thesis.** Corr **0.7158**, 60d 0.6949, beta 0.7615. **Vols 20.8% / 19.6% are the lowest in the screen**, so hedge-ratio error costs least here. TRV's 3M lead is +12.54pp (1M +1.37pp), built on its Q2 beat (2026-07: net income $2.21B, +46%; core EPS $10.04 on light catastrophe losses). TRV peaked at $398.70 on 07-28 and has given back ~10.6% since. Q3 consensus core EPS is ~$6.84 (aggregator ESTIMATE), a step-down from Q2. The case is that TRV's multiple still carries a catastrophe-light Q2 into a quarter that includes a **late-September Northeast nor'easter** (from ~2026-09-25: NJ/NY flooding, 80,000+ outages across five states). That storm hits TRV's personal-lines concentration harder than globally diversified Chubb's. **Source-quality caveat, prominently:** the storm's insured-loss significance comes from a low-quality blog source only. No dollar estimate and no catastrophe pre-announcement from either insurer was found. **Nothing about the storm may be relied on until the 10-16 print quantifies it.**
+- **(c) Reconvergence indicators — the only issuer-CONFIRMED dates in this shortlist.** (i) **TRV Q3: Fri 2026-10-16, pre-market, call 9:00 ET — CONFIRMED** (TRV scheduling press release, via a reprint). (ii) **CB Q3 call: Wed 2026-10-21, 8:30 ET — CONFIRMED** (Chubb press release). The release itself is expected 10-20 after close, which is **derived** from the call date (ESTIMATE). (iii) Any catastrophe-loss pre-announcement by TRV before 10-16.
+- **(d) Borrow/cost fit.** TRV short interest not retrieved; it is a large-cap GC insurer with no evidence of special borrow (ESTIMATE).
+- **(e) Execution.** Individual stocks. ADV: TRV ~$609M, CB ~$576M.
+- **(f) Tier: TOP-3 #3, conviction 30.** It sits in the top three on catalyst proximity and structure (two confirmed prints inside three weeks, lowest vol), not on thesis strength. **Honest risk:** TRV's 3M lead was earned by a real Q2 beat, and the storm-loss mechanism is unquantified. If TRV's 10-16 catastrophe line is benign, the thesis has nothing left and should be declined at that print.
 
-### 3) Long NOW / Short WDAY — Software (451030) — **REST (top of stack), NEW — note the inverted direction**
-- **(a) L/S.** **WDAY = leader/short** (~$197.45) and **NOW = laggard/long** (~$147.99) — *on price behaviour*, which is the opposite of the way this pair would usually be framed on fundamentals. ServiceNow's Q2 2026 (10-Q filed 2026-07-23, period ended 2026-06-30) showed subscription revenue **+23–24.5% YoY** and cRPO **+21%**, with FY26 subscription guidance raised to $15.76–15.78B. Workday's Q2 FY2027 (10-Q filed 2026-08-27, period ended 2026-07-31) showed subscription revenue **+13.9%** and cRPO **+14.2%** — roughly 60% of ServiceNow's growth rate.
-- **(b) Divergence thesis.** Corr **0.7527**, 60d 0.7441, beta 0.7053. Over three months **WDAY outperformed NOW by +16.65pp** despite growing at well under half its rate, on an AI-"agent system of record" narrative (AI SKU ARR reported +200% YoY to ~$600M). The price gap ran in the opposite direction to the fundamental growth gap — a textbook Strategy E setup, with the unusual feature that the *faster-growing, higher-quality* leg is the long.
-- **(c) Reconvergence indicators.** (i) **The first leg has already delivered**: WDAY's 2026-08-27 print sent shares down ~7% after-hours on a subscription-guidance miss ($2.52B) with commentary that reacceleration "is still elusive" — which is visible in the measured **1M spread of +9.97pp in NOW's favour**. (ii) WDAY fiscal Q3 2027 and NOW Q3 2026 — both ESTIMATE, ~late October/November, neither issuer-scheduled.
-- **(d) Borrow/cost fit — THE BINDING CAVEAT ON THIS PAIR.** WDAY short interest is reported at **~14.0% of float** in one aggregator snapshot (described as up sharply) but at **4–5%** in others. **These cannot both be right and neither is exchange-confirmed.** A 14%-of-float short leg is a materially different proposition from a 4% one for both borrow cost and squeeze risk. **This pair must not be sized before the S leg's short interest is pinned to a primary FINRA/exchange settlement-date source.** Recorded as UNVERIFIED rather than split the difference.
-- **(e) Execution.** Both legs are the most liquid in the screen (NOW ~$3.36B/day, the highest ADV of any leg). Vols 53.0% / 56.6% — the highest-volatility pair advanced, so hedge-ratio error is costly.
-- **(f) Tier: REST (top of stack).** Held below TOP for two reasons stated plainly: roughly half the reconvergence has **already happened** on the 2026-08-27 print, so entry today is chasing a partially-played move; and the short leg's borrow picture is unresolved. **Honest risk:** Workday's AI-agent monetisation is a real, disclosed, growing revenue line (>$100M new ACV in the quarter, 25%+ of new ACV, 5,500+ customers, +35% QoQ) — the three-month rally may be an early re-rating of a legitimate new growth vector rather than hype, and ServiceNow's existing premium (EV/Revenue ~7.4–9× vs WDAY ~5.0×) already prices it as the structurally faster grower, so part of the "gap" is ordinary multiple arithmetic.
-
-### 4) Long MCHP / Short ADI — Semiconductors (453010) — **REST (carry-forward, substantially realised)**
-- **(a) L/S.** **ADI = leader/short** (~$362.14). **MCHP = laggard/long** (~$73.45).
-- **(b) Divergence thesis.** Corr **0.8049**, 60d **0.8882** — high and strengthening, the second-best hedge on the list. But **the reconvergence largely happened during the month**: the 3M spread narrowed from −13.30pp in August to **−9.67pp**, and the mechanism was exactly the one the thesis named. Microchip's FQ1 2027 (2026-08-06, CONFIRMED via SEC 8-K and its own IR) printed net sales $1.485B **+38% YoY / +13.2% QoQ**, non-GAAP EPS $0.76 against a $0.67–0.71 guide, **book-to-bill "well above 1" on its best bookings quarter in about four years**, distribution inventory down to 25 days and total inventory days down 10 QoQ — and the stock closed **+13.9%** the next session. Analog Devices' FQ3 (2026-08-19, CONFIRMED) was a *record* quarter — $4.02B revenue (+40% YoY, its first $4B quarter), adj EPS $3.45 (+68%), 72.5% adj gross margin — and the stock closed **−0.81%**, a sell-the-news fade.
-- **(c) Reconvergence indicators.** (i) ADI FQ4 2026 and MCHP FQ2 2027 — both **ESTIMATE, ~November**, neither company-confirmed this session. (ii) Both companies' book-to-bill and inventory-days disclosures, the shared cycle indicator; note **neither company discloses a numeric book-to-bill**, only qualitative language, so this indicator is directional only.
-- **(d) Borrow/cost fit.** ADI not sampled live this cycle; mega-cap GC, no evidence of special borrow.
-- **(e) Execution.** Standard. Vols 49.3% / 35.5%, beta 1.1184 — the only advanced pair with beta above 1.
-- **(f) Tier: REST.** Held down precisely because it worked: the cycle-inflection catalyst on the long leg has already fired favourably, so materially less of the gap remains than the raw 3M number suggests. **Honest risk:** ADI's margin and cash-flow profile (72.5% GM, 50% adj operating margin, record FCF on 40% growth) is structurally superior to Microchip's, and MCHP's GAAP EPS — $0.22 in FQ4 2026, improving only to $0.37 now — remains depressed by preferred-dividend and restructuring accounting against a genuine inventory-correction cycle. Part of the discount is earned.
-
-### 5) Long COF / Short AXP — Consumer Finance (402020) — **REST (carry-forward, decayed by success)**
-- **(a) L/S.** **AXP = leader/short** (~$330.17). **COF = laggard/long** (~$214.51).
-- **(b) Divergence thesis.** Corr **0.7727**, 60d 0.7536, beta **0.9298** — nearly dollar-neutral, still the cleanest structure in the screen. The thesis is intact but **has substantially paid out already: +10.92pp over 3M and a further +2.76pp in the last month**, so what remains is the tail of a working trade rather than a fresh dislocation.
-- **(c) Reconvergence indicators.** (i) **AXP Q3 — CONFIRMED 2026-10-23, 08:30 ET**, sourced to American Express's own IR release pre-announcing its full 2026 schedule. **This is the only issuer-confirmed earnings date in the entire shortlist** (see the provenance note below). (ii) COF Q3 — **ESTIMATE ~2026-10-20**; no COF-issued confirmation found, and Capital One appears to announce quarter-by-quarter closer to the date. (iii) COF's next monthly credit-metrics 8-K (August data), expected ~mid-September on the observed cadence.
-- **(d) Borrow/cost fit.** Both GC; no evidence of special borrow on AXP.
-- **(e) Execution.** Standard.
-- **(f) Tier: REST, flagged for decay.** **The credit check the August edition asked for was run, and it is genuinely two-sided.** From the issuers' own 8-K/ABS trust filings: COF's July 2026 domestic-card annualised net charge-off rate is **4.12%** (auto 1.48%); American Express's Card Master Trust reported an annualised net default rate of **1.1% in July rising to 1.2% in August**. **These are not like-for-like** — COF's book skews subprime/near-prime card plus auto, AXP's skews affluent charge/spend-centric — so the ~3.5× ratio is not evidence of deterioration. What it *is* evidence of is that August's stated risk is real: COF's discount is partly a genuine credit-quality difference. **A June comparable for COF was not retrieved, so its July level cannot be characterised as improving, flat or deteriorating** — stated as a gap, not smoothed over. One risk *has* retired: the CFPB cleared the Capital One–Discover transaction under fast-track review, finding it unlikely to raise serious competition concerns.
-
-### 6) Long CB / Short TRV — Insurance (403010) — **REST (carry-forward, demoted from TOP)**
-- **(a) L/S.** **TRV = leader/short** (~$365.93). **CB = laggard/long** (~$338.60).
-- **(b) Divergence thesis.** Corr **0.7157**, 60d 0.7313 (stable), and **vols 20.7% / 19.4% — the lowest of any pair in the screen**, so hedge-ratio error costs least here. The measured divergence actually **widened**: CB−TRV is −17.35pp over 3M. But the *stated* mispricing has closed — forward P/E is now **CB 12.10 vs TRV 12.19**, essentially parity, where the August thesis rested on TRV's multiple having been pushed above Chubb's on a non-repeatable catastrophe-loss benefit. A 17pp price divergence with P/Es at parity means forward EPS estimates moved with the price, which is the *earned* reading, not the narrative one.
-- **(c) Reconvergence indicators.** (i) Q3 catastrophe-loss disclosure at either insurer, spanning peak Atlantic season — but see the risk below. (ii) CB Q3 — **ESTIMATE ~2026-10-20**; TRV Q3 — **ESTIMATE ~2026-10-15**. Neither is issuer-confirmed: Q3 has not closed and neither company has published its call announcement. **August recorded CB's date as "confirmed 2026-10-20"; that could not be re-confirmed this session and is downgraded to ESTIMATE.**
-- **(d) Borrow/cost fit.** Both large-cap GC insurers; no evidence of special borrow.
-- **(e) Execution.** Structurally the safest pair in the screen on volatility.
-- **(f) Tier: REST, demoted from TOP.** **Honest risk, and it is now the leading reading:** the mechanical catalyst has not fired and is looking less likely to. The Atlantic season through 2026-08-31 produced four **tropical storms** and **no hurricane landfall**, with CSU's below-normal forecast holding. A thesis whose reconvergence mechanism is "a hurricane forces catastrophe-loss normalisation" is weaker in a below-normal season, and with the valuation gap already closed there is materially less left to harvest than in August.
-
-### 7) Long PANW / Short CRWD — Software (451030) — **REST, EVENT-PENDING TONIGHT — two date corrections**
-- **(a) L/S.** **CRWD = leader/short** (~$231.00). **PANW = laggard/long** (~$382.13).
-- **(b) Divergence thesis.** Corr **0.8200**, 60d **0.8970** — strengthening, and now the best-hedged of the carry-forwards. 3M spread +9.04pp in PANW's favour, 1M −3.97pp.
-- **(c) TWO DATE CORRECTIONS to the August edition, both verified at the primary source.** **(i) CrowdStrike did NOT report on 2026-09-02.** It reported **2026-08-26**, after close — SEC 8-K carrying Item 2.02 filed that date, with the 10-Q for the period ended 2026-07-31 filed 2026-08-27. The August screen listed "CRWD FQ2 confirmed 2026-09-02" as the freshest catalyst for both this pair and §8; **that catalyst has already fired**, and its result cuts *against* the short leg: revenue $1.47B (+26% YoY, a beat), **record net-new ARR $333M (+51% YoY)**, ending ARR $5.84B (+25%), FCF $377M, and FY27 guidance raised to $5.99–6.01B revenue / $1.25–1.26 EPS, above consensus; the stock rose more than 11%. **(ii) Palo Alto did NOT report on 2026-08-24.** August recorded that date as "confirmed, corroborated by two independent sources." SEC EDGAR shows **no Item 2.02 filing** for PANW between 2026-06-02 and today — its 2026-08-21 8-K carries items 5.02/5.03/9.01 (officer change and bylaw amendment), not results. PANW's own press release states it reports **2026-09-01 — today — after close.** *(Carried forward and re-verified: the PANW/CyberArk deal closed **2026-02-11**; aggregators calling it an "August 2026" event remain wrong.)*
-- **(d) Borrow/cost fit.** CRWD's short-interest build that August flagged has **not** continued: ~2.40% of float / 24.16M shares (2026-09-01) and ~2.54% / 25.56M shares with 2.30 days to cover (2026-08-28), against August's 2.74% reading — flat-to-lower, with a quoted **borrow rate of 0.25%** and no hard-to-borrow signal. August's instruction that "CRWD is the one name warranting an individual SLB check before entry" is **partially discharged**: the escalating-short-pressure concern is refuted, though these remain aggregator figures rather than a live SLB quote.
-- **(e) Execution.** Standard; vols 43.7% / 52.3%.
-- **(f) Tier: REST, EVENT-PENDING.** **This pair is genuinely unresolvable today and it would be dishonest to rate it otherwise.** Half its evidence is a week old and unfavourable — CrowdStrike's own quarter argues its premium is being earned by a business that is *reaccelerating*, which is the opposite of the thesis premise — and the other half lands hours after this file is written. **Per Decision discipline, this deferral names its resolver and its default: M4 must re-check PANW's FQ4 result before queueing this pair, and if it cannot, the conservative default is to decline. The deferral does not chain — it resolves at M4 or it dies there.**
-
-### 8) Long F / Short GM — Automobiles (251020) — **REST (bottom), NEW, size-limited**
-- **(a) L/S.** **GM = leader/short** (~$86.32; Q2 2026 beat-and-raise per its 2026-07-21 8-K). **F = laggard/long** (~$13.94; Q2 2026 revenue $48.3B with a **GAAP net loss of $1.3B**).
-- **(b) Divergence thesis.** Corr **0.5707**, 60d **0.6496** (strengthening), beta 0.6386. 3M spread **−20.58pp**. The candidate mispricing is an optics/substance gap: Ford's GAAP loss came almost entirely from a **disclosed, previously-announced, one-time EV retreat** — a $3.6B BlueOval SK JV wind-down plus a $500M program cancellation, decided in December 2025 and executed in H1 2026 — while Ford's *adjusted* EBIT was $2.5B and it **raised** full-year adjusted EBIT guidance to $10–11B on the same day. A headline loss driven by a pre-announced strategic write-down is the cleanest available example of narrative running ahead of economics.
-- **(c) Reconvergence indicators.** (i) Ford Q3 2026 — **ESTIMATE ~2026-10-22**; Ford's own IR events page lists no Q3 event yet. (ii) GM Q3 2026 — **ESTIMATE ~2026-10-20**; GM's IR page returned HTTP 503 on fetch, so this is aggregator-sourced and not primary-confirmed. (iii) Monthly US sales releases from both.
-- **(d) Borrow/cost fit.** GM short interest **~2.2–3.6% of float** depending on source and date — low single digits, no squeeze signal, but the sources conflict and none is exchange-confirmed. ESTIMATE.
-- **(e) Execution.** Both highly liquid. Note Ford's ~$13.94 share price: at small book sizes the fractional-share mechanics matter more here than anywhere else in the shortlist.
-- **(f) Tier: REST (bottom), explicitly size-limited.** **Honest risk, and it is quantified and real:** GM's margin advantage is not narrative. Its 10-Q shows **warranty expense for recall campaigns fell to $310M in H1 2026 from $614M in H1 2025 — down 49% YoY** — North America EBIT margin rose 2.5pp to 8.6%, and management explicitly cited lower warranty costs as a guidance driver, while Ford still carries roughly 12M vehicles under recall in 2026. A meaningful part of the −20.58pp gap is Ford earning a genuine quality/warranty deficit. This advances as the weakest of the eight, on the strength of the GAAP-versus-adjusted asymmetry alone, and should be sized accordingly. *(One widely-circulated Ford August US sales figure was **excluded** rather than repeated: the source carried a 2024 headline under a 2026 copyright, and neither automaker had released August US sales as of this run.)*
+### 4) Long MTZ / Short PWR — Construction & Engineering (201030) — **REST, NEW**
+- **(a) L/S.** **PWR = leader/short** (642.51). **MTZ = laggard/long** (213.62).
+- **(b) Divergence thesis.** Corr **0.7367**; 60d **0.6214**, weakening. 3M spread **−37.89pp, the largest in the eligible population**; 1M −16.74pp. MTZ's Q2 (late July) set records: revenue $4.4B (+23%), 18-month backlog $21.4B, FY adj-EPS guide **raised** to $9.30. The stock nonetheless fell on Communications-segment softness, wireline deferrals and free-cash-flow concerns, then dropped a further ~7–8% on **2026-09-17 with no identified trigger** (sources disagree between −7.92% and −7.04%; technical breaks of the 50/200-day averages and insider-sale filings were noted). Consensus target ~$417 against a $214 price.
+- **(c) Reconvergence indicators.** MTZ Q3 — ESTIMATE ~late Oct/early Nov. This tests whether Communications deferrals are a timing shift or a lost book.
+- **(d) Borrow/cost fit.** PWR short interest not retrieved; large-cap, GC presumed (ESTIMATE).
+- **(e) Execution.** Individual stocks. ADV: MTZ ~$323M (the thinnest advanced leg, still >30× the floor), PWR ~$666M.
+- **(f) Tier: REST, conviction 30.** **Honest risk:** August and September both declined this pair because the earned divergence kept widening, and it has widened again, by a further 16pp. Advancing it now rests on a raised guide and record backlog against an unexplained 09-17 drop. That is weaker than a thesis. **M4 should treat this as watch-grade: a candidate for the Q3 print, not for thesis construction ahead of it.**
 
 ---
 
-## Considered and NOT advanced (new candidates this cycle)
+## Considered and NOT advanced (researched this cycle)
 
 | Pair | 252d | Why not |
 |---|---|---|
-| **ZBH/SYK** | **0.5043** | **Newly above the floor — and still not advanced.** August recorded this at 0.493 as the widest 60d-over-252d gap in the population and predicted the trailing window understated it; that call was right, the 252d has crossed the floor and 60d is **0.752**. But crossing a mechanical gate does not create a thesis. Both legs' recent moves trace to real, disclosed, company-specific events: Stryker fell ~9% after 2026-07-30 on the continuing fallout from a disclosed March 2026 cybersecurity incident **and** a −6.7% decline in US Vascular from a supply disruption, and only *narrowed* rather than raised full-year guidance; Zimmer beat (net sales $2.177B +4.8%, adj EPS $2.07) and raised guidance on genuine ROSA traction (technology/data +21.5%). That is two different quarters, not a narrative gap. Note also that ZBH has been **out-performing** (+12.49pp 3M, +8.25pp 1M), so a long-ZBH thesis is late, not early — and forward P/E is still ~20× SYK vs ~11× ZBH, i.e. the valuation gap has **not** converged, which is what a genuine re-rating would show. |
-| **ELV/UNH** | **0.6637** | **Prior drop STANDS — but on updated grounds, and the old grounds are stale.** August dropped this because UNH's discount was "substantially a disclosed regulatory/litigation risk premium." **That reason has inverted**: UNH is no longer the discounted leg — forward P/E ~18.5× UNH vs ~14.1× ELV. And one specific fact August relied on has moved: the **Claritev DOJ criminal grand jury closed on 2026-06-17** with DOJ advising Claritev it is not a target (SEC 8-K ctev-20260622), though a separate civil investigative demand from 2026-05-19 was reportedly broadened on 2026-07-16. The drop nevertheless stands for a *new* reason: Elevance's underperformance is now substantially its own earned, guided-down fundamentals — FY2026 adjusted EPS guided to "at least $27," a **~11% YoY decline** from FY2025's $30.29, on a specifically-disclosed Medicaid margin trough (operating margin guided to −1.75%, down 125bp). The August +8.8pp ELV bounce is a beat against an already-lowered bar, not a gap opening. **Re-derived, not inherited.** |
-| **HAL/SLB** | **0.7019** | **REJECT — the DVN/EOG failure mode, explicitly.** August rejected DVN/EOG because a merger had changed one leg's production mix and the pair had become "a commodity-direction bet in pair clothing." HAL/SLB is the same class: the gap is substantially a structural **North-America-versus-international business-mix and commodity-sensitivity** difference, not a narrative one, with both legs hit by the *same* shared macro shock (Bab el-Mandeb tanker traffic collapsed from 5.91M to 0.79M bpd July→mid-August; Brent closed August at 93.03). A detail that makes the point sharper rather than softer: SLB has the *greater* Middle East revenue exposure (~34% of 2025 revenue vs HAL's ~23%) and outperformed anyway — so this is not simple shock-avoidance, it is a business-mix bet. SLB's differentiation (Digital +9% sequential at 35% EBITDA margin, ChampionX contributing ~$870M, a $2B+ data-centre-solutions target) is disclosed and real. |
-| **MTZ/PWR** | 0.7443 | Not re-advanced. The B-book conflict that co-justified August's drop has lapsed (MTZ is not in the current book), but the independent earned-divergence reason stands and the spread **widened further to −22.09pp over 3M**. A gap that keeps widening on an earned mechanism is not a reconvergence candidate. |
-| **VRT/GEV** | 0.6252 | **Cross-strategy — unchanged.** GEV is open long in the D book; an E short of GEV would largely net out at book level. Recorded, not advanced. |
-| **VRT/HUBB, HUBB/NVT** | 0.5769 / 0.6368 | Not advanced — both are dominated expressions of the VRT/NVT idea, which was itself dropped this cycle (PART 1E). |
+| **WDC/STX** (452020, NEW) | **0.8777** | **Earned.** STX has run 44TB HAMR drives in production since March 2026; WDC's volume HAMR targets 2027. WDC beat on every line on 2026-08-06 (revenue $3.747B, EPS $3.56, GM 54.4%) and still fell ~11% on the technology gap, with Summit Insights downgrading to Hold that day. The gap reflects a technology roadmap that will not close inside E's 1–6 month horizon. The second-highest correlation in the population with no narrative component. |
+| **TJX/ROST** (255040) | 0.5766 | **Earned, on guidance.** ROST's Q2 (2026-08-20): comp **+10%**, its second straight double-digit; FY EPS guide raised to $8.61–8.77 (Q2 EPS included ~$0.60 of tariff refund). TJX (08-19): comp +4%, Marmaxx +1%, Q3 comp guide 2–3% against ROST's 6–7%. The forward guides say the +22.3pp 3M gap persists. The hedge is also weakening (60d 0.54). |
+| **FANG/APA** (101020) | 0.7954 | **Commodity bet in pair clothing** — the DVN/EOG and HAL/SLB failure mode, a third time. APA's Egypt/North Sea/international exposure against FANG's pure Permian WTI, during an acute Middle East supply shock (Brent ~$107 on 09-15), is a Brent/international-gas beta trade, not a narrative one. APA hit a 52-week high of $47.44 on 09-15 with a 40M-share buyback; FANG fell 7.6% in September. |
+| **LII/TT** (201020) | 0.6149 | **Earned, end-market mix.** Lennox cut its FY26 EPS guide on 2026-07-29 to $23.00–24.00, with Home Comfort shipments −12%. Deutsche Bank downgraded it to Hold on 09-14 and Wells Fargo initiated at Equal-Weight on 09-25. Residential HVAC destocking against Trane's commercial/data-center exposure is a real business difference, and no dated residential inflection exists. |
+| **AAL/DAL** (203020) | 0.8231 | **Earned, and in practice an oil/leverage bet.** AAL has a stockholders' deficit of $3.97B and $28.9B of debt and finance leases, and its operating income does not cover interest; Delta's covers it more than 8×. AAL cut its FY EPS guide in July and recovers less of the fuel increase through fares (~50% vs Delta ~60%). At a September conference AAL's CFO said fuel $1/gal above plan adds ~$1B per quarter. DAL's Q3 call 2026-10-09 appears issuer-announced, but the IR page was not opened (likely-confirmed). |
+| **H/MAR** (253020) | 0.7341 | **Mostly earned through estimate cuts, on a weakening hedge** (60d 0.63). Hyatt beat EPS on 07-30 but trimmed net rooms growth to ~6%, and its Mexico all-inclusive recovery is slow. Marriott raised its RevPAR guide to 3–3.5% on 08-03. Hyatt's openings are Q4-weighted, so proof is back-loaded beyond a clean catalyst. |
+| **VRT/NVT** (201040) | 0.7135 | **Evidence too thin to advance; momentum against the long.** VRT lagged a further 13.1pp in September on multiple compression and deal concern. It is acquiring UtilityInnovation Group for $1.45B plus up to $1.15B in earn-outs (~13× 2027 EBITDA, close expected Q4 2026). No guidance change was found, NVT's side was not re-verified, and **both legs now carry pending acquisitions**. |
+| **ALL/PGR** (403010) | 0.7186 | No identified cause for ALL's −9.0pp 1M lag. PGR's August monthly: net income $951M (−22% y/y), combined ratio 89.3% vs 83.1%. No thesis. |
+| **CLX/CHD** (303010) | 0.5511 | Earned. FY26 sales −5.4%, FY27 EPS guide $5.70–6.00 with >$200M of inflation, GOJO-driven leverage, a Sell downgrade and target cuts (Wells Fargo $102 → $90, Citi $100 → $97). The CHD leg was not researched. |
+| **KMB/PG**, **NOW/WDAY** | 0.5354 / 0.7507 | Structurally compromised (pending/reported control transactions). See the table above. |
+| **VRT/GEV** | 0.6394 | Cross-strategy: GEV is open long in the D book. |
 
 ---
 
 ## Tier summary and ordering
 
-**TOP (2):** §1 DY/EME (corr 0.5534; −29.44pp 3M, the largest divergence in the population), §2 EFX/TRU (corr 0.8462, the best hedge in the screen, and the one carry-forward measurably reconverging as predicted).
+**TOP-3:** §1 MCHP/ADI (corr 0.8126, best hedge; the reconvergence reversed with no laggard-specific cause found), §2 MDB/SNOW (corr 0.6005; −29.6pp 3M, of which only the 09-28 CEO-departure increment is the thesis), §3 CB/TRV (corr 0.7158, lowest vols; **two issuer-confirmed Q3 prints, 10-16 and 10-21**).
 
-**REST (6):** §3 NOW/WDAY, §4 MCHP/ADI, §5 COF/AXP, §6 CB/TRV, §7 PANW/CRWD *(event-pending tonight)*, §8 F/GM *(size-limited)*.
+**REST (1):** §4 MTZ/PWR (watch-grade, at the Q3 print).
 
-Total shortlist **8 pairs** — 3 new (DY/EME, NOW/WDAY, F/GM), 5 carried forward. **Five of August's ten were dropped** (COR/MCK on a falsified thesis, FTNT/CRWD on a factual error, PPG/SHW and VRT/NVT on strengthened earned-divergence evidence, WFC/C on the retirement of all three supports), and one prior TOP (COR/MCK) was falsified outright by the catalyst it named.
+Total shortlist **4 pairs**: 2 carried forward (both promoted), 2 new. **Six of September's eight were dropped**: DY/EME on D2's standing NO-GO, EFX/TRU on a spread erased by a shared FHFA shock, NOW/WDAY on a take-private-target short leg, COF/AXP on no remaining divergence, PANW/CRWD resolved against the long, and F/GM on a deteriorating long leg.
 
-**Ordering for M4 by reconvergence-indicator proximity:** §7 PANW/CRWD (**2026-09-01, tonight, after close — CONFIRMED**) → §2 EFX/TRU (**2026-09-10 NAR existing-home sales — CONFIRMED**) → §5 COF/AXP (**AXP 2026-10-23 — CONFIRMED**; COF ~10-20 estimate) → §6 CB/TRV (~10-15/10-20, estimates) → §8 F/GM (~10-20/10-22, estimates) → §1 DY/EME (EME ~10-29 estimate; DY ~mid-to-late Nov) → §4 MCHP/ADI (~November, estimates) → §3 NOW/WDAY (~late Oct/Nov, estimates).
+**Ordering for M4 by reconvergence-indicator proximity:** §3 CB/TRV (**TRV 2026-10-16 CONFIRMED; CB call 2026-10-21 CONFIRMED**) → §4 MTZ/PWR (~late Oct/early Nov, ESTIMATE) → §1 MCHP/ADI (MCHP ~early Nov, ESTIMATE) → §2 MDB/SNOW (CEO appointment undated; earnings ~late Nov/early Dec, ESTIMATE).
 
-**A provenance correction that binds this whole ordering.** August presented several Q3 dates as CONFIRMED — SHW 2026-10-27, VRT 2026-10-28, COF 2026-10-20, CB 2026-10-20. **On re-check this session, none of those could be confirmed from the issuer**, because Q3 has not closed and these companies announce their call dates roughly three weeks ahead. Only **two dates in this entire shortlist are genuinely issuer-confirmed**: AXP's 2026-10-23 (from its January multi-quarter announcement) and PANW's 2026-09-01 (from its own press release). Everything else is an aggregator estimate and is labelled as such. The asymmetry is systematic and worth remembering: a company that pre-announces a full-year schedule is confirmable months ahead; most do not, and an aggregator's confident-looking date for an unclosed quarter is a projection.
+**Provenance of dates — the systematic lesson repeats.** Only **two** dates in this shortlist are issuer-confirmed, and both are TRV/CB. Every other date is an aggregator projection for an unclosed quarter. September's one "issuer-confirmed" date (AXP 10-23) could not be re-confirmed this session.
 
-**Execution disposition.** Individual-stock pair execution remains feasible and cheap — fractional shorts permitted, round-trip commission 0.42% of gross, borrow on sampled legs 0.25–0.43% with ample availability, all far inside Entry criterion 5's 15%-of-thesis-return ceiling. Every advanced leg clears the ADV floor by more than an order of magnitude (lowest DY ~$173.1M/day against a $10M floor). **What now stands between this shortlist and a live entry is the open `premortem-E-2026-a3` Tier-1 defect (cycle 13, awaiting orchestrator) and the trading-enable gate — not activation, and not execution.** M4 should treat PART 2 as research feedstock, with §7 carrying an explicit resolve-or-decline instruction.
+**Execution disposition.** Every advanced leg clears the ADV floor by more than 30× (lowest MTZ ~$323M/day). Individual-stock pairs are feasible on all four. Borrow was **not verified on any short leg** this cycle and must be re-quoted before sizing. **What stands between this shortlist and a live entry is E's binding DO-NOT-ACTIVATE (shock override, `div-E-202608-1`) and the WEAK-breadth leg of its technical gate, not execution and not the pre-mortem.**
 
 ---
 
 ## Data-provenance and defect notes
 
-- **METHOD IMPROVEMENT — the recency gate now runs on SEC EDGAR primary filings.** See the PART 1 gate section. 171 of 172 tickers resolved, free and unmetered, in seconds, against a metered path that left 99 of 122 unresolved. Recommended as the standing method for this gate.
-- **FMP remains largely unusable — third consecutive cycle, and the failure mode is now well characterised.** Across four independent agents this session: 5 of 7 `earnings-calendar` sweeps returned ACCESS DENIED and the 2 that succeeded returned partial row sets; `earnings-company` denied on every attempt; `chart` and `quote` denied. One agent got **~6–7 successful calls across two endpoints and then hit a session-wide lockout** that persisted regardless of symbol — matching last cycle's "three successes then quota" observation. **Treat FMP as unavailable for this screen's purposes and do not budget calls against it.**
-- **THE `get_price_history` MISATTRIBUTION DEFECT REPRODUCED — three times, independently, and this cycle SEPARATES IT INTO TWO DISTINCT DEFECTS.** August concluded the swap was "CONTRACT-LEVEL, not a batching artifact," because RCL's contract returned SPOT's series byte-identically on isolated solo calls, and that "the sequential-fetch mitigation does NOT catch it." That remains true for that defect — but it is not the whole picture, and this cycle's evidence is much stronger than last cycle's on the other one:
-  - **Defect A — batch-response misattribution. Reproduced independently by three of six workers.** One found its batched slots misaligned across nine of twenty-four tickers (CB↔PGR, PNC↔STT, ALL↔MTB↔TRV, BNY↔PRU chains). A second confirmed reproducibly that batched results "did not reliably match invocation order" (a slot attributed to CRWD held AMAT's series; NOW/NXPI likewise). A third had IR and FDX briefly take ACM's series. **All three detected it and all three fixed it the same way — discard the batch, re-fetch individually.** So for this defect, sequential fetching *is* an effective mitigation, and three independent reproductions make that a solid finding rather than an anecdote.
-  - **Defect B — contract-level series substitution** (the RCL→SPOT case) is a different failure that survives sequential fetching. Not re-probed this cycle; August's finding stands unchallenged.
-  - **Operative conclusion, refined:** fetch individually *and* cross-check independently. Sequencing is not sufficient for Defect B but it is both necessary and sufficient for Defect A, which is the far more frequent one.
-- **SYSTEMATIC INTEGRITY DETECTION — new this cycle, and it closes a gap August could only spot-check.** August verified 48 legs against live snapshots and called cross-checking "the only reliable detection." Holding the whole population makes two checks possible with no external endpoint at all: **(i) a swap detector** — any two distinct tickers sharing an identical close series cannot both be genuine, which is exactly the RCL/SPOT signature; run pairwise across all 171 loaded tickers it came back **CLEAN**, with the only shared final close (MTB and PKG both at 233.94) confirmed coincidental on full-series comparison. **(ii) a frozen-print detector** for runs of ≥3 identical consecutive closes. These are free, cover the entire population rather than a sample, and should be standing checks.
-- **FITB's frozen-print defect reproduced — and the window MOVED, which is diagnostically important.** August recorded six identical 53.42 closes spanning 2026-06-24 → 2026-07-01. This cycle FITB returned **the same value (53.42) for the same run length (six sessions) over a DIFFERENT window: 2026-06-12 → 2026-06-22** — plus a missing bar for 2026-06-11 entirely (250 bars where every other ticker returned 251). **A genuine frozen print is pinned to fixed calendar dates; a defect whose window shifts between fetches while preserving value and run-length points at bar assembly or date alignment, not at the underlying quote data.** FITB/HBAN is again excluded on data quality, not thesis — it would otherwise be the third-highest correlation in the population at 0.8672.
-- **Independent cross-check PASSED on all 22 advanced and candidate legs.** Every leg was re-read through `get_price_snapshot` — a different endpoint from the history call — pre-market on 2026-09-01. **No discrepancy exceeded 2.7%** (largest: ZBH +2.64%, PANW −2.45%, ADI −2.19%; HAL matched exactly), and **every contract description matched the expected company**. Two further independent confirmations fell out of the narrative research, which sourced prices through an entirely different path: COR 323.60 and MCK 885.32, and EFX 189.16 and TRU 84.91, match this session's IBKR closes **to the cent**.
-- **Market cap is NOT available and this is now confirmed rather than inferred.** August said "neither IBKR's snapshot nor FMP exposes live market cap for most tickers." This cycle establishes the stronger statement for IBKR: the `get_price_snapshot` `market_data_names` enum contains **no market-cap or shares-outstanding field at all**. No market caps are reported anywhere in this screen and none were estimated. The large-cap limb of the population rail is therefore carried by **ADV plus S&P-500 membership**, stated rather than papered over.
-- **ADV definition, refined.** ADV is IBKR's `avg_90d_usd_volume` — 90-day, not the 30-day the screen nominally specifies. This cycle also confirms the field's documented meaning is **already a USD figure**, not a share count, so no price multiplication is applied. Every advanced leg clears $10M by more than an order of magnitude (range ~$173.1M for DY to ~$3.36B for NOW), so the 90-vs-30-day distinction changes no disposition.
-- **A telemetry blind spot, referred rather than fixed here.** The SEC EDGAR work in this run was done by direct HTTPS from the Bash tool — free, unmetered, and **not representable in `ops.web_calls`**, whose `provider` column admits only `tavily`/`anthropic`/`fmp`/`hf`. No row was invented for it. The consequence is worth flagging to whoever owns that table: a routine that moves work *off* a metered provider onto direct HTTP looks in the telemetry like it reduced spend, when it has actually moved off-ledger. Recorded as an `ops.alerts` info row against the owning surface rather than acted on here.
+- **Integrity audit is now population-wide AND transcription-checked.** See the four checks in PART 1. The new independent re-pull audit (24 series, zero mismatches) closes the one gap the swap and frozen-print detectors cannot see: a worker copying a close wrongly. It is recommended as a standing check.
+- **FITB's frozen-print defect is now STABLE across fetches.** It returned the same value (53.42), the same run length (6) and the same window (2026-06-12 → 06-22), with the same missing 2026-06-11 bar, as September. August's window differed. So the "shifting window" diagnosis from September has not reproduced, and the defect now looks pinned to fixed dates. Recorded, not resolved.
+- **IBKR window ceiling.** `period=ONE_YEAR` returns 250 bars, and `step_count=253` returned 252 bars for 19 of 24 tickers. The trailing-252-day spec is therefore met at **249 returns (population) / 251 returns (boundary re-measure)**. The boundary re-measure shows no disposition sensitivity to the shortfall, but it is a standing property of the feed and is stated rather than rounded away.
+- **IBKR `search_contracts` rate limit — 30 requests/minute (10/second).** Several workers hit it on parallel searches and recovered by batching. Contract IDs are now recorded in the bar files, so next cycle can skip the searches entirely.
+- **FMP was not used** (third consecutive cycle unusable per September; not budgeted).
+- **Tavily returned HTTP 429 on several research calls** across three workers. These were logged and are counted at rate-card estimate in `ops.web_calls`, so those rows overstate actual credits for the rate-limited calls; whether a 429 bills is not established. The research completeness caveat above stems partly from this.
+- **SEC EDGAR recency work remains off-ledger.** It ran via direct HTTPS from the Bash tool and is not representable in `ops.web_calls`, whose `provider` admits only `tavily`/`anthropic`/`fmp`/`hf`. This was already referred last cycle and is not re-filed.
+- **UNIVERSE DEFECT, inherited and now flagged: TMUS/CMCSA is not a same-industry-group pair.** T-Mobile is GICS 501020 (Wireless Telecommunication Services, group 5010) and Comcast is 502010 (Media, group 5020). Prior editions carried it as "501010 Telecom". It is below the floor this cycle (0.4254; 60d 0.6996), so nothing turns on it. It should be **removed from the universe** next cycle rather than tracked toward the floor. GICS was not re-derived for every pair (no GICS connector exists), so other inherited labels carry the same unverified status.
+- **Screen record.** One `entry_type='research-screen'` row (screen `pair-divergence`) was logged via `ops.sp_log_decision` as `events.decision_log` **`50d589a2-bff6-4353-b565-604599c786de`**. It was read back and verified: `fields` parsed (not NULL, unlike September's first row), `surfaced_count` 7 = `ARRAY_LENGTH(passed)` per the 2026-09-27 §19 correction, 61 `rejected_notable` items (every above-floor rejection, FITB/HBAN included), agreement both 4 / ai_only 3 / rule_only 61.
+- **Market cap is still not available from IBKR.** The large-cap limb of the population rail is carried by ADV plus S&P-500 membership, as in prior cycles.
