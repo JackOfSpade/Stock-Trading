@@ -33,6 +33,7 @@ concurrency:
 jobs:
   audit:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       AUDITED_SAS: >-
         gh-ci-runner@stock-trading-498512.iam.gserviceaccount.com

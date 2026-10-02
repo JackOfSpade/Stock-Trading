@@ -93,6 +93,7 @@ concurrency:
 jobs:
   relay:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - name: Self-check — on.schedule crons stay in sync with the mode-dispatch step

@@ -143,6 +143,7 @@ jobs:
   schema-validate:
     name: golden scenarios — offline schema gate (HARD GATE)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -154,4 +155,3 @@ jobs:
         run: pip install --quiet -c requirements-ci.txt pyyaml
       - name: Validate scenarios.yaml schema + governing_files existence (no network)
         run: python tests/golden_scenarios/run_golden.py --offline
-

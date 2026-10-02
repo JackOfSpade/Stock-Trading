@@ -49,6 +49,7 @@ concurrency:
 jobs:
   merge:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       # ---- DUPLICATE-DRAIN EARLY EXIT (2026-08-21 Actions cost audit) --------------------------------
       # Golden Scenarios frequently completes while the CI run on the SAME commit is still going (it is a

@@ -33,6 +33,7 @@ concurrency:
 jobs:
   audit:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       EXPECTED_REPO: JackOfSpade/Stock-Trading
       POOL_ID: github-pool

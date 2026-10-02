@@ -36,6 +36,7 @@ jobs:
   checks:
     name: tests + dbt parse + shell-lint + ruff (consolidated 2026-07-30)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     # CONSOLIDATED (2026-07-30 GitHub Actions cost audit): these four non-credentialed jobs (formerly
     # separate `test`, `lint`, `shell-lint`, `dbt` jobs) measured ~105-136s of combined ACTUAL runtime
     # but billed 4-5 rounded minutes/run under GitHub's ceil(seconds/60)-per-JOB billing — each job pays
@@ -467,6 +468,7 @@ jobs:
   warehouse-validation:
     name: dbt↔live parity + BigQuery SQL syntax (keyless WIF)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     # BLOCKING SQL SYNTAX GATE + ADVISORY DBT PARITY: no job-level continue-on-error. SQL guard/dry-run failures block unconditionally; dbt-only steps are advisory unless DBT_PARITY=block.
     # RUNS BY DEFAULT whenever the read-only WIF creds exist (changed 2026-06-22 — previously it was
     # opt-in via RUN_DBT_PARITY and so NEVER actually ran, leaving the two hand-kept copies of each view

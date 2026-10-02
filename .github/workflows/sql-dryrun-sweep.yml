@@ -86,6 +86,7 @@ jobs:
   sweep:
     name: Dry-run every bigquery/*.sql (not just changed)
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
 

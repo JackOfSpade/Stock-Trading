@@ -28,6 +28,7 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     # JOB-LEVEL GATE (2026-07-30 cost audit — replaces a step-level guard): PUBLISH_DASHBOARD is
     # confirmed UNSET (`gh variable list`), so all 40 sampled daily runs used to check out, hit a guard
     # step that set a `skip` output, skip every subsequent step via `if: steps.guard.outputs.skip ==
