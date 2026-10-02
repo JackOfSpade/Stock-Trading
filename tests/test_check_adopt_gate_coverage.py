@@ -125,17 +125,18 @@ def test_shell_fallback_line_is_not_required(tmp_path, monkeypatch):
     assert cs.main() == 0
 
 
-def test_act_local_only_step_is_not_required(tmp_path, monkeypatch):
-    # Mirrors ci.yml's "Install shellcheck (act-local CI only)" step: never runs on a real
-    # GitHub-hosted run, so it must not be treated as a real blocking gate.
+def test_conditional_blocking_step_is_required(tmp_path, monkeypatch, capsys):
+    # A conditional step still belongs to the hosted workflow's blocking coverage unless CI
+    # explicitly marks it advisory with continue-on-error or an always-pass fallback.
     wire(
         tmp_path, monkeypatch,
-        steps=[{"name": "Install shellcheck (act-local CI only)",
-                "run": "python scripts/would_never_run_on_hosted_ci.py",
-                "if": "${{ env.ACT == 'true' }}"}],
+        steps=[{"name": "conditional coverage check",
+                "run": "python scripts/conditional_coverage_check.py",
+                "if": "${{ github.event_name == 'push' }}"}],
         script_mentions=[],
     )
-    assert cs.main() == 0
+    assert cs.main() == 1
+    assert "conditional_coverage_check.py" in capsys.readouterr().out
 
 
 def test_step_with_no_run_key_is_ignored(tmp_path, monkeypatch):

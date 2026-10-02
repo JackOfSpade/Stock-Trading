@@ -16,7 +16,7 @@ suite" step would never have run them: a WEAKER gate than CI would apply. This s
 that loop mechanically so the list can never silently drift again.
 
 WHAT THIS CHECKS. Every BLOCKING step in ci.yml's `checks` job -- no `continue-on-error: true`,
-no `|| true` shell fallback on the checked line, not gated to act-local-only via `if: env.ACT`
+no `|| true` shell fallback on the checked line
 -- that invokes an identifiable script/test target (a `scripts/*.py` or root `*.py` file,
 `python -m pytest`, a `tests/*.sh` file, a `node *.js` file) must have that file's basename
 appear as a literal substring inside precondition 5's step-list paragraph in
@@ -151,10 +151,6 @@ def load_checks_job_steps(path=None):
         raise SystemExit(f"{path or CI_YML}: no jobs.checks.steps found -- workflow restructured? ({e})") from e
 
 
-def _act_local_only(step):
-    return "env.ACT" in (step.get("if") or "")
-
-
 def required_identifiers(steps):
     """(identifier, step_name) pairs precondition 5 must mention, one per BLOCKING checks-job
     step whose run: body names an identifiable script/test/lint target."""
@@ -162,7 +158,7 @@ def required_identifiers(steps):
     for step in steps:
         run = step.get("run")
         name = step.get("name", "<unnamed step>")
-        if not run or step.get("continue-on-error") is True or _act_local_only(step):
+        if not run or step.get("continue-on-error") is True:
             continue
 
         name_lower = name.lower()
@@ -228,7 +224,7 @@ def load_postmerge_step(path=None):
 def postmerge_step_identifiers(step):
     """Identifiers the post-merge coverage-check step actually `run_check`s, reusing the same
     PY_RUN/PYTEST_RUN/BASH_TEST_RUN/NODE_RUN patterns required_identifiers() uses against
-    ci.yml. Unlike that function, there is no continue-on-error/`|| true`/act-local shape to
+    ci.yml. Unlike that function, there is no continue-on-error/`|| true` shape to
     filter here -- every line in this step is unconditionally blocking by construction (see the
     step's own comment) -- so the only filter is requiring the line to actually be a `run_check
     ...` invocation, not one of the surrounding `run_check()` helper-function lines (`fail=0`,
