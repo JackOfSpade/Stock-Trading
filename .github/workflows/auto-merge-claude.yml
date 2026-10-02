@@ -105,7 +105,7 @@ jobs:
       # Every step below is gated on the early exit above. The post-merge coverage block further down
       # needs no such gate of its own: it already keys off the did_merge / result outputs of the merge
       # and postmerge steps, both of which are empty (never 'true'/'fail') when those steps are skipped.
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         if: steps.dupdrain.outputs.skip != 'true'
         with:
           ref: main
@@ -488,7 +488,7 @@ jobs:
 
       - name: Setup Python for post-merge coverage check
         if: steps.merge.outputs.did_merge == 'true'
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: '3.11'
           cache: 'pip'

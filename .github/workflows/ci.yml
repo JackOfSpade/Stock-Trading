@@ -55,7 +55,7 @@ jobs:
     # their own step-level `continue-on-error: true` below, so folding an advisory check into an
     # otherwise-blocking job does not newly block landings on a lint nit.
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           # full history so check_cadence_marker.py can resolve merge-base(HEAD, origin/main) and
           # read each cadence file's first line at the base revision. Under the default depth-1
@@ -110,7 +110,7 @@ jobs:
             echo "py_needed=$py_needed"
           } >> "$GITHUB_OUTPUT"
           echo "::notice::CI change scope — dbt:$dbt_needed lint:$lint_needed ruff:$py_needed (diff base: ${base:-unresolved — all optional groups run})"
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -350,7 +350,7 @@ jobs:
       - name: Cache actionlint binary (pinned v1.7.12)
         id: cache-actionlint
         if: steps.scope.outputs.lint_needed == 'true'
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: actionlint
           key: actionlint-v1.7.12-${{ runner.os }}
@@ -496,7 +496,7 @@ jobs:
       contents: read
       id-token: write   # Workload Identity Federation (no downloadable key)
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0   # full history so the path gate below can diff the pushed range
       - name: Path gate + WIF config + enablement
@@ -600,7 +600,7 @@ jobs:
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
       # Shared bootstrap blocks whenever sql_guard is active; when only dbt parity runs, it remains advisory unless DBT_PARITY=block.
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         if: always() && (steps.dbt_guard.outputs.skip == 'false' || steps.sql_guard.outputs.skip == 'false')
         continue-on-error: ${{ steps.sql_guard.outputs.skip == 'true' && vars.DBT_PARITY != 'block' }}
         with:
