@@ -11,7 +11,7 @@
 # bump only via a deliberate claude/* change that goes green — never silently.
 
 # --- always-on `test` job (offline) ---
-pytest>=8.0,<9.0
+pytest>=9.1.1,<10.0
 pyyaml>=6.0.3,<7.0
 # scripts/adversarial_review_storage.py's parameterized append-only repair path. dbt-bigquery also
 # depends on this package, but list it directly because repair is an operator-facing CLI, not a dbt
