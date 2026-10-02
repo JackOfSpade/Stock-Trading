@@ -17,21 +17,9 @@ name: CI
 # every branch, not just claude/*, or the auto-merge CI-gate lookup finds no run
 # for a non-claude branch's SHA and fails closed forever (skips it every drain).
 
-# `pull_request:` REMOVED (2026-07-30 cost audit — verified before removing, not just asserted):
-#   - 21 of a 27-run pull_request-triggered sample landed on a SHA that ALSO had a push-triggered run —
-#     pure duplicate work, both running every job to the same conclusion. The other 6 were early-history
-#     only (2026-07-07/08), none since.
-#   - auto-merge-claude.yml's CI gate reads the MOST RECENT run's conclusion for a SHA regardless of
-#     triggering event, so a push-triggered run alone already satisfies it.
-#   - `gh api repos/:owner/:repo/branches/main/protection` returns HTTP 403 (no GitHub Pro / branch
-#     protection on this repo) — auto-merge-claude.yml's own gate script is the ONLY merge gate; nothing
-#     else consumes a pull_request-triggered run's status or check-run.
-#   - `gh pr list --state all` shows every PR MERGED — consistent with the bot drain, not a human
-#     clicking "Merge" off a PR's own Checks tab.
-# ACCEPTED CONSEQUENCE: a PR's own "Checks" tab shows no ci.yml run of its own (it only ever duplicated
-# the branch's push run); the branch's push-triggered run remains the real gate auto-merge reads.
 on:
   push:
+  pull_request:
   workflow_dispatch:
 
 # Cancel redundant in-flight runs on the same branch when a newer push arrives.
@@ -83,7 +71,7 @@ jobs:
         # and node suites, and the workflow_run name-sync check — stays unconditional below; only
         # the three groups whose inputs are structurally confined to a path set are gated:
         #   dbt_needed  — dbt parse/coverage read bigquery/** + dbt/** (plus the pinned constraint file)
-        #   lint_needed — actionlint/shellcheck read .github/**, *.sh, and the act config
+        #   lint_needed — actionlint/shellcheck read .github/** and *.sh
         #   py_needed   — ruff reads *.py (plus its own config/constraint sources)
         # FAIL OPEN, matching the two warehouse-validation path gates: an unresolvable diff base
         # (new branch, force-push, unrelated histories) leaves all three 'true', so a push whose
@@ -112,7 +100,7 @@ jobs:
           # grep exits early on a match, which would invert the result of a matching pattern.
           if [ -n "$base" ] && changed="$(git diff --name-only "$base" "$HEAD_SHA")"; then
             grep -qE '^(bigquery/|dbt/|requirements-ci\.txt$)' <<<"$changed" || dbt_needed=false
-            grep -qE '(^\.github/|\.sh$|^\.actrc$)' <<<"$changed" || lint_needed=false
+            grep -qE '(^\.github/|\.sh$)' <<<"$changed" || lint_needed=false
             grep -qE '(\.py$|^pyproject\.toml$|^requirements-ci\.txt$)' <<<"$changed" || py_needed=false
           fi
           {
@@ -370,31 +358,6 @@ jobs:
         run: |
           # Commit SHA (not the `v1.7.12` tag) -- see the BLOCKING GATE comment block above this step.
           bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/914e7df21a07ef503a81201c76d2b11c789d3fca/scripts/download-actionlint.bash) 1.7.12
-      # act-local-CI only. GitHub's ubuntu-latest ships shellcheck preinstalled, but act's
-      # runner image (catthehacker/ubuntu:act-latest, selected by the operator's ~/.actrc)
-      # does not — so both the actionlint step below (which shells out to shellcheck for its
-      # embedded run-block linting) and the standalone shellcheck gate after it died with
-      # exit 127 under the global `act push` pre-push hook. `env.ACT` is set ONLY by act and
-      # is unset on GitHub-hosted runners, so this step is skipped there and CANNOT change
-      # real CI — it exists purely so the local gate lints exactly what the hosted one does
-      # rather than silently degrading to a weaker check.
-      # `== 'true'`, not a bare truthiness test: GitHub expression truthiness
-      # treats ANY non-empty string as true, so a future org/repo variable or
-      # composite action exposing ACT="false" would make a bare `env.ACT` fire
-      # this step on hosted CI. The in-script re-check is a second, independent
-      # guard so that even a misfiring `if:` degrades to a no-op instead of
-      # failing this BLOCKING GATE (auto-merge gates every branch on it) on a
-      # transient apt error.
-      - name: Install shellcheck (act-local CI only — GitHub's runner already has it)
-        if: ${{ env.ACT == 'true' && steps.scope.outputs.lint_needed == 'true' }}
-        run: |
-          set -euo pipefail
-          [ "${ACT:-}" = "true" ] || exit 0
-          if ! command -v shellcheck >/dev/null 2>&1; then
-            sudo apt-get update -qq
-            sudo apt-get install -y -qq shellcheck
-          fi
-          shellcheck --version
       - name: actionlint (workflow YAML + embedded run-block bash via shellcheck)
         if: steps.scope.outputs.lint_needed == 'true'
         run: ./actionlint -color

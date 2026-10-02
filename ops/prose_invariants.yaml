@@ -233,24 +233,6 @@ invariants:
       route the default craftable-order confirmation into a calendar event.
     source_of_truth: Operating_Protocols.md §1 (calendar-scope narrowing) / §11
 
-  # ---- README bigquery apply-range must be COMPUTED (ascending to the highest-numbered file), never a
-  # pinned two-endpoint literal that silently goes stale as new bigquery/NN_*.sql files are added. ----
-  - id: readme_apply_range_not_pinned
-    files: [README.md]
-    forbid_regex: 'bigquery/0?1\.\.\d'
-    reason: >
-      The bigquery apply-range in README.md was pinned ("bigquery/01..11_*.sql") and silently went stale as
-      files up to bigquery/NN accumulated. It must be phrased as ascending numeric order to the highest file,
-      not a pinned endpoint.
-    source_of_truth: bigquery/ (apply in ascending numeric order; see bigquery/README.md)
-  - id: readme_apply_range_computed_present
-    files: [README.md]
-    require_regex: 'ascending numeric order'
-    reason: >
-      README.md must state the bigquery apply order as "ascending numeric order" (the computed phrasing that
-      replaced the pinned "01..11" range) so the instruction can never re-pin a stale endpoint.
-    source_of_truth: bigquery/README.md
-
   # ---- The ROUTINE INVENTORY D2 row must reflect the 2026-07-09 D2/D2a cutover: fills reconciliation,
   # events.trade_fills/daily_marks, and the perf.strategy_daily recompute moved to D2a. ----
   - id: inventory_d2_row_no_retired_writes

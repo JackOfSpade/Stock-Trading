@@ -111,6 +111,12 @@ jobs:
         if: steps.guard.outputs.skip == 'false'
         with:
           python-version: '3.11'
+          cache: pip
+          cache-dependency-path: requirements-ci.txt
+
+      - name: Install SQL checker dependencies
+        if: steps.guard.outputs.skip == 'false'
+        run: pip install --quiet -c requirements-ci.txt pyyaml
 
       - name: GCP WIF auth + gcloud setup (provides the bq CLI)
         if: steps.guard.outputs.skip == 'false'

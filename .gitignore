@@ -28,7 +28,7 @@ creds/
 *sa_key*.json
 b14575dd-*
 
-# local CI secrets for act (global pre-push hook) - never commit
+# Local development secrets - never commit
 .secrets
 
 # BUG FIX (2026-08-31 code-quality pass): terraform.tfvars.example claims "terraform.tfvars is
