@@ -24,4 +24,4 @@ ruff>=0.16.9,<0.17
 # --- `dbt` parse + `dbt-parity` compile jobs (the drift defenses) ---
 # Keep dbt-core and dbt-bigquery on the SAME minor; mirror require-dbt-version in dbt/dbt_project.yml.
 dbt-core>=1.8,<1.10
-dbt-bigquery>=1.8,<1.10
+dbt-bigquery>=1.12.1,<1.13
