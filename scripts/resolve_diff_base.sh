@@ -84,10 +84,10 @@
 # origin/main and the merge-base are resolvable at all.
 
 # A fetch is only a best-effort refresh before the callers' documented fail-open behavior. Keep
-# it non-interactive and bounded: an unreachable remote must not hang the entire CI job (or the
-# local `act` pre-push gate) indefinitely. GNU `timeout` is present on both GitHub's Ubuntu runner
-# and the `act` image. If it is unavailable, skip this best-effort refresh and let the existing
-# local ref / caller fail-open logic decide scope; an unbounded fetch is never the fallback.
+# it non-interactive and bounded: an unreachable remote must not hang the entire CI job
+# indefinitely. GNU `timeout` is present on GitHub's Ubuntu runner. If it is unavailable, skip
+# this best-effort refresh and let the existing local ref / caller fail-open logic decide scope;
+# an unbounded fetch is never the fallback.
 _fetch_origin_main() {
   local timeout_seconds="${DIFF_BASE_FETCH_TIMEOUT_SECONDS:-45}"
   case "$timeout_seconds" in
