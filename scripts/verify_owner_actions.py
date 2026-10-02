@@ -107,12 +107,18 @@ TIMEOUT = 120
 # fences. Verified byte-for-byte: replaying OLD FENCE_RE (git show c49da9a) against the real
 # OWNER_ACTIONS.md and comparing every field of every one of the file's 17 fences against this new
 # regex's captures shows zero differences, W/X included.
+# The first non-indentation character is matched separately from the leading
+# whitespace. With `[ \t]+[^\r\n]*`, both pieces can consume a tab, creating an
+# exponential number of ways to reject a long tab-only continuation. This form
+# preserves whitespace-only continuation lines while keeping those parts disjoint.
+INDENTED_CONTINUATION = r"\r?\n[ \t]+(?:[^ \t\r\n][^\r\n]*)?"
+
 FENCE_RE = re.compile(
     r"```verify\r?\n"
     r"id:\s*(?P<id>\S+)\s*\r?\n"
     r"type:\s*(?P<type>\S+)\s*\r?\n"
-    r"probe:\s*(?P<probe>[^\r\n]*(?:\r?\n[ \t]+[^\r\n]*)*)\r?\n"
-    r"done_when:\s*(?P<done_when>[^\r\n]*(?:\r?\n[ \t]+[^\r\n]*)*)\r?\n"
+    r"probe:\s*(?P<probe>[^\r\n]*(?:" + INDENTED_CONTINUATION + r")*)\r?\n"
+    r"done_when:\s*(?P<done_when>[^\r\n]*(?:" + INDENTED_CONTINUATION + r")*)\r?\n"
     r"```"
 )
 

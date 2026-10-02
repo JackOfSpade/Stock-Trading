@@ -1039,6 +1039,21 @@ def test_fence_re_parses_wrapped_probe_continuation():
     assert matches[0].group("done_when") == "n>0"
 
 
+def test_fence_re_keeps_a_whitespace_only_continuation():
+    # Whitespace-only wrapped lines were accepted before the ReDoS hardening and
+    # remain valid, but their indentation must not overlap with the body matcher.
+    doc = "```verify\n"
+    doc += "id: SPACE\n"
+    doc += "type: manual\n"
+    doc += "probe: SELECT 1\n"
+    doc += "done_when: first line\n"
+    doc += "   \n"
+    doc += "```\n"
+    matches = list(voa.FENCE_RE.finditer(doc))
+    assert len(matches) == 1
+    assert matches[0].group("done_when") == "first line\n   "
+
+
 SAMPLE_DOC_DONEWHEN_TYPO_CROSSES_FENCE_BOUNDARY_WRAPPED_NEXT = """```verify
 id: ITEM-A
 type: bq
