@@ -1352,12 +1352,12 @@ never applied. **Repo artifacts are DONE; this section lists the owner/console a
 
 ### Theme A — alert delivery (closes the single-inbox SPOF + the un-versioned poller)
 - **A1 — second, different-class alert channel (live-on-edit spec).** `monitoring.tf` now creates a
-  webhook notification channel (`var.alert_webhook_url`, guarded — empty = email-only) and the three
+  webhook notification channel (`var.alert_webhook_url`, guarded — empty = email-only) and the five
   scheduler-absence policies notify it **alongside** email. Every alert path today converges on ONE
   Gmail inbox / ONE Google account; a non-Google webhook breaks that correlation.
   **Owner:** set `alert_webhook_url` to a Slack/Discord/ntfy/Pub/Sub-push endpoint (NOT another Gmail
   address). Spec-only here (per §12); to make it live without Terraform, add the channel in the Console
-  and attach it to the three "… scheduler absent >25h" policies.
+  and attach it to the five "… scheduler absent >25h" policies.
 - **NOTIFICATION POLICY (owner directive 2026-09-07) — two rules that now bind every channel in this
   section.** (1) **Every ntfy push must be accompanied by an email.** (2) **ntfy is for things needing
   operator action — no "everything is fine" pings.** An audit of every outbound path (ntfy, email,
@@ -3704,7 +3704,7 @@ already documents this alert as lower-severity than freshness/backup (`state.fre
 catches data staleness). If this alert recurs with the same signature (a valid heartbeat sample already
 inside the 25h window at fire time), re-run this file's verification steps first before assuming
 scheduler death — do not skip straight to a Console/Terraform metric-filter change, since the 2026-08-17
-instance proved the filter was never the problem.
+instance proved the filter was never the problem. *(Recurred: six false alarms on four policies by 2026-10-01 → §56, which adds a 30-minute pending period; "none" no longer applies. Correction: the live cadence condition was always named "Cadence scheduler absent >25h", never the spec's "No cadence-check run in 25h" quoted above; §56 renames it.)*
 
 **Lesson.** Not every recurrence of an `absent_over_time` alert is the §19 root cause (an
 un-versioned, success-only, identity-cutover-sensitive filter). The class is now two distinct
@@ -4297,3 +4297,107 @@ the affected branch and re-push, and parity goes green.
 **Disposition on the 2026-09-14 instance.** NOT actioned and deliberately no fix attempted (`capital_affected:
 false`) — recorded here (nearest owning routine W5, SPEC-DEFECT NOTICE INTAKE) so the next session reading a
 red branch does not re-derive this diagnosis from scratch.
+
+## 56. Scheduler-absence policies open incidents on healthy schedulers — six false alarms on four policies since 2026-08-17, and the 30-minute pending period that removes the class *(monitoring, false-alarm-shaped, 2026-10-03)*
+
+**Symptom.** The operator forwarded the 2026-10-01 03:58 UTC email *"Backup scheduler absent >25h on
+`__missing__`"*. The subject is the policy's **condition** display name, a leftover from cloning the backup
+policy in the Console on 2026-06-29 (the ops-export policy carries the same wrong name); the **policy** in the
+body is *"Integrity-check scheduler absent >25h"* (`4948636131821978669`) and the `metric :` chip names
+`integrity_check_scheduled_run`. The subject was pointing triage at the events backup.
+
+**Full incident history (Monitoring `projects/<P>/alerts` API — the only place it lives; the emails go to
+TRASH).** Six false alarms on four policies, plus the one real absence for contrast:
+
+| opened (UTC) | policy | open for |
+|---|---|---|
+| 2026-06-20 23:41 | Freshness | **6h 59m 50s — REAL** (§19, SA-cutover metric gap) |
+| 2026-08-17 19:51 | ops-export | 3m 42s |
+| 2026-08-17 19:53 | Cadence | 4m 33s |
+| 2026-08-18 01:22 | Cadence (§49) | 3m 39s |
+| 2026-08-18 05:25 | Backup | 4m 10s |
+| 2026-09-18 18:21 | Integrity-check (unread in TRASH until this triage) | 4m 07s |
+| 2026-10-01 03:58 | Integrity-check | 4m 06s |
+
+**Incident length is the discriminator.** A blip closes itself in ~4 minutes (one failed evaluation plus
+Monitoring's fixed close lag of `max(270s, 2x evaluation interval)`); a real absence stays open for hours. The
+08-17 pair hit two different policies two minutes apart — a platform-side evaluation event, not anything about
+a scheduler. Freshness, the only policy on a 1800s evaluation interval, has had no false firing (consistent
+with a per-evaluation blip rate).
+
+**It was FALSE both integrity times — verified live 2026-10-03, every layer independently:**
+- **Scheduler ran.** `integrity-check-daily` (config `6a4d603d-0000-2d5d-b9af-14223bafe266`, `CALL
+  ops.sp_sq_integrity_check()`) was `DONE`, no `error_result`, as `bq-scheduler@` at **07:40 UTC every day**
+  09-10 → 10-03 (`region-us.INFORMATION_SCHEMA.JOBS_BY_PROJECT`, `job_id LIKE 'scheduled_query%'`).
+  `state.append_only_integrity` empty; `state.system_health.all_green = TRUE`, 0 open criticals; `ops.heartbeat`
+  has a `sq:integrity_check` beat every day (`state.scheduled_query_version_drift`: `stale_beat=false`).
+- **Heartbeat log landed.** `gcloud logging read` shows `Summary: succeeded 1 jobs, failed 0 jobs.` at 07:41:15
+  UTC daily, including 09-30 and 10-01 — the metric filter is correct and unchanged since 2026-06-29.
+- **Metric sample landed.** The `timeSeries` API holds a `1` at 07:42 UTC on 09-30 and 10-01; the alert opened
+  20h16m after the 09-30 sample (and only 10h39m after the 09-18 one), nowhere near an absence.
+- **Replay proves it is not the data.** Running the policy's own PromQL back over history through the
+  Managed-Prometheus endpoint (`GET https://monitoring.googleapis.com/v1/projects/<P>/location/global/prometheus/api/v1/query_range`,
+  `absent_over_time(logging_googleapis_com:user_integrity_check_scheduled_run[25h])`, step 1–10 min) returns
+  **empty — never absent**, also for `[24h]`; a nonexistent metric returns `1` on the same endpoint, so the
+  replay can fail. (`[20h]`/`[10h]` do go absent, correctly — one sample per day.) **Retention limit:** the
+  stored log-metric series only reach back to ~2026-08-21, so the 08-17/18 firings cannot be replayed — they are
+  classified by the alerts-API durations above, and run history older than ~6 weeks must come from
+  `JOBS_BY_PROJECT`, never from an empty PromQL range.
+
+**Why this was fixed rather than closed as "none" (the §49 disposition).** §49 treated one cadence firing as a
+one-off. Six incidents in seven weeks across four of the five policies — including **ops-export and backup,
+whose real failure means a silently un-backed-up audit trail** — is a permanently-noisy advisory that trains the
+operator to ignore exactly the policies that matter. All five had `duration: 0s`, i.e. one bad evaluation opens
+an incident.
+
+**Fix (spec in repo; live apply is an owner step — below).**
+1. **`duration: 1800s` on all five absence conditions** (`monitoring.tf` `local.scheduler_absence_duration`).
+   A real absence is not transient (the condition stays true from sample+25h until the next run lands, i.e.
+   hours), so a 30-minute pending period costs ~2% of a 25 h window and removes any blip shorter than that —
+   6x the longest observed (4m33s). On Freshness (evaluation interval 1800s) it takes two consecutive true
+   evaluations, i.e. 30–60 min. Live `evaluationInterval` is 30s on four policies and 1800s on Freshness; the spec
+   used to say 60s for all and now states the live values per monitor. The script carries each live interval over.
+2. **Condition display names aligned** (`No integrity-check run in 25h`, `No ops.* backup run in 25h`, `No
+   events-backup run in 25h`, `No cadence-check run in 25h`, `No freshness run in 25h` — the old Freshness name said
+   "successful" and "26h", both wrong), so the email subject names the right monitor.
+3. **Alert documentation populated** on the five absence policies **and the SA-key policy** (all were EMPTY, so
+   the email said nothing actionable — the SA-key one lacked even its "delete the key immediately" text). The
+   absence text carries the three-step false-alarm check: incident length → `state.scheduled_query_version_drift`
+   → `gcloud logging read`.
+4. **Spec drift closed** while here: `alert_strategy { notification_prompts = ["OPENED"] }` is now declared (live
+   has it), and the `sa_key_created` spec was rewritten from a `condition_threshold` that never matched live to the
+   live PromQL `increase(...[10m]) > 0` form (duration deliberately stays `0s`: a pending period would let a real
+   key creation expire before opening an incident). Remaining known spec≠live: the spec creates its own
+   `Scheduler-absence alert: <email>` channels while live uses the two Console channels (`import_monitoring.sh`
+   adopts by email label); no webhook channel is attached live.
+
+**Owner step — apply to the live policies (OWNER_ACTIONS.md item AB-1).** The agent session that wrote this was
+denied the live policy edit (classifier: shared GCP resource), correctly. From any authenticated shell:
+`python3 infra/terraform/apply_absence_policy_hardening.py` (dry-run, prints the per-policy diff) then `… --apply`.
+It PATCHes only `conditions` + `documentation` (and `documentation` alone on the SA-key policy), resolves policies
+by display name, keeps each condition's `name`/query/interval, and is idempotent — re-running should print `=
+already hardened` for all. Console equivalent per policy: *Edit → condition → Pending period = 30 min*, rename the
+condition, paste the documentation. **APPLIED 2026-10-03** by the owner (verified read-only afterwards: all five at `duration 1800s`, each live query/interval/channel unchanged, no open incident) — live now matches spec on those fields;  `tests/test_absence_policy_hardening.py`
+keeps the script and `monitoring.tf` in lockstep.
+
+**Is a real integrity-check death still caught? Yes, twice.** Besides this policy (25h), `integrity_check` is in the
+`bigquery/63` version registry (`expected_interval_hours=24`): `sp_sq_integrity_check` beats first, and `cadence_check`
+raises `scheduled_query_stale` after 36h without a beat — through `ops.alerts` → `alert_emailer.gs`. The earlier claim
+(here and in `monitoring.tf`) that the absence policy was "the ONLY thing that catches it" had been stale since
+MON H5 (2026-07-17) and is corrected. A blip leaves **no** `ops.alerts` row, which is itself evidence of a false alarm.
+
+**Not conflated: the 2026-09-30 `scheduled_query_stale` warning (`backup_events_export`) was a TRUE positive.** The
+2026-09-29 05:30Z events-backup run failed in DTS (`AetherBridge: RPC::DEADLINE_EXCEEDED`, no BigQuery job started);
+the in-warehouse beat-age watch caught it and `bigquery/249` Rule 6 auto-resolved it when the 09-30 run beat. The Cloud
+Monitoring backup policy **correctly stayed silent**: the heartbeat filter `^Summary: succeeded` matches the
+`succeeded 0 jobs, failed 1 jobs` line too, so these policies detect a *dead scheduler*, not a *failed run*. Do not
+tighten the filter to success-only — that is the §19 root cause. No data loss (each export is a full dated snapshot).
+
+**Not done, deliberately.** (a) No `[48h]` widening — Cloud Monitoring caps PromQL absence lookback at ~25h (§27).
+(b) No metric-filter change — it is correct (§19/§49). (c) `notificationPrompts` stays `OPENED`-only: no "resolved"
+email by design. (d) No second email/ntfy channel — the in-warehouse backstop above is the rule-compliant one.
+
+**If it fires again after the live apply:** read `closeTime − openTime` from the alerts API first. Under ~30 min it
+cannot be this class any more (the pending period would have absorbed it) — treat it as REAL or a longer platform
+event and run the §19 triage; do not just raise the number. After the apply, validate on the next firing via the
+alerts API rather than waiting on an email.

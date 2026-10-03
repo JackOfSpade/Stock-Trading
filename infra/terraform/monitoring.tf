@@ -75,7 +75,8 @@ locals {
 # backup export. Same who-watches-the-watchers gap as freshness above: some of these
 # (backup, cadence) email on FAILURE but a silently-dead scheduler sends nothing;
 # integrity_check is record-only (writes a warning, never RAISEs) so a dead scheduler
-# writes NOTHING at all — its absence policy is the ONLY thing that catches it. All
+# writes no alert of its own — this absence policy is the FAST detector (25h); the in-warehouse
+# beat-age watch (cadence_check -> scheduled_query_stale, ~36h) is the independent backstop. All
 # four run daily, so the same 25h absence window applies. config_ids are either
 # derived from a Terraform-managed resource's .name (freshness/backup/cadence — see
 # the locals above) or a hardcoded var (integrity_check/ops_export — see the two
@@ -146,14 +147,33 @@ variable "ops_export_config_id" {
 # per-resource `count = var.X_config_id != "" ? 1 : 0` guards.
 ###############################################################################
 
+# 2026-10-03: a transient Cloud Monitoring EVALUATION-side blip has opened SIX incidents on FOUR of the
+# five absence policies since 2026-08-17 (Monitoring alerts API: ops-export 08-17 19:51Z, cadence 08-17
+# 19:53Z and 08-18 01:22Z, backup 08-18 05:25Z, integrity-check 09-18 18:21Z and 10-01 03:58Z), every
+# one with a valid heartbeat sample already inside the 25h window and nothing wrong underneath
+# (RUNBOOK §49, §56). Each closed itself in 3m39s-4m33s; the one REAL absence on record (freshness,
+# 2026-06-20) stayed open 6h59m50s. Replaying each policy's own PromQL against the stored series shows
+# no gap, so the data is fine and the single evaluation that flipped to "absent" was wrong. A real
+# absence is not transient: once the last sample is >25h old the condition stays true until the next
+# run lands, i.e. for hours. So requiring it to HOLD for 30 minutes before the incident opens removes
+# the blip class at zero detection cost (the window is 25h; 30 min is ~2% of it).
+locals {
+  scheduler_absence_duration = "1800s"
+
+  # Appended to every monitor's documentation so the alert email itself carries the triage rule
+  # (the live policies had EMPTY documentation, so the email said nothing actionable).
+  scheduler_absence_triage = " FALSE-ALARM CHECK FIRST (6 false alarms on 4 policies since 2026-08-17, ops/RUNBOOK.md section 56): the scheduler is usually fine. (1) Incident length: a blip auto-closes in ~4 min, a real absence stays open for hours. (2) Warehouse: `SELECT sq_name, last_beat_ts, stale_beat FROM state.scheduled_query_version_drift` -- this monitor's last_beat_ts within 24h and stale_beat=false means it is alive (a real death also raises a scheduled_query_stale warning in ops.alerts within ~36-60h). (3) Logs: `gcloud logging read 'resource.type=\"bigquery_dts_config\" AND resource.labels.config_id=\"<id>\" AND jsonPayload.message=~\"^Summary: succeeded\"' --freshness=2d` -- a 'Summary: succeeded 1 jobs' line inside 25h means the alert was an evaluation-side blip (a 'failed 1 jobs' Summary is a failing run, not a dead scheduler: see the DTS failure email and ops.alerts). Blip => no action."
+}
+
 locals {
   scheduler_absence_monitors = {
     for key, monitor in {
       freshness = {
         config_id             = local.freshness_config_id
+        evaluation_interval   = "1800s"
         metric_name           = "freshness_scheduled_run"
         alert_display_name    = "Freshness scheduler absent >25h"
-        condition_display_name = "No successful freshness run in 26h"
+        condition_display_name = "No freshness run in 25h"
         documentation = join(" ", [
           "The freshness dead-man's switch has not emitted a run heartbeat in >25h.",
           "FIRST verify it is real, not a repeat of the 2026-06-20 false alarm:",
@@ -166,6 +186,7 @@ locals {
       }
       backup = {
         config_id             = local.backup_config_id
+        evaluation_interval   = "30s"
         metric_name           = "backup_scheduled_run"
         alert_display_name    = "Backup scheduler absent >25h"
         condition_display_name = "No events-backup run in 25h"
@@ -173,6 +194,7 @@ locals {
       }
       cadence = {
         config_id             = local.cadence_config_id
+        evaluation_interval   = "30s"
         metric_name           = "cadence_scheduled_run"
         alert_display_name    = "Cadence scheduler absent >25h"
         condition_display_name = "No cadence-check run in 25h"
@@ -180,13 +202,15 @@ locals {
       }
       integrity_check = {
         config_id             = var.integrity_check_config_id
+        evaluation_interval   = "30s"
         metric_name           = "integrity_check_scheduled_run"
         alert_display_name    = "Integrity-check scheduler absent >25h"
         condition_display_name = "No integrity-check run in 25h"
-        documentation         = "The daily append-only INTEGRITY check (state.append_only_integrity) has emitted no run heartbeat in >25h. It is record-only (writes a warning, never RAISEs), so a DEAD scheduler writes nothing at all — this absence policy is the ONLY thing that catches it. Triage per ops/RUNBOOK.md §19; confirm the resourceViewer grant + that view 18 is applied."
+        documentation         = "The daily append-only INTEGRITY check (state.append_only_integrity) has emitted no run heartbeat in >25h. It is record-only (writes a warning, never RAISEs), so a DEAD scheduler writes no alert of its own — this policy is the fast (25h) detector, and cadence_check independently raises a scheduled_query_stale warning via ops.alerts if no sq:integrity_check heartbeat lands for 36h, so a real death is double-covered. Triage per ops/RUNBOOK.md §19; confirm the resourceViewer grant + that view 18 is applied."
       }
       ops_export = {
         config_id             = var.ops_export_config_id
+        evaluation_interval   = "30s"
         metric_name           = "ops_export_scheduled_run"
         alert_display_name    = "ops-export scheduler absent >25h"
         condition_display_name = "No ops.* backup run in 25h"
@@ -290,19 +314,24 @@ resource "google_monitoring_alert_policy" "scheduler_absent" {
     # the lookback, firing the alert. The PromQL metric name is the Monitoring
     # mapping of the log-metric type (logging.googleapis.com/user/<name> ->
     # logging_googleapis_com:user_<name>), built from the resource so the two never
-    # drift. duration/evaluation_interval are sane defaults — reconcile to the live
-    # values on import if they differ.
+    # drift. evaluation_interval is per monitor and matches the LIVE policies (30s; freshness
+    # 1800s); duration is the §56 pending period.
     condition_prometheus_query_language {
       query               = "absent_over_time(logging_googleapis_com:user_${google_logging_metric.scheduler_run[each.key].name}[25h])"
-      duration            = "0s"
-      evaluation_interval = "60s"
+      duration            = local.scheduler_absence_duration
+      evaluation_interval = each.value.evaluation_interval
     }
+  }
+
+  # Live: notificationPrompts = [OPENED] only, i.e. no "resolved" email by design.
+  alert_strategy {
+    notification_prompts = ["OPENED"]
   }
 
   notification_channels = local.scheduler_alert_channels
 
   documentation {
-    content   = each.value.documentation
+    content   = "${each.value.documentation}${replace(local.scheduler_absence_triage, "<id>", each.value.config_id)}"
     mime_type = "text/markdown"
   }
 }
@@ -318,9 +347,13 @@ resource "google_monitoring_alert_policy" "scheduler_absent" {
 # grant. The preventive org policy (iam.disableServiceAccountKeyCreation) stays deferred
 # for the no-Org reason as §17 — this detection alert is the actionable-today control.
 #
-# NOTE: structurally different from the five monitors above (condition_threshold, not
-# condition_prometheus_query_language) — deliberately left OUT of the
-# scheduler_absence_monitors for_each/map refactor.
+# NOTE: structurally different from the five monitors above (an EVENT detector — increase(...) > 0 —
+# not an absence detector) — deliberately left OUT of the scheduler_absence_monitors for_each/map
+# refactor, and its duration stays 0s: increase()>0 is only true for ~10 min after the event, so a
+# pending period would let a real key creation expire before it ever opened an incident.
+# (Corrected 2026-10-03: the spec below used to be a condition_threshold that never matched the LIVE
+# policy, which is the PromQL form with display names as written here and, until the §56 apply, EMPTY
+# documentation.)
 ###############################################################################
 
 resource "google_logging_metric" "sa_key_created" {
@@ -341,30 +374,34 @@ resource "google_logging_metric" "sa_key_created" {
   }
 }
 
+locals {
+  sa_key_created_documentation = "A user-managed (downloadable) key was just created on gh-ci-runner@ or bq-scheduler@ — both are supposed to be keyless (WIF, RUNBOOK §6/§15/§25). If you did not intend this, DELETE the key immediately (gcloud iam service-accounts keys delete) and investigate who created it. Pairs with the monthly keyless-sa-audit.yml state assertion."
+}
+
 resource "google_monitoring_alert_policy" "sa_key_created" {
   project      = var.project_id
-  display_name = "Service-account key created on a keyless SA"
+  display_name = "SA key created on gh-ci-runner or bq-scheduler"
   combiner     = "OR"
 
   conditions {
-    display_name = "A user-managed key was created on gh-ci-runner@/bq-scheduler@"
-    condition_threshold {
-      filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.sa_key_created.name}\""
-      comparison      = "COMPARISON_GT"
-      threshold_value = 0
-      duration        = "0s"
-      trigger { count = 1 }
-      aggregations {
-        alignment_period   = "600s"
-        per_series_aligner = "ALIGN_DELTA"
-      }
+    display_name = "SA key created (should always be 0)"
+    condition_prometheus_query_language {
+      # Log-based metrics surface under resource.type="global" in this project (see the 2026-07-17
+      # fire-drill note further down), hence the monitored_resource selector.
+      query               = "increase(logging_googleapis_com:user_${google_logging_metric.sa_key_created.name}{monitored_resource=\"global\"}[10m]) > 0"
+      duration            = "0s"
+      evaluation_interval = "30s"
     }
+  }
+
+  alert_strategy {
+    notification_prompts = ["OPENED"]
   }
 
   notification_channels = local.scheduler_alert_channels
 
   documentation {
-    content   = "A user-managed (downloadable) key was just created on gh-ci-runner@ or bq-scheduler@ — both are supposed to be keyless (WIF, RUNBOOK §6/§15/§25). If you did not intend this, DELETE the key immediately (gcloud iam service-accounts keys delete) and investigate who created it. Pairs with the monthly keyless-sa-audit.yml state assertion."
+    content   = local.sa_key_created_documentation
     mime_type = "text/markdown"
   }
 }

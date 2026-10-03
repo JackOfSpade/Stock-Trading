@@ -122,6 +122,30 @@ manual re-enable was actually you. Resolve them by `alert_id` once you have conf
 
 ---
 
+# 2026-10-03 Scheduler-absence alerts keep false-firing — apply the pending-period fix to the live Cloud Monitoring policies
+
+The 2026-10-01 "Backup scheduler absent >25h" email (really the Integrity-check policy) was a false alarm — the
+sixth on four policies since 2026-08-17, each auto-closing in ~4 minutes (full triage: `ops/RUNBOOK.md` §56). The
+fix is in the repo (`infra/terraform/monitoring.tf` spec + `RUNBOOK` §56); the **live** policies still have
+`duration: 0s`, the wrong condition names and empty alert bodies, and the agent session that wrote it was (rightly)
+not allowed to edit shared GCP monitoring resources.
+
+## AB-1. Run `apply_absence_policy_hardening.py` against the live Cloud Monitoring policies — `[DONE 2026-10-03 — owner ran --apply; verified live read-only: duration 1800s on all five, queries/intervals/channel unchanged, bodies populated, no open incidents; idempotent re-run read "already hardened" x6]`
+
+**Action.** From a shell where `gcloud` is authenticated as you:
+
+```
+python3 infra/terraform/apply_absence_policy_hardening.py            # dry-run: prints what changes per policy
+python3 infra/terraform/apply_absence_policy_hardening.py --apply    # writes it
+python3 infra/terraform/apply_absence_policy_hardening.py            # confirm: every line now reads "= already hardened"
+```
+
+It sets a 30-minute pending period on the five "… scheduler absent >25h" policies, renames their conditions so the
+email subject names the right monitor, and fills in the empty alert bodies (including the SA-key policy's "delete the
+key immediately" text). Idempotent; dry-run by default; touches nothing else.
+
+**Why only you can do it.** It edits shared GCP monitoring resources; the agent harness blocks that by design.
+
 # 2026-09-16 Tavily connector OAuth expiry — the fleet's primary web-research surface is down
 
 Found during an interactive alert-triage session, not by the routine that raised it: OPS1's
