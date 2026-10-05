@@ -172,13 +172,15 @@ ALLOWLIST = {
         "bigquery/145's later ALTER TABLE ADD COLUMN on events.adversarial_reviews never propagated and "
         "the view served 14 of the base table's 19 columns until 2026-08-25. The raw-table read this "
         "entry covers is unchanged and the reason above still applies verbatim.",
-    ("148_audit_2026_08_08_fixes.sql", "ops.sp_score_cross_model_referee"):
+    ("252_referee_row_content_hash.sql", "ops.sp_score_cross_model_referee"):
         "Its outer duplicate-guard NOT EXISTS deliberately tests the RAW table: refusing to insert a "
         "second referee_gemini row when ANY referee row exists (superseded or not) is strictly more "
         "conservative than testing the current view, and this procedure must never double-write. "
         "Re-pointed from 143_adversarial_review_correction_path.sql (2026-08-08): bigquery/148 is now "
         "canonical for this procedure, adding a cycle_number term to both 'already scored' guards; the "
-        "outer guard's raw-table read is unchanged and this allowlist reason still applies verbatim.",
+        "outer guard's raw-table read is unchanged and this allowlist reason still applies verbatim. "
+        "Re-pointed from 148_audit_2026_08_08_fixes.sql (2026-10-04): bigquery/252 is now canonical, adding "
+        "content_sha256/body_bytes to the INSERT (alert fe36f70a); the guard is byte-identical to 148's.",
     ("146_adversarial_review_writer_serialization.sql", "ops.sp_write_adversarial_review"):
         "Its correction branch must inspect the exact physical target named by p_superseded_by and "
         "prove every carried review field matches before appending. The current view intentionally "

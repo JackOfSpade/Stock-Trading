@@ -79,7 +79,7 @@
 -- is that it currently CANNOT distinguish "insert-only MERGE" from "the audit trail was silently
 -- rewritten" — better to just not emit a MERGE job here at all.
 -- ============================================================================
--- SUPERSEDED LIVE by bigquery/148_audit_2026_08_08_fixes.sql — that file is the current
+-- SUPERSEDED LIVE by bigquery/252_referee_row_content_hash.sql (which carries 148 forward) — that file is the current
 -- single source of truth for ops.sp_score_cross_model_referee (chain: 44 -> 143 -> 148). Kept here,
 -- unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement
 -- live in isolation: the attacker candidate subquery below has no ROW_NUMBER/QUALIFY, and the outer

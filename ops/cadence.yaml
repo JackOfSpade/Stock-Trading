@@ -285,6 +285,7 @@ routines:
     # (5/5 in the trailing week) since 2026-05-09 while declaring no repo path at all, which made
     # OPS0's unlanded-completed-run detector skip the fleet's highest-frequency routine entirely.
     # STEP 4f consumes the repo-file entries of this list as its git-evidence surface -- keep it real.
+    # (CORRECTED 2026-10-04, W5, closing OPS0's `ops0_landing_sweep_defect` 20713888: Watchlist.md is declared by FOUR routines -- D2, W4, M4, Q4 -- so it is fleet-SHARED and STEP 4(f) must IGNORE it as pathspec evidence; the entry is kept only to DESCRIBE the write, it is not a completed STEP 4f repair.)
     writes: [events.decision_log, events.queue_events, events.position_events, calendar:confirm_order,
              events.park_policy_changes, Watchlist.md]
     expected_trigger:
@@ -768,6 +769,7 @@ routines:
     depends_on: [W1, W2, W3]
     # Watchlist.md added 2026-07-29 (OPS0 STEP 4f), same reason as D2 above: written in 9/11 of W4's
     # commits (4/5 post-cutover) while undeclared, so STEP 4f could not see a stranded W4.
+    # (CORRECTED 2026-10-04, W5, closing OPS0's `ops0_landing_sweep_defect` 20713888: Watchlist.md is declared by FOUR routines -- D2, W4, M4, Q4 -- so it is fleet-SHARED and STEP 4(f) must IGNORE it as pathspec evidence; the entry is kept only to DESCRIBE the write, it is not a completed STEP 4f repair.)
     writes: [events.queue_events, events.decision_log, Watchlist.md]
     expected_trigger:
       recurrence: custom_cron
@@ -854,6 +856,7 @@ routines:
     # otherwise (step A "drain Watchlist.md A-queue", step G "WATCHLIST UPDATES"), and M4's
     # first-ever landed run (a6de10d, 2026-08-03) edited Watchlist.md. Undeclared, STEP 4f skipped
     # M4 as a no-repo-path routine and could not have seen a stranded M4.
+    # (CORRECTED 2026-10-04, W5, closing OPS0's `ops0_landing_sweep_defect` 20713888: Watchlist.md is declared by FOUR routines -- D2, W4, M4, Q4 -- so it is fleet-SHARED and STEP 4(f) must IGNORE it as pathspec evidence; the entry is kept only to DESCRIBE the write, it is not a completed STEP 4f repair.)
     writes: [events.regime_events, events.queue_events, events.decision_log, calendar:confirm_order, Watchlist.md]
     expected_trigger:
       recurrence: custom_cron

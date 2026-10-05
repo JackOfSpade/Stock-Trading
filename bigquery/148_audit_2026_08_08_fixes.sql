@@ -526,6 +526,10 @@ END;
 -- -- so it still cannot trip state.append_only_integrity (bigquery/44's 2026-07-20 fix, preserved).
 -- The Gemini prompt text is byte-identical to bigquery/44's.
 -- ============================================================================
+-- SUPERSEDED LIVE by bigquery/252_referee_row_content_hash.sql — current single source of truth for
+-- ops.sp_score_cross_model_referee (252 carries this statement forward byte-identically except that its
+-- INSERT now populates content_sha256/body_bytes; W5 2026-10-04, alert fe36f70a). Kept here, unmodified,
+-- for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_score_cross_model_referee`()
 BEGIN
   INSERT INTO `stock-trading-498512.events.adversarial_reviews`
