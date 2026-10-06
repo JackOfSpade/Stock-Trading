@@ -32,9 +32,10 @@
 
 Re-authorize the Google-Cloud-BigQuery connector in claude.ai connector settings, then resolve per RUNBOOK §26. BigQuery-dependent slots that fire before then (OPS0 tonight; OPS1, D1, D2a, D2 tomorrow) will halt or degrade under their own limbs.
 
-## Unfiled findings
+## Unfiled findings — FILED 2026-10-06
 
 - None new. `ops.alerts` is unreachable, so nothing was filed.
+- 2026-10-06 (RUNBOOK §26 step 4, after the connector was re-authorized): confirmed the OPS2 and OPS0 sections both record no new finding, so there were zero bullets to file as `ops.alerts` info rows. The heading is marked FILED so OPS0's UNFILED-FINDINGS INTAKE does not re-process it.
 
 ---
 
