@@ -506,6 +506,18 @@ Names that cleared a fresh Daily.md D1 screen and were routed by D2 as `thesis` 
 
 ## Strategy D re-screen pipeline (state index; primary tracking via the `PENDING_ANALYSIS` queue)
 
+### 2026-Q4 quarterly deferred set — D-deferred / D-blocked (Q4 action conversion, 2026-10-06)
+
+Converted from `Quarterly_D_Candidates.md` (marker 2026-Q4, Q2 run 2026-10-02). **Ready-now** names (LLY, V, VRTX, GE, MSFT, SPOT, MELI, HWM, AVGO, in thesis-strength order) were enqueued as `PENDING_ANALYSIS` thesis-construction rows `thesis-<TICKER>-D-20261006`, due 2026-10-06, for D2 to drain. **Router state at enqueue:** `div-D-202609-1` resolved **DO-NOT-ACTIVATE (unchanged)** by AR_orc on 2026-10-06, so every D new entry is still router-gated. D is also `capital_disabled` (sweep debt $4,430.02). **LLY queue reconciliation:** the existing `rescreen-LLY-D-20261214` is **kept**, not superseded. The new thesis-construction row is this quarter's merits pass. The December re-screen stays as the router-gate re-check after the next divergence cycle. Deferrals do not chain.
+
+**D-deferred** (thesis/eligibility intact; entry deferred on a specific trigger):
+
+| Ticker | Deferral reason | Momentum (trailing-30d) | Resolution trigger | Re-screen entry | Conservative default |
+|--------|-----------------|-------------------------|--------------------|-----------------|----------------------|
+| META | rally pause (criterion 6) | **+25.5%** (best month since 2022); close 16.6% above the 50-day SMA | trailing-30d change **at or below +10%** AND close **within 5% of the 50-day SMA**, measured after the Q3 print (~week of 2026-10-26) | `rescreen-META-D-20261105` (due 2026-11-05) | skip — no construction this quarter; re-surfaces at the 2027-Q1 quarterly D screen |
+
+**D-blocked** (blocked by concentration only): **none this quarter.** GE, HWM and SPOT read above 30% sector share only on the capital-disabled artifact NAV denominator (~$549; Industrials 33.4%, Comm Svcs 30.0%). On the restored denominator (~$4,979) they read ~3–4%. Per Q2's spec this is carried as a flagged caveat on each queue row, not a block. If Entry criterion 5's denominator is ruled to be the current (swept) NAV, these names become blocked until capital is restored.
+
 ### 2026-Q3 quarterly deferred set — D-deferred / D-blocked (Q4 action conversion, 2026-07-01)
 
 Converted from `Quarterly_D_Candidates.md` (2026-Q3). **Ready-now** names (GOOGL, AMZN, CRM, ISRG, UBER, + TSM valuation/regime-cautioned) were enqueued as `PENDING_ANALYSIS` thesis-construction (due today; D2 drains), ordered by thesis strength. **STATUS UPDATE 2026-07-09 (D2):** GOOGL / AMZN / CRM / UBER theses were constructed 2026-07-08 (GO) and **ENTERED as live Strategy-D positions on 2026-07-09** (`D:{ticker}:2026-07-09`; staged 07-08, filled 07-09 open, reconciled by D2 2026-07-09). ISRG and TSM were **GO-quality but ENTRY-DEFERRED to post-Q2** (`rescreen-ISRG-D-20260717` / `rescreen-TSM-D-20260717`, drain due 2026-07-17 after the ~2026-07-16 Q2 prints). **STATUS UPDATE 2026-07-19 (W5): both re-screens DRAINED 2026-07-17 and RESOLVED GO** — TSM post-Q2 (favorable print, 0 of 3 invalidation criteria met), entry staged 0.0946 sh @ $399.30 (instruction id 100; events.decision_log 0edb56ed); ISRG post-Q2-crash entry (beat but reaffirmed guide, −14.15%, 0 of 4 invalidation criteria met), entry staged 0.1091 sh @ $346.30 (instruction id 101; events.decision_log 9de1893a). This ready-now set is now closed. **All new D entries remain router-gated by `div-D-202606-1`** (`PENDING_REVIEW`, orchestrator due 2026-07-02) — DNA → terminal NO-GO. Deferrals do not chain; each carries a conservative default.
