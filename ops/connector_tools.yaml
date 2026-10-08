@@ -645,6 +645,14 @@ connectors:
         use: unused
       - name: get_company_themes
         use: unused
+      - name: get_flow_type
+        use: unused
+        note: >
+          Auto-added by OPS1 2026-10-08. Vendor-added tool, first observed in the live
+          connector's tool inventory. `use: unused` is the conservative default — nothing
+          in this fleet calls it (mirrors the IBKR `whats_new` precedent, July 2026).
+          Promoting it to required/optional and adding routine prose that calls it is a
+          separate, deliberate feature-adoption decision this step never makes on its own.
       - name: get_option_data
         use: required
         note: >-
