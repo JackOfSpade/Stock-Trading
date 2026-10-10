@@ -19,7 +19,7 @@ pyyaml>=6.0.3,<7.0
 google-cloud-bigquery>=3.45.2,<4.0
 
 # --- advisory `lint` job ---
-ruff>=0.16.9,<0.17
+ruff>=0.16.10,<0.17
 
 # --- `dbt` parse + `dbt-parity` compile jobs (the drift defenses) ---
 # Keep dbt-core and dbt-bigquery on the SAME minor; mirror require-dbt-version in dbt/dbt_project.yml.
