@@ -143,6 +143,20 @@ connectors:
           with `period=quarter` returns ACCESS DENIED, and `statements/financial-reports-dates`
           WORKS but returns only `fiscalYear`+`period` with NO dates, so it cannot supply
           report dates.
+          AMENDED 2026-10-11 (direct probes, triage of W1's
+          `fmp_earnings_calendar_silent_partial` alert; shared FMP silent-failure (iv-b)/(iv-c)
+          in Claude_Task_Plan.md). (1) SPAN CLAMP: both `earnings-calendar` and
+          `dividends-calendar` answer a span longer than 90 days with only the trailing 90
+          days ending at `to_date`, with no error, and `limit` does not help (e.g.
+          2026-12-01..2027-03-10 dropped DOCU 12-03 and ADBE 12-09, kept COST 12-10).
+          Chunk long windows into pieces of at most 60 days, each starting on the previous
+          chunk's `to_date` (both ends inclusive; dedupe on symbol+date). (2) `dividends-calendar`
+          LOOKBACK is only ~4 weeks: 2026-09-14 was served and 2026-09-11 was ACCESS DENIED,
+          and 2026-08-10..2026-08-12, inside the 08-10..08-18 window served on 2026-08-23, is
+          now denied. So it is a rolling window, not a historical fallback for old reference
+          dates. (3) The earnings horizon above is the DENSE edge, not a hard cutoff:
+          2027-01-15..2027-02-15 (zero rows on 2026-08-23) now returns TSLA, FDX, PEP, and
+          2027-03-01..2027-04-30 returned 1 row (FDX).
       - name: chart
         use: required
         prose_ambiguous: true

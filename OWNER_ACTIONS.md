@@ -491,7 +491,10 @@ either. The per-symbol form, `calendar/earnings-company`, also returns ACCESS DE
 MSCI) — there is no per-name calendar workaround on FMP itself. (The adjacent dividend and
 statements surfaces were probed the same session and are recorded in full in
 `ops/connector_tools.yaml`'s `calendar` entry: `dividends-calendar`, the date-range form, WORKS and
-is now the sanctioned fallback for `state.price_level_criterion_drift`; `dividends-company` and
+is now the sanctioned fallback for `state.price_level_criterion_drift` — AMENDED 2026-10-11: only
+for ex-dates within ~4 weeks of the call and spans of at most 60 days (the 2026-08-10..08-12 part of
+the window served on 2026-08-23 is now ACCESS DENIED; shared FMP silent-failure (iv-b)/(iv-c)), so an
+older head must come from the issuer's own declaration; `dividends-company` and
 `statements/income-statement` are both ACCESS DENIED; `statements/financial-reports-dates` works
 but returns no dates.)
 
@@ -523,7 +526,7 @@ above.
 ```verify
 id: FMP-earn-horizon
 type: fmp
-probe: an FMP `earnings-calendar` call for a window beyond ~13 weeks out (e.g. 2027-01-15..2027-02-15) — currently returns ZERO rows
+probe: an FMP `earnings-calendar` call (≤60-day span) for a window beyond ~13 weeks out (e.g. 2027-01-15..2027-02-15) — ZERO rows on 2026-08-23, 3 rows (sparse) on 2026-10-11
 done_when: standing decision — either (a) raise the FMP plan tier and re-probe to confirm the
   rolling window widened, or (b) accept the reduced confirmed-earnings horizon as-is; either
   choice closes this item, matching item W's precedent

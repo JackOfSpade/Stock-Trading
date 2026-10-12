@@ -711,7 +711,7 @@ sources:
           - name: marks_cover_reference
             description: >
               FALSE means events.daily_marks does not reach back to reference_date, so the dividend
-              total is an INCOMPLETE lower bound -- corroborate against FMP dividends-calendar.
+              total is an INCOMPLETE lower bound -- corroborate against FMP dividends-calendar (ex-dates within ~4 weeks of the call, spans <= 60 days only) or the issuer's own declaration.
           - name: reference_date_declared
             description: >
               FALSE means the criterion never recorded price_level_ref_date and entry_date was used as

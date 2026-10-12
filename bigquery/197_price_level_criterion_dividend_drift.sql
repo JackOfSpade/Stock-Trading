@@ -226,7 +226,8 @@ SELECT
   -- case: its reference date 2026-07-24 precedes its first MSCI mark on 2026-07-28. FMP's
   -- `calendar` / `dividends-calendar` endpoint (the date-range form, which is NOT plan-gated on this
   -- tier -- verified 2026-08-23, unlike `dividends-company` which IS) is the fallback for the
-  -- uncovered head of the window.
+  -- uncovered head of the window -- AMENDED 2026-10-11: only for ex-dates within ~4 weeks of the call
+  -- and spans <= 60 days (older windows now return ACCESS DENIED); take an older head from the issuer.
   (SELECT MIN(dm.mark_date) FROM `stock-trading-498512.events.daily_marks` dm
     WHERE dm.ticker = r.ticker) AS first_mark_date,
   COALESCE((SELECT MIN(dm.mark_date) FROM `stock-trading-498512.events.daily_marks` dm
