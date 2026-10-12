@@ -128,6 +128,9 @@ AS (
 -- at all" or "chunk 0 itself failed"); MERGE keys on (entry_id, chunk_index) so re-running never
 -- duplicates a chunk. Re-run safe; a no-op (cheap) when nothing is pending.
 -- ml_generate_embedding_status = '' is BigQuery's success sentinel.
+-- SUPERSEDED LIVE by bigquery/253_embed_pending_concurrent_dedupe.sql — current single source of truth for
+-- this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_embed_pending`()
 BEGIN
   MERGE `stock-trading-498512.analytics.decision_embeddings` T

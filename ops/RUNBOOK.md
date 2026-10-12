@@ -4256,6 +4256,7 @@ so out loud. Severity is a hard-coded `warning`, and `state.trading_enabled`'s `
    of a gap that still exists and that cannot be closed from inside the repo. Resolving it would be a receipt
    for work nobody did; raising it to warning/critical would add a recurring page for a condition with no
    in-band remedy. It routes to W5 SPEC-DEFECT NOTICE INTAKE, which is the right owner.
+   **Adjudicated 2026-10-11 by W5 SPEC-DEFECT NOTICE INTAKE and closed as a REJECT (accepted limitation, alert `b683172e-d00e-4510-8fc2-f93c31d58b6b`):** item 1 above is the evidence — no API exposes subscription/plan/entitlement state, so there is nothing a detector could read; the compensating control (the owner's calendar reminder) is what actually worked, and §53's signature table (the `403` row) now classifies the consequence in seconds. Nothing here is left to fix, and re-filing the gap adds no information.
 
 ### What the operator actually has to do
 

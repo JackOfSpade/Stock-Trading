@@ -233,8 +233,10 @@ ALLOWLIST = {
         "RAW SUBSTRATE. Every decision_log row is embedded, obsolete ones included; the anti-join "
         "correctly lives one layer up, inside analytics.find_precedents' candidate pool (bigquery/122). "
         "Filtering here would also desync state.embedding_health's 1:1 parity check above.",
-    ("02_ai_layer.sql", "ops.sp_embed_pending"):
-        "Materializes analytics.decision_embeddings — same raw-substrate reasoning as that table.",
+    ("253_embed_pending_concurrent_dedupe.sql", "ops.sp_embed_pending"):
+        "Materializes analytics.decision_embeddings — same raw-substrate reasoning as that table. "
+        "Re-pointed from 02_ai_layer.sql (2026-10-11): bigquery/253 is now canonical, adding only a "
+        "lossless post-MERGE dedupe for the concurrent-call race; the raw-table read is unchanged.",
     ("122_decision_correction_append_only.sql", "analytics.find_precedents"):
         "IS the anti-join, and correctly places it INSIDE the VECTOR_SEARCH candidate pool ahead of "
         "QUALIFY/LIMIT so a filtered-out row does not consume one of the ten returned slots.",

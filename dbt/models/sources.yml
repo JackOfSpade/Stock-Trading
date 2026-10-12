@@ -717,6 +717,16 @@ sources:
               FALSE means the criterion never recorded price_level_ref_date and entry_date was used as
               a lower-bound proxy.
 
+      - name: review_lane_enqueue_gap
+        description: >
+          PENDING_REVIEW producer-stall watch (bigquery/254, 2026-10-11): days since the last pending
+          enqueue against the lane's own longest observed gap. Read by W5 SPEC-DEFECT NOTICE INTAKE's
+          REVIEW-LANE ENQUEUE-GAP CHECK, which owns both the heal and the raise. Declared out-of-scope for
+          now (not yet ported as a dbt model; a one-row aggregate over events.queue_events) -- added here
+          so it stays off scripts/check_dbt_view_coverage.py's advisory uncovered list.
+        columns:
+          - name: is_stalled
+            description: TRUE when current_gap_days exceeds max_historical_gap_days.
       - name: staged_order_reconciliation_overdue
         description: >
           Staged orders that have gone unreconciled past 120h (bigquery/244, 2026-09-20). Only D2a

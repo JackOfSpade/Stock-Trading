@@ -318,6 +318,8 @@ Do not blind-resolve a live red.
 5. **Expect the `missed_run` + `staleness` double-critical** (D1/D2/D2a/D3) and resolve it with a note
    pointing at this file and RUNBOOK §26. It is the expected signature, not two new faults.
 
+> **ADDENDUM 2026-10-11 (W5 SPEC-DEFECT NOTICE INTAKE, closing SL3's `halt_record_replay_order_omits_catchup_safe_downstream`, alert `da0310fb-c7cd-46cb-bb55-4943089fb9b4`; the original steps above are left as written).** Steps 3 and 5 omit **SL3**, the one other routine declaring D2a in `depends_on` (`ops/cadence.yaml`: D2 and SL3). The omission is correct on the merits: SL3 is `catchup_safe: true` and its STEP 1 owns a multi-day catch-up loop, so it needs **no manual replay** — the skipped day returns once D2a's marks catch-up lands a `state.daily_marks_curated` row for it. Its own `halted` row and `missing_dependency` critical for 2026-09-21 are therefore part of the expected signature in step 5 (read it as **D1/D2/D2a/D3/SL3**), not a fresh fault. The general rule is now in `Claude_Task_Plan.md` §Observability, "WHAT EVERY HALTED SLOT OWES" item 6.
+
 ---
 
 ## 7. Recorded for their owning surfaces, not acted on from a halted run

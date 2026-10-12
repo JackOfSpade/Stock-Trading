@@ -693,6 +693,18 @@ connectors:
           1d Brent mark. For a futures history call, always pass the explicit `exchange` from the
           `search_futures` row, and do NOT classify that error text as transient when `exchange` was
           omitted.
+          PARALLEL CALLS CAN RETURN ANOTHER TICKER'S SERIES (added 2026-10-11, W5 SPEC-DEFECT NOTICE
+          INTAKE, closing W1's `ibkr_price_history_parallel_cross_contamination`, alert
+          7cc25b71-5eb6-411b-bf31-eff08b0359ff; MEASURED by W1 2026-09-20 by byte-for-byte diff):
+          at concurrency >= 5 one slot of a 5-call batch came back holding a DIFFERENT symbol's exact
+          bars (same closes and volumes) under the requested symbol's label — well-formed, no error,
+          no warning. Solo calls and concurrency <= 3 reproduced byte-for-byte. Instance: a 59-ticker
+          ADV pass gave GOOGL the AMZN figure (4480.253 USD m; solo GOOGL = 4292.231). RULE: issue
+          `get_price_history` solo or in batches of AT MOST 3 concurrent calls; if a larger batch is
+          unavoidable, re-run at least one ticker solo and compare before trusting the batch, and treat
+          two tickers returning an identical derived statistic (ADV, last close, 30d return) to full
+          precision as contamination, never coincidence. Consumers at risk: D1 move screens, D2a mark
+          ingest, W3 position deep-dive, W1 ADV measurement.
       - name: get_price_snapshot
         use: required
         note: OPS1-adjacent live-quote surface; D2/D2a intraday pricing
