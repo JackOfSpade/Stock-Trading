@@ -126,6 +126,12 @@
 -- Rule 6 is new. Do NOT re-apply bigquery/148, 134, 130, 107, 97, 94, 78 or 34's CREATE of this
 -- procedure live in isolation -- that would silently remove Rule 6.
 -- ============================================================================
+-- SUPERSEDED FURTHER (2026-10-13) by bigquery/255_trading_halted_auto_resolve.sql, which is now the
+-- CURRENT single source of truth for ops.sp_auto_resolve_alerts (chain: ... -> 148 -> 249 -> 255). 255
+-- carries Rules 1-6 byte-identical to this file and appends Rule 7 (trading_halted resolves when the
+-- trading gate is green again; owner directive 2026-10-13). Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only. DO NOT re-apply this CREATE OR REPLACE PROCEDURE statement live in
+-- isolation -- that would silently remove Rule 7.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_auto_resolve_alerts`()
 BEGIN
   DECLARE eligible_dep, eligible_run, eligible_stalled, eligible_stale, eligible_refire_blocked ARRAY<STRING>;

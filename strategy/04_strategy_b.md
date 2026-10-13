@@ -13,7 +13,7 @@ Already specified in A's section. Summary: A enters before event; B enters after
 
 ### Instrument eligibility rule
 
-- US-listed common equity
+- US-listed common equity. **[Rev 49, owner directive, 2026-10-13]** US-primary-listed common/ordinary shares are eligible regardless of the issuer's place of incorporation; ADRs/ADSs of foreign-domiciled companies are eligible only at market cap ≥ $10B at entry (D's large-cap line). The market-cap and ADV floors below apply to every instrument.
 - Market cap ≥ $2B at entry
 - 30-day average daily volume ≥ $10M
 - Long or short (differentiates from A's long-only posture) — but **long-biased in practice**; see the *Directional posture* note under the Router activation rule below
