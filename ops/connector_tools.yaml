@@ -722,14 +722,26 @@ connectors:
       - name: get_price_snapshot
         use: required
         note: OPS1-adjacent live-quote surface; D2/D2a intraday pricing
+      - name: get_saved_screener
+        use: unused
+        note: >
+          Auto-added by OPS1 2026-10-14. Vendor-added tool, first observed in the live connector's tool inventory. `use: unused` is the conservative default — nothing in this fleet calls it (mirrors the IBKR `whats_new` precedent, July 2026). Promoting it to required/optional and adding routine prose that calls it is a separate, deliberate feature-adoption decision this step never makes on its own.
       - name: get_theme_details
         use: unused
       - name: get_watchlist
         use: unused
       - name: get_watchlists
         use: unused
+      - name: list_saved_screeners
+        use: unused
+        note: >
+          Auto-added by OPS1 2026-10-14. Vendor-added tool, first observed in the live connector's tool inventory. `use: unused` is the conservative default — nothing in this fleet calls it (mirrors the IBKR `whats_new` precedent, July 2026). Promoting it to required/optional and adding routine prose that calls it is a separate, deliberate feature-adoption decision this step never makes on its own.
       - name: provide_customer_feedback
         use: unused
+      - name: run_saved_screener
+        use: unused
+        note: >
+          Auto-added by OPS1 2026-10-14. Vendor-added tool, first observed in the live connector's tool inventory. `use: unused` is the conservative default — nothing in this fleet calls it (mirrors the IBKR `whats_new` precedent, July 2026). Promoting it to required/optional and adding routine prose that calls it is a separate, deliberate feature-adoption decision this step never makes on its own.
       - name: search_contracts
         use: required
         note: >-
