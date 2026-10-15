@@ -148,8 +148,6 @@ required_column_naming:
       why: "M1a appends the monthly FRED-derived regime metrics it curates."
     - table: events.nogo_shadow
       why: "W5's NO-GO shadow-tracking log/close-out bullets (STEP a/b) are literal INSERT/UPDATEs."
-    - table: events.park_policy_changes
-      why: "D2 writes this row on a park-vehicle BOUND switch."
     - table: events.playbook_updates
       why: "W5's STRATEGY-PLAYBOOK REVIEW bullet does a literal INSERT INTO events.playbook_updates on a theater-judge-cleared delta."
     - table: events.position_events
@@ -251,6 +249,8 @@ required_column_naming:
       why: "No writer anywhere in Claude_Task_Plan.md -- D1's FRONTIER-LLM CAPABILITY CHECK writes findings to events.decision_log (tag [HF Frontier-LLM Capture]) instead; the table is read-only for Q3/A1 today."
     - table: events.market_holidays
       why: "Calendar-ingestion table; zero mentions in Claude_Task_Plan.md (populated outside the routine fleet)."
+    - table: events.park_policy_changes
+      why: "No routine writer since 2026-10-15 -- the park is VOO-only (bigquery/256, Operating_Protocols.md 13.F) and D2's PARK ALLOCATION CONVERSION, its only writer, was retired. D1's PARK PIN CHECK only reads state.park_policy_current and alerts park_pin_drift on a mismatch, never repairing it; a policy row is now written only by an owner-directed bigquery/*.sql file."
     - table: events.option_marks
       why: "Connector options-mark ingestion mirror, same class as events.daily_marks."
     - table: events.parking_events

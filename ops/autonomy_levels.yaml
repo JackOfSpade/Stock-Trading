@@ -275,8 +275,18 @@ loops:
       discipline as every sibling loop.
     added: "2026-07-15"
 
-  - id: park_allocator               # AI Park Allocator: daily AI judgment call on which park-menu
-                                      # vehicle idle capital holds, D1/D2 rail (PARK_ROUTER_DESIGN.md v3)
+  - id: park_allocator               # RETIRED TO A PIN CHECK 2026-10-15 (owner directive, bigquery/256_
+                                      # park_voo_only.sql; Operating_Protocols.md §13.F): the park is VOO-only
+                                      # and NO routine decides the vehicle any more. What still runs under this
+                                      # id is D1's PARK PIN CHECK — it verifies state.park_policy_current is
+                                      # VOO/VOO/f=0 and state.park_menu is VOO-only, writes the daily
+                                      # loop:park_allocator heartbeat (still watched by ops.sp_sq_cadence_check's
+                                      # 3-trading-day block) and raises park_pin_drift if broken, never
+                                      # repairing it. Stage stays active_auto because the check runs with no
+                                      # human gate; everything below this comment describes the RETIRED
+                                      # 2026-07-18..2026-10-14 allocator and is kept as history.
+                                      # Former role: AI Park Allocator, daily AI judgment call on which
+                                      # park-menu vehicle idle capital holds, D1/D2 rail (PARK_ROUTER_DESIGN.md v3)
     stage: active_auto               # BUILT AT SHADOW (2026-07-18, PARK_ROUTER_DESIGN.md v2 — owner-
                                       # review design, SISA precedent) — NOT dormant-then-promoted, same
                                       # anti-pattern-avoidance rationale as research_quality_feedback

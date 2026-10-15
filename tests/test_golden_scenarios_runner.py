@@ -1190,7 +1190,7 @@ def test_group_scenarios_for_batching_real_scenarios_yaml_covers_every_id_exactl
     all_ids = [sc["id"] for g in groups for sc in g]
     assert sorted(all_ids) == sorted(sc["id"] for sc in scenarios)  # union == every id, no loss
     assert len(all_ids) == len(set(all_ids))  # no duplicates across groups
-    assert len(groups) == 21  # 20 as measured 2026-08-17; 21 since SE-02 landed 2026-08-30
+    assert len(groups) == 20  # 20 as measured 2026-08-17; 21 since SE-02 landed 2026-08-30; 20 since the PA-01..04/07/08 group was removed 2026-10-15 (park allocator retired, bigquery/256)
 
     # Every group must be governing-TEXT-uniform — the new grouping key's actual contract
     # (_governing_text_group_key()'s own docstring: "two scenarios must land in the same group ONLY when
@@ -2806,7 +2806,7 @@ def test_group_scenarios_for_batching_real_scenarios_yaml_twenty_groups_kt02_alo
     scenarios = rg.load_scenarios()
     assert any(sc.get("governing_sections") for sc in scenarios)  # phase 2 landed (see the placeholder this supersedes)
     groups = rg.group_scenarios_for_batching(scenarios)
-    assert len(groups) == 21  # 20 when measured 2026-08-17 against the real, now-mapped file (was 7 pre-mapping); 21 since SE-02 landed 2026-08-30
+    assert len(groups) == 20  # 20 when measured 2026-08-17 against the real, now-mapped file (was 7 pre-mapping); 21 since SE-02 landed 2026-08-30; 20 since the PA-01..04/07/08 group was removed 2026-10-15
     all_ids = [sc["id"] for g in groups for sc in g]
     assert sorted(all_ids) == sorted(sc["id"] for sc in scenarios)  # union == every id, no loss
 
@@ -2827,7 +2827,7 @@ def test_golden_section_scope_escape_hatch_real_scenarios_yaml_on_vs_off(monkeyp
     # governing_sections entirely) while ON sends only the scoped excerpt, so ON must always be a strict,
     # materially smaller subset of OFF's content — never merely different, never larger.
     #
-    # Uses PA-01/PA-02/PA-03/PA-04 — the real LARGEST scoped group (measured 2026-08-17: 172,769 scoped
+    # Uses PA-05/PA-06 — the real LARGEST scoped group since 2026-10-15 (PA-01..04 held that role from 2026-08-17: 172,769 scoped
     # bytes) — as the concrete pin, holding the group's own governing_files/governing_sections fixed and
     # toggling ONLY the GOLDEN_SECTION_SCOPE env var (rather than re-grouping under scope=0, which would
     # itself change which scenarios share a group — see PA-05/PA-06/RS-01/RS-02's own governing_files
@@ -2835,12 +2835,12 @@ def test_golden_section_scope_escape_hatch_real_scenarios_yaml_on_vs_off(monkeyp
     # hatch's own effect from group_scenarios_for_batching()'s.
     scenarios = rg.load_scenarios()
     groups = rg.group_scenarios_for_batching(scenarios)  # default env: scoping ON
-    pa_group = next(g for g in groups if any(sc["id"] == "PA-01" for sc in g))
-    # Real largest scoped group. PA-07 joined it 2026-09-03 (the de-risk evidence-cardinality fixture):
-    # it declares the SAME governing_files/governing_sections set as PA-01..04, so batching correctly
-    # folds it into this group — that is the batching contract working, not drift. Membership is pinned
-    # rather than counted so a scenario SILENTLY changing its governing set still trips this.
-    assert [sc["id"] for sc in pa_group] == ["PA-01", "PA-02", "PA-03", "PA-04", "PA-07", "PA-08"]
+    pa_group = next(g for g in groups if any(sc["id"] == "PA-05" for sc in g))
+    # Real largest scoped group. Was PA-01/02/03/04/07/08 until 2026-10-15, when those allocator-call
+    # fixtures were removed with the park allocator itself (bigquery/256); PA-05/PA-06 (D2a sweep on a VOO
+    # snapshot failure) are now the largest group, re-measured that day at ~260KB scoped. Membership is
+    # pinned rather than counted so a scenario SILENTLY changing its governing set still trips this.
+    assert [sc["id"] for sc in pa_group] == ["PA-05", "PA-06"]
     gov_files = pa_group[0].get("governing_files") or []
     gov_sections = pa_group[0].get("governing_sections")
 

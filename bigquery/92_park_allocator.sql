@@ -56,6 +56,9 @@
 -- pick a vehicle. Literal 12-row reference view, same UNNEST(ARRAY[STRUCT(...)]) literal-table idiom
 -- as bigquery/09_market_calendar.sql's holiday seed.
 -- ============================================================================
+-- SUPERSEDED LIVE by bigquery/256_park_voo_only.sql (2026-10-15, park VOO-only owner directive) — current
+-- single source of truth for state.park_menu (VOO alone). Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.park_menu` AS
 SELECT * FROM UNNEST([
   STRUCT('CASH' AS ticker, 'cash'              AS asset_class, 0 AS risk_tier),
