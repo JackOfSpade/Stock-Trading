@@ -4,6 +4,16 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Every github/codeql-action/* step in a workflow must run the SAME version, or CodeQL fails
+    # ("Loaded a configuration file for version X, but running version Y"). Ungrouped, Dependabot
+    # opened init and analyze as separate PRs (#68/#69, 2026-10-16): each was red alone, #68 landed
+    # by fast-forward, and #69 then needed a merge commit touching a workflow file, which
+    # auto-merge's GITHUB_TOKEN may not push (no `workflows` permission) -- stranded for good, with
+    # main left on mismatched init/analyze. One grouped PR is consistent and fast-forwardable.
+    groups:
+      codeql-action:
+        patterns:
+          - "github/codeql-action*"
   - package-ecosystem: pip
     directory: /
     schedule:
