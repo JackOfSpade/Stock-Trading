@@ -18,6 +18,16 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # dbt minor/major bumps cannot land as a lone Dependabot PR: dbt-core and dbt-bigquery must move
+    # on the same minor AND dbt/dbt_project.yml's require-dbt-version must move with them, or
+    # `dbt parse` refuses to run (#58 for 1.12.5, closed 2026-10-02; #71 for 1.12.6, red 2026-10-17).
+    # Closing such a PR only skips that one release, so each new patch re-opens it and it strands.
+    # Upgrade dbt as one deliberate change across all three; Dependabot still sends patch bumps.
+    ignore:
+      - dependency-name: "dbt-core"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "dbt-bigquery"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
   - package-ecosystem: terraform
     directory: /infra/terraform
     schedule:
