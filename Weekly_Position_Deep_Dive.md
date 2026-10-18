@@ -1,39 +1,54 @@
-2026-W41
+2026-W42
 
 # W3 — Open-Position Deep-Dive (Strategies A, B, C, E)
 
-**Run:** Sunday 2026-10-11 · **Evidence window:** 2026-10-04 09:16:03 UTC → 2026-10-11 ~09:45 UTC (this routine's own last `completed` run → now; `state.routine_catchup_window` `window_days = 7.0`, `never_completed` FALSE, cadence-normal against the 10.5-day 1.5× weekly bar — no missed period, no catch-up sub-section owed, no `CATCHUP` token).
+**Run:** Sunday 2026-10-18 · **Evidence window:** 2026-10-11 09:25:37 UTC → 2026-10-18 ~09:25 UTC. That is this routine's own last `completed` run to now. `state.routine_catchup_window` gives `window_days = 6.99` with `never_completed` FALSE, which is cadence-normal against the 10.5-day 1.5× weekly bar. No missed period, no catch-up sub-section owed, no `CATCHUP` token.
 
 **NO `WEEKLY-THESIS-ACTION` FLAG.** There is no open in-scope position, so this file issues no hold, weekly-thesis-action or further-research recommendation. No `immediate_action_flagged` alert is owed and none is raised.
 
-**Marker.** `2026-W41` is the plain ISO week of the run date (Sun 2026-10-11 is day 7 of the Mon 10-05 → Sun 10-11 week). W1 and W2 both stamped `2026-W41` earlier today, so all three weekly files agree.
+**Marker.** `2026-W42` is the plain ISO week of the run date. Sunday 10-18 is day 7 of the Mon 10-12 → Sun 10-18 week. W1 and W2 both stamped `2026-W42` earlier today, so all three weekly files agree.
 
-**Scope, derived not assumed.** In-scope = roster-active strategies with `review_cadence: reactive`. Read this run from `strategy/roster.yaml` (`reactive` for A, B, C, E; `long_horizon` for D) and `state.strategy_roster` (A–E `ADOPTED`, `is_active`; F, G, H `REJECTED`). So the set is **A, B, C, E**, unchanged; no SISA graduate widens it. D's 12 open tranches belong to M3.
+**Scope, derived not assumed.** In-scope means roster-active strategies with `review_cadence: reactive`. This run read that from two places:
+- `strategy/roster.yaml`: `reactive` for A, B, C and E; `long_horizon` for D.
+- `state.strategy_roster`: A–E `ADOPTED` and `is_active`; F, G and H `REJECTED`.
+
+So the set is **A, B, C, E**, unchanged, and no SISA graduate widens it. D's 12 open tranches belong to M3.
 
 ---
 
-## HEADLINE — the roll hazard W3 filed last week is real, but its size was wrong. Re-measured on the spread that will actually roll, a flat price no longer crosses the trigger. A price inside a 3.6-dollar band still does, and Brent sat in that band for three sessions this week.
+## HEADLINE — Friday's tape undid most of what W2 read as progress. Brent printed a new shock high on 10-16, so the price leg is now further away than at any point this cycle. The technical leg W2 found TRUE on 10-15 depends on Friday breadth, a value nobody yet holds.
 
-`state.current_positions` returns **12 open rows, all Strategy D**. A, B, C and E hold nothing. This is the **eighth** consecutive weekly cycle with an empty in-scope book. Last week's file said B "may hold positions by next cycle". It does not: AR_orc held `div-B-202609-1` at DO-NOT-ACTIVATE on 10-06 (§Book). So Steps 1, 2, 3, 5 and 6 are vacuous and are disposed at the bottom. Step 4 carries the cycle again.
+`state.current_positions` returns **12 open rows, all Strategy D**. A, B, C and E hold nothing. This is the **ninth** consecutive weekly cycle with an empty in-scope book. Steps 1, 2, 3, 5 and 6 are therefore vacuous; they are disposed at the bottom of the file. Step 4 carries the cycle again.
 
-| | 2026-10-04 W3 | 2026-10-11 W3 | direction |
+**The warehouse ends at 10-15. The 10-16 session is externally sourced (FMP, typed), and every figure in this column is labelled as such.**
+
+| | 2026-10-11 W3 | View, 10-15 (MEASURED) | After 10-16 ingests (external close; projected) |
 |---|---|---|---|
-| `brent_peak` / `brent_retrace_trigger` (view) | 108.75 / 96.74 | **108.75 / 96.74** | unchanged |
-| `brent_current` (view) | 102.31 (10-01) | **104.28 (10-08)**; 104.72 on 10-09, external | **+1.9% / +2.4%** |
-| Required fall for leg (ii), view basis | −5.44% | **−7.23%** (−7.62% on 10-09 external) | **further** |
-| Retracement, view basis | 26.8% | **18.6%** (16.8% on 10-09) | **further** |
-| Spread the **next** roll will apply (Dec→Jan) | assumed = last roll's Nov→Dec, 5.47–6.43 | **measured ≈ 3.56–3.61** (§4a) | **smaller roll step** |
-| Price band in which the roll alone flips leg (ii) | "flat ~102 → 96–97, at or through" | **Dec close in (96.74, ≈100.33]** | **narrower, conditional** |
-| `leg_c_technical` | FALSE (breadth 41.15) | **FALSE (breadth 46.70)** | **closer, +5.55pp** |
-| `sql_limbs_fired` | FALSE | **FALSE** | — |
+| `brent_current` | 104.28 (10-08) | **105.92** | **109.86** (+3.74% on the day) |
+| `brent_peak` | 108.75 | 108.75 | **109.86, a new high, ratchets** |
+| `brent_retrace_trigger` | 96.74 | 96.74 | **97.295** = (84.73 + 109.86) / 2 |
+| Required fall, leg (ii) | −7.23% | −8.67% | **−11.44%** |
+| Retracement | 18.6% | 11.8% | **0%** |
+| `leg_c_technical` | FALSE (breadth 46.70) | **TRUE** (breadth 51.88 HEALTHY) | **breadth-dependent.** SPY trend projects NEUTRAL, which still passes; VIX 19.99 is NORMAL, which passes. Breadth on 10-16 is NOT FOUND, and it must be ≥ 50. |
+| `sql_limbs_fired` | FALSE | FALSE | FALSE, held by leg (ii) alone |
 
 **What this cycle adds, in order of weight.**
 
-**1. W3's own filing `1039c8fa` overstated the roll hazard, and is corrected (FILED THIS RUN).** Last week W3 projected the next roll (~10-29) with the **Nov→Dec** spread of the previous roll (5.47–6.43). It concluded that "a flat ~102 December price lands the post-roll stored close at ~96–97, at or through the 96.74 trigger." The roll that matters is **Dec→Jan**, and that spread measures **≈ 3.56–3.61** (§4a). On that spread, flat 102 rolls to **≈ 98.4**, above the trigger. The hazard persists, but only conditionally. The roll alone flips leg (ii) only if the December contract closes inside **(96.74, ≈100.33]** at the roll. That band is not hypothetical. **Dec closed at 100.32, 100.58 and 100.20 on 10-05/06/07, at or inside it**, before the +4% on 10-08 lifted it to 104.28. The 10-29 deadline the filing asked for still stands. The claim that a flat price crosses the trigger does not.
+**1. A new shock high on 10-16 moves the price leg away by about 3 points. It also shrinks the roll hazard filed under `1039c8fa` / `2648b25e` from a −4% move to a −8% to −10% move (§4a).**
+- FMP's typed `BZUSD` close for Friday 10-16 is **109.86**. The day's range was 104.92–110.00, and VIX rose 21% to 19.99.
+- When D2a ingests it tonight, the view's running max ratchets to 109.86 and the trigger to 97.295.
+- No discrete catalyst for the 10-16 move was found (§4b). The cause is stated as NOT FOUND, not guessed.
 
-**2. The quiet clock picked up a pinned physical event, and W1 has already shown it cannot move the gate.** UKMTO logged a tanker attack off Qatar on **2026-10-07**. It is part of a first-week-of-October Hormuz escalation that CNBC counted as "nine tankers in the past week" (10-08). Anchored on 10-07, the 15th quiet trading day is **2026-10-28**, three sessions before the 11-02 scoring. W1 proved the gate is unmoved by any event through 10-11 (§4b). W3 adds the pinned date and one disclosed counter-signal. W3 adjudicates neither.
+**2. W2's "one leg from firing" holds only on the 10-15 snapshot (§4c).**
+- The technical leg needs breadth ≥ 50 again on 10-16.
+- Friday's SPY fell −1.11% to 763.25, against a projected 50dma of 768.50. That projects `SPY_TREND` to NEUTRAL, not DOWN, so it still passes.
+- Breadth for 10-16 was not obtainable. Whether leg (c) stays TRUE is therefore unknown until tonight's D1/D2a.
+- Either way, leg (ii) now needs −11.44%, so the out-of-cycle limb is not near firing.
 
-**3. Every warehouse close in the window was reproduced to the digit by an independent pull.** That is 6 sessions × 5 series, 30 of 30 matches. Last week's five externally sourced Friday (10-02) closes were all exact on ingest. Across three cycles that is **13 of 13** pre-ingest external closes later reproduced to the digit (8 + 5), which is why Friday 10-09 is sourced externally the same way (§Coverage).
+**3. September CPI ran hot, and October hike odds roughly doubled (§4d).**
+- CPI (10-14): headline +0.6% m/m, 3.7% y/y; core +0.3% m/m against 0.2% expected.
+- Odds of a hike on 10-28 moved from ~17–22% to a 25–48% spread across venues that disagree widely.
+- This lands two sessions before D2's 10-20 pass on `thesis-FOMC-C-20261020`, the one live in-scope item. W3 records it and adjudicates nothing.
 
 Nothing in this file scores or re-scores any regime axis.
 
@@ -43,134 +58,178 @@ Nothing in this file scores or re-scores any regime axis.
 
 Measured this run, not carried forward:
 
-- `state.current_positions`: 12 rows, strategy `D` on all 12 (AMZN ×2, DIS ×2, GOOGL ×2, TSM ×2, GEV, ISRG, RTX, UBER). Each one's latest event is M3's 2026-10-01 breach-status `ADJUST`, all UNBREACHED.
-- `events.position_events`, all history: **B 41, D 41**, and **zero rows since 2026-10-04** for any strategy. A, C and E have still never produced a position event.
-- B's last event remains the terminal `CLOSE` of `B:MSCI:2026-07-27` on **2026-08-18**. B has been flat **54 calendar days / 37 trading days**, last week's 47/32 advanced by 7 and 5.
+- **`state.current_positions`:** 12 rows, strategy `D` on all 12 (AMZN ×2, DIS ×2, GOOGL ×2, TSM ×2, GEV, ISRG, RTX, UBER).
+- **`events.position_events`, all history:** **B 41, D 41**. There are **zero rows since 2026-10-11 09:25Z** for any strategy. A, C and E have still never produced a position event.
+- **B** has been flat since its terminal `CLOSE` of `B:MSCI:2026-07-27` on 2026-08-18. That is **61 calendar days / 42 trading days**; last week's 54/37 advanced by 7 and 5, since every weekday 10-12 → 10-16 was a session.
+- **`state.open_orders`:** 0.
 
-**The caveat that still holds.** "Empty book" is a weaker statement about A, C and E, which have never opened a position, than about B, which went flat. "No thesis drifted" says nothing about a strategy that has never held a thesis.
+**The caveat that still holds.** "Empty book" is a weaker statement about A, C and E than about B. A, C and E have never opened a position; B went flat. "No thesis drifted" says nothing about a strategy that has never held a thesis.
 
-### Why the book is still empty — re-measured from `state.strategy_capital_enablement`, `state.current_regime` and `state.rerisking_limb_status`
+### Why the book is still empty
 
-| Strategy | Router (as_of) | Capital | NAV (`analytics.strategy_nav`, current-state) | What changed since W40 |
-|---|---|---|---|---|
-| **A** | `DO-NOT-ACTIVATE` (10-02, `3883e492`) | disabled | $0.00 | Nothing. Raw call DNA on its own reasoning; the acute override is inert for A. W1's gate holds at **2026-11-02** for the fifth cycle. |
-| **B** | `DO-NOT-ACTIVATE` (10-06, `div-B-202609-1` **resolved**, `e503c2d3`) | disabled | $0.00 | **The review W40 pointed at ran and did not flip.** AR_orc `7db26d06` / decision `1170c3bd`: the acute override was validly applied, and the 09-30 knife-edge was a contract-roll print. B's DNA is still **override-manufactured** (raw M1b call ACTIVATE). All 22 W40 overflow identities expire ungraded (W2). |
-| **C** | `HYBRID ACTIVATE (FOMC-only)` (10-06, `div-C-202609-1` **resolved**, `4bed3605`) | **enabled** | **$19.48** | Retained, not closed. AR_orc `19d9f509`: widening is unreachable, and the per-event gate remains `thesis-FOMC-C-20261020`. |
-| **E** | `DO-NOT-ACTIVATE` (10-02, `b843fb4b`) | disabled | **$12,668.28** | All three E thesis items (`thesis-CB-TRV-E-20261002`, `-MCHP-ADI-`, `-MDB-SNOW-`) were **declined by D2 on 10-04** (`f0297a71`, `08668269`, `1c998f6d`; queue rows `complete` 10-04 23:19Z). The router-gate limb applied the conservative default. NAV is −$4.49, consistent with the October IBKR fee D2a booked (`fc5b508b`). |
+Re-measured from `state.strategy_capital_enablement`, `state.current_regime`, `analytics.strategy_nav` and `state.rerisking_limb_status`:
 
-**The structural fact for the in-scope book.** The 10-06 reviews closed the only near-term door W40 identified. The next scheduled router write is M4's on **2026-11-02**. The out-of-cycle limb is 1 of 3 legs (dwell only). So **the earliest an in-scope position can open is after the 11-02 chain**, unless M1R fires first. Next week's W3 should expect a vacuous Step 1 again. Note that B's DNA and, per AR_orc `ccc708b4`, now also D's DNA rest **entirely** on the shock override. The 11-02 shock grade (§4a) is therefore the decision that reaches real money, for B in scope and D out of scope.
+| Strategy | Router (as_of) | Capital | NAV | DNA dwell (trading days) | Change since W41 |
+|---|---|---|---|---|---|
+| **A** | `DO-NOT-ACTIVATE` (10-02) | disabled | $0.00 | 123 (left-censored, a lower bound) | None. Raw call is DNA on its own reasoning. W1's gate is 2026-11-02, now as a fail-open lower bound (§4b). |
+| **B** | `DO-NOT-ACTIVATE` (10-06, `div-B-202609-1`, review `7db26d06`) | disabled | $0.00 | 51 | None to the row. The DNA is still **override-manufactured**: the raw M1b call is ACTIVATE. This is the eighth INDEX-MODE cycle (W2). |
+| **C** | `HYBRID ACTIVATE (FOMC-only)` (10-06, review `19d9f509`) | **enabled** | **$19.48** | n/a | None. The per-event gate is `thesis-FOMC-C-20261020`, `pending`, due **2026-10-20** (§C). |
+| **E** | `DO-NOT-ACTIVATE` (10-02) | disabled | **$12,668.28** | 30 | None. No E item is queued, and no C or E `queue_events` row has been touched since 10-11. |
+
+**The structural fact for the in-scope book is unchanged.** The next scheduled router write is M4's on **2026-11-02**. The out-of-cycle limb's binding conjunct is now the price leg at −11.44% (projected). So no in-scope position can plausibly open before the 11-02 chain, and next week's Step 1 should again be vacuous. B's DNA, and D's out of scope (AR_orc `ccc708b4`), still rest entirely on the shock override. That makes the 11-02 shock grade the decision that reaches money.
 
 ---
 
 ## STEP 4 — SECTOR AND MACRO CONTEXT
 
-### 4a. Leg (ii): the price leg, and the roll re-measured
+### 4a. Leg (ii): the price leg, the new high, and the roll re-measured
 
 The rubric is `strategy/09_regime_scoring_strategy_blind_monthly.md` §Shock / overlay grading rubric (Rev 48). It is measured against, not reopened.
 
-**Governing surface, read first** (`state.rerisking_limb_status`, as_of_denver 2026-10-11; all five rows identical on the price terms):
+**Governing surface, read first.** `state.rerisking_limb_status`, as_of_denver 2026-10-18; all five rows are identical on the price terms:
+- `brent_baseline` **84.73** (43 obs, 2026-06-01 → 07-31).
+- `brent_peak` **108.75**, `brent_retrace_trigger` **96.74**, reproduced as (84.73 + 108.75) / 2.
+- `brent_current` **105.92**, `brent_as_of` **2026-10-15**.
+- `leg_b_basis` **`not_retraced`**, `leg_b_price_leg` **FALSE**.
+- Leg A is TRUE for A, B, D and E. `leg_c_technical` is **TRUE**, as of 10-15. `sql_limbs_fired` is **FALSE**.
 
-- `brent_baseline` **84.73** (43 obs, 2026-06-01 → 07-31), `brent_peak` **108.75** (raw `events.signal_marks` 09-15), `brent_retrace_trigger` **96.74**. Reproduced by hand: (84.73 + 108.75) / 2 = 96.74.
-- `brent_current` **104.28**, `brent_as_of` **2026-10-08**, `leg_b_basis` **`not_retraced`**, `leg_b_price_leg` **FALSE**.
-
-**The stored path** (`state.signal_marks_curated` `BZUSD` = raw `events.signal_marks`; exactly one row per date from 09-15 on, **no restatement**; the restatement hazard last pinned under `82c99515` did not recur for a fourth window):
+**The stored path.** `state.signal_marks_curated` `BZUSD` equals raw `events.signal_marks`, one row per date, with **no restatement in the window**. The 10-09 row ingested late (10-11 22:45Z), at exactly last week's external figure.
 
 ```
-10-01 102.31   Dec
-10-02 102.25   Dec   (ingested 10-04 22:44Z — last week's external figure, EXACT match)
-10-05 100.32   Dec   −1.93   ← inside the (96.74, ≈100.33] roll-flip band
-10-06 100.58   Dec   +0.26   ← within 0.25 of the band
-10-07 100.20   Dec   −0.38   ← inside the band
-10-08 104.28   Dec   +4.08 (+4.1%) — Hormuz tanker attacks, Hurricane Isaias shut-ins, Houthi strikes (D1 c2f7afe6; CNBC 10-08 confirms 104.28)
-10-09 104.72   Dec   +0.44   ← EXTERNALLY SOURCED (FMP); the warehouse does not yet hold 10-09
+10-08 104.28
+10-09 104.72   (ingested 10-11 — last week's external figure, EXACT)
+10-12 106.14   ← vendor now serves 106.65 (see "Vendor drift" below)
+10-13 105.69
+10-14 106.11   ← vendor now serves 106.06
+10-15 105.92
+10-16 109.86   ← EXTERNALLY SOURCED (FMP typed; H 110.00 / L 104.92); not yet in the warehouse
 ```
 
-On the view's basis at 10-08: required fall **(96.74 − 104.28) / 104.28 = −7.23%**, retracement **(108.75 − 104.28) / 24.02 = 18.6%**. At the external 10-09 close: −7.62% and 16.8%. No new high, no ratchet. W1 reports these same view figures (PART 2A STEP 1); they are reproduced here, not borrowed.
+**The 10-16 print is a new running high on the stored series.** The prior peak, 108.75, was set on 09-15 on the November contract. 109.86 is a **December**-contract close. The view's `brent_peak` is a contract-blind running max, so tonight's ingest should ratchet the peak to 109.86 and the trigger to **97.295**. That is INFERRED from the view's definition (`bigquery/224`, `MAX(close)` since the acute run start); D2a's ingest is what makes it true.
+- On the ratcheted basis: required fall **(97.295 − 109.86) / 109.86 = −11.44%**, retracement **0%**.
+- On M1a's alternative baseline (87.20, per W2's `143c2aaf`, still open), the midpoint would be (87.20 + 109.86) / 2 = **98.53**, a required fall of **−10.31%**. If M1a reads its peak like-for-like on the Dec contract, 109.86 is a new Dec high as well. That is the scorer's call.
+- **This is the third straight cycle that the leg moved away**, and the first that moved the anchor itself.
 
-**The re-measurement that corrects `1039c8fa`.** The next stored-series roll replaces the **December** contract with the **January** contract (Dec expires on the last business day of October, **Fri 2026-10-30**; this is the ICE convention, INFERRED, since the sub-agent's search did not surface ICE's calendar. Last roll the vendor series switched one session early, 09-29 for a 09-30 expiry, so ~**10-29**). The relevant step is the **Dec–Jan spread**, not the Nov–Dec spread W40 carried forward:
+**The roll hazard, re-measured with the new trigger.** The next stored-series roll swaps Dec for Jan. The Dec contract's last trading day is expected **Fri 2026-10-30**; that is the ICE rule-based expectation, still **not confirmed by a source** this run. Last roll's vendor switch came one session early, so the roll lands ~**10-29**. The post-roll stored close ≈ Dec − s, where s is the Dec–Jan spread:
 
-| Source (single-sourced each) | Dec26 | Jan27 | Z6–F7 |
+| Assumed s | Dec close at which the roll alone flips the view's leg (ii) | Fall needed from 109.86 | Retracement step the roll adds |
 |---|---|---|---|
-| commodity-board.com, 10-01 settlements | 102.63 | 99.02 | **+3.61** |
-| ICE delayed futures page, 10-05 ~09:07 GMT (intraday) | 102.50 | 98.94 | **+3.56** |
+| ≈ 3.6 (10-01 settle, commodity-board; two weeks stale) | ≤ ≈ 100.9 | **≈ −8.2%** | ≈ 3.6 / 25.13 = **~14pp** |
+| ≈ 1.8 (implied by Platts WTI-minus-Brent legs, 10-02; secondary) | ≤ ≈ 99.1 | **≈ −9.8%** | **~7pp** |
 
-Rolled forward, with s ≈ 3.6 the post-roll stored close ≈ Dec − 3.6:
+- **Last week the band was 4.2% away. It is now 8–10% away.** The 10-05 → 10-07 sessions that closed inside last week's band are now ~6 dollars below the new band's upper edge. The hazard has not gone, but it has receded.
+- **The two spread sources disagree by 2×, and neither is current.** No mid-October Z6/F7 settlement was found. Stated as a limit, not resolved.
+- **A second limit applies after the roll.** The peak keeps the Dec 109.86, while the current close moves to the lower-priced Jan contract. The stored basis therefore books ~7–14pp of "retracement" in one session without any price move. That is the same flattering step `1039c8fa` names, not a new defect.
 
-| Dec close at the roll | Post-roll stored close | vs view trigger 96.74 | vs M1a's midpoint 97.975 (W2 `143c2aaf`) |
-|---|---|---|---|
-| 104.72 (10-09, flat) | ≈ 101.1 | above, needs −4.3% | above |
-| 102.00 (W40's "flat ~102" case) | ≈ 98.4 | **above**: W40's "at or through" is **refuted** | above |
-| 101.56 or lower | ≈ 97.97 or lower | above | **at or through** |
-| 100.33 or lower | ≈ 96.74 or lower | **at or through** | through |
+**What the new high does to the consequence `1039c8fa` / `2648b25e` describe (both OPEN, W5's surface).**
+- The ask is unchanged: a roll-adjusted series, or an interim "roll-date pass = unverified" rule, reaching the 11-02 scorer and the D2a limb before ~10-29. That is now **8 trading days** away (10-19 → 10-28).
+- What changed is how much price movement the artifact needs: ≈ −8% to −10%, from −4%.
+- Leg (i) may now independently block a manufactured `latent` at 11-02 (§4b). If any 10-13 → 10-15 event qualifies, the quiet clock does not clear until 11-03 → 11-05. A roll-flattered leg (ii) pass alone could then not downgrade the overlay at the scheduled scoring. That is INFERRED from the rubric's two-leg structure and the M1a row's "both de-escalation legs fail" wording; qualification is M1a/M1R's ruling.
+- **The D2a limb is different.** `sql_limbs_fired` evaluates only the price half of leg (b) (`bigquery/224` header). A roll-manufactured pass there would fire an M1R **refresh**, not a flip, and M1R would then apply leg (i) itself. That bounds the out-of-cycle harm to a wasted refresh.
+- **No new alert is filed for this.** It is magnitude, not a new defect, and the open thread already names both surfaces. Last week's correction row (`2648b25e`) stays the operative statement of size until W5 disposes the pair. This section is the update.
 
-- **The roll alone flips the view's leg (ii) for a Dec close in (96.74, ≈100.33].** That band is ~3.6 wide, and Dec needs **−4.2%** from 10-09 to enter it. On M1a's own midpoint (97.975, per W2's measured filing), the band is (97.975, ≈101.58], and Dec needs **−3.0%** to enter it.
-- **The band is not hypothetical.** Dec closed at 100.32 / 100.58 / 100.20 on 10-05 / 10-06 / 10-07. Had the roll fallen in those sessions, the view and M1a's basis would both have read leg (ii) as held, with no further price move.
-- **Whatever the price, the roll adds ≈ 3.6 / 24.02 = ~15pp of stored-basis retracement in one session.** That figure is the flattering step the 11-02 scorer must not mistake for price.
+**Vendor drift, disclosed, not filed.** On a fresh pull, FMP serves **106.65** for 10-12 against the stored **106.14**. D1's own 10-12 screen (`982a5f26`) also cited ~106.65. FMP serves **106.06** for 10-14 against the stored 106.11. Both rows were ingested the same evening, and neither date has a second warehouse row. So the vendor's value moved after (or differed at) ingest, and the warehouse kept its first value. This is the converse of the 09-04 restatement the 2026-09-13 clause pinned. Neither date is a peak, a current or a trigger input, so no verdict moves. It is recorded in case a future revision lands on a peak date.
 
-**Stated limits.** (1) Both spread figures are single-sourced, and one is intraday. Backwardation can move by the roll. An FXNX piece (undated) claims the M1–M2 spread widened from under $1 to over $7 since late August. If Dec–Jan widens, the band widens with it. (2) FMP's `BZUSD` is a vendor continuous series and does not exactly equal the ICE Dec settle: 102.31 vs 102.63 on 10-01, a 0.32 gap. Treat the band edges as ±~0.3. (3) The baseline itself spans the June and July rolls (stated last cycle, still unquantified).
+### 4b. Leg (i): the quiet clock. W1 owns the dated list; W3 adds the earliest anchor and the counter-signals.
 
-**Why this matters.** `1039c8fa` asked for a roll-adjusted series, or an interim "roll-date flip = unverified" rule, to reach the 11-02 scorer before 10-29. That ask stands unchanged. What changes is the consequence: the artifact is now conditional on Dec trading in a ~3.6-dollar band at the roll, not "manufactured at a flat price". `82c99515` was resolved 10-05 by W5 (the recorded-triplet-anchors-the-verdict pin), but it addresses *restatement*, not the roll. `1039c8fa` remains OPEN and unadjudicated. The correction is filed as its own info row pointing at `1039c8fa` (FILED THIS RUN), rather than left in prose.
+W1 (PART 2A STEP 1, and its `fc7b0e63` filed today) already carries the dated 10-12 → 10-15 events and their clear dates:
 
-### 4b. Leg (i): the quiet clock — one pinned event, one counter-signal
+| Anchor | 15th quiet trading day |
+|---|---|
+| 10-12 | 11-02 |
+| 10-13 | 11-03 |
+| 10-14 | 11-04 |
+| 10-15 | 11-05 |
 
-W1 (PART 2A STEP 1) has already proved the gate-relevant result: **no event that can have happened by 10-11 pushes the 15th quiet day past 2026-10-30**, so 11-02 stays the gate. A new qualifying event on or after **2026-10-12** could move it (an event on 10-12 clears exactly on 11-02). W3 does not re-derive this. It adds the following, externally sourced and **not adjudicated**. Qualification is M1a/M1R's call, and `6081d304` / `11bbd3b7` own the dating and test questions.
+W1's events are: the Houthi strike on Riyadh airport (10-12); the GFS Pride sinking (10-13); the Cape Dao sinking and Houthi strikes on Aramco HQ Dhahran (10-14); a Gulf of Oman tanker fire (10-15); and Kpler Hormuz flow at about one-tenth of the prior week. W1 also moved A's gate to a fail-open lower bound. W3 does not re-derive any of that. It adds the following, externally sourced and **not adjudicated**:
 
-| Candidate | Date | Physical? | 15th quiet trading day if qualifying |
-|---|---|---|---|
-| UKMTO-reported tanker attack off Qatar, central Arabian Gulf (qcintel 10-07; "first such report there since April") | **2026-10-07, pinned** | yes, shipping | **2026-10-28** |
-| Hormuz attacks, "nine tankers in the past week" (CNBC 10-08), "wartime record" first week of October (qcintel 10-08); Kpler's 10 tankers 09-28 → 10-04 is W1's figure | weekly aggregate, individual dates **not established** | yes | ≤ 10-28 if the latest falls ≤ 10-07 |
-| Hurricane Isaias Gulf of Mexico shut-ins, ~25% of offshore output, 500k+ b/d (DTN citing Interior, 10-08) | ~10-07 / 10-08 | yes, but **natural, not geopolitical**; whether it can be a shock-cluster member at all is a rubric question | 10-28 / 10-29 |
-| Houthi missile strikes on Saudi airports (Riyadh, Abha; 10-06 / 10-07; 3 dead, 36 injured; CNBC, Al Jazeera) | 10-06 / 10-07 | physical, but **not oil infrastructure**; the threat to oil-site workers is narrative | — |
+- **10-11 (Sunday):** UKMTO, via Seatrade dated 10-13, logged four further attacks on outbound commercial ships in Hormuz. They include a crude tanker and a product tanker struck by unknown projectiles. Iran separately claims a strike on the ADNOC VLCC *Al Maqam*.
+  - This is the earliest anchor in the week. If it were the latest qualifying event, the 15th quiet day would be **10-30**, before 11-02. But it is not the latest candidate, so it changes nothing by itself.
+  - The count is "at least 18 attacks on ships in Hormuz since the start of October".
+- **10-15:** Iran's army reported a burning tanker east of Hormuz, cause unknown, AIS reportedly off. This is an **Iranian claim, unverified.** It is probably W1's Gulf of Oman fire; that identity is INFERRED.
+- **Hurricane Isaias:** BSEE's 10-12 report, the fourth day, had **57.54%** of Gulf of Mexico oil shut in (1,173,863 b/d) and 129 of 371 staffed platforms evacuated. No restart status after 10-12 was found. Whether a natural shut-in can be a shock-cluster member at all is still `11bbd3b7`'s question (OPEN).
+- **Counter-signals, disclosed so the record is not one-sided:**
+  - The IEA agreed to accelerate a ~100 mb emergency-stock release (10-16).
+  - Gulf exporters topped pre-war export levels for about half of September (Reuters via gCaptain, 10-07).
+  - No ceasefire or de-escalation was reported in any source.
+  - The flows-recovering signal W41 recorded is now contradicted by Kpler's one-tenth figure (W1).
+- **The 10-16 jump has no dated physical cause in this run's sources.** The only attribution found is ING's "Middle East uncertainty … large risk premium" (attaqa.net, headline-level). It is not a candidate on the rubric's text (narrative). Stated as NOT FOUND, not inferred.
+- **OPEC+:** no decision in the 10-09 → 10-17 window was found, and the 10-04 meeting outcome was not found.
 
-- **Counter-signal, disclosed so the record is not one-sided:** Bloomberg (via Sprague, 10-09) reports crude shipments nearing pre-war levels, and Sprague (10-06) reports Middle East flows above pre-war levels. **The attacks are rising while the flows recover.** Rev 48's trade-flows test is the scorer's to apply.
-- **Not candidates on the rubric's own text:** IEA accelerating its stock release (policy); EIA raising its Q4 Brent forecast to $105 (forecast); Trump saying no strike on Iran before the midterms (narrative); no OPEC+ decision found in the window. The **~09-29 Hormuz tanker dates** and **Libya's 09-27 Sharara valve closure** remain **unresolved**: no force majeure confirmed, and the NOC reported >300k b/d. Carried, not re-filed.
+**What this changes.** At the 11-02 scoring, leg (i) fails on any qualifying event dated 10-13 or later. Leg (ii) fails at −11.44% (projected). **Both de-escalation legs now point the same way**, for the first time since the 09-29 roll knife-edge. W5's 10-11 dating rule (resolving `6081d304`) fixes an event's date at its first public primary or wire report; that is what M1a/M1R will apply. W3 rules on no event.
 
-**What the 10-07 pin changes.** Last week M1a's 09-11 anchor made leg (i) pass "now", as of 10-02. If any 10-07 / 10-08 event qualifies, that is **no longer true**: the clock resets and clears 10-28 to 10-29. That is still before 11-02, so **at the 11-02 scoring leg (i) still passes under every anchor available today, and leg (ii) still decides the grade**, read off a series that rolls ~10-29 (§4a). The collision W40 dated stands. What changed is only how much price movement the artifact needs.
+### 4c. Technicals: breadth crossed HEALTHY on 10-15; Friday is unobserved
 
-### 4c. Technicals: breadth recovering but still WEAK
-
-From `events.regime_events` (`TECHNICAL_SIGNAL` / `TECHNICAL_INPUT`; no correction rows in window):
+From `events.regime_events` (`TECHNICAL_SIGNAL` / `TECHNICAL_INPUT`; no correction rows in the window):
 
 ```
-date   breadth  label  SPY      50dma     trend  VIX    regime  10Y   10Y−2Y
-10-01  41.15    WEAK   763.99   763.073   UP     16.39  NORMAL  5.24  0.46
-10-02  42.54    WEAK   769.64   763.702   UP     15.31  NORMAL  5.28  0.45
-10-05  43.53    WEAK   774.83   764.420   UP     15.52  NORMAL  5.31  0.47
-10-06  46.81    WEAK   779.09   765.220   UP     15.01  NORMAL  5.27  0.48
-10-07  45.21    WEAK   777.22   765.947   UP     15.08  NORMAL  5.28  0.51
-10-08  46.70    WEAK   773.93   766.837   UP     15.41  NORMAL  5.22  0.47   ← breadth source: EODData (Barchart failed)
+date   breadth  label    SPY      50dma     200dma    trend  VIX    regime  10Y   2Y    10Y−2Y
+10-08  46.70    WEAK     773.93   766.837   722.460   UP     15.41  NORMAL  5.22  4.75  0.47
+10-09  47.70    WEAK     778.57   767.574   722.928   UP     14.84  LOW     5.24  4.80  0.44
+10-12  49.50    WEAK     778.10   768.196   723.379   UP     15.21  NORMAL  (bond holiday; carried)    0.44
+10-13  49.70    WEAK     778.01   768.603   723.817   UP     15.27  NORMAL  5.21  4.79  0.42
+10-14  48.31    WEAK     769.60   768.568   724.214   UP     16.87  NORMAL  5.19  4.82  0.37
+10-15  51.88    HEALTHY  771.79   768.608   724.633   UP     16.46  NORMAL  5.10  4.77  0.33
+10-16  n/f      —        763.25*  768.502†  725.015†  NEUTRAL† 19.99* NORMAL† 5.09* 4.74* 0.35*
 ```
+\* external (FMP). † projected by W3 from the warehouse's 49 / 199 prior closes plus the external 10-16 close. This is the D2a step 1e rule (`UP` needs close > 50dma; `DOWN` needs close < 50dma AND 50dma < 200dma; else `NEUTRAL`) and the `VIX_REGIME` bands (LOW < 15, NORMAL 15–25, HIGH > 25). It is INFERRED; D2a owns the labels.
 
-- **`leg_c_technical` FALSE on breadth alone, but the gap closed from 8.85pp to 3.30pp.** This is the first week since Q1's measured slide (73.16% on 08-13 → 40.55% on 09-30) that breadth rose across the week. VIX is NORMAL throughout, and SPY_TREND is UP with the 50dma margin widened to 0.9% (10-08) from the 0.1% knife-edge of 09-30. **Breadth is now the single technical conjunct that blocks leg (c)**, and +3.3pp is a normal week's move. W3 records the proximity only. Leg (c) alone fires nothing: the out-of-cycle limb also needs leg (ii).
-- **The 10-08 breadth source switch is not a finding.** D1 fell back to EODData S5TH after Barchart (the declared primary) failed on all three paths. It recorded `single_source`, the unsettled-tell check, and an EODData revision of 10-07 (45.10 vs stored 45.21) that it correctly did not back-correct. On 10-07 the two sources agreed to 0.00pp. This is D1's documented procedure, followed. Observed, not filed.
-- The 10Y held 5.22–5.31% (5.31% on 10-05 is the high of this file's record). The curve was 0.45–0.51, `NOT-SUSTAINED` every day.
+- **Leg (c) on 10-16 turns on breadth alone.** NEUTRAL passes `spy_trend != 'DOWN'`, and NORMAL passes `vix_regime != 'HIGH'`. HEALTHY needs `EQUITY_BREADTH_PCT ≥ 50`. The 10-15 reading was 51.88, 1.88pp clear.
+- Friday had SPY −1.11%, VIX +21% and the S&P down on CPI and oil. That makes a drop below 50 plausible but **not established**. Breadth for 10-16 was NOT FOUND, and FMP `$S5TH` is plan-tier ACCESS DENIED.
+- **SPY's trend margin collapsed this week**: +1.03 (0.13%) on 10-14 and +3.18 (0.41%) on 10-15, then −5.25 (projected) on 10-16. A NEUTRAL that passes leg (c) today becomes DOWN only once the 50dma also falls below the 200dma, which is ~43 points away. So the trend conjunct is not at risk near-term; breadth is.
+- **The curve flattened to 0.33–0.35** while the 10Y fell 15bp (5.24 → 5.09) on a hot CPI week. It is `NOT-SUSTAINED` every day. Rates are not adjudicated here.
+- **10-08 breadth source switch (EODData fallback):** D1's documented procedure, carried from last week. From 10-09 Barchart is primary again, and each Barchart previous close equals the prior stored value, so there are no revisions.
 
-### 4d. Rates and the October FOMC
+### 4d. Rates, the hot CPI, and the October FOMC
 
-- **Market-implied odds of an October 28 hike: ~17–22%**, stable against last week's ~17–18%. Snapshots: 21.6% on 10-07 (investing.com); 17.2–18.3% on 10-08 (Yahoo/BeInCrypto, Kalshi); ~20–21% around 10-09/10 (FXIFY, Mitrade, exact snapshot dates unstated). **December ~78%** (FXIFY, single-sourced; TMGM ~85% for "a hike before year-end").
-- **FOMC minutes (10-07):** most officials judged another hike likely appropriate by year-end, with no timing signal. Secondary sources only.
-- **The week's release calendar was thin.** Payrolls (+29k) were 10-02 and are last cycle's. No PPI, claims or ISM-services values were found. **September CPI is due Wed 2026-10-14 08:30 ET** (consensus core ~+0.2% m/m; one forecaster has headline +0.6% m/m / 3.7% y/y). The pre-meeting blackout follows, and Warsh speaks 10-15. September PCE is due 10-29, the day after the decision.
+- **September CPI, released 10-14** (web-search summaries, not the BLS primary; consistent with D1 `c75cac94`'s 3.7% y/y and core +0.3% m/m):
 
-**Why this matters only through C.** The October meeting is still lopsided at ~20/80, so last week's reading stands. **What is new is timing.** The one high-information print before the meeting (CPI, 10-14) lands **between** W1's 10-09 vol measurement and D2's 10-20 GO/NO-GO pass on `thesis-FOMC-C-20261020`. A CPI surprise could reprice a 20% hike probability by tens of points, as payrolls did in one session last week. D2's 10-20 pass must therefore read live odds and live IV, not this file's or W1's. W1 already requires the live IV read (its integrity note 2). W3 records the odds half. It adjudicates nothing.
+| Measure | Actual | Expected | Prior |
+|---|---|---|---|
+| Headline m/m | +0.6% | ~0.6% | n/f |
+| Headline y/y | 3.7% | 3.6–3.7% | 3.4% (Aug) |
+| Core m/m | +0.3% | 0.2% | n/f |
+| Core y/y | 2.6% | 2.5% | n/f |
+
+  Gasoline rose +9.1% m/m, more than half of the headline. This is the oil shock passing into the print. On 10-14 SPY fell −0.69% (FMP); one summary said −1.11% for the S&P, a disagreement noted, not resolved. The 2Y rose 3bp and the 10Y fell 2bp.
+- **Market-implied odds of an October 28 hike:**
+  - Pre-CPI: ~16% (Kalshi), against W41's ~17–22%.
+  - Post-CPI (~10-14/15, secondary, snapshot times not stated):
+    - Kalshi **33%**.
+    - Polymarket peaked **~47.5%**.
+    - A "CME FedWatch" figure of **24.9%**, from an article, not the CME page.
+    - D1's 10-14 park note recorded **~40–60%**.
+  - **The venues disagree by roughly 2×.** All that is established is that the meeting is **materially less lopsided than a week ago**.
+  - December odds were NOT FOUND.
+- **Context, from the warehouse:** the FOMC hiked 25bp to 3.75–4.00% on 09-16, 12–0 (`FUNDAMENTAL_AXIS` `policy_stance = hawkish`). Next: decision **Wed 10-28**, September PCE 10-29.
+
+**Why this matters only through C** (see the C section).
 
 ---
 
-## STRATEGY C — W1 owns the measurements this cycle; W3 adds only what W1 does not
+## STRATEGY C — the one live in-scope item, and what moved under it
 
-W1's PART 2C (MEASURED 10-11) carries C's binds in full. They are not duplicated here: router `HYBRID ACTIVATE (FOMC-only)` retained 10-06; capital $19.48; borrow capacity 0 (`71d484fa` open); ATM 10-30 straddle **$1,685** (~86× NAV); IV/HV30 **1.133** on a now-valid broker field (from 1.32), with the realized term structure no longer inverted.
+W1's PART 2C carries C's measured binds this cycle and is not duplicated. Router `HYBRID ACTIVATE (FOMC-only)` was retained 10-06. Capital is $19.48 (`state.withdrawal_capacity`). `71d484fa` `nomadic_borrow_blocked` is OPEN.
 
-**Return-path check on W40's self-correction.** Last week this file withdrew "the pricing bind loosened" because one week of convergence had not continued. **This week the premium did narrow** (IV/HV30 1.32 → 1.13–1.21), by a different route: implied fell, rather than realized rising into it. So W40's withdrawal was right about the mechanism it named, and the narrowing arrived anyway. **Neither week is a trend.** The one conclusion that holds in every cycle is that C cannot be unblocked by the vol surface: ~86× is still a capital bind, not a pricing one.
+**`thesis-FOMC-C-20261020`:** latest `events.queue_events` status `pending` (last event 2026-09-13, W4 W37), due **Tue 2026-10-20**. It is the 10-28 FOMC decision and press conference, with no SEP; default decline; **D2 owns the GO/NO-GO.** W3 adds three dated facts for that pass, and adjudicates none:
 
-**The live item W3 must not duplicate:** `thesis-FOMC-C-20261020` is `pending` on `PENDING_ANALYSIS`, due **2026-10-20**, with a default of decline. **D2 owns the GO/NO-GO.** W3 crafts, enqueues and adjudicates nothing.
+1. **The pricing moved by an amount comparable to what has decided recent C items.**
+   - `thesis-FOMC-C-20260908` was NO-GO "on criterion 2 (hike priced ~56%)".
+   - The 10-28 meeting went from ~16–22% to somewhere in 25–48% within one CPI print.
+   - Whatever criterion 2 requires, the input D2 tests is not the one W41 or W1's 10-09 vol read saw.
+2. **Implied volatility should be higher than W1's measurement.** VIX closed 19.99 on 10-16 (intraday 22.31), from 16.46 on 10-15. D2 must read live IV, which W1's integrity note already requires.
+3. **The capital bind is untouched by both.** The ~86× straddle-to-NAV ratio W41 recorded is a capital bind, not a pricing one. No vol move can unblock it.
 
 ---
 
 ## STRATEGIES A, B AND E — no position, and what did happen
 
-- **A.** DNA for the 8th consecutive cycle, on M1b's raw reasoning. The override is inert for A, so §4a/§4b cannot by themselves activate A. The A queue holds 44 ticker rows (W1 census, unchanged). The two October foundation-change assessments (`4ab9f5e4`, `9e47e234`) completed CONTINUE on 10-07. Contract-identity note (W1): XOM now resolves to conid 895178251; that is for D2, not for this file.
-- **B.** Flat 54/37 days, seventh INDEX-MODE cycle (W2). D2 made index adds this week (`2413caad` nine on 10-05, `3668fe5c` CEG/MRVL/OPCH on 10-06), and **no capital moved**. `d093b474` records a B watchlist-expiry backlog of ~55 rows (evidence for `dd5f30f9`, owned elsewhere). **B is the in-scope strategy that an artifactual `latent` at 11-02 would reach directly**, because B's DNA *is* the override. That is why §4a's band is worth an alert row and not only prose.
-- **E.** Its first-ever thesis items were all declined on 10-04 (§Book). No new E item is queued. `state.regime_capital_sync_pending` still carries the single `SWEEP / E / blocked_no_recipient` row for $12,668.28.
-- **Capital rail, observed only:** `state.withdrawal_capacity` `total_outstanding_regime_debt` **$13,291.72** (A 3,888.45 / B 4,973.25 / D 4,430.02) against `total_donor_capacity` **$12,687.76** (E 12,668.28 + C 19.48). Headroom **−$603.96**, from −$599.46: the E fee, not a new event. Not adjudicated, not filed.
+- **A.** DNA for the 9th consecutive cycle, on M1b's raw reasoning; the override is inert for A. The A queue holds 44 WATCHLIST rows (W1 census; this run's open-queue read listed 44). W1 now carries the gate as a fail-open lower bound of 2026-11-02, possibly 2026-12-01, with 21 provisional names.
+- **B.** Flat 61/42 days, eighth INDEX-MODE cycle (W2 `3af8c71e`).
+  - Owner directive `dff01dcc` (10-13, Strategy.md Rev 49) admits ADRs/ADSs with market cap ≥ $10B to B. That widens B's eligible universe, not its router. W2 has already applied it.
+  - B is the in-scope strategy an artifactual `latent` at 11-02 would reach directly. §4a/§4b find that risk smaller this week, not gone.
+- **E.** No item queued. `state.regime_capital_sync_pending` still carries the single `SWEEP / E / blocked_no_recipient` row for $12,668.28 (`22eeb107` OPEN).
+- **Capital rail, observed only:** `state.withdrawal_capacity` `total_outstanding_regime_debt` **$13,291.72** against `total_donor_capacity` **$12,687.76**. Headroom is **−$603.96**, unchanged to the cent from W41. Not adjudicated, not filed.
 
 ---
 
@@ -178,52 +237,65 @@ W1's PART 2C (MEASURED 10-11) carries C's binds in full. They are not duplicated
 
 Every restated quantity was re-read from its owning surface.
 
-1. **"A flat ~102 December price lands the post-roll stored close at ~96–97, at or through the trigger" → refuted on the measured Dec–Jan spread (~3.6); flat 102 rolls to ~98.4.** W40 applied the expired Nov–Dec spread to a Dec–Jan roll. The hazard is conditional on a band. See §4a. Filed as a correction to `1039c8fa`.
-2. **"B may hold positions by next cycle" → did not happen;** `div-B-202609-1` held DNA on 10-06.
-3. **"E's three thesis items … still `pending`" → all declined by D2 on 10-04** (conservative default, router-gate limb).
-4. **"`e722bd13` / `22eeb107` … both OPEN" → `e722bd13` resolved 10-04 22:32Z as a duplicate;** `22eeb107` remains OPEN and is now the sole carrier. **`6f04ff75` resolved 10-05** (bigquery/246 added `state.nomadic_borrow_capacity_watch`). **`731e53d0` resolved 10-04** (owner fix, commit `76f446a`). **`82c99515` resolved 10-05 by W5.** W40 listed all four as open.
-5. **"Leg (i) passes now on M1a's 09-11 anchor" → true then, but contingent now:** a qualifying 10-07 / 10-08 event would reset it to 10-28 / 10-29 (§4b).
-6. **CONFIRMED: last week's externally sourced 10-02 closes were exact.** Brent 102.25, VIX 15.31, SPY 769.64, 10Y 5.28 and 2Y 4.83 (spread 0.45) all match the warehouse.
-7. **CONFIRMED: the 09-29 roll reading.** AR_orc independently reached the same verdict on 10-06: "the knife-edge was largely a roll artifact" (`1170c3bd`, attacker `b7b0b15c`).
+1. **"VIX 10-09 = 14.84 → would score `NORMAL`, not `LOW`" → WRONG; it scores `LOW`.** The band is LOW < 15 (D2a step 1e), and the warehouse wrote `LOW` for 10-09. W41 misapplied the threshold. No verdict turned on it (LOW and NORMAL both pass leg (c)), but it was an error stated as an inference.
+2. **"Breadth is now the single technical conjunct that blocks leg (c)" → overtaken.** Breadth crossed to 51.88 HEALTHY on 10-15, so leg (c) read TRUE. Its 10-16 state is unknown (§4c).
+3. **"The roll alone flips leg (ii) for a Dec close in (96.74, ≈100.33]" → band moved.** On the projected ratcheted trigger of 97.295, it is ≤ ≈100.9 at s ≈ 3.6, or ≤ ≈99.1 at s ≈ 1.8. It is now 8–10% away instead of 4.2% (§4a).
+4. **"`6081d304` … OPEN" → RESOLVED 10-12 by W5**, with the new HOW A SHOCK QUALIFYING EVENT IS DATED paragraph.
+5. **CONFIRMED: last week's externally sourced 10-09 closes were exact on ingest.** BZUSD 104.72, VIX 14.84, SPY 778.57, 10Y 5.24 and 2Y 4.80 are 5 of 5. Running tally of pre-ingest external closes later reproduced to the digit: **18 of 18** across four cycles.
+6. **CONFIRMED: last week's open-alert count has fallen.** It is now **53 (47 info, 6 warning, 0 critical)**, against 84 (75 / 9), reflecting W5's 10-11 intake (31 of 76 adjudicated, `da7e70dd`).
 
 ---
 
 ## COVERAGE STATED HONESTLY
 
-**D1 coverage is complete:** `completed` on 10-04, 10-05, 10-06, 10-07 and 10-08, the full `daily_sun_thu` set. D2, D2a, D3, AR_att, AR_orc and M1R are likewise complete on all five dates. **OPS0 and OPS2 have no 10-05 row.** That is cadence-watchdog surface, and the dead-man switches own it. It touches no in-scope position. Observed only.
+**D1 coverage is complete:** `completed` on all five Sun–Thu dates 10-11 → 10-15. D2, D2a, D3, AR_att, AR_orc, M1R, OPS0, OPS1, OPS2, SL2, SL3 and SL5 are likewise complete on all five. There are no `failed` or `halted` rows in the window. This also closes W41's observation that OPS0/OPS2 had no 10-05 row, since they are present every day this window. OPS0's 10-12 trigger sweep could not run headless (`7ed5f9ce`); an interactive session completed it on 10-13 (`924d1b5a`, 33 of 33). Observed only.
 
-**Friday 2026-10-09 is unobserved by the warehouse** (`marks_due_through` 2026-10-08 vs `last_trading_day` 2026-10-09). That is structural: Friday is absorbed by tonight's D1/D2a. Per the spec's 2026-09-13 clause, external sourcing is required. It was done and labelled:
+**Friday 2026-10-16 is unobserved by the warehouse** (`marks_due_through` 2026-10-15 vs `last_trading_day` 2026-10-16). That is structural: tonight's D1/D2a absorb it. Per the spec's 2026-09-13 clause, external sourcing is required; it was done and labelled.
+- **Overlap validation:** FMP against the warehouse for 10-08 → 10-15 matched on **26 of 28** checks. That is 6 sessions × BZUSD/VIX/SPY plus 5 treasury sessions × 10Y/2Y (10-12 was a bond holiday). Both misses are `BZUSD` (10-12: 106.65 vs 106.14; 10-14: 106.06 vs 106.11), disclosed under "Vendor drift" in §4a.
+- **Consequence of the misses:** the 10-16 Brent figure carries the same vendor-revision risk. If FMP revises it before D2a ingests, the ratcheted peak and trigger in this file move with it.
+- **10-16 values:** BZUSD 109.86, VIX 19.99, SPY 763.25, 10Y 5.09, 2Y 4.74.
+- **Breadth 10-16:** NOT FOUND.
 
-- **Overlap validation:** FMP's values for **every** session 10-01 → 10-08 (Brent, VIX, SPY, 10Y, and 2Y via the stored 10Y−2Y spread) equal the warehouse to the digit. That is six sessions × five series, **30 of 30**.
-- **Brent 10-09 = 104.72** (FMP), so the view-basis required fall is −7.62%. No new high, no ratchet.
-- **VIX 10-09 = 14.84** → would score `NORMAL`, not `LOW`. **INFERRED** from an external close against a published threshold; D2a owns the label.
-- **SPY 10-09 = 778.57** (it matches W1's IBKR bar). 10Y **5.24**, 2Y **4.80**. No 50dma is recomputed and no trend claim is made.
-- **Breadth 10-09: not obtained.** `$S5FI` at 42% on 10-05 surfaced from a single social-media source, and it is the 50-day measure, not the 200-day `$S5TH` the system uses, so it is not comparable. Nothing turns on it: leg (c) is blocked by breadth, and leg (ii) blocks the limb regardless.
+**System state at write time.**
+- `state.system_health.all_green = TRUE`; **zero open criticals**.
+- `state.trading_enabled = FALSE`, with `halt_reason` "state.freshness marks_fresh/engine_fresh not both TRUE".
+- `state.staging_halt_disposition` reads `halt_is_prerefresh_artifact = TRUE` and `gate_alert_action = 'defer_to_craft_site'`. That is the documented Sunday pre-refresh artifact. **W3 crafts no orders, so it raises nothing for it.**
 
-**System state at write time.** `state.system_health.all_green = TRUE`. **Zero open criticals.** **84 open alerts (75 info, 9 warning)**, down from 113 (95 / 18) last cycle, reflecting W5's 10-05 intake. `state.trading_enabled = FALSE` with `halt_reason` "state.freshness marks_fresh/engine_fresh not both TRUE". `state.staging_halt_disposition` reads `halt_is_prerefresh_artifact = TRUE` and `gate_alert_action = 'defer_to_craft_site'`. That is the documented Sunday pre-refresh artifact. **W3 crafts no orders, so it raises nothing for it.** `state.open_orders` is empty.
+**Metered spend.** One external sub-agent made **18 calls**, its full budget:
+- 5 FMP: BZUSD, ^VIX, SPY, treasury rates, and one `$S5TH` probe that was ACCESS DENIED but still counted.
+- 11 Anthropic `web_search` and 2 Anthropic `web_fetch`.
+- **Zero Tavily** (unavailable this session) and zero HF.
 
-**Metered spend.** One external sub-agent, budget 14, **11 used**: 4 FMP (BZUSD, ^VIX, SPY, treasury rates) and 7 Tavily basic searches (7 credits). None failed outright. The Dec26 expiry search found no ICE calendar, and the expiry stated in §4a is therefore labelled INFERRED. All 11 are written to `ops.web_calls`. The warehouse sub-agent and the orchestrator made BigQuery reads only, which are not metered.
+All 18 are written to `ops.web_calls` with their targets. The warehouse sub-agent and the orchestrator made BigQuery reads only, which are not metered.
 
 ---
 
 ## OBSERVED, NOT ADJUDICATED — do not re-flag
 
-- **`1039c8fa` `shock_price_leg_roll_precedes_scheduled_scoring`** (W3, 10-04): OPEN. Its magnitude is corrected by this run's filing. Its deadline is not.
-- **`143c2aaf`** (W2, 10-11): two baseline-to-peak midpoints, the view's 96.74 vs M1a's 97.975. §4a's table carries both, because the band edge depends on which governs. W2's surface, not re-filed.
-- **`6081d304` `shock_leg_i_event_anchor_undated`** and **`11bbd3b7` `shock_leg_i_qualifying_event_test_underspecified`** (W3): both OPEN. The 10-07 pin and the hurricane question in §4b are evidence for them. W1's `eb64b71d` attached the Hormuz evidence to `6081d304` today.
-- **`2bf52b18`** (W3 → W1, 10-04): still OPEN on the board, but **W1 applied the correction today** (its PART 2A STEP 1 and its "Correction applied this cycle" note). It is ready for its owner to close. W3 does not close another routine's alert.
-- **`99ccd487` `w1_catalyst_gate_omits_m1r_path`** (W1): OPEN, W1/W5 surface.
-- **`71d484fa` `nomadic_borrow_blocked`**: OPEN, C's borrow condition. **`22eeb107` `regime_sweep_blocked`**: OPEN, E's blocked sweep.
-- **AR_orc `a6ae4e22`** (10-06): D's DNA basis inverted. Raw M1b is now ACTIVATE, the DNA comes entirely from the override, and limb (b) horizon-scaling is open. D is M3's. Noted only because it widens §4a's consequence.
+- **`1039c8fa`** (`shock_price_leg_roll_precedes_scheduled_scoring`) and **`2648b25e`** (its magnitude correction), both W3, both OPEN, owned at W5. The deadline is unchanged (~10-29, 8 sessions away). The magnitude receded on the projected new high (§4a). No new row.
+- **`143c2aaf`** (W2): the view's baseline midpoint vs M1a's. §4a carries both, re-based on 109.86.
+- **`11bbd3b7`** (W3, qualifying-event test underspecified): OPEN. The hurricane question in §4b is evidence for it.
+- **`fc7b0e63`** (W1, today, quiet-clock qualification unowned): W1's surface. §4b's 10-11 anchor is supplementary and does not change W1's band.
+- **`99ccd487`** (W1, catalyst gate silent on the M1R path): OPEN, W1/W5 surface.
+- **`71d484fa`** `nomadic_borrow_blocked` and **`22eeb107`** `regime_sweep_blocked`: OPEN, D2a's.
+- **`c3bbfc6e`** (D1, `D:ISRG:2026-07-20` cost-basis divergence) and **`b8e2ebb0`** (OPS2): out of scope (D / ops), noted only.
 
 ---
 
-## FILED THIS RUN
+## FILED / CHANGED THIS RUN
 
-**1. `ops.alerts` info, `source='W3'`, category `shock_roll_hazard_magnitude_restated`. Owner: same surfaces as `1039c8fa` (`bigquery/217` BZUSD ingest, `state.rerisking_limb_status` / `bigquery/224`, and the Rev 48 rubric slice). Nearest routine: W5 SPEC-DEFECT NOTICE INTAKE. To be disposed together with `1039c8fa`.** Alert id **`2648b25e-ea63-43f3-bae4-f3e7cefcbaf5`**.
-MEASURED: the next stored-series roll (~10-29) is Dec→Jan, with a spread of ≈3.56–3.61 (10-01 settle, 10-05 intraday; single-sourced each). It is not the 5.47–6.43 Nov→Dec spread that `1039c8fa` carried forward. The roll alone flips the view's price leg only for a Dec close in (96.74, ≈100.33], or in (97.975, ≈101.58] on M1a's midpoint. Dec closed 100.20–100.58 on 10-05 → 10-07, inside or at the edge of that band. A flat price at 10-09's 104.72 does not flip it. The roll adds ~15pp of stored retracement whatever the price. **The 10-29-before-11-02 ask in `1039c8fa` is unchanged.** Its "flat price crosses the trigger" premise is withdrawn.
+1. **`ops.alerts` `2bf52b18-06a4-42bc-8256-7105122f59b0` RESOLVED.** This is W3's own 10-04 filing (`w1_like_for_like_brent_retracement_mislabelled`) against W1's PART 2A STEP 1. W1 applied the correction on 10-11. Its 10-18 file keeps it: it states like-for-like is "NOT re-derived" now the November contract has expired, and carries no mislabelled figure. The condition this alert named is verifiably absent for two consecutive W1 cycles. Resolving one's own satisfied filing is a one-line correction; W41 left it for W1, which has no alert-close step.
+2. **18 `ops.web_calls` rows** (see Metered spend).
+3. **No new alert.** §4a's magnitude update and the 10-16 high are evidence on open threads, and D2a's ingest makes the ratchet mechanical tonight.
 
-**What W3 did NOT do:** score or re-score any axis; edit the rubric, `bigquery/*`, `Strategy.md`, any slice, or another routine's file; adjudicate any candidate qualifying event or the hurricane-eligibility question; close any alert (including `2bf52b18`, which W1 has satisfied); touch a queue item; craft, block or size anything; adjudicate `thesis-FOMC-C-20261020`.
+**What W3 did NOT do:**
+- score or re-score any axis;
+- edit the rubric, `bigquery/*`, `Strategy.md`, any slice, or another routine's file;
+- adjudicate any candidate qualifying event or the hurricane-eligibility question;
+- close any other routine's alert;
+- touch a queue item;
+- craft, block or size anything;
+- adjudicate `thesis-FOMC-C-20261020`.
 
 ---
 
@@ -232,8 +304,13 @@ MEASURED: the next stored-series roll (~10-29) is Dec→Jan, with a spread of �
 1. **Current thesis status:** no thesis in scope. Vacuous.
 2. **Competitive landscape:** no position whose peers matter. Vacuous.
 3. **Fundamental developments:** no position to accrue evidence against. Vacuous.
-4. **Sector and macro context:** discharged by §4a (price leg, roll re-measured), §4b (quiet clock: one pinned event and one counter-signal), §4c (technicals), §4d (rates, CPI timing), and the C section.
-5. **Thesis-invalidation signals:** no criteria live in scope. Vacuous. (The D book's daily sweep is D1's; its monthly deep-dive is M3's.)
+4. **Sector and macro context:** discharged by:
+   - §4a: price leg, the new 10-16 high, the roll re-measured;
+   - §4b: quiet clock, the earliest anchor and the counter-signals;
+   - §4c: technicals, with leg (c) breadth-dependent on 10-16;
+   - §4d: hot CPI and repriced hike odds;
+   - the C section.
+5. **Thesis-invalidation signals:** no criteria live in scope. Vacuous. The D book's daily sweep is D1's; its monthly deep-dive is M3's.
 6. **Time-to-thesis-resolution:** no resolution window open. Vacuous. Per spec, no convergence targets, time-exits or option-expiry mechanics were checked.
 
 ---
@@ -242,8 +319,8 @@ MEASURED: the next stored-series roll (~10-29) is Dec→Jan, with a spread of �
 
 - **No `WEEKLY-THESIS-ACTION` flag.** No position-level recommendation and no `immediate_action_flagged` alert.
 - **Zero queue-convertible items.**
-- **Cross-strategy deconfliction is vacuous** with zero open in-scope positions.
-- **`thesis-FOMC-C-20261020` is live and must not be re-minted.** Its router eligibility was confirmed on 10-06. The 10-14 CPI print lands before its 10-20 pass, so D2 reads live odds and IV.
-- **The shock-overlay measurement is evidence, not a referral.** W4 must not route it to M1a (blinding). The filed alert goes to W5.
-- **W1's 2026-11-02 gate is NOT invalidated** (§4b).
-- **No in-scope position can plausibly open before the 11-02 chain** (§Book). Next week's Step 1 is expected to be vacuous again.
+- **Cross-strategy deconfliction is vacuous**, with zero open in-scope positions.
+- **`thesis-FOMC-C-20261020` is live, due 10-20, and must not be re-minted.** Its inputs moved this week (hike odds, VIX), so D2 reads live odds and live IV, not this file's or W1's.
+- **The shock-overlay measurement is evidence, not a referral.** W4 must not route it to M1a (blinding). The open threads are at W5.
+- **W1's gate is NOT invalidated.** This file's 10-11 anchor sits inside W1's band.
+- **No in-scope position can plausibly open before the 11-02 chain.** Next week's Step 1 is expected to be vacuous again.
