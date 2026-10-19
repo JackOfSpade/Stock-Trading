@@ -238,6 +238,14 @@ connectors:
           any universe-screening step are at risk, since the natural use is a screen: ALWAYS diff the
           requested symbol list against the returned one and treat the difference as unknown-not-absent
           -- never as zero market cap and never as a screen that covered the full requested universe.
+          THIRD `batch-market-cap` REGIME, MEASURED by W1 2026-09-27 (added 2026-10-18, W5 SPEC-DEFECT
+          NOTICE INTAKE, closing alert ee375601-28f2-48df-8ca3-2e5f5b1100ec): the gate is per-SYMBOL
+          filtering, so the response shape depends on batch composition -- (1) every symbol allow-listed:
+          complete (20 of 20, zero drops); (2) mixed: silent partial at HTTP 200 (a designed probe of
+          AAPL, AVGO, MSFT, CAT returned only AAPL and MSFT); (3) NO symbol allow-listed: an outright
+          "ACCESS DENIED" with ZERO rows (28 queue-only symbols), NOT an empty array. So an error here
+          means the whole batch was denied, while a non-empty response is NEVER evidence of
+          completeness -- keep diffing requested against returned.
       - name: crypto
         use: unused
         prose_ambiguous: true
