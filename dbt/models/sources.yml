@@ -481,6 +481,11 @@ sources:
         description: >
           CANONICAL instruction per routine, rebuilt wholesale by a CREATE OR REPLACE TABLE ... AS in that file. state.instruction_drift compares live run_log instructions against it. Defined in bigquery/15_routine_catalog.sql.
       - name: routine_commit_markers
+      - name: shock_transmission_register
+        description: >
+          Shock Transmission Register (Strategy.md Rev 50, 2026-10-19): per-strategy attributes of the
+          shock_overlay=acute reconciliation rule, seeded by bigquery/257_shock_transmission_register.sql
+          and read by state.shock_transmission_status. Latest row per strategy_code wins.
         description: >
           Landed-commit markers per routine run; the run_log self-heal candidates view reads them. Defined in bigquery/38_run_log_selfheal.sql.
       - name: trigger_change_intents

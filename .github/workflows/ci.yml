@@ -207,6 +207,12 @@ jobs:
         # equality across all four, not subset: a subset rule would permit precisely that mistake.
         # Pure text parsing, no creds. A failed extraction is a FAILURE, never a vacuous pass.
         run: python scripts/check_roster_notice_lockstep.py
+      - name: Shock Transmission Register lockstep (Strategy.md table <-> bigquery/257 seed; Rev 50, 2026-10-19)
+        # BLOCKING. The register is the per-strategy attribute of the acute-shock reconciliation rule;
+        # its prose table in Strategy.md and its runtime seed in bigquery/257 must agree row for row,
+        # or M1b applies a rule the spec does not state. scripts/check_shock_register_lockstep.py
+        # resolves the seed file dynamically (highest-numbered bigquery/*.sql carrying the INSERT).
+        run: python scripts/check_shock_register_lockstep.py
       - name: session-config tool coverage (Claude_Task_Plan.md/ops/triggers.json mcp__ refs ⇄ .claude/settings.json allowlist — completeness-critic N-1)
         # An unattended scheduled routine calling an mcp__ tool absent from .claude/settings.json's
         # permissions.allow gets an unanswerable permission prompt and silently stalls that step (no
