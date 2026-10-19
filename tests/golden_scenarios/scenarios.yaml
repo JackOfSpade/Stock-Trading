@@ -91,8 +91,9 @@
 # ALLOCATION CALL + D2's PARK ALLOCATION CONVERSION step), and the AI Research-Significance Screen's
 # two-layer conversion (RS-*, added 2026-07-19 per Redesign C, owner reversal of the same-day DEFER —
 # Operating_Protocols.md §19 / Claude_Task_Plan.md's D1/W2/M2 research-screen calls).
-# 36 cases total (brief calls for 12-20; SE-02 added 2026-08-30; PA-07 added 2026-09-03 for the de-risk
-# evidence-cardinality rule). COUNT CORRECTED 2026-08-20 (D3): this line read "31" and had
+# 30 cases total (brief calls for 12-20; SE-02 added 2026-08-30; PA-07 added 2026-09-03 for the de-risk
+# evidence-cardinality rule; PA-01..04/07/08 removed 2026-10-15 by a0c54648, park VOO-only — count
+# re-measured 2026-10-18 by D3). COUNT CORRECTED 2026-08-20 (D3): this line read "31" and had
 # been stale since the four RS-* scenarios landed 2026-07-19 — the id numbering has gaps (no RR-10,
 # KT-03, SB-03), so the count is not derivable from the ids and a reader has no way to notice the drift.
 # No CI check asserts this number; keep it in sync by hand when adding or removing a scenario.
