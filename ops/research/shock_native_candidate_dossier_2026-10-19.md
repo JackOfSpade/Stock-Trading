@@ -220,3 +220,94 @@ Fieldhouse, Kim & Mahajan 2025-12 WP; arXiv 2409.00769 (Kilian replication); Has
 Economics Letters; arXiv 2604.19476; arXiv 2606.29290; arXiv 2512.19484; arXiv 2504.14765; arXiv
 2512.23847; arXiv 2601.13770; arXiv 2512.06607; Reuters via Times of India 2026-05-19; Fortune
 2026-05-06; Morgan Lewis 2026-05-11; CSIS ChinaPower 2026-04-30; Barclays Hedge Fund Outlook 2026.
+
+---
+
+## 8. Event-study outcome (same day, 2026-10-19) — the design inverts
+
+§§1–7 above are the pre-study record and are left as written. The study they asked for was run the
+same day (`ops/research/shock_episode_event_study_2026-10.md`, `scripts/research/shock_episode_event_study.py`;
+BEA 2023 use table for the link map, Kenneth French 49-industry portfolios for six supply shocks
+1990–2026 plus two demand-shock controls, Nasdaq data for an ETF-era cross-check, 12 seeded placebo
+onsets and a 500-draw placebo distribution; no LLM in the loop). Its verdict, quoted:
+
+> Second-hop hedged drift over 4 weeks is +0.6% (bootstrap 95% CI −2.2% to +3.2%) vs +0.1% in
+> placebo windows, positive in 4 of 6 episodes; over 12 weeks it is −2.9% (CI −10.1% to +4.6%) vs
+> +0.5% in placebos, positive in 2 of 6. No horizon from 1 to 12 weeks shows a second-hop drift
+> distinguishable from the base rate, while the dispersion of second-hop outcomes in shock months is
+> about twice the placebo dispersion (3.5% vs 1.5% at 1 week, 10.5% vs 5.5% at 12 weeks). The spread
+> second-hop minus first-hop is negative at every horizon (−0.6% at 2 weeks to −4.1% at 12, 5th–25th
+> placebo percentile) because the FIRST hop keeps repricing for 2–4 weeks after onset (+1.9% hedged
+> at 4 weeks, 95th percentile; refiners +17% and airlines −9% on 2016–2026 ETF data, 3 of 3).
+
+### 8.1 What it kills
+
+- **The second-hop mechanical drift (§4's mechanism).** Not distinguishable from placebo at any
+  horizon; what shock months add is dispersion, with episode-specific direction. The "judgment
+  picks the right second-hop names" hypothesis survives only as an unmeasurable residual on top of a
+  zero mechanical prior — which is exactly the shape SL1 STEP 3 (a) default-rejects.
+- **§3.4's inference that first-order exposure is fully priced in two days.** True for a disclosed
+  tariff list on announcement day; false for an oil supply shock, where the first-hop industries
+  keep moving in the shock's direction for 2–4 weeks, hedged.
+
+### 8.2 What it supports — and why the philosophy makes it harder, not easier
+
+The repeatable, placebo-beating pattern is **first-hop continuation**: long the shock's first-order
+winners / short its first-order losers, market-hedged, held 2–4 weeks from a rubric-qualifying
+onset. +1.9% hedged at 4 weeks pooled (95th placebo percentile, 4 of 6 episodes); the 2026 Iran
+episode itself read +6.0% hedged at 4 weeks. Bounds: n = 6 supply shocks (3 in the ETF era),
+industry-level portfolios, a survivorship-selected 2026 basket, no dividend-adjusted long ETF series.
+
+Identifying refiners and airlines after an oil shock is not a Part-1 AI edge; it is a classical
+post-event industry drift, and rail (a) rejects a mechanical version of it on the same ground that
+rejected F and H. The only philosophy-consistent form is **Strategy B's mechanism applied to the
+shock**: for each first-hop name, judge whether the first-order repricing is over- or under-done
+against the shock's *measured* transmission legs (Brent triplet, crack spreads, disclosed fuel
+hedges, contract pass-through in filings), with the AI's value in the per-name magnitude call and
+the pair/hedge construction, not in the sector call. Two things stop B itself from doing this today:
+B is long-biased by construction (0 of ~108 theses ever short, so it cannot hold the loser leg), and
+B's register row BINDS under `acute` (Rev 50, deliberately — B's long post-event drift carries beta
+in a shock). The data say the override removes B from the one regime where a post-event drift is
+measurably present, while B's construction could only take half of it.
+
+### 8.3 Revised candidate for SL1 — a short-capable, shock-triggered sibling of B
+
+| Element | Revised implication | Why |
+|---|---|---|
+| Mechanism | On a rubric-qualifying shock event, enumerate first-hop industries from a STATIC link map (BEA use table — never the model's recall), then per name judge over/under-reaction vs the measured transmission legs; express as hedged pairs (first-hop winner long / first-hop loser short, or either leg vs a sector/index hedge) | §8.2; event-study table 3 |
+| Return driver | 1.1/1.4 on the *quality* of a realised reaction to known public information — B's own accepted trace — narrowed to shock-driven moves and extended to the short leg | rail (a) |
+| Compensated disadvantages | 2.6 (public documents only), 2.12 (link map, beta, hedge ratio by code), 2.2 (multi-week horizon) | rail (a) |
+| Structure | Hedged; net-long directional forbidden; mandatory short-leg stop set at entry (E's Rev 45 pattern) | SHOCK-NATIVE rail (i), 2.18 |
+| Horizon | 2–6 weeks from onset; hard time-exit at 6 weeks | drift is spent by week 4–6 |
+| Countable signal | one per rubric qualifying shock event × first-hop enumeration; band declared in qualifying events/yr (2026 to date: ≥ 2 structures, ≥ 6 events) | rail (iii) |
+| Invalidation | rubric de-escalation legs close every open thesis; plus per-name public-information invalidation | rail (ii) |
+| Router line | `shock_overlay ∈ {latent, acute}` AND VIX ≠ HIGH; trend and breadth unconstrained | hedge carries DOWN cells |
+| Register row | SHOCK-NATIVE, exempt by class, no gate, horizon `status-quo` | Rev 50 |
+| Differentiation vs B | short-capable; shock-triggered rather than single-name 5% event-day move; hedged; 2–6-week horizon; exempt under `acute` where B binds | rail (b) |
+| Prior | +1.9% hedged per 4-week episode window, 4 of 6 episodes, n = 6 — a per-event prior, not a per-month one; costs ~0.4% round trip + borrow per pair | §6 restated |
+
+### 8.4 Rails status after the study
+
+| Rail | Status | What changed |
+|---|---|---|
+| (a) edge validity | PLAUSIBLE, now with a measured mechanical prior instead of none | the AI edge is the per-name magnitude judgment on top of a +1.9%/episode first-hop base; SL1 must show the judgment layer is more than the base |
+| (b) structural difference | PASS vs A–E (short-capable, shock-triggered, hedged, 2–6 wk) | — |
+| (c) non-redundancy | PASS — B binds under `acute` and cannot short | — |
+| (d) cost fit | PLAUSIBLE (0.42% equity-pair round trip measured) | per-thesis at authoring |
+| (e)/(f) | PASS | — |
+
+### 8.5 What SL1 needs to do next (replaces §7)
+
+1. Resolve the lead `interactive-2026-10-shock-first-hop-continuation-hedged` (OPEN; the second-hop
+   lead is CLOSED with this outcome). Do not reopen the second-hop archetype on the same evidence.
+2. Derive the first-hop enumeration as code over the BEA use table (static, point-in-time safe) and
+   the per-name judgment protocol as judgment-native machinery (SL2 (A) 1b) with a declared
+   conviction gate; the signal count is the rubric's qualifying events.
+3. Declare the frequency in qualifying events/year and the 30-trade arithmetic (two trades per
+   pair).
+4. State the B relationship explicitly in the differentiation section: this is B's mechanism on the
+   shock's first hop with a short leg, exempt under `acute` where B binds — and why that is not a
+   B restart (it is additive machinery, not a B edit).
+5. Still deliberately not done here: no candidate row, no Strategy.md section, no backtest with the
+   model, no change to B's register row (which stays BINDS until an adversarial review says
+   otherwise — `premortem-router-2026-a1`, enqueued 2026-10-19, asks exactly that question).
