@@ -287,7 +287,11 @@ routines:
     # STEP 4f consumes the repo-file entries of this list as its git-evidence surface -- keep it real.
     # (CORRECTED 2026-10-04, W5, closing OPS0's `ops0_landing_sweep_defect` 20713888: Watchlist.md is declared by FOUR routines -- D2, W4, M4, Q4 -- so it is fleet-SHARED and STEP 4(f) must IGNORE it as pathspec evidence; the entry is kept only to DESCRIBE the write, it is not a completed STEP 4f repair.)
     writes: [events.decision_log, events.queue_events, events.position_events, calendar:confirm_order,
-             events.park_policy_changes, Watchlist.md]
+             events.park_policy_changes, Watchlist.md, events.regime_events]
+             # events.regime_events added 2026-10-19 (owner decision in an interactive session: wire Strategy.md's daily technical-flip divergence clause literally).
+             # STRATEGY_ACTIVATION comes from item 4's confirmed branch and from ROUTER EVERY-RUN DUTIES' held-state
+             # and mechanical writes. Dataset.table entries are documentation only -- OPS0 STEP 4f consumes
+             # just the file-path entries.
     expected_trigger:
       recurrence: custom_cron
       cron_utc: "15 23 * * 0,1,2,3,4"
@@ -607,7 +611,13 @@ routines:
     catchup_safe: false
     depends_on: [AR_att]
     writes: [events.adversarial_reviews, events.regime_events, events.decision_log, calendar:confirm_order,
-             events.strategy_lifecycle, ops.roster_change_log]
+             events.strategy_lifecycle, ops.roster_change_log, events.queue_events]
+             # events.queue_events declared 2026-10-19 (owner decision in an interactive session: wire Strategy.md's daily technical-flip divergence clause literally):
+             # every PENDING_REVIEW close and re-enqueue (STEP 0, STEP 0.5, Steps 1.5, 3.5, 4 and 5, and the
+             # DIVERGENCE-REVIEW STANDING-CYCLE PRE-CHECK's MOOT/SUPERSEDED closes) and the PENDING_ANALYSIS rows
+             # its B and A-queue drains enqueue, or a class-changing bind's or MOOT close's DO-NOT-ACTIVATE halt supersedes, INSERT there. Documentation only, like D2's dataset.table entries.
+             # Watchlist.md (those drains) stays undeclared: it is fleet-shared, and OPS0 STEP 4f excludes a
+             # routine whose writes: list names no repo-file path.
     expected_trigger:
       recurrence: custom_cron
       cron_utc: "35 0 * * 1,2,3,4,5"

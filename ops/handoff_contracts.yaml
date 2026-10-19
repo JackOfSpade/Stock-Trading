@@ -332,3 +332,38 @@ row_handoffs:
       (re-discovering the same termination every cycle forever) and violates
       ops.roster_change_log.change_key STRING NOT NULL. Until 2026-08-20 the consumer pinned no
       predicate at all and NEITHER producer named from_state.
+  - table: state.decision_log_current
+    discovery_column: entry_type
+    discovery_value: fundamental-call
+    producers: [M4, D2]
+    consumer: D2
+    consumer_branch: "ROUTER EVERY-RUN DUTIES, STANDING FUNDAMENTAL CALL"
+    pinned_columns: [cycle_as_of, reconciled_call, fallback_suppressed]
+    why: >
+      Added 2026-10-19 (owner decision in an interactive session: wire Strategy.md's daily technical-flip
+      divergence clause literally). M4's A0 step writes one events.decision_log row per roster strategy per
+      M1b cycle, and D2 item 4's confirmed branch writes one in-cycle, in the cycle it amends, whenever a
+      judged review writes a strategy's activation state. Every evening D2 takes each strategy's row with the
+      greatest (cycle_as_of, event_ts, entry_id) as its standing call, compares the strategy's technical line
+      with reconciled_call, and skips a fallback_suppressed call. The table is the _current view, not
+      events.decision_log: both consumers query the view, which drops every row a correction's superseded_by
+      names (bigquery/122), and this check matches the bare table name at a word boundary, which
+      `decision_log` does not satisfy inside `decision_log_current`. The pinned columns live inside the
+      `fields` JSON. C2 asserts only that each producer's SECTION names them (routine-section granularity, the limit
+      check_handoff_contracts.py's docstring records). It catches a producer section that drops a column
+      entirely, but not a drop from either STRUCT: M4's section names all three outside A0's STRUCT, and
+      D2's own standing-call query names all three, so both write sites are guarded only by the STRUCTs
+      they pin.
+  - table: state.decision_log_current
+    discovery_column: entry_type
+    discovery_value: fundamental-call
+    producers: [M4, D2]
+    consumer: AR_orc
+    consumer_branch: "DIVERGENCE-REVIEW STANDING-CYCLE PRE-CHECK"
+    pinned_columns: [cycle_as_of, reconciled_call]
+    why: >
+      Added 2026-10-19 (same owner decision). AR_orc reads the same standing call: a divergence-review that
+      was opened against a different call closes SUPERSEDED with no activation write, and a daily-flip review
+      whose divergence has gone closes MOOT by writing the call. Without cycle_as_of the ordering that picks
+      the standing row is undefined, so a review that straddles M1b day could land its verdict over M4's
+      new-cycle STRATEGY_ACTIVATION row, the measured hazard the SUPERSEDED close exists for.
