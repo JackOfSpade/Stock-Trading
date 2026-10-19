@@ -2033,7 +2033,7 @@ def test_check_fails_when_a_fleet_override_model_differs_from_routine_model(tmp_
     _wire(tmp_path, monkeypatch, backup_doc=doc, routine_model=_MOR_LIVE)
     assert rb.check() == 1
     out = capsys.readouterr().out
-    assert (f"D1: model of record: " in out and f"overrides.model='{_MOR_STALE}' != "
+    assert ("D1: model of record: " in out and f"overrides.model='{_MOR_STALE}' != "
             f"ops/cadence.yaml routine_model='{_MOR_LIVE}'" in out)
     assert "OPS2: model of record" not in out  # only the pinned routine is named
 

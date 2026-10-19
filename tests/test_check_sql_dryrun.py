@@ -846,7 +846,7 @@ def test_per_statement_pass_skips_object_absent_from_final_definitions(tmp_path,
     # the same as "not final" -- never a KeyError, never a dry-run.
     fixture_path = tmp_path / "999_multi.sql"
     fixture_path.write_text(MULTI_CREATE_FIXTURE, encoding="utf-8")
-    monkeypatch.setattr(csd, "find_final_definitions", lambda: {})
+    monkeypatch.setattr(csd, "find_final_definitions", dict)
     monkeypatch.setattr(csd, "canary_ok", lambda: True)
     calls = []
 

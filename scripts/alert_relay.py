@@ -96,7 +96,7 @@ Modes (env RELAY_MODE):
   those apart — so it could not even in principle push only the rows that needed action.
   REPLACED BY, not dropped: bigquery/229_staged_order_confirm_notice.sql raises the same fact as a
   `staged_order_awaiting_confirm` WARNING in ops.alerts from ops.sp_sq_daily_staging_cap_check — a DAILY
-  scheduled query (05:25 UTC, 7 days a week, so it covers the Fri/Sat weekend hole D3's 5x/week Sun–Thu
+  scheduled query (05:25 UTC, 7 days a week, so it covers the Fri/Sat weekend hole D3's 5x/week Sun-Thu
   cadence leaves). That single row now reaches BOTH channels automatically: email via alert_emailer.gs
   (RULE 1 satisfied) and ntfy via `alerts` mode above. It dedups on the sorted item_key SET via
   sp_raise_alert_once, so a NEW order to confirm re-alerts while an unchanged pile stays quiet

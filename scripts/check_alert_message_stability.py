@@ -521,26 +521,43 @@ def _prose_call_args(text, open_paren):
         ch = text[i]
         if in_str:
             if ch == "\\" and i + 1 < len(text):
-                buf.append(text[i:i + 2]); i += 2; continue
+                buf.append(text[i:i + 2])
+                i += 2
+                continue
             if ch == "'":
                 in_str = False
-            buf.append(ch); i += 1; continue
+            buf.append(ch)
+            i += 1
+            continue
         if ch == "'":
-            in_str = True; buf.append(ch); i += 1; continue
+            in_str = True
+            buf.append(ch)
+            i += 1
+            continue
         if ch == "(":
-            depth += 1; buf.append(ch); i += 1; continue
+            depth += 1
+            buf.append(ch)
+            i += 1
+            continue
         if ch == ")":
             if depth == 0:
                 args.append("".join(buf))
                 return args, True
-            depth -= 1; buf.append(ch); i += 1; continue
+            depth -= 1
+            buf.append(ch)
+            i += 1
+            continue
         if ch == "," and depth == 0:
-            args.append("".join(buf)); buf = []; i += 1; continue
+            args.append("".join(buf))
+            buf = []
+            i += 1
+            continue
         if ch == "`" and depth == 0:
             # ran off the end of the markdown inline-code span without a closing paren
-            return args + ["".join(buf)], False
-        buf.append(ch); i += 1
-    return args + ["".join(buf)], False
+            return [*args, "".join(buf)], False
+        buf.append(ch)
+        i += 1
+    return [*args, "".join(buf)], False
 
 
 def _as_literal(raw):

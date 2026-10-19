@@ -379,7 +379,7 @@ def test_routine_run_failed_and_run_log_problem_unalerted_still_push(monkeypatch
     # "add the new run-outcome categories to the suppression list" edit fails a test instead of
     # silently going unpushed.
     seen = {}
-    monkeypatch.setattr(ar, "bq", lambda sql: seen.setdefault("sql", sql) and [] or [])
+    monkeypatch.setattr(ar, "bq", lambda sql: (seen.setdefault("sql", sql) and []) or [])
     monkeypatch.setattr(ar, "get_user_tz", lambda: "America/Denver")
     ar.relay_alerts()
     sql = seen["sql"]
@@ -396,7 +396,7 @@ def test_no_push_categories_does_not_touch_severity_or_resolved_filter(monkeypat
     # counted by every state.* view and trading gate that reads ops.alerts. Silencing a verifier by
     # editing its input is the failure mode this pins against.
     seen = {}
-    monkeypatch.setattr(ar, "bq", lambda sql: seen.setdefault("sql", sql) and [] or [])
+    monkeypatch.setattr(ar, "bq", lambda sql: (seen.setdefault("sql", sql) and []) or [])
     monkeypatch.setattr(ar, "get_user_tz", lambda: "America/Denver")
     ar.relay_alerts()
     sql = seen["sql"]
@@ -491,7 +491,7 @@ def test_suppression_clause_is_null_safe(monkeypatch):
     # still emailed. COALESCE(..., TRUE) points the unknown case at delivery. Suppression must be
     # provably TRUE, never merely not-provably-false.
     seen = {}
-    monkeypatch.setattr(ar, "bq", lambda sql: seen.setdefault("sql", sql) and [] or [])
+    monkeypatch.setattr(ar, "bq", lambda sql: (seen.setdefault("sql", sql) and []) or [])
     monkeypatch.setattr(ar, "get_user_tz", lambda: "America/Denver")
     ar.relay_alerts()
     assert "COALESCE(category NOT IN (" in seen["sql"]
@@ -514,7 +514,7 @@ def test_empty_no_push_tuple_degrades_to_no_filter_not_a_syntax_error(monkeypatc
     seen = {}
     monkeypatch.setattr(ar, "NO_PUSH_CATEGORIES", ())
     monkeypatch.setattr(ar, "EMAIL_ONLY_CATEGORIES", ())
-    monkeypatch.setattr(ar, "bq", lambda sql: seen.setdefault("sql", sql) and [] or [])
+    monkeypatch.setattr(ar, "bq", lambda sql: (seen.setdefault("sql", sql) and []) or [])
     monkeypatch.setattr(ar, "get_user_tz", lambda: "America/Denver")
     ar.relay_alerts()
     assert "NOT IN ()" not in seen["sql"]
@@ -534,7 +534,7 @@ def test_no_push_categories_alone_going_empty_does_not_empty_combined_set(monkey
     # told stays email-only.
     seen = {}
     monkeypatch.setattr(ar, "NO_PUSH_CATEGORIES", ())
-    monkeypatch.setattr(ar, "bq", lambda sql: seen.setdefault("sql", sql) and [] or [])
+    monkeypatch.setattr(ar, "bq", lambda sql: (seen.setdefault("sql", sql) and []) or [])
     monkeypatch.setattr(ar, "get_user_tz", lambda: "America/Denver")
     ar.relay_alerts()
     sql = seen["sql"]

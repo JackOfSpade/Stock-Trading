@@ -197,3 +197,13 @@ def test_unknown_flag_is_a_loud_exit_2_not_a_silent_full_fleet_run(monkeypatch, 
     assert vp.main(["--al"]) == 2
     out = capsys.readouterr().out
     assert "--al" in out and "Usage:" in out
+
+
+def test_strip_dataset_accepts_both_argument_spellings():
+    # gen_dbt_port.py takes `state.foo`; verify_dbt_port.py's usage line says `foo`. Both must resolve
+    # to the compiled file `models/state/foo.sql`; an unknown prefix must be left alone, not swallowed.
+    assert vp.strip_dataset("state.shock_transmission_status") == "shock_transmission_status"
+    assert vp.strip_dataset("analytics.strategy_nav") == "strategy_nav"
+    assert vp.strip_dataset("shock_transmission_status") == "shock_transmission_status"
+    assert vp.strip_dataset("ops.alerts") == "ops.alerts"
+    assert vp.strip_dataset("state.") == "state."

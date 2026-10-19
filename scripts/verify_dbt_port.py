@@ -123,6 +123,14 @@ def resolve_profiles_dir():
     return profiles_dir, True
 
 
+def strip_dataset(name):
+    """`state.foo` -> `foo` when the prefix is one of DBT_DATASETS; any other spelling is returned as is."""
+    head, sep, tail = name.partition(".")
+    if sep and head in DBT_DATASETS and tail:
+        return tail
+    return name
+
+
 def all_model_names():
     """Every model under dbt/models/{state,perf,analytics} (model names are globally unique).
 
@@ -155,7 +163,12 @@ def main(argv):
         print(f"unknown flag(s): {' '.join(unknown)}\n{usage}")
         return 2
     use_compiled = "--use-compiled" in argv
-    models = [a for a in argv if not a.startswith("--")]
+    # Accept both spellings: a bare model name (the usage line) and the `<dataset>.<model>` form
+    # scripts/gen_dbt_port.py takes, so the two halves of the porting workflow can be driven with the
+    # same argument. Found 2026-10-19: `verify_dbt_port.py state.foo` compiled nothing (dbt read the
+    # dotted token as an fqn selector) and then reported "no compiled output found" for a model that
+    # had just compiled fine under its bare name -- a wrong diagnosis, not a wrong port.
+    models = [strip_dataset(a) for a in argv if not a.startswith("--")]
     if "--all" in argv or not models:
         models = all_model_names()
     if not models:
