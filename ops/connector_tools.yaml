@@ -715,6 +715,17 @@ connectors:
           1d Brent mark. For a futures history call, always pass the explicit `exchange` from the
           `search_futures` row, and do NOT classify that error text as transient when `exchange` was
           omitted.
+          INDEX (`security_type='IND'`) CALLS NEED IT TOO (added 2026-10-19, interactive owner session
+          triaging the 2026-10-19 alert emails, closing D1's `routine_run_warning`
+          `ibkr_vix_history_unavailable`, alert 6c7a05d0-1392-42e0-baa8-11cb98745502; MEASURED
+          2026-10-19 by an A/B on identical arguments): `get_price_history` for the CBOE VIX
+          (contract_id 13455763) and SPX (416904) fails with the same non-specific "Details
+          currently unavailable." when `exchange` is omitted (or set to SMART), and returns full bars
+          with `exchange` CBOE; `get_price_snapshot` returns an empty object (or a `top-status`
+          REJECT) without it. Same rule as futures: pass the `exchange` from the `search_contracts`
+          row and do NOT classify that error text as transient when `exchange` was omitted. The
+          operative copy for routines is the native-exchange bullet in Claude_Task_Plan.md's "IBKR
+          connector usage" section; this note is the manifest-side record only.
           PARALLEL CALLS CAN RETURN ANOTHER TICKER'S SERIES (added 2026-10-11, W5 SPEC-DEFECT NOTICE
           INTAKE, closing W1's `ibkr_price_history_parallel_cross_contamination`, alert
           7cc25b71-5eb6-411b-bf31-eff08b0359ff; MEASURED by W1 2026-09-20 by byte-for-byte diff):

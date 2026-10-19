@@ -527,7 +527,7 @@ satisfies (self-improvement audit ITEM 17, 2026-07-11):** `UPDATE ops.alerts SET
 **A MARK IS NOT A CLOSE, AND A DAILY BAR IS NOT SELF-VALIDATING — TWO MEASURED IBKR DATA DEFECTS THAT FAIL SILENTLY (added 2026-09-21, W5 SPEC-DEFECT NOTICE INTAKE, closing D1's `ibkr_position_mark_not_a_close`, alert `bc6b7586-d809-49fc-8dac-bd8a87c998c8`, and `ibkr_vix_daily_bar_close_outside_ohlc`, alert `e683d529-591d-44c7-9934-5b0d75ef7d27`).** The close-to-close rule above says which CALL to use; these two say why the other calls cannot be substituted for it, and what to check when you use it. Both were measured, not inferred, and neither raises an error — a wrong number simply arrives.
 
 - **`get_account_positions.market_price` is a POSITION MARK, not a settled close, and can be several sessions stale.** Measured by D1 on 2026-09-07, a US market holiday with the last session 2026-09-04: `get_account_positions` served GOOGL at **335.00 — the 2026-09-01 close, THREE SESSIONS STALE** — against a true 09-04 close of 338.46. In the same run `get_price_snapshot` returned AMZN at 258.30 carrying **`is_close: false`** (a live-looking tick, stamped 2026-09-07T22:00:01Z, on a closed market) against a true 09-04 close of 258.51, while all eight other snapshots that run carried `is_close: true`. Only `get_price_history` (`step=ONE_DAY`, `outside_rth=false`) gave the correct close on every name. **So: never read a close out of `get_account_positions`, and when a snapshot is used at all, READ `is_close` — it is the field that distinguishes a settled print from a tick, and it is easy to miss because it is usually true.** `get_account_positions` remains correct for what it is for: exact current holdings and quantities. D2a already sources `events.daily_marks` from `get_price_history` by its own spec, so the known exposure is small — but **no one has swept the fleet for other position-mark or snapshot readers**, and this bullet is the record that the sweep has not been done rather than a claim that it is clean.
-- **ASSERT `low <= close <= high` ON ANY IBKR DAILY BAR YOU CONSUME AS A CLOSE, AND PREFER AN ALREADY-INGESTED VALUE OVER A RE-PULL.** IBKR served a structurally impossible `^VIX` daily bar: the 2026-09-04 bar (contract_id 13455763) returned **`close=15.30` against its own `high=14.58` and `low=13.80`** — a close 0.72 ABOVE its own high — while every other bar in the same 21-bar pull was well formed. **The bar MUTATED after the fact:** the 2026-09-06 D1 park record cites the identical call and pinned 14.53 for that session, and `events.signal_marks` independently holds 14.53 from FMP; 14.53 sits inside the bar's own range and 15.30 does not. Third corroboration: against the well-formed 2026-09-08 close of 15.72, 14.53 implies +8.19%, matching an independent same-day report of VIX up ~8%, whereas 15.30 implies +2.75%, which no source carries. **The consequence is not cosmetic:** `state.park_axis_daily`'s volatility axis tests `VIX > 15 AND VIX > its own 20d SMA`, so the corrupt bar would have scored 09-04 as ALREADY standing defensive, when read correctly the axis ENTERED defensive on 09-08 — exactly the standing-vs-entry distinction the de-risk increase gate and the DE-RISK EVIDENCE CARDINALITY rule turn on. The 2026-09-08 D1 run caught it and substituted 14.53; a session reading the series naively would not have. **Where `events.signal_marks` / `state.signal_marks_curated` already holds a historical close, read it from there rather than re-pulling the bar** — the warehouse value is the one a prior run validated, and a re-pull can return a value that has since mutated.
+- **ASSERT `low <= close <= high` ON ANY IBKR DAILY BAR YOU CONSUME AS A CLOSE, AND PREFER AN ALREADY-INGESTED VALUE OVER A RE-PULL.** IBKR served a structurally impossible `^VIX` daily bar: the 2026-09-04 bar (contract_id 13455763, `security_type='IND'`, `exchange='CBOE'` — see the native-exchange bullet below) returned **`close=15.30` against its own `high=14.58` and `low=13.80`** — a close 0.72 ABOVE its own high — while every other bar in the same 21-bar pull was well formed. **The bar MUTATED after the fact:** the 2026-09-06 D1 park record cites the identical call and pinned 14.53 for that session, and `events.signal_marks` independently holds 14.53 from FMP; 14.53 sits inside the bar's own range and 15.30 does not. Third corroboration: against the well-formed 2026-09-08 close of 15.72, 14.53 implies +8.19%, matching an independent same-day report of VIX up ~8%, whereas 15.30 implies +2.75%, which no source carries. **The consequence is not cosmetic:** `state.park_axis_daily`'s volatility axis tests `VIX > 15 AND VIX > its own 20d SMA`, so the corrupt bar would have scored 09-04 as ALREADY standing defensive, when read correctly the axis ENTERED defensive on 09-08 — exactly the standing-vs-entry distinction the de-risk increase gate and the DE-RISK EVIDENCE CARDINALITY rule turn on. The 2026-09-08 D1 run caught it and substituted 14.53; a session reading the series naively would not have. **Where `events.signal_marks` / `state.signal_marks_curated` already holds a historical close, read it from there rather than re-pulling the bar** — the warehouse value is the one a prior run validated, and a re-pull can return a value that has since mutated.
 
 **Rich market-data fields (use them wherever they sharpen a decision).** `get_price_snapshot` exposes far more than last/bid/ask:
 - *Instrument eligibility:* `avg-90d-usd-volume` (when populated) gives dollar ADV for the Strategy B criterion-1 ≥$10M liquidity gate; it can be omitted by the API, so if absent derive ADV from `get_price_history` (volume × close). `misc-statistics` gives 13/26/52-week high/low.
@@ -535,6 +535,7 @@ satisfies (self-improvement audit ITEM 17, 2026-07-11):** `UPDATE ops.alerts SET
 - *Volatility context:* `implied-vol`, `implied-volatility-percentile`, `historical-vol` gauge whether a post-event move is large relative to the name's own vol regime.
 - *Options analytics (A/C options theses):* `implied-vol`, `option-midpoint-iv`, `option-volume`, `option-open-interest`, `underlying-today/avg-option-volume`. The connector supplies both the data to BUILD and size the options thesis AND crafts the resulting order (single-leg + OPT–OPT combos — self-improvement audit ITEM 13, 2026-07-11, corrected from a prior "cannot craft options orders" mischaracterization).
 - Always pull `get_price_history` with `include_corporate_actions: true` so splits / special dividends are surfaced and never masquerade as price moves — critical for the B criterion-1 close-to-close magnitude gate and convergence-target derivation, and for attributing account drift in D2 Step 0.
+- **AN INDEX (`security_type='IND'`), FUTURE OR FUTURES-OPTION CALL MUST PASS THE CONTRACT'S NATIVE `exchange` — OMITTED, IT DEFAULTS TO SMART, WHICH DOES NOT ROUTE THEM, AND THE CONNECTOR ANSWERS WITH A NON-SPECIFIC "Details currently unavailable" THAT READS LIKE AN OUTAGE (added 2026-10-19, interactive owner session triaging the 2026-10-19 alert emails, closing D1's `routine_run_warning` `ibkr_vix_history_unavailable`, alert `6c7a05d0-1392-42e0-baa8-11cb98745502`).** Take `exchange` verbatim from the instrument's `search_contracts` row (for a future or futures option, from the exchange its futures-search or `get_option_parameters` result reports) (`^VIX` contract_id 13455763 and SPX 416904 are both `CBOE`) and pass it on every `get_price_history` AND `get_price_snapshot` call for that instrument. MEASURED 2026-10-19 with every argument identical except `exchange`: with it omitted (or set to SMART) both indices returned `Details currently unavailable. Please try again later…` from `get_price_history` (ONE_WEEK, ONE_MONTH and step_count 5 alike) and an empty `{}` from `get_price_snapshot` (or only `top-status` `REJECT` when that field is requested); with `exchange='CBOE'` both returned full OHLC bars and a `last`, and all 20 `^VIX` sessions 2026-09-21..10-16 equalled the close D2a ingested from FMP to the cent. Futures fail identically (D1's Brent BZX6 call, 2026-09-14, alert `d5b9e263`, cured by `exchange=NYMEX`), but that finding was recorded only in `ops/connector_tools.yaml`, which no routine reads at call time, so this bullet is the copy routines actually see. It is the almost-certain cause of D1's `^VIX` history failures on 2026-10-15 and 2026-10-18 — INFERRED, not observed, because neither run recorded the arguments it sent (the alert's parameter list names no `exchange`, and the 10-15 run's `get_price_snapshot` read succeeded, which itself requires `exchange='CBOE'`, so the omission was specific to the history call, whose tool description invites it with "omit to use SMART"): the only sentence in D1's text that ever told it to pass `exchange='CBOE'` sat in the PARK ALLOCATION CALL evidence bullet deleted at the 2026-10-15 park retirement (`bigquery/256`), and the four D1 runs before it (10-11..10-14) read the IBKR VIX bar without incident. **So when `get_price_history` answers "Details currently unavailable" for an index, future or futures option, re-issue the call ONCE with the native `exchange` before treating it as an outage, a fallback trigger or an alert; a CBOE index bar then carries `delayed: 900`, which is expected and not a fault.** This restores a missing PARAMETER only: it does NOT make `^VIX` a D1 evidence input (the PARK PIN CHECK still forbids gathering park evidence), and for any session `state.signal_marks_curated` already holds, read the warehouse value rather than re-pulling the bar (the `low <= close <= high` bullet above).
 
 **Cached `contract_id`s for current holdings** (verify against `get_account_positions` at use; ids are stable per instrument): SGOV 424099317, VOO 136155102 (ARCA, US primary listing — the park vehicle per §13, active-vs-historical determined by `state.park_policy_current`, resolved 2026-07-15), RTX 415342104, DIS 6459, HCA 85076790, TJX 12814, ZBRA 276304, BRC 6467986, AZO 4750, BURL 135699190. New names resolve via `search_contracts`.
 
@@ -1857,7 +1858,8 @@ Concretely, every run:
   dwell clock corrected Rev 48); schema
   `bigquery/224_rerisking_limb_status.sql`). **MECHANICAL, no AI call** — D2a carries no analysis by design, so this
   substep reads one view and may write ONE queue row: it never scores a regime, never reads roster membership or
-  activation intent, and never moves capital. Runs after the two capital substeps above, last in Step 0; its
+  activation intent, and never moves capital. Runs after the two capital substeps above (only the DE-RISKING REFRESH REQUEST
+  follows it in Step 0); its
   position relative to them is not load-bearing precisely because it moves nothing.
   `SELECT * FROM state.rerisking_limb_status`. No row with `sql_limbs_fired = TRUE` (the steady state) → no-op,
   nothing to log. One or more rows with `sql_limbs_fired = TRUE`:
@@ -1907,6 +1909,68 @@ Concretely, every run:
     varying figures go in the PAYLOAD. **Its own category, distinct from both blocked-row categories above**, and
     it has a reachable closure path: M1R resolves it by `alert_id` when it drains the item, so this alert cannot
     latch on the board after the condition is serviced.
+  - **THE LIMB HAS NO MACRO-RELEASE LEG, DELIBERATELY — do not add one (added 2026-10-19, W5 SPEC-DEFECT NOTICE
+    INTAKE adjudicated by an interactive owner session, closing D2's `fundamental_axis_has_no_macro_print_detector`,
+    alert `2622b6cf-0b0b-4d64-97de-1bf5cdd2c67e`).** A leg queuing `regime-refresh` on a primary macro release (for
+    example a D1-recorded print contradicting a standing `growth_momentum` or `inflation_trend`) was proposed and
+    rejected on measurement. For growth and inflation, M1R's Read access scope admits only the substrate M1a's OUTPUT 1
+    already ingested, plus `^VIX` and `BZUSD` (its STEP 2a event sweep and currency closes are not a macro ingest), so the re-score such a leg queued would not be permitted to read the print that queued it: a
+    vacuous refresh that still spends a full M1R run from the shared weekly quota. Widening M1R to ingest the print
+    is one of its NON-GOALS, and carrying the print inside the queue item would let a non-blind producer choose what
+    evidence the blind scorer sees. The mid-month channel for such a release is D1's ANALYSIS — REGIME CHECK into
+    D2's item 4 (its bullet "A PRIMARY MACRO RELEASE THAT CONTRADICTS A STANDING ..."). This ruling covers the
+    macro-release leg only; it neither extends nor narrows the limb's acute-only scope, which stays exactly as
+    `bigquery/224`'s header defines it.
+  - **LEG (b) IS WIRED FOR THE ACUTE-SHOCK BRANCH ONLY, DELIBERATELY. Do not re-file the other three branches (recorded
+    2026-10-19, interactive owner session triaging the 2026-10-19 alert emails).** Strategy.md's leg (b) names four
+    reconciliation-override axes: acute shock overlay, stressed risk sentiment, growth+policy and inflation+policy.
+    `state.rerisking_limb_status` measures only the first, and its `acute` conjunct leaves the limb inert otherwise;
+    `bigquery/224`'s header records that scoping and the self-sustaining re-queue loop it prevents. An out-of-cycle
+    refresh cannot service the two macro branches (growth+policy, inflation+policy) at all; the stressed-risk-sentiment branch is unwired only because `stressed` has never been emitted (below), not because M1R cannot move that axis — its `^VIX` grant can (D2 item 4, WHAT THIS DOES AND DOES NOT DO). The macro branches' primary inputs are macro releases, and M1R re-scores only from
+    the substrate M1a ingests monthly and never re-runs that ingest (M1R's NON-GOALS). Measured 2026-10-19,
+    `events.macro_series` ingest days since 2026-08-01 are exactly 2026-08-03, 2026-09-01 and 2026-10-02. A refresh
+    queued on a mid-month macro reversal would therefore re-score the prints M1a already scored and return its answer.
+    The next monthly M1a run is the earliest point at which such a reversal can be MEASURED, which is the standard leg
+    (b) itself sets. `stressed` has also never been emitted (Strategy.md's Rev 48 changelog says so). Widening the
+    view would add queue traffic and no information.
+- DE-RISKING REFRESH REQUEST (added 2026-10-19, interactive owner session triaging the 2026-10-19 alert emails;
+  canonical rail Strategy.md § "Pre-mortem: Regime router" → §6 Misclassification scenarios, scenarios 1 and 3,
+  which make an out-of-cycle FUNDAMENTAL refresh "permitted and required" on each de-risking trigger).
+  **MECHANICAL, no AI call; D2a stays the SOLE writer of `PENDING_REGIME_REFRESH`.** D2 item 4 detects and
+  services those triggers the same evening it sees them: its MEASURED OUT-OF-CYCLE REFRESH TRIGGER bullet, and a D1
+  flag on a qualifying geopolitical event. It logs one `router-review` entry per trigger run carrying
+  `fields.measured_trigger` and `fields.trigger_run_start`. That review protects; it is not the refresh, because
+  Strategy.md's re-risking limb paragraph (same scenario 3) defines a refresh as re-running the M1a/M1b machinery
+  and authorises no daily routine to score an axis. This substep turns each such entry into the blind re-score,
+  through the same lane and drain as the limb above. Read ONLY the two trigger fields, never the entry's
+  per-strategy outcome:
+  `WITH t AS (SELECT JSON_VALUE(fields, '$.measured_trigger') AS measured_trigger, JSON_VALUE(fields,
+  '$.trigger_run_start') AS trigger_run_start, MIN(event_ts) AS logged_ts FROM events.decision_log WHERE
+  entry_type = 'router-review' AND JSON_VALUE(fields, '$.measured_trigger') IS NOT NULL AND entry_date >=
+  DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 14 DAY) GROUP BY 1, 2) SELECT t.measured_trigger,
+  t.trigger_run_start, t.logged_ts FROM t WHERE NOT EXISTS (SELECT 1 FROM events.queue_events q WHERE q.queue =
+  'PENDING_REGIME_REFRESH' AND q.item_type = 'regime-refresh' AND q.event_ts >= t.logged_ts)`
+  A row means a serviced trigger with no refresh requested or completed since D2 logged it. Zero rows is the
+  steady state (it returned zero on 2026-10-19). A refresh written OR completed after the entry already covers
+  it, since M1R scores on post-trigger data either way. That is why the test is any `regime-refresh` row at or
+  after `logged_ts`, not a match on payload. On one or more rows:
+  - If a `regime-refresh` item is already open (the limb's dedup leg (a) query above) → no-op. That item's
+    re-score lands after the trigger, and its completion row satisfies the test above. Name it in `<note>`.
+  - Otherwise write ONE item covering every returned row, in the limb's INSERT shape:
+    `queue = 'PENDING_REGIME_REFRESH'`, `item_key = 'regime-refresh-YYYYMMDD'` (today, America/Denver),
+    `item_type = 'regime-refresh'`, `status = 'pending'`, `due_date = <today>`, the limb's
+    `conservative_default`, and `payload` carrying `resolving_venue = 'M1R'`, `trigger_class = 'de-risking'`
+    and the returned `measured_trigger` / `trigger_run_start` pairs. The limb's THE ITEM TEXT IS STRATEGY-BLIND
+    rule binds it verbatim: `strategy` NULL, and for example `note = 'A de-risking out-of-cycle refresh trigger
+    fired (named in payload); the standing monthly FUNDAMENTAL_AXIS snapshot may be stale. Re-score the 5 axes
+    out of cycle.'`
+  - The limb's dedup leg (b) does NOT apply here. It stops a STANDING re-risk condition from re-queuing,
+    whereas each row here is a new, dated trigger already deduplicated by the test above. The converse does
+    apply, and is accepted: a completed de-risking re-score suppresses the limb for 5 trading days, because the
+    axes it would refresh were just refreshed.
+  - Raise NO alert. Nothing here needs the owner, and the record is the queue row plus D2's entry. M1R drains
+    the item with its existing steps unchanged, and D2 item 4's A SCORED OUT-OF-CYCLE `FUNDAMENTAL_AXIS` CHANGE
+    bullet brings the re-score into activation the same evening M1R writes it.
 
 STEP 0b — ACCOUNT SNAPSHOT (run after Step 0, while connector account data is fresh; one INSERT, best-effort).
 Persist the account-level NAV/cash/TWR read in Step 0 so the weekly self-email + account-NAV history have it —
