@@ -157,6 +157,16 @@ connectors:
           dates. (3) The earnings horizon above is the DENSE edge, not a hard cutoff:
           2027-01-15..2027-02-15 (zero rows on 2026-08-23) now returns TSLA, FDX, PEP, and
           2027-03-01..2027-04-30 returned 1 row (FDX).
+          AMENDED 2026-10-20 (direct probes, triage of D1's
+          `fmp_earnings_calendar_empty_for_window` warning, ops.alerts 638b4521): inside its
+          window `earnings-calendar` is SPARSE IN NAMES, not window-sensitive. A single-day
+          from=to=2026-10-20 query returned its four names (GE, GM, NFLX, UAL), 10-13..10-19
+          returned eight past rows WITH actuals (so the trailing week is readable, contrary to
+          the strict forward-only reading above), and NO window returned a 2026-10-19 row while
+          seventeen $2B+ names reported that day. It is a ~10-mega-cap-per-week SAMPLE, never an
+          enumeration. Enumeration source for D1 DEVELOPMENTS item 2 is the key-less Nasdaq
+          per-day calendar (api.nasdaq.com/api/calendar/earnings?date=YYYY-MM-DD, WebFetch with
+          a browser User-Agent; marketCap and report time included), pinned there 2026-10-20.
       - name: chart
         use: required
         prose_ambiguous: true
