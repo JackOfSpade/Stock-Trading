@@ -493,6 +493,10 @@ sources:
           Live-ramp parameters per strategy (LIVE_RAMP_DESIGN.md section 3.1; bigquery/259_live_ramp.sql).
           Append-only, latest effective_ts row per strategy_code wins; written by SL5 at PROBE registration.
           Read by analytics.strategy_ramp_trades, state.strategy_ramp and state.strategy_ramp_calibration.
+      - name: guard_waivers
+        description: >
+          One-time owner waivers for routine guards (bigquery/260_guard_waivers.sql): append-only GRANTED /
+          CONSUMED / REVOKED events per waiver_id; state.guard_waivers_open reads it.
       - name: trigger_change_intents
         description: >
           Declared intent for a routine-trigger edit (the actor column the vendor API does not provide). Defined in bigquery/195_trigger_change_attribution.sql.

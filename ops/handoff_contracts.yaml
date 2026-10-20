@@ -207,6 +207,8 @@ required_column_naming:
       why: "SL3/SL4/SL5/AR_orc write the idempotency marker for every roster-membership/state transition."
     - table: ops.routine_commit_markers
       why: "OPS0 STEP 4d writes this on a stranded-branch adoption."
+    - table: ops.guard_waivers
+      why: "ONE-TIME OWNER WAIVER (bigquery/260, 2026-10-20): the owner writes GRANTED/REVOKED rows in an interactive session; a routine bound by the SAME-DAY DOUBLE-RUN GUARD writes the CONSUMED row for its own waiver before proceeding. The six NOT NULL no-default columns are named in that clause of Claude_Task_Plan.md."
     - table: ops.shock_transmission_register
       why: "Shock Transmission Register (Strategy.md Rev 50, 2026-10-19): bigquery/257 seeds the A-E rows and SL5 branch (2) inserts a newcomer's row at PROBE registration, mirroring its Strategy.md register row; state.shock_transmission_status evaluates it into the override_applies boolean M1b step 2 reads."
     - table: ops.strategy_ramp_params
