@@ -1,13 +1,14 @@
--- Parallel-run dbt port of bigquery/35_strategy_arsenal.sql:state.arsenal_rails — canonical source is that
--- file until owner cutover. Added 2026-08-22 (dbt view-coverage burn-down): this view had
--- NO dbt presence at all, so scripts/dbt_parity.py had nothing to compare and it carried
--- ZERO row-level parity protection. Ported MECHANICALLY from the canonical body — the only
--- edit is ref()/source() substitution for the fully-qualified table names.
+-- Parallel-run dbt port of bigquery/259_live_ramp.sql:state.arsenal_rails — canonical source is that file until
+-- owner cutover. Generated MECHANICALLY by scripts/gen_dbt_port.py from that canonical body — the
+-- only edit is ref()/source() substitution for fully-qualified names — and proved token-identical
+-- to it by scripts/verify_dbt_port.py. Do not hand-edit the BODY: re-generate, then re-verify.
+-- Regenerating REPLACES this header, so any hand-written provenance above the body must be put
+-- back by the person who regenerates it.
 WITH consts AS (
   SELECT
     2  AS n_min,                       -- roster floor (blocks SL4 below it; a hit forces SL1 generation)
     8  AS n_max,                       -- roster ceiling (~$10k account cost discipline)
-    2  AS k_incubate,                  -- max concurrent SHADOW+PAPER strategies
+    2  AS k_incubate,                  -- max concurrent PROBE (live-ramp) strategies (rev 20, 2026-10-19; was SHADOW+PAPER)
     3  AS k_regime,                    -- regime-coverage target
     180 AS max_roundtrip_commission_bps, -- accepted probe-scale all-in round-trip ceiling (1.8%)
     90 AS adoption_rate_window_days,   -- <= 1 PROBE per rolling 90 days
@@ -16,10 +17,8 @@ WITH consts AS (
     90 AS keep_cooldown_days
 ),
 counts AS (
-  -- single scan of state.strategy_roster for both counts (rev 2026-07-10b, cleanup, code-review finding #9;
-  -- was two separate correlated subqueries each re-evaluating the whole view).
   SELECT
-    (SELECT AS STRUCT COUNTIF(is_active) AS active_count, COUNTIF(is_incubating) AS incubating_count
+    (SELECT AS STRUCT COUNTIF(is_active) AS active_count, COUNTIF(current_state = 'PROBE') AS incubating_count
        FROM {{ source('state_external', 'strategy_roster') }}) AS roster,
     (SELECT COUNT(*) FROM {{ source('events', 'strategy_lifecycle') }}
        WHERE to_state = 'PROBE'

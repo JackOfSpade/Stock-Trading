@@ -203,6 +203,7 @@ OPTIONS(description='Deployed-TWR engine output. Full series computed 2026-06-05
 -- SGOV-relative shortfall is fully explained by low/negative market-beta exposure rather than bad
 -- decisions. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
 -- this CREATE statement live in isolation.
+-- SUPERSEDED AGAIN (2026-10-19): the current canonical definition is bigquery/259_live_ramp.sql (which adds evidence_kill); bigquery/39 is itself superseded. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.perf.kill_flags` AS
 SELECT strategy, as_of_date, deployed_unit_value, peak_unit_value, current_drawdown,
        excess_vs_sgov, deployed_days, closed_trades, gate_n,

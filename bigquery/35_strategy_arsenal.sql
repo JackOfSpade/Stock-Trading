@@ -393,6 +393,7 @@ FROM cells c LEFT JOIN cov ON cov.regime_cell = c.regime_cell;
 -- deadline literal is mirrored in 12_cadence_monitor.sql and checked by check_cadence_consistency.py).
 -- One row. adoption_rate_window_days is inlined as 90 in the probes_in_window count below (same value).
 -- ============================================================================
+-- SUPERSEDED LIVE by bigquery/259_live_ramp.sql (rev 20, 2026-10-19): incubating_count now counts PROBE (the live ramp) instead of SHADOW+PAPER; every constant and other column is byte-identical there. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.arsenal_rails` AS
 WITH consts AS (
   SELECT
@@ -450,6 +451,7 @@ FROM consts c CROSS JOIN counts n;
 -- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation: latest_verdict
 -- below reads events.adversarial_reviews directly and so has no awareness of superseded_by. Everything
 -- else (the six AND-terms of `ready`, the fail-closed theater_ok default) is unchanged in 143.
+-- SUPERSEDED AGAIN (2026-10-19): the current canonical definition is bigquery/259_live_ramp.sql (marker UNDER_REVIEW->PROBE); bigquery/143 is itself superseded. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.strategy_adoption_readiness` AS
 WITH latest_verdict AS (
   SELECT strategy AS strategy_code, verdict, review_id

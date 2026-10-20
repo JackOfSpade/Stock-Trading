@@ -113,6 +113,7 @@ QUALIFY ROW_NUMBER() OVER (PARTITION BY strategy ORDER BY as_of_date DESC) = 1;
 -- perf.kill_flags definition with only the two named columns changed — keep the two files' comments in
 -- sync if either changes.
 -- ============================================================================
+-- SUPERSEDED LIVE by bigquery/259_live_ramp.sql (rev 20, 2026-10-19): adds evidence_kill (state.strategy_ramp) beside the flags below; everything else is byte-identical there. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
 CREATE OR REPLACE VIEW `stock-trading-498512.perf.kill_flags` AS
 SELECT
   k.strategy, k.as_of_date, k.deployed_unit_value, k.peak_unit_value, k.current_drawdown,

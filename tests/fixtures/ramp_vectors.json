@@ -1,0 +1,120 @@
+{
+  "cases": [
+    {
+      "name": "ten_inline_wins",
+      "params": {"mu": 0.02, "sigma": 0.06, "opening_score": 0.0, "tail_loss_5pct": null, "calibration_trades": 10, "loss_asymmetry": 2.0, "surprise_cut": 0.5, "surprise_window_trades": 5, "sprt_alpha": 0.05, "sprt_beta": 0.2},
+      "trades": [
+        {"key": "t01", "entry_date": "2026-01-01", "exit_date": "2026-01-02", "r": 0.02},
+        {"key": "t02", "entry_date": "2026-01-04", "exit_date": "2026-01-05", "r": 0.02},
+        {"key": "t03", "entry_date": "2026-01-07", "exit_date": "2026-01-08", "r": 0.02},
+        {"key": "t04", "entry_date": "2026-01-10", "exit_date": "2026-01-11", "r": 0.02},
+        {"key": "t05", "entry_date": "2026-01-13", "exit_date": "2026-01-14", "r": 0.02},
+        {"key": "t06", "entry_date": "2026-01-16", "exit_date": "2026-01-17", "r": 0.02},
+        {"key": "t07", "entry_date": "2026-01-19", "exit_date": "2026-01-20", "r": 0.02},
+        {"key": "t08", "entry_date": "2026-01-22", "exit_date": "2026-01-23", "r": 0.02},
+        {"key": "t09", "entry_date": "2026-01-25", "exit_date": "2026-01-26", "r": 0.02},
+        {"key": "t10", "entry_date": "2026-01-28", "exit_date": "2026-01-29", "r": 0.02}
+      ],
+      "expected": {"score": 1.0, "trades_n": 10, "cum_llr": 0.5555555556, "evidence_kill": false, "evidence_confirmed": false, "graduation_ready": true, "last_surprise_idx": null}
+    },
+    {
+      "name": "nine_wins_one_loss",
+      "params": {"mu": 0.02, "sigma": 0.06, "opening_score": 0.2, "tail_loss_5pct": null, "calibration_trades": 10, "loss_asymmetry": 2.0, "surprise_cut": 0.5, "surprise_window_trades": 5, "sprt_alpha": 0.05, "sprt_beta": 0.2},
+      "trades": [
+        {"key": "t01", "entry_date": "2026-01-01", "exit_date": "2026-01-02", "r": 0.02},
+        {"key": "t02", "entry_date": "2026-01-04", "exit_date": "2026-01-05", "r": 0.02},
+        {"key": "t03", "entry_date": "2026-01-07", "exit_date": "2026-01-08", "r": 0.02},
+        {"key": "t04", "entry_date": "2026-01-10", "exit_date": "2026-01-11", "r": 0.02},
+        {"key": "t05", "entry_date": "2026-01-13", "exit_date": "2026-01-14", "r": 0.02},
+        {"key": "t06", "entry_date": "2026-01-16", "exit_date": "2026-01-17", "r": 0.02},
+        {"key": "t07", "entry_date": "2026-01-19", "exit_date": "2026-01-20", "r": 0.02},
+        {"key": "t08", "entry_date": "2026-01-22", "exit_date": "2026-01-23", "r": 0.02},
+        {"key": "t09", "entry_date": "2026-01-25", "exit_date": "2026-01-26", "r": 0.02},
+        {"key": "t10", "entry_date": "2026-01-28", "exit_date": "2026-01-29", "r": -0.02}
+      ],
+      "expected": {"score": 0.8, "trades_n": 10, "cum_llr": 0.3333333333, "evidence_kill": false, "evidence_confirmed": false, "graduation_ready": false, "last_surprise_idx": null}
+    },
+    {
+      "name": "surprise_halves",
+      "params": {"mu": 0.02, "sigma": 0.06, "opening_score": 0.2, "tail_loss_5pct": null, "calibration_trades": 10, "loss_asymmetry": 2.0, "surprise_cut": 0.5, "surprise_window_trades": 5, "sprt_alpha": 0.05, "sprt_beta": 0.2},
+      "trades": [
+        {"key": "t01", "entry_date": "2026-01-01", "exit_date": "2026-01-02", "r": 0.02},
+        {"key": "t02", "entry_date": "2026-01-04", "exit_date": "2026-01-05", "r": 0.02},
+        {"key": "t03", "entry_date": "2026-01-07", "exit_date": "2026-01-08", "r": 0.02},
+        {"key": "t04", "entry_date": "2026-01-10", "exit_date": "2026-01-11", "r": 0.02},
+        {"key": "t05", "entry_date": "2026-01-13", "exit_date": "2026-01-14", "r": 0.02},
+        {"key": "t06", "entry_date": "2026-01-16", "exit_date": "2026-01-17", "r": -0.1}
+      ],
+      "expected": {"score": 0.35, "trades_n": 6, "cum_llr": -0.3333333333, "evidence_kill": false, "evidence_confirmed": false, "graduation_ready": false, "last_surprise_idx": 6}
+    },
+    {
+      "name": "second_surprise_floors",
+      "params": {"mu": 0.02, "sigma": 0.06, "opening_score": 0.2, "tail_loss_5pct": null, "calibration_trades": 10, "loss_asymmetry": 2.0, "surprise_cut": 0.5, "surprise_window_trades": 5, "sprt_alpha": 0.05, "sprt_beta": 0.2},
+      "trades": [
+        {"key": "t01", "entry_date": "2026-01-01", "exit_date": "2026-01-02", "r": 0.02},
+        {"key": "t02", "entry_date": "2026-01-04", "exit_date": "2026-01-05", "r": 0.02},
+        {"key": "t03", "entry_date": "2026-01-07", "exit_date": "2026-01-08", "r": 0.02},
+        {"key": "t04", "entry_date": "2026-01-10", "exit_date": "2026-01-11", "r": 0.02},
+        {"key": "t05", "entry_date": "2026-01-13", "exit_date": "2026-01-14", "r": 0.02},
+        {"key": "t06", "entry_date": "2026-01-16", "exit_date": "2026-01-17", "r": -0.1},
+        {"key": "t07", "entry_date": "2026-01-19", "exit_date": "2026-01-20", "r": 0.01},
+        {"key": "t08", "entry_date": "2026-01-22", "exit_date": "2026-01-23", "r": 0.01},
+        {"key": "t09", "entry_date": "2026-01-25", "exit_date": "2026-01-26", "r": -0.1}
+      ],
+      "expected": {"score": 0.0, "trades_n": 9, "cum_llr": -0.9444444444, "evidence_kill": false, "evidence_confirmed": false, "graduation_ready": false, "last_surprise_idx": 9}
+    },
+    {
+      "name": "overlap_discount",
+      "params": {"mu": 0.02, "sigma": 0.06, "opening_score": 0.2, "tail_loss_5pct": null, "calibration_trades": 10, "loss_asymmetry": 2.0, "surprise_cut": 0.5, "surprise_window_trades": 5, "sprt_alpha": 0.05, "sprt_beta": 0.2},
+      "trades": [
+        {"key": "o1", "entry_date": "2026-03-02", "exit_date": "2026-03-10", "r": 0.02},
+        {"key": "o2", "entry_date": "2026-03-02", "exit_date": "2026-03-10", "r": 0.02},
+        {"key": "o3", "entry_date": "2026-03-02", "exit_date": "2026-03-10", "r": 0.02}
+      ],
+      "expected": {"score": 0.3, "trades_n": 3, "cum_llr": 0.1666666667, "evidence_kill": false, "evidence_confirmed": false, "graduation_ready": false, "last_surprise_idx": null}
+    },
+    {
+      "name": "no_edge_kills",
+      "params": {"mu": 0.02, "sigma": 0.06, "opening_score": 0.2, "tail_loss_5pct": null, "calibration_trades": 10, "loss_asymmetry": 2.0, "surprise_cut": 0.5, "surprise_window_trades": 5, "sprt_alpha": 0.05, "sprt_beta": 0.2},
+      "trades": [
+        {"key": "t01", "entry_date": "2026-01-01", "exit_date": "2026-01-02", "r": 0.024},
+        {"key": "t02", "entry_date": "2026-01-04", "exit_date": "2026-01-05", "r": -0.024},
+        {"key": "t03", "entry_date": "2026-01-07", "exit_date": "2026-01-08", "r": 0.024},
+        {"key": "t04", "entry_date": "2026-01-10", "exit_date": "2026-01-11", "r": -0.024},
+        {"key": "t05", "entry_date": "2026-01-13", "exit_date": "2026-01-14", "r": 0.024},
+        {"key": "t06", "entry_date": "2026-01-16", "exit_date": "2026-01-17", "r": -0.024},
+        {"key": "t07", "entry_date": "2026-01-19", "exit_date": "2026-01-20", "r": 0.024},
+        {"key": "t08", "entry_date": "2026-01-22", "exit_date": "2026-01-23", "r": -0.024},
+        {"key": "t09", "entry_date": "2026-01-25", "exit_date": "2026-01-26", "r": 0.024},
+        {"key": "t10", "entry_date": "2026-01-28", "exit_date": "2026-01-29", "r": -0.024},
+        {"key": "t11", "entry_date": "2026-01-31", "exit_date": "2026-02-01", "r": 0.024},
+        {"key": "t12", "entry_date": "2026-02-03", "exit_date": "2026-02-04", "r": -0.024},
+        {"key": "t13", "entry_date": "2026-02-06", "exit_date": "2026-02-07", "r": 0.024},
+        {"key": "t14", "entry_date": "2026-02-09", "exit_date": "2026-02-10", "r": -0.024},
+        {"key": "t15", "entry_date": "2026-02-12", "exit_date": "2026-02-13", "r": 0.024},
+        {"key": "t16", "entry_date": "2026-02-15", "exit_date": "2026-02-16", "r": -0.024},
+        {"key": "t17", "entry_date": "2026-02-18", "exit_date": "2026-02-19", "r": 0.024},
+        {"key": "t18", "entry_date": "2026-02-21", "exit_date": "2026-02-22", "r": -0.024},
+        {"key": "t19", "entry_date": "2026-02-24", "exit_date": "2026-02-25", "r": 0.024},
+        {"key": "t20", "entry_date": "2026-02-27", "exit_date": "2026-02-28", "r": -0.024},
+        {"key": "t21", "entry_date": "2026-03-02", "exit_date": "2026-03-03", "r": 0.024},
+        {"key": "t22", "entry_date": "2026-03-05", "exit_date": "2026-03-06", "r": -0.024},
+        {"key": "t23", "entry_date": "2026-03-08", "exit_date": "2026-03-09", "r": 0.024},
+        {"key": "t24", "entry_date": "2026-03-11", "exit_date": "2026-03-12", "r": -0.024},
+        {"key": "t25", "entry_date": "2026-03-14", "exit_date": "2026-03-15", "r": 0.024},
+        {"key": "t26", "entry_date": "2026-03-17", "exit_date": "2026-03-18", "r": -0.024},
+        {"key": "t27", "entry_date": "2026-03-20", "exit_date": "2026-03-21", "r": 0.024},
+        {"key": "t28", "entry_date": "2026-03-23", "exit_date": "2026-03-24", "r": -0.024},
+        {"key": "t29", "entry_date": "2026-03-26", "exit_date": "2026-03-27", "r": 0.024},
+        {"key": "t30", "entry_date": "2026-03-29", "exit_date": "2026-03-30", "r": -0.024}
+      ],
+      "expected": {"score": 0.0, "trades_n": 30, "cum_llr": -1.6666666667, "evidence_kill": true, "evidence_confirmed": false, "graduation_ready": false, "last_surprise_idx": null}
+    },
+    {
+      "name": "empty",
+      "params": {"mu": 0.02, "sigma": 0.06, "opening_score": 0.25, "tail_loss_5pct": null, "calibration_trades": 10, "loss_asymmetry": 2.0, "surprise_cut": 0.5, "surprise_window_trades": 5, "sprt_alpha": 0.05, "sprt_beta": 0.2},
+      "trades": [],
+      "expected": {"score": 0.25, "trades_n": 0, "cum_llr": 0.0, "evidence_kill": false, "evidence_confirmed": false, "graduation_ready": false, "last_surprise_idx": null}
+    }
+  ]
+}

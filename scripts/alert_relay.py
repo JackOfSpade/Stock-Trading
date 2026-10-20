@@ -204,6 +204,8 @@ NO_PUSH_CATEGORIES = (
 # keep pushing.
 EMAIL_ONLY_CATEGORIES = (
     "routine_run_warning",   # bigquery/230 P1/P2: run completed with a non-blocking issue
+    "ramp_surprise_cut",     # bigquery/259 (rev 20, 2026-10-19): SL3 notice, the live ramp halved a PROBE strategy score on a tail loss
+    "ramp_cap_breached",     # bigquery/259 (rev 20, 2026-10-19): SL3 notice, deployed MV exceeds a PROBE strategy ramp cap
 )
 
 

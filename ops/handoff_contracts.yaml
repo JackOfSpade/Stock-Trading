@@ -58,7 +58,7 @@ queue_lanes:
     terminal_status: complete
     drainers: [SL5]
     why: >
-      SL3 -> SL5 PAPER->PROBE graduation handoff. SL5 branch (2)'s "CLOSE THE DRAINED PENDING_ROSTER
+      SL3 -> SL5 graduation handoff (rev 20, 2026-10-19: item_type adopt-register, PROBE->ADOPTED on state.strategy_ramp.graduation_ready; formerly probe-register, PAPER->PROBE). SL5 branch (2)'s "CLOSE THE DRAINED PENDING_ROSTER
       ITEM" bullet (pinned 2026-08-19) is the fix for defect instance 2 in the founding incident set --
       the arsenal's first real-capital registration would otherwise have left the item open forever,
       relying only on the change_key idempotency guard as an accidental backstop.
@@ -209,6 +209,8 @@ required_column_naming:
       why: "OPS0 STEP 4d writes this on a stranded-branch adoption."
     - table: ops.shock_transmission_register
       why: "Shock Transmission Register (Strategy.md Rev 50, 2026-10-19): bigquery/257 seeds the A-E rows and SL5 branch (2) inserts a newcomer's row at PROBE registration, mirroring its Strategy.md register row; state.shock_transmission_status evaluates it into the override_applies boolean M1b step 2 reads."
+    - table: ops.strategy_ramp_params
+      why: "Live ramp (Experiment_Parameters.md rev 20, 2026-10-19; bigquery/259_live_ramp.sql): SL5 branch (1) inserts the newcomer row at PROBE registration from the SL1 STEP 3 (g) declarations on state.strategy_candidates. Its NOT NULL no-default columns are named in that branch."
     - table: ops.trading_control
       why: "D2a composes literal INSERT INTO ops.trading_control (halt_all, mode, reason, set_by) rows to set/clear the entries-halted state."
     - table: ops.user_prefs

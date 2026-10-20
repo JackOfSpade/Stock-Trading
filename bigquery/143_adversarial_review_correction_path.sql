@@ -335,6 +335,7 @@ END;
 -- sort -- a correction row reproduces its original's review_date and therefore cannot outrank a newer
 -- review. Everything else is byte-identical to bigquery/35.
 -- ============================================================================
+-- SUPERSEDED LIVE by bigquery/259_live_ramp.sql (rev 20, 2026-10-19): the idempotency marker is now '<code>:UNDER_REVIEW->PROBE' (SL5 registers a SUFFICIENT candidate straight into PROBE); the six AND-terms and the fail-closed theater_ok default are unchanged there. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.strategy_adoption_readiness` AS
 WITH latest_verdict AS (
   SELECT strategy AS strategy_code, verdict, review_id

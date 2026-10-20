@@ -492,6 +492,8 @@ PROSE_PLACEHOLDERS = {
     "<found>": "upstream_marker_mismatch: the marker actually present. It changes only if the upstream rewrites the file, which IS a different condition.",
     "<item_key>": "queue_item_stale / review_handoff_stuck: the queue item's own key.",
     "<item_type>": "queue_item_stale: the item's type, constant for that item.",
+    "<code>": "ramp_surprise_cut / ramp_cap_breached (SL3): the strategy code (A..Z), an identifier of WHICH strategy the notice is about, never a measurement.",
+    "<idx>": "ramp_surprise_cut (SL3): the 1-based closed-trade index on analytics.strategy_ramp_trades, an identifier of WHICH trade surprised, not a running count.",
     "<n>": "review_handoff_stuck (AR_orc): the review CYCLE number. Cycle 3 is cycle 3 — an identifier of which cycle stuck, not a running count.",
     "<park vehicle>": "connector (D2a): the park ETF symbol. A symbol, not a measurement.",
     "<prevented|exit handed to D2>": "prefill_invalidation: a two-value enumerated alternation, both spellings fixed at the site.",

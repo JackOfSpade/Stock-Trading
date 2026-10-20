@@ -34,8 +34,9 @@
 #                    by the owner's 2026-07-10 directive (rev 2026-07-10 — Strategy Arsenal autonomy
 #                    conversion, owner directive; see ops/RUNBOOK.md §39). Its compensating control is NOT
 #                    human PR review but the multi-scrutiny GRADUATION pipeline — a two-routine adversarial
-#                    pre-mortem (AR_att/AR_orc) + a zero-capital SHADOW signals phase + a simulated-fill
-#                    PAPER forward-test vs SGOV + the live $2,000 PROBE + the existing 30-trade gate —
+#                    pre-mortem (AR_att/AR_orc) + the live ramp (rev 20, 2026-10-19: PROBE from
+#                    registration at a dynamic floor, a deployment cap that grows with per-trade evidence, the
+#                    evidence kill; LIVE_RAMP_DESIGN.md; formerly SHADOW + PAPER + $2,000 PROBE + 30-trade gate) —
 #                    bounded by caps / rate-limits / default-no / default-KEEP / N-floor and the
 #                    ops.arsenal_control owner kill switch, exactly the "compensating control is live and
 #                    drilled" bar this register's own sequencing demands (the D2a auto-cutover precedent,
@@ -57,7 +58,7 @@
 #                    the D2a / strategy_arsenal skeleton (bigquery/37_self_improvement_autonomy.sql). A loop
 #                    still may NOT self-apply until ITS OWN data gate clears; autonomy removes the human
 #                    step, never the evidence bar. What is NOT relaxed: the mechanical kill triggers, the
-#                    $2,000 probe-stake floor, the per-thesis risk-budget discipline (its hard envelopes
+#                    dynamic ramp floor (the $2,000 cost minimum or 2% of NAV, whichever is larger; rev 20, 2026-10-19), the per-thesis risk-budget discipline (its hard envelopes
 #                    RETIRED by owner directive 2026-08-05 - sizing is now numerically unconstrained;
 #                    the DISCIPLINE, i.e. the seven-factor justification + adversarial size attack, remains)
 #                    (Rev 43/EP rev 18, 2026-07-28 — the flat 2% figure is retired), and the IBKR
@@ -196,9 +197,9 @@ loops:
       in the path (the only residual human touches are the system-wide IBKR order-confirm tap and deposits,
       which apply to every trade equally). Unlike the four constant-tuning loops above, roster MEMBERSHIP is
       VERSIONED POLICY — not a frozen experiment parameter (each strategy's own machinery stays immutable,
-      frozen at SHADOW entry / spec_locked_since) — mirroring the 2026-06 capital-allocation pivot
+      frozen at PROBE entry / spec_locked_since; rev 20, 2026-10-19, formerly SHADOW entry) — mirroring the 2026-06 capital-allocation pivot
       (Experiment_Parameters.md:150-154). So an SL1-SL5 commit is a ROUTINE commit gated by the adversarial
-      + shadow + paper + probe + 30-trade graduation pipeline, exactly like D2a's autonomous cutover (§36),
+      + live-ramp PROBE pipeline (rev 20, 2026-10-19; formerly shadow + paper + probe + 30-trade gate), exactly like D2a's autonomous cutover (§36),
       NOT a PR-gated change to a production trading CONSTANT. The compensating control replacing human PR
       review is that graduation pipeline plus the anti-churn/anti-runaway rails (concurrent-incubation cap
       k_incubate=2, one adoption per rolling quarter, roster floor N>=2 / ceiling N_max=8, cooldowns,

@@ -37,7 +37,8 @@ PROJECT = "stock-trading-498512"
 MODELS_ROOT = os.path.join(REPO, "dbt", "models")
 SOURCES_YML = os.path.join(MODELS_ROOT, "sources.yml")
 # dbt has no ref() for a scalar UDF; ported models call it fully qualified (dbt/README.md).
-UDF_PASSTHROUGH = {("analytics", "fn_is_occ_option_symbol")}
+UDF_PASSTHROUGH = {("analytics", "fn_is_occ_option_symbol"),
+                   ("analytics", "fn_ramp_path")}  # bigquery/259 JavaScript UDF (live ramp), same scalar-UDF rule
 
 # NOT ported, by standing decision in dbt/README.md ("Deliberately NOT ported"): the body is not a
 # pure SELECT -- it computes ML.DISTANCE over embeddings produced by a REMOTE MODEL, so dbt cannot
