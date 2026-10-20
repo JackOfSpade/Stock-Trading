@@ -76,6 +76,18 @@ queue_lanes:
       possible on this lane at all", so an item correctly naming M1R as its resolving venue would be
       reported as an unwired claim on the first one ever written.
 
+  - queue: PENDING_QUALIFICATION
+    terminal_status: complete
+    drainers: [SL1]
+    why: >
+      D1 -> SL1 lead-readiness handoff for the J-lead news-reaction paper book
+      (ops/research/news_reaction_paper_book_2026-10.md, bigquery/261, 2026-10-20). D1's NEWS-REACTION
+      PAPER BOOK step enqueues one item_type lead-readiness item (item_key = lead_id) when
+      state.news_reaction_paper_book_readiness reports ready = TRUE; SL1 is the lane's only drainer and
+      the terminal close at status = complete lives in SL1 STEP 1's lead-readiness clause. SL1 fires
+      quarterly, so OPS2 hosts it off-cycle when an item is due. Registered in allowed_map by
+      bigquery/262 in the same change that creates the lane, for the same reason bigquery/225 was.
+
 # Queues that exist in events.queue_events but are DELIBERATELY not drain-to-completion handoffs --
 # recorded explicitly (never silently omitted) per bigquery/180's own allowed_map comment: "A queue
 # absent from this UNNEST ... is treated as 'no legitimate venue claim is possible on this lane at
@@ -146,6 +158,8 @@ required_column_naming:
       why: "D2/D2a/AR_orc double-entry capital movements (newcomer floor fill, termination redistribution, nomadic/regime capital sweeps) -- all direct INSERTs, never SP-wrapped."
     - table: events.macro_fred
       why: "M1a appends the monthly FRED-derived regime metrics it curates."
+    - table: events.news_reaction_calls
+      why: "D1's NEWS-REACTION PAPER BOOK step (ops/research/news_reaction_paper_book_2026-10.md, bigquery/261) appends one call row per (call_date, ticker, headline_hash); it composes every NOT NULL/no-default column as a literal: call_date, lead_id, ticker, headline_hash, headline, source, direction, agreement_score, k, horizon_days, scorer_routine."
     - table: events.nogo_shadow
       why: "W5's NO-GO shadow-tracking log/close-out bullets (STEP a/b) are literal INSERT/UPDATEs."
     - table: events.playbook_updates
@@ -255,6 +269,8 @@ required_column_naming:
       why: "No writer anywhere in Claude_Task_Plan.md -- D1's FRONTIER-LLM CAPABILITY CHECK writes findings to events.decision_log (tag [HF Frontier-LLM Capture]) instead; the table is read-only for Q3/A1 today."
     - table: events.market_holidays
       why: "Calendar-ingestion table; zero mentions in Claude_Task_Plan.md (populated outside the routine fleet)."
+    - table: events.news_reaction_marks
+      why: "Key-less Nasdaq price-mark ingestion mirror written by D1's NEWS-REACTION PAPER BOOK step (bigquery/261) -- relays external quotes, composes no business-rule literal; same class as events.daily_marks."
     - table: events.park_policy_changes
       why: "No routine writer since 2026-10-15 -- the park is VOO-only (bigquery/256, Operating_Protocols.md 13.F) and D2's PARK ALLOCATION CONVERSION, its only writer, was retired. D1's PARK PIN CHECK only reads state.park_policy_current and alerts park_pin_drift on a mismatch, never repairing it; a policy row is now written only by an owner-directed bigquery/*.sql file."
     - table: events.option_marks
@@ -285,6 +301,8 @@ required_column_naming:
       why: "Written by the scheduled-query procedure ops.sp_restore_drill (bigquery/17_restore_drill.sql), which appends one liveness marker on EVERY completion (pass AND fail) -- the only INSERT site against this table -- not by a Claude routine; zero mentions in Claude_Task_Plan.md. CORRECTION (2026-09-04): this entry previously credited the infra script scripts/restore_drill.sh, which is the AD-HOC shell equivalent of that drill (it restores into its own *_adhoc scratch dataset and writes no ops.drill_log row); the exemption conclusion is unchanged either way -- the writer is scheduled-query SQL, not a routine composing a literal."
     - table: ops.monitor_health_history
       why: "Populated by the monitor-promotion self-heal MERGE machinery (bigquery/45/57/79), not a literal routine-composed INSERT in Claude_Task_Plan.md."
+    - table: ops.news_reaction_universe
+      why: "Seeded only by bigquery/261_news_reaction_paper_book.sql's schema-time NOT-EXISTS-guarded INSERT (40 UNIVERSE tickers + SPY BENCHMARK, fixed at pre-registration); no routine writes it -- D1's NEWS-REACTION PAPER BOOK step only reads it."
     - table: ops.order_stage_mutex
       why: "Internal locking primitive (bigquery/126_dust_operational_hardening.sql), same class as ops.adversarial_review_write_mutex."
     - table: ops.park_control

@@ -239,7 +239,8 @@ routines:
     monitor_class: daily_sun_thu
     catchup_safe: true
     depends_on: []
-    writes: [Daily.md, events.decision_log, events.regime_events, ops.heartbeat, state.strategy_candidates]
+    writes: [Daily.md, events.decision_log, events.regime_events, ops.heartbeat, state.strategy_candidates, events.news_reaction_marks, events.news_reaction_calls, events.queue_events]
+             # events.news_reaction_* + events.queue_events added 2026-10-20 (NEWS-REACTION PAPER BOOK, J lead; D1 enqueues the PENDING_QUALIFICATION lead-readiness item SL1 drains). Dataset.table entries are documentation only -- OPS0 STEP 4f consumes just the FILE-PATH entries.
     expected_trigger:
       recurrence: custom_cron
       cron_utc: "0 22 * * 0,1,2,3,4"

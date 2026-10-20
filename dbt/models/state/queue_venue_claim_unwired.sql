@@ -1,4 +1,4 @@
--- Parallel-run dbt port of bigquery/225_regime_refresh_queue_lane.sql:state.queue_venue_claim_unwired — canonical source is that file until
+-- Parallel-run dbt port of bigquery/262_pending_qualification_queue_lane.sql:state.queue_venue_claim_unwired — canonical source is that file until
 -- owner cutover. Generated MECHANICALLY by scripts/gen_dbt_port.py from that canonical body — the
 -- only edit is ref()/source() substitution for fully-qualified names — and proved token-identical
 -- to it by scripts/verify_dbt_port.py. Do not hand-edit the BODY: re-generate, then re-verify.
@@ -81,7 +81,17 @@ allowed_map AS (
     -- queue_driven, the same producer/consumer evidence standard the four rows above were verified
     -- against; ops/handoff_contracts.yaml carries the matching queue_lanes entry, which
     -- scripts/check_handoff_contracts.py asserts stays set-identical to this UNNEST.
-    STRUCT('PENDING_REGIME_REFRESH' AS queue, ['M1R'] AS allowed_drainers)
+    STRUCT('PENDING_REGIME_REFRESH' AS queue, ['M1R'] AS allowed_drainers),
+    -- PENDING_QUALIFICATION added 2026-10-20 (bigquery/262, the J-lead news-reaction paper book,
+    -- ops/research/news_reaction_paper_book_2026-10.md). D1's NEWS-REACTION PAPER BOOK step enqueues
+    -- one item_type `lead-readiness` item on this lane (item_key = lead_id) when
+    -- state.news_reaction_paper_book_readiness reports ready = TRUE; SL1 STEP 1 is its only drainer
+    -- and performs the terminal close at status = complete whatever the qualification verdict. SL1
+    -- fires quarterly, so OPS2 hosts it off-cycle when an item is due. Registering the lane is
+    -- load-bearing for the same reason bigquery/180's and bigquery/225's rows were: a CORRECT
+    -- resolving_venue='SL1' payload would otherwise be reported as an unwired claim on the very first
+    -- item D1 writes. ops/handoff_contracts.yaml carries the matching queue_lanes entry.
+    STRUCT('PENDING_QUALIFICATION' AS queue, ['SL1'] AS allowed_drainers)
   ])
 ),
 candidates AS (

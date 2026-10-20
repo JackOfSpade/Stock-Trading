@@ -266,12 +266,14 @@ def test_real_allowed_map_source_still_parses():
 def test_real_allowed_map_source_resolves_to_the_current_canonical_file():
     """The live guard: on the real repo tree, ALLOWED_MAP_SOURCE must resolve to the CURRENT
     canonical definition of state.queue_venue_claim_unwired -- bigquery/225 since 2026-09-05, which
-    added the PENDING_REGIME_REFRESH -> ['M1R'] lane (chain: 160 -> 180 -> 199 -> 225) -- and never
+    added the PENDING_REGIME_REFRESH -> ['M1R'] lane (chain: 160 -> 180 -> 199 -> 225), and
+    bigquery/262 since 2026-10-20, which added the PENDING_QUALIFICATION -> ['SL1'] lane for the
+    J-lead news-reaction paper book (chain: 160 -> 180 -> 199 -> 225 -> 262) -- and never
     to a superseded link in that chain. The expected filename is deliberately spelled out rather
     than recomputed: recomputing it here would just re-run resolve_allowed_map_source() against
     itself and assert nothing, while a literal makes the next supersede a deliberate, reviewed
     edit. Update it in the same commit that lands the next redefinition."""
-    assert os.path.basename(ch.ALLOWED_MAP_SOURCE) == "225_regime_refresh_queue_lane.sql"
+    assert os.path.basename(ch.ALLOWED_MAP_SOURCE) == "262_pending_qualification_queue_lane.sql"
 
 
 # =================================================================================================

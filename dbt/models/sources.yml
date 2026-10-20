@@ -266,6 +266,53 @@ sources:
           - name: ingest_ts
             description: Ingest timestamp — the dedup discriminator (latest wins).
 
+      - name: news_reaction_calls
+        description: >
+          News-reaction paper book calls (bigquery/261_news_reaction_paper_book.sql,
+          ops/research/news_reaction_paper_book_2026-10.md). Append-only, one row per
+          (call_date, ticker, headline_hash), written by D1. Read by
+          state.news_reaction_call_returns.
+        loaded_at_field: call_ts
+        columns:
+          - name: call_id
+            description: Primary key (GENERATE_UUID default).
+            tests:
+              - unique
+              - not_null
+          - name: call_date
+            description: Scoring-run date (partition key); part of the idempotency key.
+          - name: lead_id
+            description: Research lead this paper book serves.
+          - name: ticker
+            description: Scored ticker from ops.news_reaction_universe.
+          - name: headline_hash
+            description: Normalized-headline hash; part of the idempotency key.
+          - name: direction
+            description: Modal vote of the k blind reads (UP | DOWN | FLAT).
+          - name: agreement_score
+            description: Modal share of the k votes.
+          - name: horizon_days
+            description: Pre-registered horizon in trading days.
+
+      - name: news_reaction_marks
+        description: >
+          News-reaction paper book open/close marks for the 40-ticker universe plus SPY
+          (bigquery/261), ingested by D1 from Nasdaq historical. Deliberately separate from
+          daily_marks and signal_marks; consumers read state.news_reaction_marks_curated
+          (latest ingest per ticker/day).
+        loaded_at_field: ingest_ts
+        columns:
+          - name: mark_date
+            description: Trading date. (ticker, mark_date) is the dedup key in the curated view.
+          - name: ticker
+            description: Universe ticker or SPY.
+          - name: open_px
+            description: Open price (the entry/exit price of the open-to-open returns).
+          - name: close_px
+            description: Close price.
+          - name: ingest_ts
+            description: Ingest timestamp — the dedup discriminator (latest wins).
+
       - name: market_holidays
         description: US equity-market full-close + early-close exceptions (trading-day calendar source, bigquery/09).
         columns:

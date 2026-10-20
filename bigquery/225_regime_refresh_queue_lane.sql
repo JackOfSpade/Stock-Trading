@@ -48,6 +48,12 @@
 -- Defines exactly one view; creates, redefines or drops nothing else.
 -- ============================================================================================
 
+-- SUPERSEDED LIVE by bigquery/262_pending_qualification_queue_lane.sql (2026-10-20) — that file is now
+-- the CURRENT canonical definition of state.queue_venue_claim_unwired (chain: 160 -> 180 -> 199 -> 225
+-- -> 262). 262 carries this file's view body forward byte-identical and adds ONE allowed_map lane,
+-- PENDING_QUALIFICATION -> ['SL1'], for the J-lead news-reaction paper book's lead-readiness handoff
+-- (D1 enqueues, SL1 drains). Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- Do NOT re-apply this definition live in isolation: doing so drops the PENDING_QUALIFICATION lane.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.queue_venue_claim_unwired` AS
 WITH latest AS (
   -- Latest status per (queue, item_key), same idiom as state.open_queue_detail
