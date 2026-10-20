@@ -6,17 +6,8 @@ name: CI
 # workflow, the module's own self-test only ran if a human typed `python
 # c_options_math.py`; nothing tested it on push. Now every change is checked.
 #
-# NOTE on merge-gating: auto-merge-claude.yml merges ANY branch -> main via a
-# direct bot push (not a PR). It now triggers on this workflow's completion
-# (workflow_run) and merges a branch ONLY if the CI run for that branch's exact
-# tip commit concluded "success" — so a red build blocks the merge. The two ruff
-# steps inside the `checks` job below are step-level continue-on-error (advisory),
-# so they never affect that gate.
-#
-# `push:` has no `branches:` filter (was `['claude/**', main]`) — CI must run on
-# every branch, not just claude/*, or the auto-merge CI-gate lookup finds no run
-# for a non-claude branch's SHA and fails closed forever (skips it every drain).
-
+# Main changes use explicit PR merges and required CI/security checks.
+# Push and PR validation both run for every relevant commit.
 on:
   push:
   pull_request:
@@ -390,37 +381,6 @@ jobs:
             exit 1
           fi
           shellcheck -S warning "${existing[@]}"
-      - name: workflow_run trigger names stay in sync (auto-merge-claude.yml <-> ci.yml / golden-scenarios.yml name:)
-        # actionlint does NOT catch this (verified): auto-merge-claude.yml's on.workflow_run.workflows
-        # matches against a workflow's name: field, not its filename -- a rename to either name:
-        # without updating this array silently and permanently stops that workflow's completions
-        # from re-triggering auto-merge, with zero red CI signal (2026-07-14 audit finding).
-        run: |
-          set -euo pipefail
-          ci_name="$(grep -m1 '^name:' .github/workflows/ci.yml | sed 's/^name:[[:space:]]*//')"
-          gs_name="$(grep -m1 '^name:' .github/workflows/golden-scenarios.yml | sed 's/^name:[[:space:]]*//')"
-          line="$(grep -m1 'workflows:' .github/workflows/auto-merge-claude.yml)"
-          mapfile -t triggers < <(printf '%s' "$line" | grep -oP '(?<=\[)[^]]*(?=\])' | tr ',' '\n' | sed 's/^[[:space:]]*"//; s/"[[:space:]]*$//')
-          missing=""
-          for want in "$ci_name" "$gs_name"; do
-            found=0
-            for t in "${triggers[@]}"; do [ "$t" = "$want" ] && found=1 && break; done
-            [ "$found" -eq 0 ] && missing="$missing [$want]"
-          done
-          if [ -n "$missing" ]; then
-            echo "::error::auto-merge-claude.yml's on.workflow_run.workflows is missing:$missing (present as a ci.yml/golden-scenarios.yml name: but not in the trigger list) -- that workflow's completions will silently stop re-triggering auto-merge."
-            exit 1
-          fi
-          echo "OK: workflow_run trigger names match ci.yml + golden-scenarios.yml name: fields."
-
-      # Validates the dbt/ modeling layer's structure + that every ref()/source() and test resolves,
-      # WITHOUT a warehouse (parse does not connect). The full `dbt build` against BigQuery is gated on
-      # WIF creds — see ops/RUNBOOK.md §14. Offline; no secrets needed. PATH-GATED (`dbt_needed`, see the
-      # change-scope step) on the same bigquery/** + dbt/** path set the warehouse-validation job's parity
-      # guard uses, plus requirements-ci.txt (which pins the dbt versions parse itself runs under): what
-      # `dbt parse` reads is confined to those paths, so a push touching none of them cannot change its
-      # verdict. Still BLOCKING when it runs, and the scope step fails open. dbt-core/dbt-bigquery come
-      # from the path-gated install step above, not from the always-run one.
       - name: Write a CI profile (no creds — parse does not connect)
         if: steps.scope.outputs.dbt_needed == 'true'
         # dbt/profiles.ci.yml is the single checked-in source for this profile (2026-07-04 code-quality
@@ -751,3 +711,50 @@ jobs:
             exit 0
           fi
           python scripts/check_sql_dryrun.py "${existing[@]}"
+
+  merge-policy:
+    name: Validate merge policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - run: python3 -m unittest discover -s .github/tests -p 'test_merge_validated_pr.py'
+
+  ci-required:
+    name: CI required
+    if: ${{ always() }}
+    needs: ["checks", "warehouse-validation", "merge-policy", "offline-regression"]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every prerequisite to succeed
+        env:
+          JOB_RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          results = json.loads(os.environ["JOB_RESULTS"])
+          failed = [name for name, job in results.items() if job["result"] != "success"]
+          if failed:
+              sys.exit("Unsuccessful prerequisites: " + ", ".join(failed))
+          PY
+  offline-regression:
+    name: Offline behavior / Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.13']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: requirements-ci.txt
+      - run: python -m pip install -c requirements-ci.txt pytest pyyaml
+      - name: Replay deterministic math, sizing, paper-book and fixture regressions
+        run: >-
+          python -m pytest -q tests/test_options_math.py tests/test_ramp_calc.py
+          tests/test_news_reaction_paper_book.py tests/test_golden_scenarios_runner.py

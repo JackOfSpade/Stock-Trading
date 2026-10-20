@@ -2,8 +2,8 @@
 # SessionStart hook — align the harness-assigned branch to latest origin/main.
 #
 # Companion to .github/workflows/auto-merge-claude.yml: routines push their
-# assigned `claude/<suffix>` branch at session end, and the Action merges it
-# into main server-side (and deletes the merged branch). To start each
+# assigned `claude/<suffix>` branch, open its PR, and explicitly dispatch the
+# selected validated-PR Action after exact-head checks. To start each
 # routine from the latest committed state, we hard-reset the assigned branch
 # to origin/main here.
 #

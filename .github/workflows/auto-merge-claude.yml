@@ -1,650 +1,80 @@
-name: Auto-merge branches to main
+name: Merge validated PR
 
-# Merges ALL branches (any prefix — claude/*, jack/*, etc.) into main automatically
-# — but ONLY once their CI run is green. This keeps full hands-off automation while
-# ensuring a red build never lands on main.
-#
-# Why trigger on `workflow_run` (CI completed) instead of `push`:
-#   The old version triggered on push and merged immediately, *before* CI had even
-#   finished — so it couldn't gate on CI. Triggering when the "CI" workflow
-#   completes means (a) every drain happens with a known CI result in hand, and
-#   (b) when a branch's CI later turns green, that completion re-triggers this
-#   workflow and the branch gets picked up. No polling, no stranded branches.
-
+# Explicit selection replaces automatic sweeping/merging/deletion of branches.
 on:
-  workflow_run:
-    # BUG FIX (rev 2026-07-11, adversarial self-audit): added "Golden Scenarios (prose regression)"
-    # (matches golden-scenarios.yml's `name:`) so a branch whose golden-scenarios run completes AFTER
-    # its CI run (the path-gated job can legitimately finish later) still gets re-evaluated and drained
-    # once both verdicts are in — previously this workflow never even woke up on that completion, so a
-    # branch could sit un-merged (or worse, get merged on a stale drain before schema-validate's result
-    # existed) until some unrelated later push happened to re-trigger it.
-    workflows: ["CI", "Golden Scenarios (prose regression)"]
-    types: [completed]
-  workflow_dispatch: {}     # manual drain escape hatch
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Same-repository PR to merge after all required checks pass'
+        required: true
+        type: string
 
 permissions:
-  contents: write
-  pull-requests: write
-  actions: write            # read: the CI-gate check reads workflow runs via the Actions API.
-                            # write (2026-07-15, self-improvement audit — CONFIRMED GAP
-                            # red-ci-merge-conflict-no-remediation): the one-shot CI retry below
-                            # calls `gh run rerun --failed`, which needs write. Also covers the
-                            # 2026-08-19 stuck-secondary-gate one-shot `gh workflow run
-                            # golden-scenarios.yml --ref <branch>` (workflow_dispatch also needs
-                            # actions: write; see the Golden Scenarios gate block for why this is a
-                            # dispatch, not a `gh run rerun`, of the stuck run).
-  id-token: write           # RUNBOOK §38 self-heal (ITEM 3): required for google-github-actions/auth
-                            # (keyless WIF) so this job can write ops.routine_commit_markers rows.
-                            # No-op (job still runs fine) if GCP_WIF_PROVIDER/GCP_WIF_SERVICE_ACCOUNT
-                            # are unset — see the gated step below.
-  issues: write              # 2026-07-30 CI coverage-gap fix: `gh issue create`/`gh issue comment` in
-                            # the post-merge coverage-gap steps below (mirrors live-sql-parity.yml's
-                            # dedup-issue pattern) needs this; it was missing entirely before.
+  contents: read
 
 concurrency:
-  group: auto-merge-main
+  group: merge-validated-pr
   cancel-in-progress: false
 
 jobs:
   merge:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+      id-token: write # Existing table-scoped WIF identity for RUNBOOK section 38 markers.
     steps:
-      # ---- DUPLICATE-DRAIN EARLY EXIT (2026-08-21 Actions cost audit) --------------------------------
-      # Golden Scenarios frequently completes while the CI run on the SAME commit is still going (it is a
-      # short schema gate; CI is minutes of pytest + checkers). Its completion wakes this workflow, but
-      # that drain can never merge the branch it woke for — the CI gate below reads a still-running CI run
-      # and skips it — and CI's own completion then fires a SECOND, full drain moments later. The first
-      # drain is therefore pure duplicate cost (~183 Actions-min/mo measured).
-      #
-      # NO BRANCH CAN BE LOST BY SKIPPING: the drain below is repo-wide (it sweeps EVERY un-merged remote
-      # branch, not just the one whose run completed), so the imminent CI-completion drain does strictly
-      # everything this run would have done, on a strictly newer view of the world.
-      #
-      # LIVENESS BIAS — this check may only ever skip on a POSITIVE, freshly-confirmed "CI is still
-      # running on this exact SHA" answer. Every other outcome (any other triggering workflow,
-      # workflow_dispatch, no CI run for the SHA, a terminal CI run, an API/HTTP/jq/date failure, an
-      # unparseable timestamp) falls through to a full drain: a skipped drain that should have run can
-      # strand a branch until some unrelated push happens, while a redundant drain only costs a minute.
-      # The 15-minute freshness bound exists for the same reason — a CI run that has been queued/running
-      # longer than that may be stuck (see the stuck-secondary-gate remediation below for a live example
-      # of a run that never completed at all), and no completion event may ever arrive to drain for it.
-      - name: Duplicate-drain early exit (Golden Scenarios completion while this SHA's CI is still live)
-        id: dupdrain
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TRIGGER_NAME: ${{ github.event.workflow_run.name }}
-          TRIGGER_SHA: ${{ github.event.workflow_run.head_sha }}
-        run: |
-          set -uo pipefail
-          skip=false
-          if [ "${TRIGGER_NAME:-}" = "Golden Scenarios (prose regression)" ] && [ -n "${TRIGGER_SHA:-}" ]; then
-            runs_json="$(curl -sS \
-              -H "Authorization: Bearer $GH_TOKEN" \
-              -H "Accept: application/vnd.github+json" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              "${GITHUB_API_URL:-https://api.github.com}/repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$TRIGGER_SHA&per_page=1" \
-              2>/dev/null || echo "")"
-            ci_status="$(printf '%s' "$runs_json" | jq -r '.workflow_runs[0].status // empty' 2>/dev/null || echo "")"
-            ci_created="$(printf '%s' "$runs_json" | jq -r '.workflow_runs[0].created_at // empty' 2>/dev/null || echo "")"
-            ci_created_epoch="$(date -u -d "$ci_created" +%s 2>/dev/null || echo "")"
-            now_epoch="$(date -u +%s)"
-            if { [ "$ci_status" = "queued" ] || [ "$ci_status" = "in_progress" ]; } && [ -n "$ci_created_epoch" ]; then
-              age=$(( now_epoch - ci_created_epoch ))
-              # age < 0 means clock skew between the runner and the API timestamp -- treat as unparseable
-              # and drain, per the liveness bias above.
-              if [ "$age" -ge 0 ] && [ "$age" -lt 900 ]; then
-                skip=true
-                echo "::notice::Skipping this drain -- it was triggered by Golden Scenarios for ${TRIGGER_SHA:0:7}, whose CI run is still '$ci_status' after $(( age / 60 ))m. That CI run's own completion fires a fresh, repo-wide drain; this one could only be a no-op for that branch."
-              fi
-            fi
-          fi
-          echo "skip=$skip" >> "$GITHUB_OUTPUT"
-
-      # Every step below is gated on the early exit above. The post-merge coverage block further down
-      # needs no such gate of its own: it already keys off the did_merge / result outputs of the merge
-      # and postmerge steps, both of which are empty (never 'true'/'fail') when those steps are skipped.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        if: steps.dupdrain.outputs.skip != 'true'
+      - name: Check out trusted main policy, never PR code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: main
-          fetch-depth: 0
+          persist-credentials: false
+      - name: Merge only the selected validated PR and check main
+        id: merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          REQUIRED_CHECKS: '["CI required", "Security required", "Dependency review required"]'
+          MAIN_WORKFLOWS: '["ci.yml", "codeql.yml"]'
+        run: python3 .github/scripts/merge_validated_pr.py
 
-      - name: Configure git
-        if: steps.dupdrain.outputs.skip != 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Gate on WIF (RUNBOOK §38 commit markers)
-        id: wif_guard
-        if: steps.dupdrain.outputs.skip != 'true'
-        run: |
-          if [ -n "${{ vars.GCP_WIF_PROVIDER }}" ] && [ -n "${{ vars.GCP_WIF_SERVICE_ACCOUNT }}" ]; then
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "::notice::WIF vars unset -- auto-merge still runs normally, but no ops.routine_commit_markers row is written for any merge in this run (RUNBOOK section 38 self-heal stays dormant until GCP_WIF_PROVIDER/GCP_WIF_SERVICE_ACCOUNT are set, ops/RUNBOOK.md section 6)."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: GCP WIF auth + gcloud setup (provides bq, RUNBOOK §38 commit markers)
-        # BUG FIX (rev 2026-07-11, adversarial self-audit): without continue-on-error, ANY failure of
-        # this step (a transient GCP outage, network blip, IAM propagation delay -- not just the vars
-        # being unset) aborts the whole job by GitHub Actions' default behavior, skipping the "Merge all
-        # CI-green branches into main" step entirely -- for every branch pending in this run, not just
-        # the specific commit whose marker-write this auth is for. That is a MUCH larger blast radius
-        # than intended: this file's own later comment already documents the marker-write as "best-
-        # effort: a marker-insert failure must never fail the merge/push" -- the auth step upstream of
-        # it must honor that same contract, or the best-effort feature can take down the actual merge
-        # pipeline. continue-on-error: true here means a failed auth simply leaves WIF_CONFIGURED
-        # effectively unusable for this run (the downstream bq marker-insert call is already wrapped in
-        # its own `|| echo "::warning"` at the bottom of the merge step, so it degrades gracefully too)
-        # while the merge itself proceeds unaffected.
+      # Preserve the existing landed-but-unlogged routine recovery independently
+      # of the routine session. Trusted main code inspects only this selected PR's
+      # verified landed commits; it never checks out or sweeps other branches.
+      - name: Authenticate for selected PR landing markers (best effort)
+        id: marker-auth
+        if: always() && steps.merge.outputs.merge_sha != '' && vars.GCP_WIF_PROVIDER != '' && vars.GCP_WIF_SERVICE_ACCOUNT != ''
         continue-on-error: true
-        if: steps.dupdrain.outputs.skip != 'true' && steps.wif_guard.outputs.skip == 'false'
         uses: ./.github/actions/gcp-wif-auth
         with:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
 
-      - name: Merge all CI-green branches into main
-        id: merge
-        if: steps.dupdrain.outputs.skip != 'true'
+      - name: Record only the selected PR's landed routine outputs
+        if: always() && steps.merge.outputs.merge_sha != ''
         env:
-          GH_TOKEN: ${{ github.token }}
-          WIF_CONFIGURED: ${{ steps.wif_guard.outputs.skip == 'false' }}
+          BASE_SHA: ${{ steps.merge.outputs.base_sha }}
+          HEAD_SHA: ${{ steps.merge.outputs.head_sha }}
+          MERGE_SHA: ${{ steps.merge.outputs.merge_sha }}
+          AUTH_OUTCOME: ${{ steps.marker-auth.outcome }}
+          WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
+          WIF_SERVICE_ACCOUNT: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
         run: |
-          set -uo pipefail
-          # shellcheck source=../../scripts/auto_merge_decision.sh
-          source scripts/auto_merge_decision.sh
-
-          # Drain EVERY un-merged branch (any prefix), not just the one whose CI
-          # just finished. The concurrency group (auto-merge-main) keeps only ONE
-          # run pending, so rapid CI completions from several sessions can drop a
-          # queued run (GitHub keeps one pending per group). Processing all branches
-          # here means whichever run does execute also picks up any stranded
-          # stragglers — a dropped queued run can no longer lose a branch's work.
-          if ! git fetch origin --prune; then
-            echo "::warning::git fetch failed; the next CI completion re-triggers and drains."
+          if [ -z "$WIF_PROVIDER" ] || [ -z "$WIF_SERVICE_ACCOUNT" ]; then
+            echo '::notice::WIF vars unset -- section 38 landing markers are not configured.'
             exit 0
           fi
-
-          git checkout -B main origin/main
-
-          # Every remote branch is a candidate EXCEPT main itself (nothing to merge
-          # main into) and the origin/HEAD symbolic ref (not a real branch). NOTE the
-          # bare `origin` alternative in the pattern: git renders refs/remotes/origin/HEAD
-          # as the SHORT name `origin` (not `origin/HEAD`), so an `^origin/(main|HEAD)$`
-          # pattern alone never matches it — it would flow through as br='origin', land in
-          # merged_branches via the is_ancestor_of fast path (defeating the "nothing to
-          # merge" early exit below) and then fail `git fetch origin "origin"`. Dormant
-          # until refs/remotes/origin/HEAD exists locally, which git >= 2.49 creates on
-          # fetch by default (remote.<name>.followRemoteHEAD=create).
-          merged_branches=""
-          declare -a marker_shas=()   # RUNBOOK §38 self-heal (ITEM 3): tip SHA of every branch actually merged below
-          for ref in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin/ | grep -v -E '^origin(/(main|HEAD))?$' || true); do
-            br="${ref#origin/}"
-
-            # Already contained in main (e.g. a prior run merged it): just clean up.
-            if is_ancestor_of "$ref" main; then
-              merged_branches="$merged_branches $br"
-              continue
-            fi
-
-            # --- CI gate -----------------------------------------------------------
-            # Only merge a branch whose EXACT tip commit has a successful CI run.
-            # We query the latest "CI" workflow run for that precise SHA, so a commit
-            # pushed after CI passed (new tip, no green run yet) is skipped until its
-            # own CI completes green. The lint job is continue-on-error (advisory), so
-            # the *run* conclusion is "success" whenever the required test job passes —
-            # exactly the gate we want. Fail closed: any non-success (in-progress,
-            # failure, missing, or API error) skips the branch. ci_conclusion_from_json /
-            # is_ci_green (scripts/auto_merge_decision.sh, sourced above) hold this
-            # fail-closed logic and are exercised by tests/test_auto_merge_logic.sh — not
-            # just actionlint/shellcheck syntax checks.
-            sha="$(git rev-parse "$ref")"
-            runs_json="$(gh api \
-              "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$sha&per_page=1" \
-              2>/dev/null || echo "")"
-            ci_conclusion="$(ci_conclusion_from_json "$runs_json")"
-            if ! is_ci_green "$ci_conclusion"; then
-              # ONE-SHOT, CONTENT-FREE RETRY (2026-07-15, self-improvement audit — CONFIRMED GAP
-              # red-ci-merge-conflict-no-remediation). Before this, a red-CI branch just sat parked
-              # indefinitely with "the routine does not retry inside its session" — no automated
-              # remediation at all, even for a transient/flaky CI failure. should_retry_failed_ci
-              # bounds this to exactly ONE attempt ever per run (GitHub's own run_attempt counter is
-              # the idempotency marker — a rerun that fails again reads attempt=2 and is never
-              # retried again); the rerun's own completion re-triggers this workflow via the
-              # existing workflow_run trigger, so no polling is needed here.
-              run_id="$(ci_run_id_from_json "$runs_json")"
-              run_attempt="$(ci_run_attempt_from_json "$runs_json")"
-              if should_retry_failed_ci "$ci_conclusion" "$run_attempt" && [ -n "$run_id" ]; then
-                echo "::notice::$br — CI for ${sha:0:7} failed on attempt 1; requesting a one-shot re-run (run $run_id) before treating it as stranded."
-                gh run rerun "$run_id" --failed 2>/dev/null \
-                  || echo "::warning::Could not request a re-run for $br (run $run_id) — falls through to the existing stranded-branch alert if it stays red."
-              fi
-              echo "::notice::Skipping $br — CI for ${sha:0:7} is '$ci_conclusion', not success. It merges once its CI run completes green."
-              continue
-            fi
-
-            # --- Golden Scenarios schema-validate gate ------------------------------
-            # BUG FIX (rev 2026-07-11, adversarial self-audit): golden-scenarios.yml's schema-validate
-            # job is documented as a HARD GATE ("this can never be allowed to silently rot") but nothing
-            # here ever checked it — a failing schema-validate run had zero effect on whether a commit
-            # merged. This workflow is path-gated (only runs when Strategy.md/Operating_Protocols.md/
-            # Claude_Task_Plan.md/the golden fixtures change), so most commits will have NO matching run
-            # at all — is_secondary_gate_satisfied treats that as satisfied (not a block), and only an
-            # explicit non-success conclusion (the workflow DID run for this SHA and schema-validate
-            # failed) blocks the merge. STALE-COMMENT FIX (2026-08-30): this used to note that
-            # prose-regression, "the OTHER job in that workflow", was continue-on-error and so could
-            # never turn the overall run conclusion to "failure". That job no longer exists — it moved
-            # out to golden-prose-daily.yml on 2026-08-21 and that workflow was deleted outright on
-            # 2026-08-30 (see CLAUDE.md's golden-scenarios note). golden-scenarios.yml now runs
-            # schema-validate ALONE, so the run's overall conclusion reflects the hard gate directly,
-            # with no continue-on-error job in the mix. The check below is unchanged and is now
-            # strictly less ambiguous than when the comment was written.
-            gs_runs_json="$(gh api \
-              "repos/$GITHUB_REPOSITORY/actions/workflows/golden-scenarios.yml/runs?head_sha=$sha&per_page=1" \
-              2>/dev/null || echo "")"
-            gs_conclusion="$(ci_conclusion_from_json "$gs_runs_json")"
-            if ! is_secondary_gate_satisfied "$gs_conclusion"; then
-              # ONE-SHOT STUCK-RUN REMEDIATION (2026-08-19). ci_conclusion_from_json falls back to
-              # `.status` when `.conclusion` is null, so a golden-scenarios run GitHub never
-              # dispatches to a runner (status stays "queued" forever — a rare Actions-platform
-              # glitch) reads as "queued" here and blocks this branch PERMANENTLY, since nothing
-              # else in the repo ever moves a run out of "queued". OBSERVED TWICE, both stuck for
-              # hours/days with zero remediation: run 32215104789 (branch claude/sl3-2026-08-18,
-              # created 2026-08-19T04:15:35Z) and a run from fix/alert-triage-2026-08-04 (created
-              # 2026-08-06T16:39:13Z, still queued 13 days later).
-              #
-              # THE REMEDIATION IS workflow_dispatch ON THE BRANCH, NOT `gh run rerun` OF THE STUCK
-              # RUN — MEASURED LIVE against run 32215104789, 2026-08-19: `gh run rerun 32215104789`
-              # -> "cannot be rerun; This workflow is already running" (exit 1; GitHub refuses to
-              # rerun a non-terminal run, and a never-dispatched "queued" run never reaches one, so
-              # this call can NEVER succeed for this failure mode). `gh run cancel 32215104789` ->
-              # "HTTP 500: Failed to cancel workflow run" (exit 1; these zombie runs cannot even be
-              # cancelled, so cancel-then-rerun is not a usable fallback either). `gh workflow run
-              # golden-scenarios.yml --ref claude/sl3-2026-08-18` -> SUCCEEDED, creating a fresh run
-              # (32272701107, event=workflow_dispatch) against the SAME head_sha as the stuck run —
-              # golden-scenarios.yml already declares `workflow_dispatch:` in its `on:` block, so no
-              # workflow change was needed there. This is sufficient even though the zombie run
-              # itself is never touched: the query just above is `...runs?head_sha=$sha&per_page=1`
-              # — per_page=1 returns the MOST RECENT run for that SHA, so once the dispatched run
-              # completes, ci_conclusion_from_json reads ITS conclusion, not the zombie's; the
-              # zombie can stay "queued" forever with zero further effect on the gate.
-              # golden-scenarios.yml's `concurrency: group: golden-scenarios-${{ github.ref }}`
-              # (cancel-in-progress: true) is scoped per-branch, so this dispatch cannot collide
-              # with a run on any other branch.
-              #
-              # should_redispatch_stuck_secondary_gate (scripts/auto_merge_decision.sh, sourced
-              # above) bounds this to firing at most ONCE per stuck run — run_attempt=="1" (a
-              # second sweep sees the freshly-dispatched run, not this same stuck run, as
-              # golden-scenarios.yml's now-most-recent run for the SHA) — and only once queued for
-              # over 60 minutes (golden-scenarios.yml normally finishes in 2-6 minutes), so it
-              # cannot fire against a run merely still queueing normally, nor against one that IS
-              # executing (conclusion must be exactly "queued", never "in_progress"). This is a
-              # REPAIR ATTEMPT, not a gate weakening: is_secondary_gate_satisfied above still blocks
-              # the merge this run either way. The dispatch is best-effort and fail-soft — a failed
-              # request falls through unchanged to the `continue` below, leaving the existing
-              # stranded-branch-check.yml alert path as the backstop exactly as today.
-              gs_run_id="$(ci_run_id_from_json "$gs_runs_json")"
-              gs_run_attempt="$(ci_run_attempt_from_json "$gs_runs_json")"
-              gs_created_at="$(ci_run_created_at_from_json "$gs_runs_json")"
-              gs_now_epoch="$(date -u +%s)"
-              if should_redispatch_stuck_secondary_gate "$gs_conclusion" "$gs_run_attempt" "$gs_created_at" "$gs_now_epoch" \
-                 && [ -n "$gs_run_id" ]; then
-                gs_created_epoch="$(iso8601_to_epoch_utc "$gs_created_at" 2>/dev/null || echo "")"
-                gs_age_min="?"
-                [ -n "$gs_created_epoch" ] && gs_age_min=$(( (gs_now_epoch - gs_created_epoch) / 60 ))
-                echo "::notice::$br — Golden Scenarios run $gs_run_id for ${sha:0:7} has been 'queued' for ~${gs_age_min}m with no runner ever dispatched (attempt 1); dispatching a fresh golden-scenarios.yml run for the same head SHA before treating it as stranded (gh run rerun cannot work on a non-terminal run — see comment above)."
-                gh workflow run golden-scenarios.yml --ref "$br" 2>/dev/null \
-                  || echo "::warning::Could not dispatch a fresh Golden Scenarios run for $br (stuck run $gs_run_id) — falls through to the existing stranded-branch-check.yml alert if it stays queued."
-              fi
-              echo "::notice::Skipping $br — Golden Scenarios schema-validate for ${sha:0:7} is '$gs_conclusion', not success/none. It merges once that run completes green (or is re-triggered)."
-              continue
-            fi
-
-            # Fast-forward if possible, else a merge commit. The .gitattributes
-            # union driver auto-resolves append-only logs; anything else conflicts.
-            if git merge --ff-only "$ref" || git merge --no-ff "$ref" -m "Auto-merge $br into main"; then
-              merged_branches="$merged_branches $br"
-              marker_shas+=("$sha")   # RUNBOOK §38 self-heal (ITEM 3): the branch's pre-merge tip commit
-            else
-              git merge --abort || true
-              if git rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1; then
-                echo "::error::merge abort failed for $br — repo still mid-merge (MERGE_HEAD present); stopping the drain now to avoid cascading false conflicts on subsequent branches in this loop." >&2
-                exit 1
-              fi
-              echo "::warning::Unresolved conflict merging $br (likely an in-place state file)."
-              gh pr create --base main --head "$br" \
-                --title "Auto-merge conflict: $br" \
-                --body "The auto-merge workflow hit a conflict the .gitattributes union driver could not resolve (likely an in-place state file). Resolve manually and merge, or close if superseded." \
-                || echo "PR already exists or could not be created."
-            fi
-          done
-
-          if [ -z "${merged_branches// }" ]; then
-            echo "No CI-green branches to merge."
+          if [ "$AUTH_OUTCOME" != 'success' ]; then
+            echo '::warning::WIF authentication failed -- section 38 landing markers could not be written; the completed PR merge is unaffected.'
             exit 0
           fi
-
-          if ! git push origin main; then
-            echo "::warning::push to main failed; branches left intact for the next run."
+          if ! git fetch --no-tags origin "$MERGE_SHA"; then
+            echo '::warning::Could not fetch the selected landed merge -- no routine markers written.'
             exit 0
           fi
-
-          # STEP OUTPUT for the post-merge coverage-gap steps at the end of this job (2026-07-30 CI
-          # coverage-gap fix — see the header comment above those steps for the full rationale). Gate on
-          # marker_shas, not merged_branches: marker_shas is populated ONLY inside the `git merge
-          # --ff-only/--no-ff` success branch above (a genuinely NEW merge this run) — the earlier
-          # `is_ancestor_of "$ref" main` "already merged, just needs branch cleanup" path adds to
-          # merged_branches but deliberately never appends to marker_shas. So this is exactly "did this
-          # run land new content on main", not "did this run touch merged_branches at all" (which would
-          # also fire on a cleanup-only re-run of an already-merged branch, wasting a test run on a tree
-          # that hasn't changed). Combined with the push-succeeded check just above, this also guarantees
-          # the working tree checked out right now IS main's new pushed tip — no re-checkout needed below.
-          if [ "${#marker_shas[@]}" -gt 0 ]; then
-            echo "did_merge=true" >> "$GITHUB_OUTPUT"
+          if ! bash scripts/write_routine_commit_markers.sh "$BASE_SHA" "$HEAD_SHA" "$MERGE_SHA"; then
+            echo '::warning::Selected landed range verification failed -- no unverified routine markers written; the completed PR merge is unaffected.'
           fi
-
-          # ---- RUNBOOK section 38 self-heal (ITEM 3): mark each merged commit's routine/run_date ----
-          # Best-effort: a marker-insert failure must never fail the merge/push that already succeeded.
-          # Needs the owner's table-scoped gh-ci-runner@ dataEditor grant on ops.routine_commit_markers
-          # (see the ITEM 3 packet's owner_actions) -- until granted, bq query fails and this just warns.
-          if [ "$WIF_CONFIGURED" = "true" ]; then
-            # Field extraction lives in scripts/auto_merge_decision.sh (sourced above) so it is unit-
-            # tested by tests/test_auto_merge_logic.sh. FIXED 2026-07-29: this used to require a full
-            # YYYY-MM-DD *in the subject*, which silently limited every marker row — and therefore all
-            # of RUNBOOK §38's run_log self-heal — to D1/D2/W5. run_date now falls back to the commit's
-            # own author date, so a routine whose subject carries only a year ("A1 2026: ...") is
-            # marked correctly too.
-            for sha in "${marker_shas[@]:-}"; do
-              [ -z "$sha" ] && continue
-              subject="$(git log -1 --format=%s "$sha" 2>/dev/null || true)"
-              # RENDER THE FALLBACK DATE IN THE OPERATING TIMEZONE (2026-08-04). This used to be
-              # `--format=%as`, which renders the author date in the COMMIT'S OWN recorded offset. The
-              # routine containers stamp commits in UTC (e.g. 2026-08-04T01:41:06Z), so for any routine
-              # committing after 18:00 MT, %as returned TOMORROW's date -- the exact midnight-UTC
-              # misattribution the fallback was added to avoid. MEASURED 2026-08-04: SL2's 2026-08-03
-              # evening commit 27a8853 (subject carries no date, so the fallback is what is used) was
-              # marked run_date=2026-08-04, and ops.sp_backfill_run_log_from_markers then wrote a
-              # phantom 'completed' ops.run_log row for a run that never happened -- which in turn made
-              # SL2 read days_silent=0 in state.queue_driven_silence_watch, blinding the detector added
-              # the day before precisely to catch SL2 going quiet. --date=short-local renders in $TZ.
-              commit_date="$(TZ=America/Denver git log -1 --date=short-local --format=%ad "$sha" 2>/dev/null || true)"
-              author_email="$(git log -1 --format=%ae "$sha" 2>/dev/null || true)"
-              routine="$(marker_routine_from_subject "$subject")"
-              run_date="$(marker_run_date_from_subject "$subject" "$commit_date")"
-              # WAS THIS A ROUTINE **OUTPUT** COMMIT AT ALL? (2026-08-17, W5) The two extractors above
-              # answer "which routine/date does this subject name", never "did a routine run produce
-              # this commit". Two classes slipped through and minted phantom 'completed' run_log rows:
-              # a routine's own HALT commit (subject names the routine and the day, body says nothing
-              # was written), and an operator commit whose subject merely STARTS with a routine token.
-              # Both are guarded in scripts/auto_merge_decision.sh — see the block above those two
-              # functions for the measured harm and the fail-toward-no-marker rationale.
-              if [ -n "$routine" ] && [ -n "$run_date" ] \
-                 && marker_author_is_routine "$author_email" \
-                 && ! marker_subject_declares_no_completion "$subject"; then
-                # shellcheck disable=SC2016 # single-quoted intentionally: @p_routine etc. are BigQuery
-                # named-parameter placeholders bound via --parameter=, not shell variables to expand.
-                bq query --project_id=stock-trading-498512 --use_legacy_sql=false --nouse_cache \
-                  --parameter="p_routine:STRING:${routine}" \
-                  --parameter="p_run_date:DATE:${run_date}" \
-                  --parameter="p_git_commit:STRING:${sha}" \
-                  --parameter="p_commit_subject:STRING:${subject}" \
-                  'INSERT INTO `stock-trading-498512.ops.routine_commit_markers` (routine, run_date, git_commit, commit_subject, source) VALUES (@p_routine, @p_run_date, @p_git_commit, @p_commit_subject, "auto-merge-claude.yml")' \
-                  || echo "::warning::routine_commit_markers insert failed for $sha ($routine $run_date) -- section 38 self-heal will not see this run; nothing else is affected."
-              elif [ -n "$routine" ] && [ -n "$run_date" ]; then
-                # Suppression is ANNOUNCED, never silent: this branch means the subject named a real
-                # routine + date but one of the two 2026-08-17 guards rejected it. Printing it keeps a
-                # future over-broad guard debuggable from the merge log alone -- the failure mode being
-                # avoided is a marker quietly never written and nobody knowing why.
-                echo "::notice::routine_commit_markers row SUPPRESSED for $sha ($routine $run_date) -- not a routine output commit (author='$author_email', subject='$subject'). This is the 2026-08-17 phantom-completion guard; §38 self-heal will not treat this commit as a completed run."
-              fi
-            done
-          fi
-
-          # Delete each merged branch ONLY after re-confirming its current remote
-          # tip is fully contained in the new main, so a commit pushed during the
-          # merge window is never deleted unmerged — it's left for the next run.
-          for br in $merged_branches; do
-            git fetch origin "$br" >/dev/null 2>&1 || continue
-            if is_ancestor_of "origin/$br" main; then
-              git push origin --delete "$br" || true
-            else
-              echo "::warning::$br advanced during the merge; not deleting (next run merges it)."
-            fi
-          done
-
-      # =================================================================================================
-      # POST-MERGE COVERAGE-GAP CHECK (2026-07-30, verified CI coverage-gap audit).
-      #
-      # THE GAP THIS CLOSES. This job merges branches into main with `git merge --no-ff` / `--ff-only`
-      # and pushes with the workflow's own GITHUB_TOKEN. GitHub does NOT trigger new workflow runs from a
-      # GITHUB_TOKEN push (documented Actions behavior — prevents recursive workflow loops), so ci.yml's
-      # `push:` trigger never fires for the merge commit this job creates. Confirmed empirically: 0
-      # ci.yml runs exist for any of 20 sampled bot-merge SHAs on main (a human-pushed merge commit, by
-      # contrast, DOES get one — the gap is specific to this bot's token). Bot merges are not rare: 101 of
-      # the last 200 main commits (50.5%) are auto-merge-claude.yml merges. So main's actual merged tip —
-      # the tree every scheduled routine and every future branch's diff-base runs against — usually has
-      # ZERO CI signal of its own. Each contributing branch was individually green, but two branches can
-      # be semantically coupled through a file NEITHER one's diff touches and land broken with no signal
-      # at all (near-miss: 1fdb9d9 changed ops/cadence.yaml while fec6986 changed the cadence CHECKERS —
-      # either alone was fine; only the combined tree could have shown the mismatch).
-      #
-      # WHY ONLY THE CREDENTIAL-FREE REPO-CONTENT CHECKS, NOT ALL OF ci.yml. Measured from this repo's own
-      # CI runs (2026-07-30 cost audit): dbt-parity = 154s, ~3 of a 6-minute CI run's billed minutes, and is ALSO
-      # redundant here — it is path-gated on bigquery/**/dbt/** and already ran pre-merge on whichever
-      # branch actually touched those paths, and what it checks (dbt-compiled-vs-live BigQuery row parity)
-      # is not a question a merge commit's cross-file coupling could newly break. NOTE it is a HARD
-      # BLOCKING gate in ci.yml today (`DBT_PARITY=block` is set live), not advisory — "redundant here"
-      # means redundant for THIS post-merge purpose, not unimportant. sql-validate (31s) likewise needs
-      # WIF/GCP credentials this job should not widen. The remaining checks — pytest, the local
-      # consistency checkers, the bash/node helper tests — are the cheap, credential-free ones AND the
-      # only class with literal zero coverage on main's merged tip today. So:
-      # pytest + the local consistency checkers + the node pure-helper test, mirrored from ci.yml's
-      # `checks` job (same install line, same commands, same order) — nothing invented, nothing added
-      # beyond what that job already runs. Scope it precisely: this carries EVERY blocking script/test
-      # target of that job — in that job's own order — with ONE deliberate omission,
-      # scripts/check_cadence_marker.py, which scopes itself to a PUSH DIFF via merge-base(HEAD,
-      # origin/main) and so has an empty diff, nothing to check, when run against main's own tip. That
-      # job's other blocking steps (the actionlint/shellcheck pair, the dbt profile/deps/parse trio) are
-      # not mirrored: each needs a network install this block deliberately does not pay for, and the dbt
-      # ones fall under the same "not what a merge commit's cross-file coupling breaks" reasoning above.
-      #
-      # PLACEMENT AND GATING. Steps live at the END of THIS job (not a new job — a new job pays its own
-      # runner-startup floor for a check whose real cost is ~31s of test time) and AFTER the existing
-      # branch-cleanup/commit-marker logic above, so a failure here can never leave a merged branch
-      # undeleted or a routine_commit_markers row unwritten. They run ONLY when the `merge` step's
-      # `did_merge` output is 'true' — set above IFF marker_shas (branches genuinely NEWLY merged this
-      # run, not a cleanup-only re-run of an already-merged branch) was non-empty AND the push to main
-      # succeeded. This gating is the whole cost story: most drain runs merge nothing at all (~27-30
-      # drain runs/day vs ~11 actual commits landing per CLAUDE.md's cost-audit numbers), and those runs
-      # already exit the merge step early ("No CI-green branches to merge.") well before did_merge is
-      # ever set — so this whole block, including the Python/pip setup below, is skipped for them.
-      #
-      # FAILURE SIGNALLING: on a broken merged tree this (a) opens/refreshes a deduped GitHub issue,
-      # mirroring live-sql-parity.yml's "Open/refresh finding issue (dedup)" step (same `gh issue list
-      # --jq` title-prefix match, comment-if-exists / create-if-not pattern), (b) writes an
-      # ops.ci_findings row so D3's CI-FINDINGS ADJUDICATION step and cadence_check.sql's `ci_finding`
-      # alert see it too — gh-ci-runner@ already holds table-scoped dataEditor on ops.ci_findings
-      # (OWNER_ACTIONS.md item G, granted 2026-07-17), so no new IAM grant is needed; the write reuses
-      # this job's existing WIF auth and is gated the same way the routine_commit_markers insert above
-      # already is, via steps.wif_guard.outputs.skip — and (c) FAILS THE JOB, so there is a red run in
-      # the Actions tab, not only a durable BigQuery/GitHub-Issue record. A clean run instead writes a
-      # status="resolved" row via `INSERT ... SELECT FROM state.ci_findings_open` (writes ZERO rows when
-      # nothing is open for this workflow/key — cheap no-op on the common healthy path) so a transient red
-      # main auto-clears on the next clean drain instead of latching a finding open forever; this mirrors
-      # every other workflow's clean-run auto-resolve in this repo (live-sql-parity.yml, alert-relay.yml,
-      # offsite-backup.yml, keyless-sa-audit.yml, wif-binding-audit.yml).
-      #
-      # DELIBERATE NON-GOAL: no autonomous revert of main. This step's job is to make a broken merged tree
-      # IMPOSSIBLE TO MISS (red run + durable finding row + GH issue), not to act on it — reverting a push
-      # that already landed is a materially higher-blast-radius action (main is what every scheduled
-      # routine reads) than the purely additive detection this fix is scoped to. A human or a downstream
-      # self-heal routine decides the remediation; this step only guarantees the signal exists.
-      # =================================================================================================
-
-      - name: Setup Python for post-merge coverage check
-        if: steps.merge.outputs.did_merge == 'true'
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-          cache-dependency-path: requirements-ci.txt
-
-      - name: Install test deps (pinned via constraints — mirrors ci.yml's `checks` job)
-        if: steps.merge.outputs.did_merge == 'true'
-        # google-cloud-bigquery is INSTALLED EXPLICITLY, not inherited. ci.yml's `checks` job runs the
-        # same `pytest -q` but installs dbt-core/dbt-bigquery, so it picks this package up TRANSITIVELY
-        # via dbt-bigquery; this job deliberately never installs dbt (it does not run dbt parse), so it
-        # got no such inheritance and this line silently diverged from what `pytest -q` actually needs.
-        # requirements-ci.txt already lists google-cloud-bigquery under its always-on `test` job section
-        # for exactly this reason. Note `-c` is a CONSTRAINTS file (it pins versions of packages that are
-        # installed, it does not install them), so listing the package here is required, not redundant.
-        # Latent since 2026-08-08 (c349e18): every earlier test in tests/test_adversarial_review_storage.py
-        # bypassed __init__ via object.__new__, so nothing had ever really imported google.cloud.bigquery.
-        # Two new tests for the stuck-BigQuery-job timeout fix call the real constructor, and this step
-        # then failed on 11 consecutive main tips with ModuleNotFoundError: No module named 'google'.
-        run: pip install --quiet -c requirements-ci.txt pytest pyyaml google-cloud-bigquery
-
-      - name: Post-merge coverage check (mirrors ci.yml's `checks` job, run against main's ACTUAL merged tip)
-        id: postmerge
-        if: steps.merge.outputs.did_merge == 'true'
-        # The working tree right now IS main's new pushed tip (the merge step above checked out and
-        # merged in place, then pushed — no re-checkout needed). Every command below is copy-identical
-        # to ci.yml's `checks` job (the consolidated job, 2026-07-30), and the list covers that job's
-        # blocking script/test targets in its own order except the push-diff-scoped
-        # check_cadence_marker.py (see the header block above for that and for the lint/dbt steps that
-        # are likewise not mirrored); see ci.yml for the per-check rationale comments. `run_check` records
-        # a failure and keeps going instead of stopping at the first red check, so one run surfaces every
-        # broken class at once instead of only the first (matching this file's existing preference for a
-        # single fail-loud verdict over a partial, order-dependent one).
-        run: |
-          set -uo pipefail
-          fail=0
-          run_check() {
-            echo "--- $* ---"
-            if ! "$@"; then
-              fail=1
-              echo "::error::post-merge check failed: $*"
-            fi
-          }
-          run_check python c_options_math.py
-          run_check python -m pytest -q
-          run_check python scripts/split_strategy.py --check
-          run_check python scripts/split_task_plan.py --check
-          run_check python scripts/check_cadence_consistency.py
-          run_check python scripts/check_prose_invariants.py
-          run_check python scripts/check_routine_scope.py
-          run_check python scripts/gen_routine_lists.py --check
-          run_check python scripts/routine_backup.py check
-          run_check python scripts/check_cron_dst_safety.py
-          run_check python scripts/check_roster_consistency.py
-          run_check python scripts/check_autonomy_consistency.py
-          run_check python scripts/check_handoff_contracts.py
-          run_check python scripts/check_script_version_consistency.py
-          run_check python scripts/check_sq_version_registry.py
-          run_check python scripts/check_superseded_markers.py
-          run_check python scripts/check_superseded_by_discipline.py
-          run_check python scripts/check_alert_message_stability.py
-          run_check python scripts/check_roster_notice_lockstep.py
-          run_check python scripts/check_shock_register_lockstep.py
-          run_check python scripts/check_settings_toolcov.py
-          run_check python scripts/check_connector_tools.py
-          run_check python scripts/check_adopt_gate_coverage.py
-          run_check python scripts/check_dbt_view_coverage.py
-          run_check bash tests/test_auto_merge_logic.sh
-          run_check bash tests/test_resolve_diff_base.sh
-          run_check bash tests/test_notify_webhook.sh
-          run_check bash tests/test_ci_finding.sh
-          run_check bash tests/test_bq_csv.sh
-          run_check bash tests/test_restore_drill.sh
-          run_check bash tests/test_session_start_hook.sh
-          run_check node ops/weekly_report/test_pure_helpers.js
-          if [ "$fail" -eq 0 ]; then
-            echo "result=ok" >> "$GITHUB_OUTPUT"
-            echo "All post-merge checks passed against main's merged tip ($(git rev-parse HEAD))."
-          else
-            echo "result=fail" >> "$GITHUB_OUTPUT"
-            echo "::error::One or more post-merge checks FAILED against main's merged tip ($(git rev-parse HEAD)) -- see the ::error:: lines above for which one(s). Every contributing branch's OWN CI was green; this is the combined-tree gap this job exists to catch."
-          fi
-
-      - name: Open/refresh finding issue (dedup) — post-merge coverage check failed
-        # Mirrors live-sql-parity.yml's "Open/refresh finding issue (dedup)" step: a stable title-prefix
-        # match via `gh issue list --jq`, comment on an existing open issue, else create one.
-        if: always() && steps.merge.outputs.did_merge == 'true' && steps.postmerge.outputs.result == 'fail'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -uo pipefail
-          {
-            echo "**RED MAIN** — the post-merge coverage check (pytest + local consistency checkers + node helper tests, mirrored from ci.yml's \`test\` job) failed against main's ACTUAL merged tip ($(git rev-parse HEAD)) after this workflow landed one or more branches. Each contributing branch's OWN CI was green individually — GitHub does not re-trigger ci.yml on this job's GITHUB_TOKEN push, so this is the first and only automated signal that the COMBINED tree is broken. See the failing run for which check(s) failed."
-            echo
-            echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          } > /tmp/postmerge_body.md
-
-          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
-            --jq '[.[] | select(.title|startswith("⚠️ Post-merge coverage check:"))][0].number // empty')
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body-file /tmp/postmerge_body.md
-            echo "Updated existing issue #$existing."
-          else
-            gh issue create --repo "$GITHUB_REPOSITORY" \
-              --title "⚠️ Post-merge coverage check: main's merged tip is red" \
-              --body-file /tmp/postmerge_body.md
-          fi
-
-      - name: ops.ci_findings — open row (post-merge coverage check failed)
-        # Reuses the job's existing WIF auth (steps.wif_guard.outputs.skip, set near the top of this
-        # job) exactly like the routine_commit_markers insert above — no new IAM grant needed
-        # (gh-ci-runner@ already holds table-scoped dataEditor on ops.ci_findings, OWNER_ACTIONS.md item
-        # G). 2026-08-31 code-quality pass (shell-workflows#0): the VALUES-row insert itself now lives
-        # in scripts/ci_finding.sh, which builds run_url from GitHub's own default env vars — no shell
-        # run_url var needed here any more.
-        if: always() && steps.wif_guard.outputs.skip == 'false' && steps.merge.outputs.did_merge == 'true' && steps.postmerge.outputs.result == 'fail'
-        run: |
-          set -uo pipefail
-          detail="post-merge coverage check (pytest + consistency checkers + node helper tests) failed against main's merged tip $(git rev-parse HEAD) -- see the run for which check(s)."
-          scripts/ci_finding.sh "auto-merge-main" "postmerge_coverage" "open" "$detail" \
-            || echo "::warning::ops.ci_findings open-row insert failed for postmerge_coverage -- GH issue path unaffected."
-
-      - name: ops.ci_findings — resolved row (post-merge coverage check clean)
-        # INSERT..SELECT FROM state.ci_findings_open, scoped to this exact (workflow, finding_key), so a
-        # clean run writes ZERO rows when nothing is open (cheap no-op on the common healthy path) and
-        # exactly one otherwise -- the same idiom every other clean-run auto-resolve in this repo already
-        # uses (live-sql-parity.yml / alert-relay.yml / offsite-backup.yml), chosen over an unconditional
-        # VALUES row so a healthy day doesn't grow this append-only table for no reason.
-        if: always() && steps.wif_guard.outputs.skip == 'false' && steps.merge.outputs.did_merge == 'true' && steps.postmerge.outputs.result == 'ok'
-        run: |
-          set -uo pipefail
-          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          # shellcheck disable=SC2016 # single-quoted intentionally: see above.
-          bq query --project_id=stock-trading-498512 --use_legacy_sql=false \
-            --parameter="p_url:STRING:${run_url}" \
-            'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) SELECT workflow, finding_key, "resolved", "post-merge coverage check clean this run", @p_url FROM `stock-trading-498512.state.ci_findings_open` WHERE workflow = "auto-merge-main" AND finding_key = "postmerge_coverage"' \
-            || echo "::warning::ops.ci_findings resolved-row insert failed for postmerge_coverage -- GH issue path unaffected."
-
-      - name: Close finding issue if resolved
-        if: always() && steps.merge.outputs.did_merge == 'true' && steps.postmerge.outputs.result == 'ok'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -uo pipefail
-          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
-            --jq '[.[] | select(.title|startswith("⚠️ Post-merge coverage check:"))][0].number // empty')
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Resolved — the post-merge coverage check passed against main's current merged tip. Closing."
-            gh issue close "$existing" --repo "$GITHUB_REPOSITORY"
-          fi
-
-      - name: Fail the job if the post-merge coverage check failed
-        # LAST STEP, DELIBERATELY: branch cleanup, commit markers, the checks themselves, and the
-        # issue/finding signalling above have all already completed by this point, so failing here
-        # cannot skip any of it. See the header comment above this block for why a red run (not only a
-        # durable finding) matters, and why an autonomous revert of main is explicitly NOT attempted.
-        if: steps.postmerge.outputs.result == 'fail'
-        run: |
-          echo "::error::Post-merge coverage check failed against main's merged tip -- see the 'Post-merge coverage check' step above and the deduped GitHub issue / ops.ci_findings row for details."
-          exit 1

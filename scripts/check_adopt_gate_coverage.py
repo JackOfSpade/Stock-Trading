@@ -86,6 +86,7 @@ auto-merge-claude.yml every time this script runs, so it cannot go stale the way
 
 Usage: python scripts/check_adopt_gate_coverage.py     # exit 0 if in sync, 1 + diff if not
 """
+import json
 import os
 import re
 import sys
@@ -210,6 +211,21 @@ def load_postmerge_step(path=None):
     """The auto-merge-claude.yml step whose `id:` is POSTMERGE_STEP_ID, or None if no step in
     the workflow carries that id (workflow restructured -- the id itself renamed or removed)."""
     doc = load_yaml(path or AUTO_MERGE_YML)
+    if doc.get("name") == "Merge validated PR":
+        # The explicit PR path dispatches the entire CI workflow on new main,
+        # replacing a hand-maintained subset of mirrored shell commands.
+        for job in doc.get("jobs", {}).values():
+            for step in job.get("steps", []):
+                if step.get("run") != "python3 .github/scripts/merge_validated_pr.py":
+                    continue
+                try:
+                    workflows = json.loads(step.get("env", {}).get("MAIN_WORKFLOWS", "[]"))
+                    checks = json.loads(step.get("env", {}).get("REQUIRED_CHECKS", "[]"))
+                except (TypeError, ValueError):
+                    return None
+                if "ci.yml" in workflows and "CI required" in checks:
+                    return dict(step, dispatches_full_ci=True)
+        return None
     try:
         jobs = doc["jobs"]
     except KeyError as e:
@@ -254,6 +270,8 @@ def find_postmerge_missing(required):
     step = load_postmerge_step()
     if step is None:
         return [], None
+    if step.get("dispatches_full_ci"):
+        return [], step
 
     present = postmerge_step_identifiers(step)
     missing = []
@@ -319,6 +337,9 @@ def main():
         for ident, step_name in postmerge_missing:
             print(f"  - {ident}  (ci.yml step: {step_name!r})")
         exit_code = 1
+    elif postmerge_step.get("dispatches_full_ci"):
+        print("POST-MERGE VALIDATION: OK -- explicitly selected PR merges dispatch the full "
+              "ci.yml on main, covering every required job without a mirrored subset.")
     else:
         covered = len({i for i, _ in required} - POSTMERGE_EXCLUDED_IDENTIFIERS)
         print(f"POST-MERGE COVERAGE MIRROR: OK -- {covered} blocking checks-job identifiers all "
