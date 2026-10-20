@@ -397,3 +397,22 @@ def test_real_repo_postmerge_mirror_is_in_sync():
     missing, step = cs.find_postmerge_missing(required)
     assert step is not None
     assert missing == []
+
+
+def test_explicit_pr_merge_requires_full_ci_dispatch(tmp_path, monkeypatch):
+    import json
+    workflow = tmp_path / 'merge.yml'
+    def write(workflows, checks):
+        workflow.write_text(yaml.safe_dump({'name': 'Merge validated PR', 'jobs': {
+            'merge': {'steps': [{'run': 'python3 .github/scripts/merge_validated_pr.py',
+                                'env': {'MAIN_WORKFLOWS': json.dumps(workflows),
+                                        'REQUIRED_CHECKS': json.dumps(checks)}}]}}}))
+    monkeypatch.setattr(cs, 'AUTO_MERGE_YML', str(workflow))
+    write(['ci.yml', 'codeql.yml'], ['CI required', 'Security required'])
+    missing, step = cs.find_postmerge_missing([('new_future_check.py', 'Future CI check')])
+    assert missing == []
+    assert step['dispatches_full_ci']
+    write(['codeql.yml'], ['CI required'])
+    assert cs.find_postmerge_missing([]) == ([], None)
+    write(['ci.yml'], [])
+    assert cs.find_postmerge_missing([]) == ([], None)

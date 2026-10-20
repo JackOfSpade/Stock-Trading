@@ -1,5 +1,17 @@
 # Project notes for Claude
 
+## CI policy update (2026-10-20)
+
+This repository is public. Standard public GitHub-hosted runner compute is free;
+the private-minute cost measurements below describe historical visibility.
+Batch related pushes to reduce queue noise. Main now uses required PR checks
+and the manual **Merge validated PR** workflow in place of the old branch drain.
+It never enumerates or deletes other branches. See `.github/CI_POLICY.md`.
+Existing external cloud/model cost controls and autonomous routine contracts
+are unchanged. Golden scenario semantic adjudication remains with D3/AR_orc;
+CI adds deterministic offline behavior coverage across Python versions.
+
+
 ## Operating notes
 
 - **Batch pushes within a session — every push costs CI minutes.** This repo is private,
