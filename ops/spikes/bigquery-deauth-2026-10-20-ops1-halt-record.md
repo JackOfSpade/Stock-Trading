@@ -49,3 +49,19 @@ Re-authorize the Google-Cloud-BigQuery connector in claude.ai connector settings
 ## Unfiled findings
 
 - None new. `ops.alerts` is unreachable, so nothing was filed.
+
+---
+
+## M1R slot, 2026-10-20: HALTED
+
+- **Clock at pre-flight:** UTC `2026-10-20 13:09` (scheduled 13:05:57), **Denver 07:09 MDT**. Operating-plane date **2026-10-20**. Trigger `trig_01R6YpUzw3pk7UEeWB5Bdtvq`.
+- **Signature:** the Google-Cloud-BigQuery MCP server was listed as **requiring authentication** at session start. None of its tools were exposed, so the pre-flight `state.trading_day_today` read could not be issued through the connector at all. As a diagnostic only, `bq query --project_id=stock-trading-498512` with the ambient CLI credentials returned `Invalid Credentials`, the same as OPS1 saw. This is the re-auth class, which is **non-waitable**, so no retry ladder was run. The outage still held 34 minutes after OPS1's detection.
+- **Disposition:** HALT, per the FLEET CONNECTOR-DOWN DISPOSITION TABLE's M1R row (M1R has no limb of its own).
+- **What this fire did NOT do:** it ran no STEP 1 gate read, so whether a `PENDING_REGIME_REFRESH` `regime-refresh` item is open is **UNKNOWN, not empty**. It emits no "No open regime-refresh item" line. It ran no STEP 2a event sweep and made no metered call, so **METERED SPEND: ZERO** and no `ops.web_calls` row is owed. It wrote no `events.regime_events` or `events.queue_events` row and resolved no `rerisking_limb_fired` alert. It wrote no `ops.run_log` row (not even `started`). Under the blinding rules it read no strategy material; beyond the plan, its file reads were this record and `ops/cadence.yaml`.
+- **Calendar:** no second event was created. One line, `UPDATE 07:12 MDT M1R halted …`, was appended to event `fp4q99provs98frj45j93ou4t0`. The description was well under the 8,192-character cap and ended cleanly before the append.
+- **After re-auth:** M1R is queue-driven and `catchup_safe: true`, so the catch-up path replays the slot. Its STEP 1 due predicate is `due_date <= today`, so an item that was open today is still picked up by the replay or by the next regular fire (Wed 2026-10-21 07:00 MT). No `ops.run_log` backfill is owed.
+- **Recovery procedure:** no routine in `ops/cadence.yaml` names M1R in `depends_on`, so no dependent needs a replay. D2 picks up a new `FUNDAMENTAL_AXIS` row the same evening only if M1R has run by then. That is a reading relationship, not a declared dependency, and D2 halts anyway while BigQuery is down. **Expected signature:** no M1R `run_log` row for 2026-10-20 until the catch-up replays it. A `queue_driven_missed_fire` warning for M1R/2026-10-20 from `state.queue_driven_missed_fire_watch` is expected, not a fresh fault.
+
+### Unfiled findings (M1R slot)
+
+- None new.
