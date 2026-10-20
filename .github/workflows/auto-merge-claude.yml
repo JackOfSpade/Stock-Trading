@@ -25,6 +25,7 @@ jobs:
       contents: write
       pull-requests: write
       actions: write
+      id-token: write # Existing table-scoped WIF identity for RUNBOOK section 38 markers.
     steps:
       - name: Check out trusted main policy, never PR code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -32,9 +33,48 @@ jobs:
           ref: main
           persist-credentials: false
       - name: Merge only the selected validated PR and check main
+        id: merge
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ inputs.pr_number }}
           REQUIRED_CHECKS: '["CI required", "Security required", "Dependency review required"]'
           MAIN_WORKFLOWS: '["ci.yml", "codeql.yml"]'
         run: python3 .github/scripts/merge_validated_pr.py
+
+      # Preserve the existing landed-but-unlogged routine recovery independently
+      # of the routine session. Trusted main code inspects only this selected PR's
+      # verified landed commits; it never checks out or sweeps other branches.
+      - name: Authenticate for selected PR landing markers (best effort)
+        id: marker-auth
+        if: always() && steps.merge.outputs.merge_sha != '' && vars.GCP_WIF_PROVIDER != '' && vars.GCP_WIF_SERVICE_ACCOUNT != ''
+        continue-on-error: true
+        uses: ./.github/actions/gcp-wif-auth
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
+
+      - name: Record only the selected PR's landed routine outputs
+        if: always() && steps.merge.outputs.merge_sha != ''
+        env:
+          BASE_SHA: ${{ steps.merge.outputs.base_sha }}
+          HEAD_SHA: ${{ steps.merge.outputs.head_sha }}
+          MERGE_SHA: ${{ steps.merge.outputs.merge_sha }}
+          AUTH_OUTCOME: ${{ steps.marker-auth.outcome }}
+          WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
+          WIF_SERVICE_ACCOUNT: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$WIF_PROVIDER" ] || [ -z "$WIF_SERVICE_ACCOUNT" ]; then
+            echo '::notice::WIF vars unset -- section 38 landing markers are not configured.'
+            exit 0
+          fi
+          if [ "$AUTH_OUTCOME" != 'success' ]; then
+            echo '::warning::WIF authentication failed -- section 38 landing markers could not be written; the completed PR merge is unaffected.'
+            exit 0
+          fi
+          if ! git fetch --no-tags origin "$MERGE_SHA"; then
+            echo '::warning::Could not fetch the selected landed merge -- no routine markers written.'
+            exit 0
+          fi
+          if ! bash scripts/write_routine_commit_markers.sh "$BASE_SHA" "$HEAD_SHA" "$MERGE_SHA"; then
+            echo '::warning::Selected landed range verification failed -- no unverified routine markers written; the completed PR merge is unaffected.'
+          fi
