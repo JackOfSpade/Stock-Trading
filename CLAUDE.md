@@ -5,7 +5,12 @@
 This repository is public. Standard public GitHub-hosted runner compute is free;
 the private-minute cost measurements below describe historical visibility.
 Batch related pushes to reduce queue noise. Main now uses required PR checks
-and the manual **Merge validated PR** workflow in place of the old branch drain.
+and the explicitly selected **Merge validated PR** workflow in place of the old branch drain.
+Scheduled routines open/reuse only their own assigned branch's PR, wait for
+`CI required`, `Security required`, `Dependency review required` and native CodeQL
+on its exact up-to-date head, dispatch `auto-merge-claude.yml` on main with
+`pr_number`, and confirm merged state plus main ancestry. This authorized routine
+path needs no human approval; see Claude_Task_Plan.md §Branch and state propagation.
 It never enumerates or deletes other branches. See `.github/CI_POLICY.md`.
 Existing external cloud/model cost controls and autonomous routine contracts
 are unchanged. Golden scenario semantic adjudication remains with D3/AR_orc;
@@ -14,10 +19,10 @@ CI adds deterministic offline behavior coverage across Python versions.
 
 ## Operating notes
 
-- **Batch pushes within a session — every push costs CI minutes.** This repo is private,
-  so GitHub Actions bills per job-minute (ceil per job), and `ci.yml` runs on EVERY push with
-  no branch/path filter at the workflow level (deliberate — auto-merge's gate looks up the CI
-  run for a branch's exact tip SHA, so a push with no CI run would never merge). A 2026-07-20
+- **Batch pushes within a session — every push costs CI minutes.** This repo is public;
+  standard public GitHub-hosted runners are free. `ci.yml` runs on EVERY push with
+  no branch/path filter so each PR head has the complete checks required for its selected merge.
+  The following billable-minute measurements describe the repository's former private visibility. A 2026-07-20
   cost audit measured ~13 billable minutes per CI run under the then-6-job layout, ~76% of that
   month's Actions bill, and found one long interactive session that pushed 61 times to a single
   branch (~23% of July's CI minutes) by pushing after each small edit. Since the 2026-07-30 job
@@ -61,7 +66,7 @@ CI adds deterministic offline behavior coverage across Python versions.
 
   **Practice:** in an interactive session, accumulate related edits and push ONCE per
   completed, reviewable unit of work — the same discipline the scheduled routine fleet
-  already follows (one branch, one push, auto-merge drains it). Do not push to "checkpoint"
+  already follows (its own branch and PR, exact-head checks, then explicit validated-PR dispatch). Do not push to "checkpoint"
   work in progress; the working tree is the checkpoint. An incident night that legitimately
   produces many separate landings (each its own reviewed fix) is fine — the anti-pattern is
   re-pushing the *same* unit of work repeatedly.
