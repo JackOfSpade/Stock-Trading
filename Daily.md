@@ -1,29 +1,28 @@
-2026-10-19
-<!-- d1_scan_through_utc: 2026-10-19T22:25:00Z -->
+2026-10-20
+<!-- d1_scan_through_utc: 2026-10-20T22:30:00Z -->
 
-# Daily Market Development Scan — 2026-10-19 (Mon, MT)
+# Daily Market Development Scan — 2026-10-20 (Tue, MT)
 
-Scan window: 2026-10-18 16:45 MT → 2026-10-19 16:25 MT (~24h). The start comes from the prior `Daily.md` marker `2026-10-18T22:45:00Z`, and that file's commit (22:38:51Z) agrees. The window holds **one completed US trading session, Monday 2026-10-19**, plus Sunday's weekend news. After-close 10-19 releases are in the window, but they react on 10-20.
+Scan window: 2026-10-19 16:25 MT → 2026-10-20 16:30 MT (~24h). The start comes from the prior `Daily.md` marker `2026-10-19T22:25:00Z`, and that file's commit (22:26:11Z) agrees. The window holds **one completed US trading session, Tuesday 2026-10-20**, plus 10-19 after-close releases, which react on 10-20. Releases after the 10-20 close (NFLX, ISRG, COF, CB, UAL and others) react on 10-21 and are pending.
 
-Tape: **a relief rebound in chips and software on a rising-yield day. The S&P was barely up and the equal-weight index fell.**
-- **Indices.** IBKR regular-session closes, 10-16 → 10-19: SPY 763.25 → **766.48 (+0.4232%)**, QQQ **+1.2060%**, IWM +0.3106%, DIA −0.0347%, **RSP −0.3223%**, and **SMH +1.6061%**, its first up day after nine straight declines. Secondary: S&P 500 7,690.73 (+0.41%), Dow −0.07%, Nasdaq Composite about +1.1%.
-- **VIX 18.44 (−1.55)**, from IBKR (CBOE index bar, `exchange` CBOE; 19.99 on 10-16).
-- **Rates.** 10Y 5.15% (+6bp), 2Y 4.77% (+3bp), 30Y 5.48% (+5bp), from FMP treasury-rates. TLT fell −0.74% and HYG −0.04%.
-- **Oil.**
-  - **Brent December settled $109.55 on 10-19, against $109.86 on 10-16 (−0.3%)** (MarketWatch/WSJ settle line). WTI December settled $98.54 (−0.5%).
-  - The expiring WTI November contract rose +2.2% to $103.66 on thin volume. That was the source of the "5-week high" headlines.
-  - USO fell −0.59% and GLD −0.61%.
-- **Leadership.** XLY +1.78 and XLK +1.36 led; XLU −2.01 and XLRE −1.16 lagged.
+Tape: **a rotation out of the AI and mega-cap trade into healthcare, banks and small caps on a heavy earnings day.**
+- **Indices.** IBKR regular-session closes, 10-19 → 10-20: SPY 766.48 → **769.05 (+0.3353%)**, QQQ −0.1016%, **IWM +1.6588%**, DIA +1.0483%, **RSP +1.1528%**, SMH −0.3829%. SPY closed +0.10% above its 50-day SMA of closes (768.29). The trend call is D2a's.
+- **VIX 17.31 (−1.13)**, from IBKR (CBOE index bar; 18.44 on 10-19).
+- **Rates.** 10Y 5.12% (−3bp), 2Y 4.79% (+2bp), 30Y 5.42% (−6bp), from FMP treasury-rates pinned to 10-20. TLT rose +0.84% and HYG was flat.
+- **Oil.** **The 10-20 Brent and WTI December settles are not confirmed**, so no 10-20 level is quoted. The last confirmed Brent settle is $109.55 on 10-19 (Reuters). Intraday 10-20, Brent December traded about $109.90–111.42 (WSJ, CNBC). USO fell −0.12% and GLD −0.54%.
+- **Leadership.** XLV +2.37 led and XLRE +1.70 followed. XLK −0.28 was the only sector down.
 
 ## TL;DR
 
-- **Exits triggered: none.** There are twelve Strategy D tranches and no mechanical trigger. No Development met any invalidation criterion.
-- **New entry candidates: none routed.** Five names clear Strategy B's frozen ≥5% floor on own events, all anchored 2026-10-19: **IRON, CLF, MANE, DDOG and ARQT**. B is `DO-NOT-ACTIVATE` and capital-disabled, so they go to the index only.
-- **Add candidates: none (0 of 12).** D is `DO-NOT-ACTIVATE` and capital-disabled.
-- **Watchlist: 5 changes.** ADD IRON, CLF, MANE, DDOG and ARQT to the Strategy B new-entry index.
-- **Regime review: no review.** VIX eased inside NORMAL. Breadth fell to **50.69**, still above the 50 line. The acute shock overlay already covers the Gulf escalation.
+- **Exits triggered: none.** Twelve Strategy D tranches carry no mechanical trigger. RTX and ISRG both reported Q3 inside the window, and neither breached any criterion.
+- **New entry candidates: none routed.** Twelve names cleared Strategy B's frozen ≥5% floor on own events. B is `DO-NOT-ACTIVATE` and capital-disabled, so the 11 eligible names go to the index only: **BRZE, HAS, EFX, LION, PAC, GM, MMM, GPC, MSCI, VICR, UCB**. AERO is an ineligible ADR.
+- **Add candidates: none (0 of 12).** RTX and ISRG show strengthened conviction, but D is `DO-NOT-ACTIVATE` and capital-disabled.
+- **Watchlist: 11 changes.** ADD the eleven names above to the Strategy B new-entry index.
+- **Regime review: no review.** VIX eased to 17.31 and breadth rose to **53.28**. New IRGC Hormuz mine claims fall inside the standing `acute` shock overlay.
 
 Park: VOO-only pin verified
+
+Paper book (J): 120 calls, 0/30 realized, net_mu n/a, ready=FALSE
 
 ---
 
@@ -31,94 +30,138 @@ Park: VOO-only pin verified
 
 ### 1. Market-wide breaking events
 
-- **Gulf / Hormuz. The rhetoric escalated, but oil slipped.**
-  - **10-19.** Iran said it has "no choice" but to assert control of Hormuz ("the strait belongs to Iran and the US must pay the price"; Barchart). Crude touched its session high on it in the afternoon.
-  - **10-19.** Reuters (via Baird Maritime) reported fresh Houthi strikes on Saudi energy, airport and military targets. Saudi Arabia did not confirm them and Reuters could not verify them.
-  - **10-18.** The IRGC claimed another tanker hit a mine south of Hormuz. It also said ships that switch off AIS will be treated as hostile. The claim came through Iranian media and Iran International and has not been independently confirmed.
-  - **Flows.** Kpler measured 10.17M bpd through Hormuz in the 7 days to Saturday, ~41% below pre-war. Energy Secretary Wright put Persian Gulf flows at ~80% of pre-war. The US blockade is still in force. Araghchi's 7-day reopening offer "remains on the table", and Trump says the strait is "open to all but Iran".
-  - **Why oil slipped anyway.** The Friday 10-16 executive order waived some Russia sanctions (a diesel deal). Brent fell as much as −2.1% to $107.55 early Monday, then recovered to settle −0.3%. Separately, Ukraine struck a St. Petersburg oil terminal on 10-18 (Russian product exports).
-- **AI-credit stress paused.** Goldman upgraded CoreWeave to Buy and cut its price target to $106 from $139, and neocloud names bounced intraday. But CRWV closed **−0.44%** (61.39 → 61.12) and NBIS +2.88%. **No new CDS print, default or downgrade** was found for 10-19.
-- **No new Anthropic or OpenAI funding event** in the window. Reported Nscale–Anthropic talks (~$45B, Bloomberg) are not an AWS commitment change.
+- **Gulf / Hormuz.**
+  - **10-20.** The IRGC said two "non-compliant" tankers were set ablaze after hitting its mines in Hormuz (Tasnim, via CNBC). It also claimed a mine strike on a tanker on 10-18.
+  - **Houthis** claimed strikes on Saudi energy sites (Aramco Yanbu and Shaybah); these are unconfirmed.
+  - **Flows.** Kpler counts at least 18 vessels fired on in two weeks, with Hormuz crude flows around 8.5 mb/d last week. Energy Secretary Wright puts Gulf flows at ~80% of pre-conflict.
+  - **Russia.** The US is easing some Russian oil sanctions (a diesel deal), and lawmakers are resisting.
+  - Saudi Arabia postponed FII to 2027. Oil firmed early on 10-20; the settle is unconfirmed.
+- **AI-credit stress.**
+  - CoreWeave 5-year CDS ended 10-19 near 1,090bp, about 3x a year earlier (Bloomberg data via Yahoo).
+  - CRWV hit its lowest since May 2025 early on 10-20, then bounced.
+  - CNBC reports Oracle debt is near junk, with downgrade risk.
+  - Semicap and AI-chip names lagged (LRCX −3.21, KLAC −2.80, ARM −3.07) while software rebounded.
+- **No Anthropic or OpenAI funding or compute-commitment event** was found in the window. That means nothing was found, not that none exists.
 
 ### 2. Scheduled events that resolved in the window
 
+- **Enumeration.**
+  - The Nasdaq key-less calendar for 10-19 and 10-20 was fetched with curl and filtered to ≥$2B.
+  - Release times come from issuer releases or EDGAR acceptance stamps. **EDGAR acceptance is an upper bound**, except where noted.
+  - FMP's calendar was not used for enumeration.
 - **Macro.**
-  - NAHB housing index fell to **29** (consensus 31, prior 32), the lowest since June 2012; 43% of builders cut prices.
-  - The Fed is in blackout through 10-29, and the FOMC meets 10-27/28. Hike odds are ~15–17%. Hassett called the economy "in a boom".
-- **Earnings, pre-open 10-19.**
-  - **Cleveland-Cliffs (CLF)** Q3 2026, issuer release on Business Wire.
-    - Adj EPS ~$0.28 (IBD $0.26) vs ~$0.22. Revenue $5.6B vs $5.71B (a slight miss).
-    - Adj EBITDA $612M. Q4 guided higher. **2027 adj EBITDA >$4B against ~$2.66B consensus.**
-  - **Fifth Third** reported per ZeroHedge's calendar; not looked into.
-- **Earnings, after close 10-19.** These anchor 10-19 and react 10-20, so they are pending and not measured.
-  - **W. R. Berkley (WRB)** Q3, issuer release on Business Wire: net income $446M, operating ROE 18.8%.
-  - **Crown Holdings (CCK)** Q3, issuer release on PR Newswire at 16:05 ET: income from operations $442M.
-  - **Steel Dynamics (STLD)**: net income $756M, per AP; the issuer release was not fetched.
-  - **AGNC, Zions, FNB, RLI, BOK Financial and Wintrust** are listed after close (calendar only, not verified).
-- **Enumeration gap.** FMP's earnings calendar returned empty for 10-18/10-19 on three calls. So this list is search-built, **not a full enumeration of the ≥$2B universe**.
-- **Clinical and FDA.**
-  - **Disc Medicine (IRON):** the Phase 3 APOLLO trial succeeded (issuer GlobeNewswire release, pre-open). It is a trial readout, not an FDA action.
-  - **Veradermics (MANE):** Phase 3 Study 304 succeeded (Business Wire, 07:00 ET).
-  - **GSK's Jemperli** approval for MSI-H/dMMR locally advanced rectal cancer (10-19) comes from GSK's release only. **It is unresolved against the FDA's own page**, which was not checked.
-- **Not in window.** RTX, GE and GM report 10-20 pre-open (RTX's date is issuer-verified). ISRG reports 10-20 after close (secondary source), Netflix 10-20, and Tesla and Meta 10-21.
+  - No US data release on 10-20 was identified.
+  - The Fed is in blackout; the FOMC meets 10-27/28. CME FedWatch showed 82.8% for a hold (premarket). BofA still calls an October hike.
+- **Earnings, 10-19 after close (react 10-20).**
+  - FNB EPS was $0.43, in line (PR Newswire, 16:31 ET).
+  - AGNC net spread income was $0.37/share vs $0.39 expected.
+  - Regional banks mostly beat: ZION, WAL, BOKF, WTFC, RLI, SFBS.
+  - AERO posted record Q3 revenue (6-K at ~17:34 ET).
+  - WRB, CCK and STLD moved less than 2% on 10-20.
+- **Earnings, 10-20 pre-open.**
+  - **GM:** adj EPS $3.70 vs $3.55 and a $20B buyback, yet the stock fell −6.84%. The release states 06:30 ET.
+  - **HAS:** adj EPS $2.90 vs $1.86, with the outlook raised.
+  - **EFX:** adj EPS $2.26 vs $2.19, but the FY revenue guide was cut.
+  - **MMM:** adj EPS $2.50 vs $2.41, with the guide raised.
+  - **GPC:** a slight miss, with the guide top cut.
+  - **MSCI:** adj EPS $5.11 vs $4.98.
+  - **NOC:** EPS $7.89 vs $7.22, with the guide raised.
+  - **GE:** a beat with the guide raised, yet the stock fell −3.67%.
+  - **KEY:** EPS $0.51 vs $0.46.
+  - **VICR:** revenue +78.5% with a small EPS miss.
+  - **PAC:** revenue +21.8%.
+  - **UCB:** the print is distorted by one-offs.
+- **Held names: RTX (pre-open) and ISRG (after close).** Both were read from the issuers' 8-K Ex-99.1; see the risk section below.
+- **Earnings, 10-20 after close (pending; react 10-21).**
+  - **NFLX:** Q3 revenue $12.9B (+12%), FY26 guide $51.1B.
+  - **COF:** adj EPS $6.69 vs $5.45.
+  - **CB:** core EPS $7.66 vs $6.53.
+  - **UAL:** adj EPS $2.54 vs $2.60, with Q4 revenue guided above +20%.
+  - Also: EWBC, NLY, ADC, HWC, PEGA, WFRD, NP, ALK, LRN.
+- **Not verified.**
+  - ELS, OZK and AMX: no issuer release found.
+  - SMMT and CLBK: no 8-K.
+  - OMC reports 10-22, outside the window.
+  - Revenue consensus was not sourced for any print.
+- **FDA.**
+  - **GSK Jemperli** (dostarlimab) accelerated approval for Stage II/III MSI-H/dMMR locally advanced rectal cancer, dated 10-19. The fda.gov page summary was seen via search, but a direct fetch returned 401. **Sponsor and status are unresolved against the FDA page itself**, and the release time is not established.
+  - **GSK's hepatitis B drug approval** (Reuters headline, 10-20) is **unresolved against FDA pages**.
 
 ### 3. Large single-name moves — AI-SIGNIFICANCE SCREEN
 
-Durable record: **`c7045f5f-9300-44cd-8227-b0771dc4ad29`** (`research-screen`, `single-name-move`). **`surfaced_count` = 7 = ARRAY_LENGTH(passed); rail_tally 10; universe_measured 141.**
+Durable record: **`ec09d8fc-29d6-42fc-92a8-ce292d0501d5`** (`research-screen`, `single-name-move`). **`surfaced_count` = 15 = ARRAY_LENGTH(passed); rail_tally 24; universe_measured 193.**
 
-**Population.** The screen measured 141 distinct US equities on IBKR daily bars (close array, 10-16 → 10-19):
-- a fixed sweep of 130 large caps (122 non-held S&P and Nasdaq leaders plus the 8 held names);
-- 20 names off discovery: FMP biggest-gainers, biggest-losers and most-active, plus date-checked 10-19 mover and analyst-call pages (CNBC premarket and midday, Fool, Yahoo, 24/7 Wall St, Newsquawk, StockTitan). Nine of these overlapped the sweep.
+**Population (selection_rule).** IBKR daily bars, close array, 10-19 → 10-20:
+- a fixed sweep of 159 US large caps;
+- every ≥$2B Nasdaq-calendar reporter from 10-19 after close and 10-20 pre-open (30 measured, 26 of them outside the sweep);
+- 8 names off discovery (FMP gainers, losers and most-active, plus 3 wide news searches).
 
-Names below $2B were dropped on the FMP cap.
+Names below $2B were dropped on the FMP `profile-symbol` cap.
 
-**Clear the B floor (≥5%) on an own event.** In every case `qualifying_event_date` = 2026-10-19 = the reaction session, because each release was pre-open or intraday.
+**Clear the B floor (≥5%) on an own event.**
 
-| Name | Move (prior → event close) | Event | Release | Cap | Conv. | Other ≥5% sessions in window |
+| Name | Move (prior → event close) | Event | Anchor / release | Cap | Conv. | Other ≥5% sessions |
 |---|---|---|---|---|---|---|
-| IRON | **+38.8635%** (56.84 → 78.93) | Phase 3 APOLLO success (bitopertin, EPP/XLP); $350M follow-on the same day | pre-open, issuer GlobeNewswire | $3.03B post (~$2.2B pre) | 75 | 1 (10-13) |
-| CLF | **+16.3366%** (12.12 → 14.10) | Q3 beat; 2027 EBITDA >$4B vs ~$2.66B consensus | pre-open, issuer Business Wire | $8.04B | 75 | 1 (10-09) |
-| MANE | **+12.3690%** (108.82 → 122.28) | Phase 3 Study 304 success (oral minoxidil) | 07:00 ET, issuer IR stamp | $5.11B | 60 | **5** (10-06, 10-08, 10-12, 10-13, 10-16) |
-| ARQT | **+10.6523%** (28.82 → 31.89) | Guggenheim price target raised to $44 | 10-19, time not established | $4.01B | 30 | 2 (10-09, 10-15) |
-| DDOG | **+5.3620%** (247.11 → 260.36) | Bernstein upgrade to Outperform (PT $350) | pre-open, broker note | $93.5B | 45 | 2 (10-09, 10-16 −7.19%) |
+| BRZE | **+51.6977%** (30.04 → 45.57) | Salesforce all-cash deal at $47.50 | 10-20 pre-open (halted pre-open; minute not captured) | $5.18B | 75 | 2 (10-07, 10-15) |
+| LION | **+14.4068%** (10.62 → 12.15) | Bloomberg: revived ~$3.5B Legendary bid (unconfirmed) | 10-20 intraday | $3.62B | 60 | 0 |
+| EFX | **+11.3325%** (158.57 → 176.54) | Q3 beat; FY revenue guide cut | 10-20 pre-open (EDGAR 06:31) | $20.7B | 60 | 1 (10-15) |
+| HAS | **+11.1991%** (98.49 → 109.52) | Q3 beat; outlook raised; buyback doubled | 10-20 pre-open (EDGAR 06:32) | $15.4B | 75 | 0 |
+| VICR | **+7.0589%** (190.68 → 204.14) | Q3 revenue +78.5%; small EPS miss | 10-20 pre-open (EDGAR 07:20) | $9.41B | 45 | **5** |
+| PAC | **+7.0511%** (203.09 → 217.41) | 3Q26 revenue +21.8% (ADS, cap ≥$10B: eligible) | 10-20 pre-open (6-K 06:00) | $11.3B | 60 | 0 |
+| GM | **−6.8399%** (82.75 → 77.09) | Q3 beat and $20B buyback; GMI EBIT −88% | 10-20 06:30 ET (stated) | $67.6B | 60 | 0 |
+| AERO | **−6.3562%** (15.89 → 14.88) | Record Q3 revenue | 10-19 after close → reaction 10-20 | $2.17B | 45 | 0 |
+| MMM | **+5.7774%** (162.01 → 171.37) | Q3 beat; guide raised | 10-20 pre-open (EDGAR 06:35) | $88.4B | 60 | 0 |
+| GPC | **−5.1160%** (130.18 → 123.52) | Slight miss; guide top cut | 10-20 pre-open (EDGAR 07:47) | $17.0B | 60 | 0 |
+| MSCI | **+5.0045%** (563.49 → 591.69) | Q3 beat | 10-20 pre-open (EDGAR 06:46) | $43.0B | 60 | 0 |
+| UCB | **+5.0030%** (33.78 → 35.47) | Q3 distorted by one-offs; KRE +1.96 | 10-20 pre-open (EDGAR 07:00) | $4.25B | 45 | 0 |
 
-- **IRON and CLF carry the most information.** IRON's is a binary clinical de-risking; CLF's is a guidance re-rating that its steel peers did not share (XLB +0.06%).
-- **MANE is not a clean single-event reaction.** Five other ≥5% sessions sit inside its window (it IPO'd 2026-02-04), which prejudices B criteria 2 and 4.
-- **DDOG** largely retraces Friday's −7.19% on a software-rebound tape.
-- **ARQT** rests on aggregator headlines only. Its 10-15 own event is already indexed under `3e90f4a0`; this is a distinct, later anchor.
+- **AERO is instrument-ineligible for B.** It is a foreign ADS with a $2.17B cap, below Rev 49's $10B ADR line. It is written up as context only.
+- **BRZE is pinned to a cash deal price.** That makes B criteria 2 and 4 (mispricing vs information) the crux.
+- **LION** rests on an anonymous-source report.
+- **VICR** carries five other ≥5% sessions in its window, so it is not a clean single-event reaction.
+- **MSCI and UCB** sit on the floor: +5.0045% and +5.0030%.
 
-**Written up below the floor (`below_spec_floor`, context only).**
-- **AMZN +4.9800%** (250.00 → 262.45; held D). Morgan Stanley named it a top pick (PT $350, AWS +47% expected in 2027).
-- **AMP −4.0715%** (500.80 → 480.41). BofA cut it two notches to Underperform (PT $445 from $570), citing advisor departures and cash-sweep pressure.
+**Written up below the floor (`below_spec_floor`).**
+- NOC +4.5726% (510.65 → 534.00): beat and guide raise.
+- GE −3.6655% (311.28 → 299.87): sold the news on a beat and raise.
+- KEY +4.4679% (19.92 → 20.81): about 2.5pp of the move is idiosyncratic against KRE.
 
-**Rejected (≥5%, no own event).** SNDK +5.5276% rebounded on CXMT's Sunday profit guide, which is a peer's event, after three ≥5% down sessions.
+**Rejected (≥5%, no own event).**
+- **MDB +5.0159%** (348.69 → 366.18): a software-wide rebound after 10-16's −7.89%. An unverified CEO-departure headline (Yahoo/Insider Monkey) is an open lead, not a dated release.
+- **RKT +5.042%** (10.71 → 11.25): rate-relief housing beta.
 
-**Context under the floor.** PLTR +4.36, MRVL +4.06, TSLA +3.76, ANET +3.37, TEAM +3.33, ACN +3.16, LRCX +3.13 and MU +2.97 joined the semis and software rebound. INTC +2.43 had a JPMorgan upgrade to Neutral. NRG −4.21 and CEG −3.01 fell with the power and utility selloff.
+**Context under the floor.**
+- MSTR +4.93: no cause found.
+- Healthcare rotation: BMY +4.84, LLY +3.49 (record high).
+- Software rebound: WDAY +4.50, ADBE +3.90.
+- 10-19 after-close prints: AGNC +4.27 and FNB +4.13 (in-line).
+- NU +4.00 on a UBS price-target raise.
+- Semicap weakness: LRCX −3.21, ARM −3.07.
 
 **Checks and gaps.**
-- **Close-chain check ran: 0 hits.** No prior item shares these names with a 2026-10-19 anchor. Coverage is ~32%, so a clean pass is not a clearance.
-- **No after-hours movers list was found.** After-close 10-19 prints (WRB, CCK, STLD, AGNC, regional banks) are pending.
-- **Not IBKR-measured** (FMP quote or headline only): RIG, WULF, SOFI, AGNC, BYD, JBLU, PINS, WHR, DOW, MKS.
+- **Close-chain check ran: 2 hits, IRON and CLF.** Today's prior closes (78.93, 14.10) equal the 10-19 items' event closes in `c7045f5f`. Both anchors are 10-19 pre-open, so today's pair is the session *after* their measured reactions. The earlier dispositions are carried forward, and neither is re-written. No written item hit. Coverage is about 32%, so a clean pass is not a clearance.
+- **Release minutes are upper bounds** (EDGAR acceptance) except GM and FNB. Revenue consensus is unsourced.
+- **Causes not established** for MDB, MSTR, ON and NXPI.
 
 ### 4. Sector-level moves — AI-SIGNIFICANCE SCREEN
 
-Durable record: **`dbd82e7e-8dda-4f52-9c0f-3d8b86af5af6`** (`research-screen`, `sector-move`). `surfaced_count` 3, rail_tally 4, universe 11, dispersion 3.79pp.
+Durable record: **`af249738-e165-4fc8-8ba4-a5f2c1f6dd35`** (`research-screen`, `sector-move`). `surfaced_count` 3, rail_tally 5, universe 11, dispersion 2.65pp.
 
-- **First-use guard: passed.** All eleven registry ETFs' 10-16 closes equal the 2026-10-18 screen's event closes.
-- **XLU −2.0137%** (42.21 → 41.36), conviction 60, `legacy_rule_pass` TRUE. This reversed Friday's +1.34% defensive bid as the 10Y rose ~6bp. AI-power names sold alongside the regulated utilities: NRG −4.21, CEG −3.01, SO −2.09, NEE −2.04, DUK −1.81. It is notable because SPY was up on the day.
-- **XLY +1.7784%** (112.46 → 114.46), conviction 45. The gain was concentrated in AMZN +4.98 and TSLA +3.76; breadth inside the sector was thin.
-- **XLK +1.3572%** (183.47 → 185.96), conviction 45. A relief rebound: SMH +1.61 after nine declines, with memory, semicap and software up. There was no own-sector event, so this reads as a rebound, not a re-rating.
+- **First-use guard: passed.** The 10-19 closes for XLU (41.36), XLY (114.46) and XLK (185.96) equal the 10-19 screen's event closes.
+- **XLV +2.3740%** (175.65 → 179.82), conviction 60, `legacy_rule_pass` TRUE. Reuters wires (14:01 and 16:55 ET) put healthcare at the top of the S&P sectors and at a record, attributing it to rotation out of the AI trade. No drug-pricing or policy event was found.
+- **XLF +1.1987%** (55.06 → 55.72), conviction 45. A run of regional-bank beats sent KRE up +1.96%.
+- **XLK −0.2796%** (185.96 → 185.44), conviction 45, dispersion-only (`legacy_rule_pass` FALSE). Tech fell on a day RSP rose +1.15 and IWM +1.66. Semicap and AI chips lagged while software rebounded.
 - **Not surfaced.**
-  - XLRE −1.16 cleared the rail but is rate beta.
-  - XLE −0.64: Brent December settled $109.55 on 10-19 against $109.86 on 10-16 after the Russia sanctions waiver.
-  - XLF −0.83, XLI −0.64, XLV −0.60, XLP −0.47, XLC −0.21, XLB +0.06.
+  - XLRE +1.70 and XLU +1.26 are rate beta (TLT +0.84).
+  - XLY +0.91, XLP +0.62, XLB +0.55, XLE +0.25, XLC +0.09, XLI +0.07.
+  - XLE carries no oil level for 10-20, because the settle is unconfirmed.
 
 ### 5. Notable commentary
 
-- **Goldman Sachs** upgraded CRWV to Buy (PT $106). Separately, Goldman estimates a ~$24/bbl crude risk premium and says a European diesel-reserve release could take ~$11 off fair value.
-- **JPMorgan** upgraded INTC to Neutral. **Bernstein** upgraded DDOG to Outperform. **BofA** double-downgraded AMP. **Morgan Stanley** named AMZN a top pick.
-- **ING** says a sustained Hormuz recovery needs a US–Iran agreement. **SEB** flags Iranian escalation risk before the 11-03 midterms, and WaPo reports Tehran is escalating to maximize oil-price pain before them.
-- **TIC data:** Japan and China cut Treasury holdings in August.
+- **Morgan Stanley** (Wilson and Amato) says the correction is nearly over; Amato sees the S&P at 8,300 by May 2027.
+- **JPMorgan** (Matejka) sees relief ahead for equities. **Evercore** flags levels that would turn the AI bull into a correction. **Yardeni** published "Why AI May Be Too Big to Fail".
+- **BofA** (Bhave) keeps a non-consensus October hike call. **Waller** is not "greatly concerned" about a slowdown.
+- **Analyst actions.** UBS raised its NU price target to $20.50. The market reaction to the strategy notes was not measured.
 
 ## ANALYSIS — RISK TO EXISTING POSITIONS
 
@@ -127,13 +170,13 @@ Durable record: **`dbd82e7e-8dda-4f52-9c0f-3d8b86af5af6`** (`research-screen`, `
 Run for **every** position over the **union** of `state.current_positions` and live `get_account_positions`.
 
 - **Twelve tranches, all Strategy D, eight names.** `convergence_target` and `time_exit_date` are NULL on all twelve, so **no mechanical exit trigger can fire**.
-- **The union is clean.** Broker share counts match BigQuery exactly: AMZN 0.3464, DIS 0.7244, GEV 0.1244, GOOGL 0.2577, ISRG 0.1091, RTX 0.1601, TSM 0.155, UBER 0.5156. **No RECONCILIATION-LAG position exists, so no alert is owed.**
+- **The union is clean.** Broker quantities equal BigQuery's per-name tranche sums exactly: AMZN 0.3464, DIS 0.7244, GEV 0.1244, GOOGL 0.2577, ISRG 0.1091, RTX 0.1601, TSM 0.155, UBER 0.5156. **No reconciliation-lag position exists, so no alert is owed.**
 - **Park:** VOO 17.7307 and no SGOV row, which matches the VOO-only pin.
 
 ### Per-strategy kill-trigger sweep
 
-- **Strategy D** (`perf.kill_flags` as of 2026-10-16): `current_drawdown` −3.71%, `excess_vs_sgov` +4.70%, `deployed_days` 121. All five flags are FALSE.
-  - **Refreshed on the 10-19 IBKR closes:** the D book's market value moved 546.91 → **551.23 (+0.79%)**. The drawdown is ~**−2.9%** from peak, nowhere near the −50% kill.
+- **Strategy D** (`perf.kill_flags` as of 2026-10-19): `current_drawdown` −2.94%, `excess_vs_sgov` +5.53%, `deployed_days` 122. All five flags are FALSE, including `evidence_kill`.
+  - **Refreshed on the 10-20 IBKR closes:** the D book's market value moved 551.23 → **550.49 (−0.13%)**. That puts drawdown at about **−3.1%** from peak, nowhere near the −50% kill.
 - **A, B, C, E:** no open positions. B's flags are stale (as of 2026-08-18; capital-disabled), all FALSE.
 - **No `interim_underperf_warning` alert is open or owed. B pairwise correlation is inert:** `n_positions = 0`.
 
@@ -141,164 +184,225 @@ Run for **every** position over the **union** of `state.current_positions` and l
 
 **No Development met any entry-record criterion.**
 
-- **AMZN** +4.98%, both tranches. The Morgan Stanley note is commentary. TorchNeuron and the Trainium tooling are product news. Nothing touches AWS growth, margin or backlog, or the Anthropic/OpenAI commitments (criterion 4 not engaged). Q3 reports 10-29 (FMP, not IR-verified).
-- **TSM** +1.84%, both tranches. Samsung will use TSMC 3nm for Nvidia HBM base dies (Reuters, 10-18), which is mildly positive. No order cut, no CoWoS datum and no export-control development was found, so criterion 3 is not engaged.
-- **GOOGL** +1.05%: no Cloud datum and no structural remedy. Q3 is 10-28 (FMP).
-- **ISRG** +1.52%: Q3 had **not** reported in the window. The next test is 10-20 after close (secondary source; IR returned 403).
-- **RTX** −0.93%: no news. The latest release is the 10-08 $6.3B SM-3 contract. Q3 is **10-20 pre-open, issuer-verified** (RTX release 2026-09-29).
-- **GEV** −1.39%. It sold with AI-power names, and price action is on its not-exit-triggering list. The Q3 date (~10-28) is **unverified**.
-- **UBER** −0.55%: no news. Q3 is 11-04 (FMP).
-- **DIS** −0.90%: no news. FQ4 is **11-17 pre-open, issuer-verified** (Disney's 10-12 release).
+- **RTX** +0.64%. Q3 2026 was released 10-20 (8-K Ex-99.1, accession 0000101829-26-000030; the 8:30 ET call implies pre-open).
+  - Sales were $24.97B (+12% organic) and adj EPS $2.26.
+  - **c4 backlog: $340B, up from $289B.** **c5: the FY26 FCF guide was raised to $9.0–9.2B**, well above the $7.5B floor.
+  - **c2:** the only charge was about $0.36B (a P&W customer bankruptcy). That is not a quality event and is under $1B.
+  - c1 (Airbus) and c3 (GTF Advantage) have no new information. c6 is not engaged.
+  - **UNBREACHED.**
+- **ISRG** +1.11% (pre-release session). Q3 was released 10-20 after the close (8-K Ex-99.1, accession 0001035267-26-000067; 1:30pm PDT call). The anchor is 10-20 and the reaction is 10-21.
+  - **c1:** da Vinci procedures grew about 14% YoY, above the 10% line (Q1 16%, Q2 15%).
+  - **c2:** placements were 546 vs 427.
+  - **c3:** I&A grew 18%, above procedure growth.
+  - **c4:** no competitor displacement is disclosed. That is nothing found, not a verified negative.
+  - **UNBREACHED.**
+- **AMZN** +0.07%, **GOOGL** −1.14%, **TSM** +1.16%, **GEV** −1.99%, **UBER** −1.46%, **DIS** +1.90%: no criterion-relevant development was found. One wide search returned mostly stale items, so this is not a verified negative.
+  - TSM's 10-15 Q3 print was not retrieved this run.
+  - Next prints (approximate, not issuer-confirmed): GOOGL 10-27/28, AMZN 10-29, UBER 10-29 to 11-03, DIS mid-November. GEV's date is unverified.
 
 **No price-level criterion is held, so no dividend-netting test was reached.** **Watchlist:** no Development changed the candidacy of any Strategy A queue name, and A remains `DO-NOT-ACTIVATE`.
-
-**Coverage caveat.** Held-name searching was thin: several IR pages returned 403/404. "None material" means nothing was found, not a verified negative. Two dated earnings tests land tomorrow (RTX, ISRG).
 
 ## ANALYSIS — OPPORTUNITY CHECK
 
 Evaluated against the reactive-cadence roster set (A, B, C, E).
 
-- **Strategy B — five names clear the frozen ≥5% floor on own-event anchors; none is routed.** B is `DO-NOT-ACTIVATE` (10-06) and capital-disabled, so no `thesis-construction` identity is minted. All five are indexed: IRON, CLF, MANE, DDOG, ARQT (§3).
-  - On criterion 4 (information vs sentiment), CLF and IRON are the most information-driven, which argues *against* mispricing.
-  - DDOG and ARQT are broker-note moves that extend existing momentum or retrace earlier sessions.
-- **Strategy A — no new candidate.** No name gained a newly announced catalyst within 6 months that fits A's thesis shape.
-- **Strategy C — no new candidate.** C is FOMC-only. The weak NAHB print and the Fed blackout feed the in-pipeline `thesis-FOMC-C-20261020` for the 10-28 FOMC; they are not a new catalyst.
-- **Strategy E — no new candidate.** The utilities split is factor-driven (AI power vs regulated, all down), not an intra-industry-group mispricing. Memory (SNDK +5.5 vs MU +3.0) moved together on a common driver. E is `DO-NOT-ACTIVATE`.
+- **Strategy B — eleven eligible names clear the frozen ≥5% floor on own-event anchors; none is routed.** B is `DO-NOT-ACTIVATE` (10-06) and capital-disabled, so no `thesis-construction` identity is minted. All eleven are indexed (§3). AERO is excluded on the instrument rule.
+  - On criterion 4 (information vs sentiment), GM and GE are the interesting cases: both moved *against* fundamental beats.
+  - BRZE is a deal-pinned target, and LION rests on an unconfirmed bid report.
+- **Strategy A — no new candidate.**
+- **Strategy C — no new candidate.** C is FOMC-only. `thesis-FOMC-C-20261020` (10-28 FOMC) stays in the pipeline, and CME odds (~83% hold) are context for it.
+- **Strategy E — no new candidate.** The semicap vs analog split (LRCX and KLAC down; ON and NXPI up) has no identified driver, and E is `DO-NOT-ACTIVATE`.
 
 ## ANALYSIS — ADD-CANDIDATE CHECK (Strategies A, B, D only)
 
-Durable record, including every decline: **`77565863-04a9-4500-8c36-3e7233de1376`** (`add-candidate-review`). **12 evaluated, 0 flagged, 0 declined at the HARD GATE.**
+Durable record, including every decline: **`11513062-0d2f-4a1e-92d7-6ffe3993af5f`** (`add-candidate-review`). **12 evaluated, 0 flagged, 0 declined at the HARD GATE.**
 
 | Position | mark vs cost | Trigger | Disposition |
 |---|---|---|---|
-| D:ISRG:2026-07-20 | +23.9390% | none | declined |
-| D:AMZN:2026-07-09 | +8.7902% | none | declined |
-| D:RTX:2026-04-27 | +8.5988% | none | declined |
-| D:TSM:2026-07-29 | +6.9581% | none | declined |
-| D:DIS:2026-08-05 | +5.5929% | none | declined |
-| D:GOOGL:2026-07-26 | +4.9830% | none | declined |
-| D:AMZN:2026-07-30 | −1.2206% | dip-with-intact-thesis | declined |
-| D:DIS:2026-05-07 | −1.5532% | dip-with-intact-thesis | declined |
-| D:TSM:2026-07-21 | −1.7859% | dip-with-intact-thesis | declined |
-| D:GOOGL:2026-07-09 | −4.3542% | dip-with-intact-thesis | declined |
-| D:UBER:2026-07-09 | −4.4358% | dip-with-intact-thesis | declined |
-| D:GEV:2026-08-03 | −6.3373% | dip-with-intact-thesis | declined |
+| D:ISRG:2026-07-20 | +25.3181% | strengthened-conviction | declined |
+| D:RTX:2026-04-27 | +9.2941% | strengthened-conviction | declined |
+| D:AMZN:2026-07-09 | +8.8648% | none | declined |
+| D:TSM:2026-07-29 | +8.1951% | none | declined |
+| D:DIS:2026-08-05 | +7.5970% | none | declined |
+| D:GOOGL:2026-07-26 | +3.7904% | none | declined |
+| D:DIS:2026-05-07 | +0.3153% | none | declined |
+| D:TSM:2026-07-21 | −0.6500% | dip-with-intact-thesis | declined |
+| D:AMZN:2026-07-30 | −1.1528% | dip-with-intact-thesis | declined |
+| D:GOOGL:2026-07-09 | −5.4407% | dip-with-intact-thesis | declined |
+| D:UBER:2026-07-09 | −5.8291% | dip-with-intact-thesis | declined |
+| D:GEV:2026-08-03 | −8.2045% | dip-with-intact-thesis | declined |
 
-- **Price basis.** The numerator is the 2026-10-19 IBKR daily bar close; the denominator is the tranche's own `cost_basis / shares`.
-- **HARD GATE — clear on all 12.** The three-disjunct, COALESCE-wrapped test returns 0. It was re-read immediately before the append; D2a had not run and no position event has landed since 10-18.
-- **Why everything is declined.** D is `DO-NOT-ACTIVATE` and capital-disabled, so no add has a funding path. The AMZN note is not a strengthened-conviction trigger, because it carries no new AWS information.
+- **Price basis.** The numerator is the 2026-10-20 IBKR daily bar close; the denominator is the tranche's own `cost_basis / shares`.
+- **HARD GATE — clear on all 12.** The three-disjunct, COALESCE-wrapped test returns 0. It was re-read immediately before the append; D2a had not run and no position event has landed since 10-19.
+- **Why everything is declined.** D is `DO-NOT-ACTIVATE` and capital-disabled, so no add has a funding path. The RTX and ISRG prints *reinforce* their theses (strengthened-conviction) but do not change that.
 
 ## ANALYSIS — REGIME CHECK
 
 **NO inter-monthly router review is recommended.**
 
-- `state.current_regime` STRATEGY_ACTIVATION is unchanged:
+- `state.current_regime` STRATEGY_ACTIVATION:
   - B and D `DO-NOT-ACTIVATE` (10-06);
-  - A and E `DO-NOT-ACTIVATE` (10-02);
-  - C `HYBRID ACTIVATE (FOMC-only)`.
-- FUNDAMENTAL_AXIS (as of 10-01) reads growth stable, inflation stable, policy hawkish, risk sentiment neutral, shock overlay **acute**.
-- **Geopolitical trigger.** These are the scenario-3 producer duties.
-  - The dated 10-18 and 10-19 items are: an IRGC-claimed tanker mine strike, unconfirmed Houthi strikes on Saudi targets, and Iranian rhetoric. Brent December fell −0.3% on the day.
-  - **The standing `shock_overlay` is already `acute`.** A further qualifying event is therefore already inside the standing grade: the rubric goes no higher than `acute`, and a new event only restarts the de-escalation clock that M1a and M1R read for themselves. **So no flag is owed.**
+  - A `DO-NOT-ACTIVATE` (10-02);
+  - C `HYBRID ACTIVATE (FOMC-only)`;
+  - E `DO-NOT-ACTIVATE — PENDING div-E-202610-1` (D2's 10-19 held state).
+- FUNDAMENTAL_AXIS (as of 10-01) reads stable growth, stable inflation, hawkish policy, neutral risk sentiment, shock overlay **acute**.
+- **Geopolitical trigger.**
+  - The dated 10-20 items are the IRGC claim of two tankers set ablaze by mines in Hormuz, plus unconfirmed Houthi strike claims on Saudi sites.
+  - **The standing `shock_overlay` is already `acute`**, so a further qualifying event is already inside the standing grade: the rubric goes no higher than `acute`, and a new event only restarts the de-escalation clock that M1a and M1R read for themselves. **So no flag is owed.**
 - **Measured triggers** are D2's to detect and are not computed here.
-  - VIX eased to 18.44, inside NORMAL.
-  - SPY 766.48 is still under its ~768.5 50-day SMA, so the trend stays NEUTRAL (D2a's call).
-  - Breadth is 50.69, down 1.19pp in the day and still above 50. That is D2a's STEP 1e call, and it sits close to the line.
-- None of this can move an activation while the acute override binds A/B/D/E at `DO-NOT-ACTIVATE`. Default NO.
+  - VIX eased to 17.31, inside NORMAL.
+  - SPY 769.05 closed just above its 50-day SMA of closes (768.29). The trend class is D2a's call.
+  - Breadth is 53.28, up 2.59pp.
+- None of this can move an activation while the acute override binds. Default NO.
 
 ## EQUITY-BREADTH OBSERVATION
 
-**50.69** for session **2026-10-19**, written to `events.regime_events` (`TECHNICAL_INPUT` / `EQUITY_BREADTH_PCT`). D2a owns the HEALTHY/WEAK call.
+**53.28** for session **2026-10-20**, written to `events.regime_events` (`TECHNICAL_INPUT` / `EQUITY_BREADTH_PCT`). D2a owns the HEALTHY/WEAK call.
 
-- **First fetch (~22:10Z, sub-agent): unsettled, not recorded.**
-  - Barchart served the stale "Sun, Oct 18th" carried bar (51.88 unch, 10:45 ET, O=H=L=C).
-  - EODData's quote box read 50.49, stamped "19 Oct 26 15:55", with Low equal to Last. That is the pre-16:00 tell.
-- **Re-fetch (~22:25Z, orchestrator, `tavily_extract` advanced, cache-busted): settled.**
-  - Barchart `$S5TH` is headed "Quote Overview for Mon, Oct 19th, 2026" and reads **50.69 −1.19 (−2.29%) at 17:05 ET**. Previous Close 51.88 equals the stored 10-16 value, so there is no revision.
-  - EODData's settled table row "19 Oct 26" reads O 51.88 / H 52.48 / L 50.49 / **C 50.69**. It agrees, but **Barchart and EODData are one feed, so this run has a single usable source.**
-- **Independent check, ChartRow:** "as of market close, Oct 19, 2026", 250 of 497 eligible (50.30%).
-  - Against its 10-16 reading of 51.71, that is −1.41pp, versus −1.19pp on `$S5TH`. So `chartrow_dod_gap=0.22`, and the direction agrees.
-  - This is not an exact repeat of the prior session.
+- **Barchart `$S5TH`** (`tavily_extract` advanced, cache-busted) is headed "Quote Overview for Tue, Oct 20th, 2026" and reads **53.28 +2.59 (+5.11%) at 17:03 ET**. Previous Close is 50.69, equal to the stored 10-19 value, so there is no revision. O 52.88 / H 54.87 / L 51.68: not a carry, and not an exact repeat.
+- **EODData** settled row "20 Oct 26" reads O 52.88 / H 54.87 / L 51.68 / **C 53.28**. Its quote box showed an anomalous 53.08 with no timestamp, so the settled row was used. **Barchart and EODData are one feed, so this run has a single usable source.**
+- **Independent check, ChartRow:** "as of market close, Oct 20, 2026", 264 of 497 eligible (53.12%).
+  - Against its 10-19 reading of 50.30, that is +2.82pp, versus +2.59pp on `$S5TH`. So `chartrow_dod_gap=0.23`, and the direction agrees.
 - **MacroMicro was not probed.** The re-probe runs on Sundays only.
 
 ## RECOMMENDED ACTIONS
 
-**Exits triggered: none.** No open position carries a mechanical trigger, and no Development met any thesis-invalidation criterion.
+**Exits triggered: none.** No open position carries a mechanical trigger, and no Development met any thesis-invalidation criterion. The RTX and ISRG Q3 prints both leave every criterion unbreached.
 
-**New entry candidates: none routed.** Strategy B is `DO-NOT-ACTIVATE` and capital-disabled. The five own-event B-floor clearers are indexed below instead.
+**New entry candidates: none routed.** Strategy B is `DO-NOT-ACTIVATE` and capital-disabled. The eleven eligible own-event B-floor clearers are indexed below instead.
 
 **Add candidates: none.**
 
 **Router reviews: none.**
 
-Watchlist updates go to the Strategy B new-entry index. Each window runs 10 trading days from the anchor, and D2 computes the close date on the inclusive convention. Source `research-screen` `c7045f5f-9300-44cd-8227-b0771dc4ad29`.
+Watchlist updates go to the Strategy B new-entry index. Each window runs 10 trading days from the anchor, and D2 computes the close date on the inclusive convention. Source `research-screen` `ec09d8fc-29d6-42fc-92a8-ce292d0501d5`.
 
-- ADD **IRON** (Strategy B, `qualifying_event_date` 2026-10-19) — +38.8635% (56.84 → 78.93) on its pre-open Phase 3 APOLLO success; index only. A $350M follow-on was priced the same day, and the move is information-driven (criterion 4 is the crux).
-- ADD **CLF** (Strategy B, `qualifying_event_date` 2026-10-19) — +16.3366% (12.12 → 14.10) on its pre-open Q3 beat and 2027 EBITDA >$4B outlook; index only. One other ≥5% session is in the window (10-09).
-- ADD **MANE** (Strategy B, `qualifying_event_date` 2026-10-19) — +12.3690% (108.82 → 122.28) on its 07:00 ET Phase 3 Study 304 success; index only. **Five other ≥5% sessions are in the window**, which prejudices criteria 2 and 4.
-- ADD **DDOG** (Strategy B, `qualifying_event_date` 2026-10-19) — +5.3620% (247.11 → 260.36) on a pre-open Bernstein upgrade; index only. It largely retraces Friday's −7.19%; two other ≥5% sessions are in the window.
-- ADD **ARQT** (Strategy B, `qualifying_event_date` 2026-10-19) — +10.6523% (28.82 → 31.89) on a Guggenheim price-target raise (aggregator-sourced, time not established); index only. This is distinct from its indexed 10-15 anchor; two other ≥5% sessions are in the window.
+- ADD **BRZE** (Strategy B, `qualifying_event_date` 2026-10-20) — +51.6977% (30.04 → 45.57) on the pre-open Salesforce all-cash deal at $47.50; index only. It is pinned to the deal price, so criteria 2 and 4 are the crux. Two other ≥5% sessions are in the window.
+- ADD **HAS** (Strategy B, `qualifying_event_date` 2026-10-20) — +11.1991% (98.49 → 109.52) on its pre-open Q3 beat, raised outlook and doubled buyback; index only.
+- ADD **EFX** (Strategy B, `qualifying_event_date` 2026-10-20) — +11.3325% (158.57 → 176.54) on a pre-open Q3 beat with an FY revenue guide cut; index only. One other ≥5% session is in the window (10-15).
+- ADD **LION** (Strategy B, `qualifying_event_date` 2026-10-20) — +14.4068% (10.62 → 12.15) on an intraday Bloomberg report of a revived ~$3.5B Legendary bid (unconfirmed); index only.
+- ADD **PAC** (Strategy B, `qualifying_event_date` 2026-10-20) — +7.0511% (203.09 → 217.41) on pre-open 3Q26 results; index only. It is an ADS with an $11.3B cap, so it is eligible under Rev 49.
+- ADD **GM** (Strategy B, `qualifying_event_date` 2026-10-20) — −6.8399% (82.75 → 77.09) on its 06:30 ET Q3 release (a beat plus a $20B buyback, but GMI EBIT −88%); index only. The move runs against the beat, which bears on criterion 4.
+- ADD **MMM** (Strategy B, `qualifying_event_date` 2026-10-20) — +5.7774% (162.01 → 171.37) on its pre-open Q3 beat and guide raise; index only.
+- ADD **GPC** (Strategy B, `qualifying_event_date` 2026-10-20) — −5.1160% (130.18 → 123.52) on its pre-open Q3 slight miss and guide-top cut; index only.
+- ADD **MSCI** (Strategy B, `qualifying_event_date` 2026-10-20) — +5.0045% (563.49 → 591.69) on its pre-open Q3 beat; index only. The move sits on the floor.
+- ADD **VICR** (Strategy B, `qualifying_event_date` 2026-10-20) — +7.0589% (190.68 → 204.14) on its pre-open Q3 (revenue +78.5%); index only. **Five other ≥5% sessions are in the window.**
+- ADD **UCB** (Strategy B, `qualifying_event_date` 2026-10-20) — +5.0030% (33.78 → 35.47) on its pre-open Q3, which is distorted by one-offs (KRE +1.96); index only. The move sits on the floor.
 
 ```yaml d1_actions
 - action: watchlist
-  ticker: IRON
+  ticker: BRZE
   strategy: B
-  qualifying_event_date: 2026-10-19
-  source_research_screen_id: c7045f5f-9300-44cd-8227-b0771dc4ad29
-  detail: ADD to B new-entry index — +38.8635% on pre-open 10-19 Phase 3 APOLLO success (bitopertin); $350M follow-on same day; index only, information-driven move (criterion 4 crux)
+  qualifying_event_date: 2026-10-20
+  source_research_screen_id: ec09d8fc-29d6-42fc-92a8-ce292d0501d5
+  detail: ADD to B new-entry index — +51.6977% on pre-open 10-20 Salesforce all-cash deal at $47.50; deal-pinned (criteria 2/4 crux); index only; 2 other >=5% sessions in window
 - action: watchlist
-  ticker: CLF
+  ticker: HAS
   strategy: B
-  qualifying_event_date: 2026-10-19
-  source_research_screen_id: c7045f5f-9300-44cd-8227-b0771dc4ad29
-  detail: ADD to B new-entry index — +16.3366% on pre-open 10-19 Q3 beat and 2027 adj EBITDA >$4B outlook; index only; 1 other >=5% session in window (10-09)
+  qualifying_event_date: 2026-10-20
+  source_research_screen_id: ec09d8fc-29d6-42fc-92a8-ce292d0501d5
+  detail: ADD to B new-entry index — +11.1991% on pre-open 10-20 Q3 beat, outlook raised, buyback doubled; index only
 - action: watchlist
-  ticker: MANE
+  ticker: EFX
   strategy: B
-  qualifying_event_date: 2026-10-19
-  source_research_screen_id: c7045f5f-9300-44cd-8227-b0771dc4ad29
-  detail: ADD to B new-entry index — +12.3690% on 07:00 ET 10-19 Phase 3 Study 304 success; index only; 5 other >=5% sessions in window prejudice criteria 2 and 4
+  qualifying_event_date: 2026-10-20
+  source_research_screen_id: ec09d8fc-29d6-42fc-92a8-ce292d0501d5
+  detail: ADD to B new-entry index — +11.3325% on pre-open 10-20 Q3 beat with FY revenue guide cut; index only; 1 other >=5% session in window (10-15)
 - action: watchlist
-  ticker: DDOG
+  ticker: LION
   strategy: B
-  qualifying_event_date: 2026-10-19
-  source_research_screen_id: c7045f5f-9300-44cd-8227-b0771dc4ad29
-  detail: ADD to B new-entry index — +5.3620% on pre-open 10-19 Bernstein upgrade; index only; largely retraces 10-16 -7.19%, 2 other >=5% sessions in window
+  qualifying_event_date: 2026-10-20
+  source_research_screen_id: ec09d8fc-29d6-42fc-92a8-ce292d0501d5
+  detail: ADD to B new-entry index — +14.4068% on intraday 10-20 Bloomberg report of revived ~$3.5B Legendary bid (unconfirmed); index only
 - action: watchlist
-  ticker: ARQT
+  ticker: PAC
   strategy: B
-  qualifying_event_date: 2026-10-19
-  source_research_screen_id: c7045f5f-9300-44cd-8227-b0771dc4ad29
-  detail: ADD to B new-entry index — +10.6523% on 10-19 Guggenheim PT raise (aggregator-sourced, time unestablished); index only; distinct from indexed 10-15 anchor; 2 other >=5% sessions in window
+  qualifying_event_date: 2026-10-20
+  source_research_screen_id: ec09d8fc-29d6-42fc-92a8-ce292d0501d5
+  detail: ADD to B new-entry index — +7.0511% on pre-open 10-20 3Q26 results; ADS cap $11.3B >= $10B ADR line (Rev 49) eligible; index only
+- action: watchlist
+  ticker: GM
+  strategy: B
+  qualifying_event_date: 2026-10-20
+  source_research_screen_id: ec09d8fc-29d6-42fc-92a8-ce292d0501d5
+  detail: ADD to B new-entry index — -6.8399% on 06:30 ET 10-20 Q3 (beat + $20B buyback, GMI EBIT -88%); move against the beat bears on criterion 4; index only
+- action: watchlist
+  ticker: MMM
+  strategy: B
+  qualifying_event_date: 2026-10-20
+  source_research_screen_id: ec09d8fc-29d6-42fc-92a8-ce292d0501d5
+  detail: ADD to B new-entry index — +5.7774% on pre-open 10-20 Q3 beat and guide raise; index only
+- action: watchlist
+  ticker: GPC
+  strategy: B
+  qualifying_event_date: 2026-10-20
+  source_research_screen_id: ec09d8fc-29d6-42fc-92a8-ce292d0501d5
+  detail: ADD to B new-entry index — -5.1160% on pre-open 10-20 Q3 slight miss and guide-top cut; index only
+- action: watchlist
+  ticker: MSCI
+  strategy: B
+  qualifying_event_date: 2026-10-20
+  source_research_screen_id: ec09d8fc-29d6-42fc-92a8-ce292d0501d5
+  detail: ADD to B new-entry index — +5.0045% on pre-open 10-20 Q3 beat; sits on the floor; index only
+- action: watchlist
+  ticker: VICR
+  strategy: B
+  qualifying_event_date: 2026-10-20
+  source_research_screen_id: ec09d8fc-29d6-42fc-92a8-ce292d0501d5
+  detail: ADD to B new-entry index — +7.0589% on pre-open 10-20 Q3 (revenue +78.5%); 5 other >=5% sessions in window prejudice criteria 2 and 4; index only
+- action: watchlist
+  ticker: UCB
+  strategy: B
+  qualifying_event_date: 2026-10-20
+  source_research_screen_id: ec09d8fc-29d6-42fc-92a8-ce292d0501d5
+  detail: ADD to B new-entry index — +5.0030% on pre-open 10-20 Q3 distorted by one-offs (KRE +1.96); sits on the floor; index only
 ```
 
 ## PROCESS NOTES
 
-- **Pre-flight.** BigQuery and IBKR are both live. The run is logged on branch `claude/d1-2026-10-19`. The double-run guard found no prior completion, and `sp_auto_resolve_alerts` ran. Git history is complete (`--is-shallow-repository` false).
+- **Pre-flight.**
+  - BigQuery, which was de-authed this morning (OPS1 and M1R halted), answered normally for this run. IBKR is live.
+  - The run is logged on branch `claude/d1-2026-10-20`. The double-run guard found no prior completion.
+  - Git history is complete (`--is-shallow-repository` false).
 - **Park pin check.** `state.park_policy_current` reads `('VOO', 0, 'VOO', 'VOO')` and `state.park_menu` is exactly `VOO`. The pin holds, and the `loop:park_allocator` heartbeat was written.
-- **Frontier-LLM capability check (Monday battery: cross-session consistency).**
-  - One `hf_fs` paper search ("cross-session consistency LLM agents") returned five results, dated 2025-04 to 2026-10-02, so **nothing was published since the window floor**.
-  - No `[HF Frontier-LLM Capture]` entry and no strategy-candidate row were written. This is the known relevance-ranked-search limitation (open notice `56dde459`).
+- **News-reaction paper book (J lead), first scoring day.**
+  - **Marks.** Nasdaq historical rows were fetched for all 41 tickers, and 410 rows (10-06..10-19) were inserted into `events.news_reaction_marks`.
+    - **Nasdaq had not yet published the 10-20 bar at ~16:10 MT.** It self-heals on the next run inside the D−14 window.
+  - **Calls.** Google News RSS gave 120 headlines (3 per ticker × 40, published since the window start). There were 5 blind Sonnet reads, and 120 calls were written.
+    - The modal votes were UP 25, DOWN 17 and FLAT 78. 19 modal-UP calls clear the 0.8 gate (11 DOWN at the gate, recorded only).
+  - **Readiness:** `n_realized` 0 of 30, `ready` FALSE, so nothing was enqueued. No ticker was skipped.
+  - The feeds were fetched with `curl` (the same key-less endpoints the spec names for WebFetch), so no `ops.web_calls` rows are owed for them.
+- **Write-integrity incident, found and repaired in-run.**
+  - The 120-row calls INSERT was handed to a Sonnet executor. Because the MCP tool cannot take a file, it hand-retyped the ~30KB SQL.
+  - A per-row fingerprint readback against the local source found **3 corrupted `source_url` values** (JPM `e221f9c5`, NVDA `96f85048`, WMT `499f6487`). Every scoring field (hash, ticker, direction, agreement, votes, timestamps, headline) matched on all 120 rows.
+  - The three URLs were corrected with a hash-guarded `UPDATE`, scoped to this session's rows, in which the replacement was required to hash to the source value.
+  - The 410 marks verified byte-exact by checksum.
+  - **Lesson:** later D1 runs should not delegate large literal-SQL writes to a sub-agent. Write them from the orchestrator, or verify by fingerprint as done here.
+- **Frontier-LLM capability check (Tuesday battery: prompt injection).**
+  - One `hf_fs` paper search ("prompt injection LLM agents") returned five results. The newest is dated 2026-09-28, so **nothing was published since the window floor**.
+  - No `[HF Frontier-LLM Capture]` entry and no strategy-candidate row were written. This is the known recency limitation (open notice owned by W5).
 - **Durable records this run.**
-  - `events.regime_events` 1 row (breadth 50.69 for 10-19).
-  - `events.decision_log` 3 rows: `c7045f5f` single-name screen, `dbd82e7e` sector screen, `77565863` add-candidate review. All three were checked after writing: `fields` parses, `routine='D1'` is on both screens, and `surfaced_count` equals `ARRAY_LENGTH(passed)` (7 and 3).
+  - `events.regime_events` 1 row (breadth 53.28 for 10-20).
+  - `events.decision_log` 3 rows: `ec09d8fc` single-name screen, `af249738` sector screen, `11513062` add-candidate review. All three were checked after writing: `fields` parses, `routine='D1'` is on both screens, and `surfaced_count` equals `ARRAY_LENGTH(passed)` (15 and 3).
   - `ops.heartbeat` 1 row.
-  - `ops.web_calls` batch before run end.
-- **Orchestration.** Five Sonnet workers ran, each with disjoint subjects and a per-subject call cap written into a shared rules file:
+  - `events.news_reaction_marks` 410 rows and `events.news_reaction_calls` 120 rows.
+  - `ops.web_calls` 71 rows.
+- **Orchestration.** Six Sonnet workers ran, each with disjoint subjects and per-subject caps written into a shared rules file, plus one follow-up attribution worker:
+  - IBKR tape and held book (IBKR only, 0 metered);
+  - earnings reactors;
+  - non-earnings movers;
   - macro, events and commentary;
-  - mover discovery and attribution;
-  - an IBKR sweep of sectors, the held book and 122 large caps (IBKR only, no metered calls);
-  - held-book criterion news;
-  - breadth plus HF.
-  - Two workers went over their caps, and each said so: macro S4 (5 calls, because the FMP calendar was empty) and held-book GEV (4 calls).
-  - The orchestrator made one Tavily extract call (the breadth re-fetch).
+  - held-book criteria;
+  - breadth plus HF;
+  - attribution (5 searches).
+
+  Five blind readers and two SQL executors also ran.
+  - **Metered total:** 71 calls, about 24.8 estimated credits (none reported by the provider). The orchestrator itself made no metered call.
+  - **Caps.** The macro worker went over its S3 cap because the closing-wrap searches returned nothing, and it said so. The movers worker spent 2 calls on BRZE to confirm the release time.
 - **Degraded legs, stated.**
-  - FMP's earnings calendar was empty, so the scheduled-event list is search-built.
-  - ARQT's event is aggregator-sourced, and CLF's EPS differs across secondary sources.
-  - Jemperli is not checked against the FDA page.
-  - The ISRG, GEV, GOOGL, AMZN and UBER earnings dates are not IR-verified.
+  - The 10-20 oil settles are unconfirmed.
+  - Jemperli and the GSK hepatitis B approval are unresolved against FDA pages (fda.gov returned 401).
+  - Release minutes are EDGAR upper bounds, and revenue consensus is unsourced.
+  - MDB, MSTR, ON and NXPI causes are unresolved.
+  - Held-name non-earnings search was thin (not a verified negative), and TSM's 10-15 Q3 was not retrieved.
   - Breadth has one feed plus the ChartRow check.
-  - None of these is load-bearing for a verdict.
-- **Instrument changes observed on IBKR this run.**
-  - Marsh McLennan resolves as **MRSH** (conid 9705); there is no MMC symbol.
-  - VIX history works only with `exchange='CBOE'` (conid 13455763, IND).
