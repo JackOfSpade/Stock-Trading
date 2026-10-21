@@ -165,7 +165,7 @@ connectors:
           the strict forward-only reading above), and NO window returned a 2026-10-19 row while
           seventeen $2B+ names reported that day. It is a ~10-mega-cap-per-week SAMPLE, never an
           enumeration. Enumeration source for D1 DEVELOPMENTS item 2 is the key-less Nasdaq
-          per-day calendar (api.nasdaq.com/api/calendar/earnings?date=YYYY-MM-DD, WebFetch with
+          per-day calendar (api.nasdaq.com/api/calendar/earnings?date=YYYY-MM-DD, curl with
           a browser User-Agent; marketCap and report time included), pinned there 2026-10-20.
       - name: chart
         use: required

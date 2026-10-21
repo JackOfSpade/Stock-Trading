@@ -1,0 +1,197 @@
+{
+ "_comment": "Shared contract between scripts/paper_book_sql.py and BigQuery. Every expected row_sha16 below was reproduced by BigQuery from the STORED rows on 2026-10-21 (calls readback ok=6/6 against events.news_reaction_calls call_date 2026-10-20; marks readback ok=5/5 against state.news_reaction_marks_curated). If a digest changes, the SQL and Python digests have diverged.",
+ "calls": {
+  "call_date": "2026-10-20",
+  "session": "session_015eUXnvdhjv85zKiU1oeeWs",
+  "rows": [
+   {
+    "ticker": "AAPL",
+    "headline": "Apple’s $1,999 foldable phone is set to hit stores Friday, are you buying one? - Investing.com",
+    "published_ts": "2026-10-20T20:36:18Z",
+    "source": "google-news-rss",
+    "source_url": "https://news.google.com/rss/articles/CBMiygFBVV95cUxPaC1xZ1dpRWFldDR5ZzZHVFZEcktzZkJpYzBsZjVPUnZlTlFEcWNWTlNwQ3U0aE9oZXZUQk5FcWxFa29kZDRzbWxwa2RFSXNhXzJGWFFvb1MteWZXZVctRGpfSFNWOTZNSlctankyRTlUeFBDY05VV0M3ZlZEeTh0cFdnQ3ZfZ05jWmxVbTBic0wtTVpRalZacG5MVkVKVHEwM3RKX1RmQmtuaEdmenVyZFlNZXVPUnpDMzRWcXRrdUxwd0taR2s4RktR?oc=5",
+    "votes": [
+     "FLAT",
+     "FLAT",
+     "FLAT",
+     "FLAT",
+     "FLAT"
+    ]
+   },
+   {
+    "ticker": "AAPL",
+    "headline": "This Analyst Is Losing Faith in Apple Stock. Here's Why - Barchart.com",
+    "published_ts": "2026-10-20T20:31:48Z",
+    "source": "google-news-rss",
+    "source_url": "https://news.google.com/rss/articles/CBMinwFBVV95cUxNbnJnbGgyWFdERG5ZV3NyTXZQM1Byd0JxVFczNVVzSHQtYTRzdUNzYnNMT3k3Z2tkSDJlUG5MR0NmMjIxTnBObk1jNXZOMWJMakJrZm11aUFKa2Mzd0FfRDk3UWdtWjkxeE45cnFuWE9menFTRXZuLXdjeXJiam11ZDJBd3NNaDU3MU9VN0RTVmV5RV9TVmN1QzNFbDNLY2s?oc=5",
+    "votes": [
+     "FLAT",
+     "DOWN",
+     "DOWN",
+     "DOWN",
+     "DOWN"
+    ]
+   },
+   {
+    "ticker": "AAPL",
+    "headline": "Apple (NASDAQ:AAPL) Stock Falls 1% on Insider Selling - MarketBeat",
+    "published_ts": "2026-10-20T21:05:01Z",
+    "source": "google-news-rss",
+    "source_url": "https://news.google.com/rss/articles/CBMirwFBVV95cUxOYThFakhwd0RWMkhLMDZtazh3bUdDTzU3YjV5bVpEeVVnZHYxMVA4d3lMeVRVcnRaajZnOWVtQzI3R210U1NIWU83U2dqMzF6dFBnT2xST045YXBfUHNiQ0pkQUxxWHdYNENGc3FLUzYwTDlJaDh2VC1PUlVTYm1zZkV2SFp6ZjYtOGY5OEJieGc3YnRJYk9IaHV3Nm1FdTFrT1ZHMnRRZDJFeTFUa25B?oc=5",
+    "votes": [
+     "FLAT",
+     "FLAT",
+     "FLAT",
+     "FLAT",
+     "FLAT"
+    ]
+   },
+   {
+    "ticker": "JPM",
+    "headline": "JPMorgan keeps AUD 5.00 target for South32 stock - ad-hoc-news.de",
+    "published_ts": "2026-10-20T20:07:38Z",
+    "source": "google-news-rss",
+    "source_url": "https://news.google.com/rss/articles/CBMiqwFBVV95cUxOc0VaV3pYbXk1VjNya2NBU1Z5c3NEM21VVXpuQ0hnbUEtR3NTWWxibjFWWjVPMG1SYWI4ZmdTT3FmRDFMMTVWanJhLXZaZ1kwRzlhV29ya2JzYl9sZzViTm5tVmtXaVV2UjM2ME5ES1lHb1NoVHVUaEw2bTV5dFhkWGpOelVOM0p4eURCdFhQSHIzbVhka2RGVm1UaWczOVZweWk1S1E1Qi1zcm8?oc=5",
+    "votes": [
+     "FLAT",
+     "FLAT",
+     "FLAT",
+     "FLAT",
+     "FLAT"
+    ]
+   },
+   {
+    "ticker": "NVDA",
+    "headline": "German AI Stocks Riding The Nvidia Buildout Including SAP Stock - Simply Wall Street",
+    "published_ts": "2026-10-20T20:09:03Z",
+    "source": "google-news-rss",
+    "source_url": "https://news.google.com/rss/articles/CBMiygFBVV95cUxNU1pQa3J0UjhRQUtRX2FBNS11N1JfRmRTeTZsUUhsNzhOVnRjMjJDWnhoeGROSGZna2YtR3ExbHlvWDBfbWZTN25oQUJPT1gyaUZVLWt6SkFGSkZUNkdrR2kzRF8wblA2X29BYnBVd3BOWHdHd09OYW5aNHJzQnRxajllOS1WMHJZczhYdG1pcFJ6UklncWNncXdoaXZ5OGhmdS13aXI0OWQ5aHNJMW8wTEs0RXQyWTUyN0xGU3NvZjRqNWU5T1VRVkhB0gHPAUFVX3lxTE5iZWJsMnhCRjd3MS03Nlg0TkJJNHRPMTJfTmhGLWYwVTNWWHFGaTVsb1prSURaYnVfd3luS2tCS1pCcVE2TXJ5RmpsanlkV3F5RFZldWdLQlZYOG9BN193ZExia2NiQzh3Y1lfSGZGZFJWbmY3STF0VDhRYXhxSXBoT2UtYndfNVhqSGdZdXhPUEEwamdjeDhLS2dzY1VpOTYxTkVVaW5iVWtTZnV2b2lDd0NMTXlrYnV0YkFBNVlWbV9yOHl6T2FQNjF1d3o5WQ?oc=5",
+    "votes": [
+     "FLAT",
+     "UP",
+     "UP",
+     "UP",
+     "UP"
+    ]
+   },
+   {
+    "ticker": "WMT",
+    "headline": "Walmart teams up with Sam’s Club for new $120 membership with chunky savings - Yahoo Finance",
+    "published_ts": "2026-10-20T20:21:20Z",
+    "source": "google-news-rss",
+    "source_url": "https://news.google.com/rss/articles/CBMimgFBVV95cUxPdGJGdE9GY3hWSWc1MzlsQzdFRE03NENPenhxVVdqdHZJOGczVWlodmZyQzM1SEU4a2dKWmV4N2JvYjMweUxyS3dBX0ZFZkZ5STllVWs0RnFuZ19IZUtlbXY0cldYMXNvVWVFMXN3cjdJUXJxSUlLUnRKRE1waDRrNXFtOTdxQVdlVms0eGFjM3VqUVZ1a3NmU3VB?oc=5",
+    "votes": [
+     "FLAT",
+     "FLAT",
+     "UP",
+     "UP",
+     "DOWN"
+    ]
+   }
+  ],
+  "expected": [
+   {
+    "headline_hash": "04aa458b1b978905ac7f04101c99133401d6eca7d8f2a82c2a48a0a98c350f77",
+    "direction": "FLAT",
+    "agreement_score": "1",
+    "row_sha16": "998e57ae8aa98615"
+   },
+   {
+    "headline_hash": "57827ef13f9962d850ae927799ec8e880c834d641d7dd4e94116aad28e554b34",
+    "direction": "DOWN",
+    "agreement_score": "0.8",
+    "row_sha16": "c9ce4b4351bdb581"
+   },
+   {
+    "headline_hash": "fc15c21955cf51461202d62c5c6f5273217c715824a4ad19ea2bbfb29ea40743",
+    "direction": "FLAT",
+    "agreement_score": "1",
+    "row_sha16": "84bff109f6c18e5c"
+   },
+   {
+    "headline_hash": "e221f9c5428fbb41b7584b35b719a2b8e2dda8e3bbdb05e0ddbb5376f1c12db8",
+    "direction": "FLAT",
+    "agreement_score": "1",
+    "row_sha16": "730e07a854146135"
+   },
+   {
+    "headline_hash": "96f85048d0ce628d2046aca8a4a8acd7a0a2183fbee7b504dc8821008203e372",
+    "direction": "UP",
+    "agreement_score": "0.8",
+    "row_sha16": "72030cfb58dc74b8"
+   },
+   {
+    "headline_hash": "499f648799650a1c86ea05071af0c6b346a2c70e6e99f2abd50acfecce26454c",
+    "direction": "FLAT",
+    "agreement_score": "0.4",
+    "row_sha16": "4bb6d5e534176ea5"
+   }
+  ]
+ },
+ "marks": {
+  "rows": [
+   {
+    "mark_date": "10/15/2026",
+    "ticker": "AVGO",
+    "open_px": "$338.34",
+    "close_px": "344.33"
+   },
+   {
+    "mark_date": "10/16/2026",
+    "ticker": "AVGO",
+    "open_px": "$338.48",
+    "close_px": "328.75"
+   },
+   {
+    "mark_date": "10/19/2026",
+    "ticker": "AVGO",
+    "open_px": "$338.75",
+    "close_px": "334.59"
+   },
+   {
+    "mark_date": "10/15/2026",
+    "ticker": "SPY",
+    "open_px": "$766.25",
+    "close_px": "771.79"
+   },
+   {
+    "mark_date": "10/16/2026",
+    "ticker": "SPY",
+    "open_px": "$773.24",
+    "close_px": "763.25"
+   }
+  ],
+  "expected": [
+   {
+    "mark_date": "2026-10-15",
+    "open_px": "338.34",
+    "close_px": "344.33",
+    "row_sha16": "b47cf43aadc2939b"
+   },
+   {
+    "mark_date": "2026-10-16",
+    "open_px": "338.48",
+    "close_px": "328.75",
+    "row_sha16": "1100932a9c49c3ee"
+   },
+   {
+    "mark_date": "2026-10-19",
+    "open_px": "338.75",
+    "close_px": "334.59",
+    "row_sha16": "6759b297cc38c29e"
+   },
+   {
+    "mark_date": "2026-10-15",
+    "open_px": "766.25",
+    "close_px": "771.79",
+    "row_sha16": "89772d7c45591f0c"
+   },
+   {
+    "mark_date": "2026-10-16",
+    "open_px": "773.24",
+    "close_px": "763.25",
+    "row_sha16": "22c8173bdea34e2b"
+   }
+  ]
+ }
+}

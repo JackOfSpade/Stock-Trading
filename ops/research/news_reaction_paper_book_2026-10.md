@@ -101,6 +101,30 @@ spread); the book therefore tests the edge where we would actually trade it.
 
 The step is non-gating: a failed fetch is a skipped ticker, noted in the run note, never a halted D1.
 
+**Amendment 2026-10-21 (mechanics only; no section-1 constant changed, so the book is not re-opened).** After
+the first run corrupted 3 of 120 `source_url` values while a sub-agent re-typed the calls INSERT (ops.alerts
+5638e932), the data path moved into `scripts/paper_book.py` and the D1 step's WRITE INTEGRITY rule:
+- Every written row carries a SHA-256 digest that BigQuery recomputes, so a row damaged in transit is never
+  written; a readback names anything missing for a targeted re-issue. In-place repair is never used.
+- Step 1 above: a mark is written when its pair is absent OR its stored open/close differ from the source (latest
+  ingest wins in the curated view), and a ticker whose stored bars no longer match is re-fetched from the book's
+  first mark. Without this a split left the stored series on mixed bases and one straddling call read a -50% to
+  -90% return.
+- Step 2 above: the Google query is the company name from a pinned map, URL-encoded, with `when:2d` so a 48 h
+  SCAN WINDOW is covered (the `--since` cut is exact). "Name the company" is a pinned, case-sensitive rule in the
+  script (`UNIVERSE`, `CUE_TICKERS`, `EXCLUDE`, `BROKERS`, `NON_NEWS`), and de-duplication is on the story (the
+  title without its trailing " - <outlet>"), not the full-title hash. On 2026-10-20 at least 15 of the 120 calls
+  were about another subject (JNJ "Dwayne Johnson", COP "Cop shoots", UPS "Grown Ups", Honeywell Aerospace for
+  HON, banks rating other companies for JPM/BAC/GS) and 5 more were syndicated copies of a story already called.
+  There is no Tavily fallback any more: a hand-copied headline is the one input the write guard cannot protect.
+  A later edit of the rule changes which headlines are scored from that date on; date it here.
+- Step 4 above: a call is not written when the same (ticker, headline_hash) or the same story was called in the
+  previous 4 calendar days, and the 3-per-ticker cap counts calls already stored for the call_date, so a same-day
+  re-run cannot exceed it. headline_hash itself is unchanged.
+- The 120 calls of 2026-10-20 stand as written: all 120 are internally consistent (headline_hash, direction and
+  agreement_score recompute from their stored inputs), and the 3 repaired URLs match the source hashes the run
+  computed before its repair. Their off-subject and duplicate rows are part of the record; nothing is deleted.
+
 ## 6. The hand-off (why a queue lane and OPS2, not a cron change)
 
 SL1 fires quarterly (`0 21 2 1,4,7,10 *`, next 2027-01-02). Headless routines cannot call the RemoteTrigger
