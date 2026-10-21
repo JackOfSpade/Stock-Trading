@@ -46,9 +46,10 @@ Re-authorize the Google-Cloud-BigQuery connector in claude.ai connector settings
 - **Replay order:** OPS1 only. It has no declared dependents: no routine in `ops/cadence.yaml` names OPS1 in `depends_on`. The replay comes from the catch-up path, so no manual re-run is needed.
 - **Expected signature after re-auth:** no OPS1 `run_log` row for 2026-10-20 until the catch-up replays it. The freshness and cadence dead-man switches may record the gap, and that is expected, not a fresh fault.
 
-## Unfiled findings
+## Unfiled findings — FILED 2026-10-20
 
 - None new. `ops.alerts` is unreachable, so nothing was filed.
+- 2026-10-20 (OPS0 UNFILED-FINDINGS INTAKE, first OPS0 run with BigQuery live after the outage): the OPS1 and M1R sections both record no new finding, so there were zero bullets to file as `ops.alerts` info rows. The heading is marked FILED so OPS0's intake does not re-process it. Recovery observed: OPS2 caught up OPS1/2026-10-20 inline (`ops.run_log` completed ~22:21 MDT).
 
 ---
 
@@ -62,6 +63,6 @@ Re-authorize the Google-Cloud-BigQuery connector in claude.ai connector settings
 - **After re-auth:** M1R is queue-driven and `catchup_safe: true`, so the catch-up path replays the slot. Its STEP 1 due predicate is `due_date <= today`, so an item that was open today is still picked up by the replay or by the next regular fire (Wed 2026-10-21 07:00 MT). No `ops.run_log` backfill is owed.
 - **Recovery procedure:** no routine in `ops/cadence.yaml` names M1R in `depends_on`, so no dependent needs a replay. D2 picks up a new `FUNDAMENTAL_AXIS` row the same evening only if M1R has run by then. That is a reading relationship, not a declared dependency, and D2 halts anyway while BigQuery is down. **Expected signature:** no M1R `run_log` row for 2026-10-20 until the catch-up replays it. A `queue_driven_missed_fire` warning for M1R/2026-10-20 from `state.queue_driven_missed_fire_watch` is expected, not a fresh fault.
 
-### Unfiled findings (M1R slot)
+### Unfiled findings (M1R slot) — FILED 2026-10-20
 
 - None new.
