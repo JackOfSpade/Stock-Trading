@@ -563,6 +563,42 @@ def find_procedure_body_end(text, begin_start):
     return None
 
 
+class ExternalBody(str):
+    """The body of an external-language scalar FUNCTION (`LANGUAGE js AS r\"\"\"...\"\"\"`), already
+    unwrapped from its string literal. main() compares it VERBATIM against live, never through
+    normalize_tail()/canonicalize().
+
+    WHY (2026-10-21). analytics.fn_ramp_path (bigquery/259) is the repo's first JavaScript UDF.
+    INFORMATION_SCHEMA.ROUTINES.routine_definition for it is the bare JavaScript -- the literal's
+    CONTENT, without the `r\"\"\"` / `\"\"\"` delimiters -- but extract_body() kept the delimiters, so the
+    object reported DRIFT from its first parity run (2026-10-20 07:32 UTC) although live was
+    byte-identical to the file (SHA-256 of live routine_definition == SHA-256 of the literal content,
+    1910 chars; one CREATE_FUNCTION job, the 2026-10-20 01:40 UTC owner-credentialed apply of 4d2a052).
+    D3's self-heal would have re-applied it every night and never converged. Unwrapping alone is not
+    enough: the SQL normalizers are wrong for JavaScript -- normalize_tail() strips the live body's
+    final `return out;` semicolon (the repo side keeps it inside the literal) and sql_tokens() would
+    read a JS `i--` as the start of a SQL comment -- so the content is compared as text."""
+
+
+def external_body_content(body):
+    """The content of `body` if it is exactly one string literal, optionally raw-prefixed (`r'...'`,
+    `R\"\"\"...\"\"\"`), else None. A NON-raw literal containing a backslash also returns None: BigQuery
+    stores the DECODED value and this does not decode escapes, so such a body falls back to the
+    ordinary comparison and reports DRIFT loudly rather than being compared wrongly."""
+    toks = [t for t in sql_tokens(body) if t[0] != "W"]
+    raw = len(toks) == 2 and toks[0][0] == "T" and toks[0][1] in ("r", "R") and toks[0][3] == toks[1][2]
+    if not (raw or len(toks) == 1) or toks[-1][0] != "S":
+        return None
+    lit = toks[-1][1]
+    quote = lit[:3] if lit[:3] in ('"""', "'''") and len(lit) >= 6 else lit[:1]
+    if len(lit) < 2 * len(quote) or not lit.endswith(quote):
+        return None                                          # unterminated literal
+    content = lit[len(quote):-len(quote)]
+    if not raw and "\\" in content:
+        return None
+    return content
+
+
 def extract_body(txt, start, obj_type):
     """Given the file text and the start offset of a CREATE_STMT match, return the object's body:
     the preamble (CREATE ... AS / ... BEGIN) is dropped, keeping only what INFORMATION_SCHEMA's
@@ -619,14 +655,19 @@ def extract_body(txt, start, obj_type):
         # this match and prepend the comment's text to the body forever. The `(?=\s)` condition is
         # preserved as "the next token is whitespace", which is what sql_tokens()'s "W" kind means.
         toks = list(sql_tokens(stmt))
-        as_end = next(
-            (tend for idx, (kind, val, _tstart, tend) in enumerate(toks)
+        as_idx = next(
+            (idx for idx, (kind, val, _tstart, _tend) in enumerate(toks)
              if kind == "T" and val.upper() == "AS"
              and idx + 1 < len(toks) and toks[idx + 1][0] == "W"),
             None)
-        if as_end is None:
+        if as_idx is None:
             return None
-        body = stmt[as_end:]
+        body = stmt[toks[as_idx][3]:]
+        if obj_type == "FUNCTION" and any(
+                kind == "T" and val.upper() == "LANGUAGE" for kind, val, _s, _e in toks[:as_idx]):
+            external = external_body_content(normalize_tail(body))
+            if external is not None:
+                return ExternalBody(external.strip())
 
     body = normalize_tail(body)
     if obj_type in ("TABLE FUNCTION", "FUNCTION"):
@@ -1055,7 +1096,13 @@ def main():
         # canonicalize (not collapse): BigQuery re-serializes stored definitions — comments stripped,
         # whitespace around punctuation removed, backticks/quote-style normalized — so a raw-text
         # compare reported 70/179 objects as DRIFT when only 5 differed in MEANING (2026-07-18).
-        if canonicalize(body) != canonicalize(normalize_tail(live_body)):
+        # An external-language FUNCTION body is JavaScript, stored verbatim: compare it as text
+        # (see ExternalBody's docstring for why the SQL normalizers are wrong for it).
+        if isinstance(body, ExternalBody):
+            drifted = body != (live_body or "").strip()
+        else:
+            drifted = canonicalize(body) != canonicalize(normalize_tail(live_body))
+        if drifted:
             mismatches.append(f"{dataset}.{name} — live definition does NOT match the final "
                               f"effective definition in {source_file}")
             findings.append({"dataset": dataset, "name": name, "object_type": obj_type,

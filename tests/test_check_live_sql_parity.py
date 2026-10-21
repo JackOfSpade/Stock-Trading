@@ -956,6 +956,67 @@ def test_extract_body_table_function_genuine_wrapper_around_union_stays_correct(
     assert body == "(SELECT p AS y) UNION ALL (SELECT p + 1 AS y)"
 
 
+# ---- extract_body: external-language scalar FUNCTION (LANGUAGE js AS r"""...""") -----------------
+# 2026-10-21: analytics.fn_ramp_path (bigquery/259) reported permanent false DRIFT because the repo
+# side kept the r"""...""" delimiters that live routine_definition does not carry. See ExternalBody.
+_JS_UDF = (
+    "CREATE OR REPLACE FUNCTION `stock-trading-498512.analytics.fn_js`(x FLOAT64)\n"
+    "RETURNS FLOAT64\n"
+    "LANGUAGE js AS r\"\"\"\n"
+    "  var i = 2; i--;  // not a SQL comment\n"
+    "  return x * i;\n"
+    "\"\"\";\n"
+)
+
+
+def test_extract_body_js_udf_unwraps_the_raw_literal_and_keeps_the_js_semicolon():
+    m = clsp.CREATE_STMT.search(_JS_UDF)
+    body = clsp.extract_body(_JS_UDF, m.start(), "FUNCTION")
+    assert isinstance(body, clsp.ExternalBody)
+    assert body == "var i = 2; i--;  // not a SQL comment\n  return x * i;"
+
+
+def test_extract_body_sql_udf_whose_body_is_a_literal_is_not_treated_as_external():
+    # No LANGUAGE clause: `AS ('abc')` is a SQL expression whose live definition is `'abc'` WITH quotes.
+    txt = "CREATE OR REPLACE FUNCTION `p.analytics.fn_k`() AS ('abc');\n"
+    m = clsp.CREATE_STMT.search(txt)
+    body = clsp.extract_body(txt, m.start(), "FUNCTION")
+    assert not isinstance(body, clsp.ExternalBody)
+    assert body == "'abc'"
+
+
+def test_external_body_content_refuses_an_escaped_non_raw_literal():
+    # BigQuery stores the decoded value; this does not decode, so it must not claim a content.
+    assert clsp.external_body_content('"""a\\nb"""') is None
+    assert clsp.external_body_content('"""ab"""') == "ab"
+    assert clsp.external_body_content("R'a\\nb'") == "a\\nb"
+    assert clsp.external_body_content("r '''x'''") is None          # prefix must touch the quote
+    assert clsp.external_body_content("'a' || 'b'") is None
+
+
+def test_real_repo_fn_ramp_path_is_an_external_body():
+    obj_type, _p, source, body = clsp.find_final_definitions()[("analytics", "fn_ramp_path")]
+    assert (obj_type, source) == ("FUNCTION", "259_live_ramp.sql")
+    assert isinstance(body, clsp.ExternalBody)
+    assert body.startswith("var out = [];") and body.endswith("return out;")
+
+
+def test_main_compares_a_js_udf_verbatim_against_the_live_bare_javascript(monkeypatch):
+    m = clsp.CREATE_STMT.search(_JS_UDF)
+    body = clsp.extract_body(_JS_UDF, m.start(), "FUNCTION")
+    live = "\n  var i = 2; i--;  // not a SQL comment\n  return x * i;\n"   # INFORMATION_SCHEMA shape
+    monkeypatch.setattr(sys, "argv", ["check_live_sql_parity.py"])
+    monkeypatch.setattr(clsp, "find_final_definitions",
+                        lambda: {("analytics", "fn_js"): ("FUNCTION", "p", "259.sql", body)})
+    monkeypatch.setattr(clsp, "fetch_live_definitions", lambda project, final: ({}, {}))
+    monkeypatch.setattr(clsp, "resolve_live_definition", lambda v, r, ds, nm, ot: live)
+    assert clsp.main() == 0
+    # A change hidden behind the JS `i--` (which sql_tokens would read as a SQL comment) is DRIFT.
+    monkeypatch.setattr(clsp, "resolve_live_definition",
+                        lambda v, r, ds, nm, ot: live.replace("// not", "// NOT"))
+    assert clsp.main() != 0
+
+
 # ---- bq(): thin delegation to lib/bq_json.run_bq_query -- the shared subprocess-invoke/JSON-parse/
 # returncode/timeout contract is proven ONCE on run_bq_query itself (tests/test_bq_json.py); this
 # just pins that THIS caller forwards sql/project with no extra fixed args when max_rows is omitted
