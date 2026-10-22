@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """Merge one explicitly selected, current, fully checked same-repository PR.
 
-This script never enumerates branches, executes PR code, or deletes a branch.
+This script never enumerates branches or executes PR code. After a confirmed
+merge it deletes only the selected PR's own head branch, and only while that
+branch still names the merged head commit.
 It uses only the authenticated GitHub CLI and the Python standard library.
 """
 import json
 import os
 import subprocess
+import urllib.parse
 
 
 def validate(pr, base_sha, comparison, checks, required):
@@ -34,6 +37,25 @@ def validate(pr, base_sha, comparison, checks, required):
             failures.append(name)
     if failures:
         raise ValueError("Required checks missing or unsuccessful: " + ", ".join(failures))
+
+
+def delete_merged_head(repo, pr, head):
+    # GitHub's repository auto-delete setting does not fire for merges made with
+    # this workflow's GITHUB_TOKEN: on 2026-10-22, 0 of 4 bot merges (#75, #76,
+    # #78, #79) lost their head branch versus 2 of 2 owner merges (#73, #74).
+    # Best effort only: the merge has already landed, so a failure just warns.
+    ref = pr["head"].get("ref")
+    if not ref or ref == pr["base"]["ref"]:
+        return
+    quoted = urllib.parse.quote(ref, safe="/")
+    try:
+        current = api(f"repos/{repo}/git/ref/heads/{quoted}")["object"]["sha"]
+        if current != head:
+            print(f"::notice::Branch {ref} moved past the merged head; left in place.")
+            return
+        gh("api", "--method", "DELETE", f"repos/{repo}/git/refs/heads/{quoted}")
+    except (subprocess.CalledProcessError, KeyError, TypeError, ValueError) as error:
+        print(f"::warning::Could not delete merged branch {ref}: {error}")
 
 
 def gh(*args):
@@ -78,6 +100,7 @@ def main():
                 output.write(f"{key}={value}\n")
     for workflow in json.loads(os.environ["MAIN_WORKFLOWS"]):
         gh("workflow", "run", workflow, "--repo", repo, "--ref", "main")
+    delete_merged_head(repo, pr, head)
     print(f"Merged PR #{int(number)} and dispatched main validation")
 
 

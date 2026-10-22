@@ -12,10 +12,14 @@ fails its aggregate check.
 The **Merge validated PR** workflow is manual and accepts one PR number. It
 checks the current main ancestry, exact PR head, GitHub Actions check origin,
 and latest configured check results before merging. It checks out trusted main policy,
-never PR code. It dispatches main validation after the merge and never deletes
-branches itself. GitHub's existing repository auto-delete setting can separately
-delete the selected PR's merged head branch. Existing branches and PRs are not
-swept or automatically adopted.
+never PR code. It dispatches main validation after the merge, then deletes the
+selected PR's own head branch only while that branch still points at the merged
+head commit (a branch that moved is left in place, and a failed delete only
+warns). GitHub's repository auto-delete setting does not fire for merges made
+with the workflow's `GITHUB_TOKEN` (2026-10-22: 0 of 4 workflow merges versus
+2 of 2 owner merges), which is why the workflow does this itself. No other
+branch is listed or deleted, and existing branches and PRs are not swept or
+automatically adopted.
 
 The selected PR workflow is optional. Its explicit checks guard that merge
 path; they do not restrict direct pushes or other writers. They cannot atomically

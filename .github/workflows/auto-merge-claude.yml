@@ -1,6 +1,8 @@
 name: Merge validated PR
 
 # Explicit selection replaces automatic sweeping/merging/deletion of branches.
+# The only deletion is the selected PR's own head branch after its confirmed merge,
+# guarded on the branch still naming the merged head (merge_validated_pr.py).
 on:
   workflow_dispatch:
     inputs:
