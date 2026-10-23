@@ -181,6 +181,9 @@ WHERE nav IS NULL;
 -- D2a outage or Step-0b failure remains caught (155's header WALKTHROUGH). Kept here, unmodified, for
 -- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE OR REPLACE VIEW statement live
 -- in isolation.
+-- SUPERSEDED LIVE (2026-10-23) by bigquery/265_snapshot_stale_preopen_guard.sql -- current canonical for this
+-- object (snapshot_stale guard now also requires the D2a run to finish after the session close). DO NOT
+-- re-apply this CREATE live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.book_drawdown_watch` AS
 WITH snaps AS (
   SELECT snapshot_date, nav

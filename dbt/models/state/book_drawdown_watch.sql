@@ -1,5 +1,5 @@
 -- Parallel-run dbt port of state.book_drawdown_watch — canonical source is
--- bigquery/214_account_fee_recording.sql (chain 78 -> 153 -> 155 -> 213) until owner cutover (was 23; rebased 2026-07-17 whole-system audit finding
+-- bigquery/265_snapshot_stale_preopen_guard.sql (chain 78 -> 153 -> 155 -> 214 -> 265) until owner cutover (was 23; rebased 2026-07-17 whole-system audit finding
 -- C1). Mirrors the flow-adjusted, two-tier breaker: drawdown
 -- measured on flow-neutral trading gain (nav - cumulative external flows) so deposits/withdrawals
 -- cannot ratchet the peak or fake a breach; breach_soft (-15%) = entries-only, breach_hard (-40%) =
@@ -54,7 +54,11 @@ SELECT
    AND agg.latest.snapshot_date < ltd.last_trading_day
    AND EXISTS (SELECT 1 FROM {{ source('ops', 'run_log') }}
                WHERE routine = 'D2a' AND status = 'completed'
-                 AND run_date >= ltd.last_trading_day)) AS snapshot_stale,
+                 AND run_date >= ltd.last_trading_day
+                 -- bigquery/265: the run must have FINISHED after last_trading_day's 16:00 ET close.
+                 -- A PRE-OPEN SLOT LIMB run is stamped run_date = today but writes the PRIOR session's
+                 -- snapshot by spec, so it never had the opportunity this guard is testing for.
+                 AND log_ts >= TIMESTAMP(DATETIME(ltd.last_trading_day, TIME '16:00:00'), 'America/New_York'))) AS snapshot_stale,
   (agg.n_snapshots >= 5 AND SAFE_DIVIDE(agg.latest.gain - agg.latest.peak_gain, NULLIF(agg.latest.cum_flows, 0)) <= -0.15) AS breach_soft,
   (agg.n_snapshots >= 5 AND SAFE_DIVIDE(agg.latest.gain - agg.latest.peak_gain, NULLIF(agg.latest.cum_flows, 0)) <= -0.40) AS breach_hard,
   (agg.n_snapshots >= 5 AND SAFE_DIVIDE(agg.latest.gain - agg.latest.peak_gain, NULLIF(agg.latest.cum_flows, 0)) <= -0.40) AS drawdown_breach,

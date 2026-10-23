@@ -138,6 +138,9 @@
 -- connector-sourced it ALREADY reflects the fee -- so without the exclusion, booking fee rows into
 -- events.cash_flows would drop cum_flows by the same amount and newly hide fees from the -15%/-40%
 -- breaker. Every other line of the view is byte-identical to the definition below.
+-- SUPERSEDED LIVE (2026-10-23) by bigquery/265_snapshot_stale_preopen_guard.sql -- current canonical for this
+-- object (snapshot_stale guard now also requires the D2a run to finish after the session close). DO NOT
+-- re-apply this CREATE live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.book_drawdown_watch` AS
 WITH snaps AS (
   SELECT snapshot_date, nav

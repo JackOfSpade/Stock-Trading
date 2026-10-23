@@ -121,6 +121,9 @@ WHERE ingest_ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 14 DAY)
 -- the flattering direction. The magnitude is small (18.43 cumulative against a ~15.9k book, ~0.12%,
 -- versus a 15% threshold) so this is not a live breach risk either way -- but the direction is
 -- one-way and it compounds, so the exclusion lands in the same unit of work as the booking.
+-- SUPERSEDED LIVE (2026-10-23) by bigquery/265_snapshot_stale_preopen_guard.sql -- current canonical for this
+-- object (snapshot_stale guard now also requires the D2a run to finish after the session close). DO NOT
+-- re-apply this CREATE live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.book_drawdown_watch` AS
 WITH snaps AS (
   SELECT snapshot_date, nav
