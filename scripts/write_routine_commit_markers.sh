@@ -19,6 +19,14 @@ for sha in "$base_sha" "$head_sha" "$merge_sha"; do
   fi
 done
 
+# In a shallow repository base's ancestry is cut off, so base..head cannot tell old
+# main commits from the PR's own and spans arbitrary history (2026-10-23: a PR head
+# that had merged main yielded 218 markers for May-Jul commits). Fail closed.
+if [ "$(git rev-parse --is-shallow-repository)" != 'false' ]; then
+  echo 'Refusing marker write: shallow repository, so base..head is not the selected PR range.' >&2
+  exit 1
+fi
+
 # A --merge PR result must have exactly the validated main and selected PR head
 # as its two parents. Do not mark an arbitrary range supplied by a stale caller.
 parents="$(git show --no-patch --format=%P "$merge_sha")"

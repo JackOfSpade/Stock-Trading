@@ -68,7 +68,7 @@ def landed_pr(tmp_path):
         f"#!{sys.executable}\nimport json, os, sys\n"
         "with open(os.environ['GIT_CAPTURE'], 'a') as out: out.write(json.dumps(sys.argv[1:]) + '\\n')\n"
         "if sys.argv[1:] == ['fetch', '--no-tags', 'origin', os.environ['VALIDATED_MERGE_SHA']]: sys.exit(0)\n"
-        "if sys.argv[1] not in {'show', 'merge-base', 'rev-list', 'log'}: sys.exit(99)\n"
+        "if sys.argv[1] not in {'show', 'merge-base', 'rev-list', 'log', 'rev-parse'}: sys.exit(99)\n"
         f"os.execv({REAL_GIT!r}, [{REAL_GIT!r}, *sys.argv[1:]])\n"
     )
     for tool in shim.iterdir():
@@ -130,7 +130,7 @@ def test_marks_only_selected_landed_routine_outputs_and_preserves_calendar_guard
     assert all('"auto-merge-claude.yml"' in call[-1] for call in emitted)
     assert "SUPPRESSED" in result.stdout
     recorded = [json.loads(line) for line in case["commands"].read_text().splitlines()]
-    assert {args[0] for args in recorded} <= {"show", "merge-base", "rev-list", "log"}
+    assert {args[0] for args in recorded} <= {"show", "merge-base", "rev-list", "log", "rev-parse"}
     assert git(case["repo"], "rev-parse", "main") == case["merged"]
     assert git(case["repo"], "rev-parse", "pre-existing-unrelated") == case["unrelated"]
     assert git(case["repo"], "rev-parse", "selected-pr") == case["head"]
@@ -164,6 +164,39 @@ def test_stale_pr_head_cannot_supply_markers_for_new_main(landed_pr):
     assert calls(case) == []
 
 
+def test_shallow_checkout_refuses_instead_of_marking_old_history(landed_pr, tmp_path):
+    # 2026-10-23 (PR #80): a depth-1 main checkout plus a PR head that had merged main
+    # made base..head span history below the shallow boundary -> 218 May-Jul markers.
+    case = landed_pr
+    repo = case["repo"]
+    git(repo, "checkout", "--quiet", "-b", "old-routine-history", case["base"])
+    old = commit(repo, "D2 2026-05-09: old routine output already on main", date="2026-05-09T12:00:00+0000")
+    git(repo, "checkout", "--quiet", "main")
+    git(repo, "merge", "--quiet", "--no-ff", "old-routine-history", "-m", "Merge old history")
+    base = git(repo, "rev-parse", "HEAD")
+    git(repo, "checkout", "--quiet", "-b", "pr-that-merged-main", old)
+    commit(repo, "AR_orc 2026-10-22: selected PR output")
+    git(repo, "merge", "--quiet", "--no-ff", "main", "-m", "Merge branch 'main' into pr")
+    head = git(repo, "rev-parse", "HEAD")
+    git(repo, "checkout", "--quiet", "main")
+    git(repo, "merge", "--quiet", "--no-ff", "pr-that-merged-main", "-m", "Merge PR")
+    merged = git(repo, "rev-parse", "HEAD")
+    # Mirror CI: depth-1 checkout of main as it was before the merge, then fetch the merge.
+    git(repo, "branch", "main-before-merge", base)
+    shallow = tmp_path / "shallow"
+    subprocess.check_call(
+        [REAL_GIT, "clone", "--quiet", "--depth=1", "--no-local", "--branch", "main-before-merge",
+         f"file://{repo}", str(shallow)]
+    )
+    git(shallow, "fetch", "--quiet", "--no-tags", "origin", "main")
+    assert git(shallow, "rev-parse", "FETCH_HEAD") == merged
+    assert git(shallow, "rev-parse", "--is-shallow-repository") == "true"
+    result = run_writer(dict(case, repo=shallow), base, head, merged)
+    assert result.returncode != 0
+    assert "shallow repository" in result.stderr
+    assert calls(case) == []
+
+
 def test_bigquery_failure_warns_and_continues_after_successful_pr_merge(landed_pr):
     result = run_writer(landed_pr, failure=13)
     assert result.returncode == 0
@@ -185,6 +218,8 @@ def test_real_workflow_preserves_selected_markers_and_optional_auth_contract(lan
     job = workflow["jobs"]["merge"]
     assert job["permissions"]["id-token"] == "write"
     steps = job["steps"]
+    checkout = next(step for step in steps if str(step.get("uses", "")).startswith("actions/checkout@"))
+    assert checkout["with"]["fetch-depth"] == 0
     assert any(step.get("id") == "merge" for step in steps)
     marker_auth = next(step for step in steps if step.get("id") == "marker-auth")
     assert marker_auth["continue-on-error"] is True
