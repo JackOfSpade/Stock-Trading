@@ -28,6 +28,21 @@ def _make_repo(tmp_path, monkeypatch, md=None, sql=None):
     monkeypatch.setattr(cs, "REPO", str(tmp_path))
 
 
+# Rev 53 (2026-10-23) withdrew E's gate, so the live register has no numeric gate left. The gate-value
+# tests run on the Rev 50 shape instead: bigquery/257's seed (E gated 0.85 / 0.60 / 35) and a Strategy.md
+# whose E row is restored to match it.
+REV50_SQL_REL = "bigquery/257_shock_transmission_register.sql"
+REV50_E_ROW = "| E | SPREAD | yes | 0.85 | 60% | 35 | status-quo | Rev 50 gated row (test fixture). |"
+
+
+def _gated_fixture():
+    md = _read("Strategy.md")
+    row = next(line for line in md.splitlines() if line.startswith("| E | SPREAD |"))
+    gated_md = md.replace(row, REV50_E_ROW, 1)
+    assert gated_md != md
+    return gated_md, _read(REV50_SQL_REL)
+
+
 def _run(capsys):
     rc = cs.main()
     out = capsys.readouterr()
@@ -48,25 +63,47 @@ def test_real_repo_parses_expected_e_row():
     sql = cs.parse_sql(_read(REAL_SQL_REL), REAL_SQL_REL)
     assert sorted(table) == sorted(sql) == ["A", "B", "C", "D", "E"]
     e = sql["E"][1]
+    # Rev 53: E binds, no gate (router review premortem-router-2026-a1 cycle 1, T1-1)
+    assert e["transmission_class"] == "SPREAD"
+    assert e["exempt_by_class"] is False
+    assert e["gate_median_60d_max"] is None and e["gate_share_ge_080_max"] is None and e["gate_max_age_days"] is None
+    # the note is a long prose literal with commas and parentheses inside the quotes; it must parse as ONE
+    # field (BigQuery has no '' escape -- a doubled quote is a syntax error -- so the seed avoids apostrophes)
+    assert "exemption withdrawn" in e["note"]
+    assert "'" not in e["note"]
+    assert table["E"][1]["exempt_by_class"] is False and table["E"][1]["gate_share_ge_080_max"] is None
+    assert sql["A"][1]["gate_median_60d_max"] is None and table["A"][1]["gate_median_60d_max"] is None
+
+
+def test_rev50_seed_still_parses_gated_e_row():
+    sql = cs.parse_sql(_read(REV50_SQL_REL), REV50_SQL_REL)
+    e = sql["E"][1]
     assert e["exempt_by_class"] is True
     assert e["gate_median_60d_max"] == cs.Decimal("0.85")
     assert e["gate_share_ge_080_max"] == cs.Decimal("0.60")
     assert e["gate_max_age_days"] == 35
-    # the note is a long prose literal with commas and parentheses inside the quotes; it must parse as ONE
-    # field (BigQuery has no '' escape -- a doubled quote is a syntax error -- so the seed avoids apostrophes)
     assert "failure channel E itself names" in e["note"]
-    assert "'" not in e["note"]
-    assert table["E"][1]["gate_share_ge_080_max"] == cs.Decimal("0.60")
-    assert sql["A"][1]["gate_median_60d_max"] is None and table["A"][1]["gate_median_60d_max"] is None
+
+
+def test_table_reexempting_e_fails_naming_e_and_exempt(tmp_path, monkeypatch, capsys):
+    md = _read("Strategy.md")
+    mutated = md.replace("| E | SPREAD | no |", "| E | SPREAD | yes |", 1)
+    assert mutated != md
+    _make_repo(tmp_path, monkeypatch, md=mutated)
+    rc, out, err = _run(capsys)
+    assert rc == 1
+    mism = [line for line in err.splitlines() if "MISMATCH" in line]
+    assert len(mism) == 1
+    assert re.match(r"ERROR: Strategy\.md:\d+: strategy E column 'Exempt by class' \(exempt_by_class\) MISMATCH", mism[0])
 
 
 # (2) ------------------------------------------------------------------------------------------
 
 def test_table_median_gate_change_fails_naming_e_and_median(tmp_path, monkeypatch, capsys):
-    md = _read("Strategy.md")
+    md, sql = _gated_fixture()
     mutated = md.replace("| E | SPREAD | yes | 0.85 |", "| E | SPREAD | yes | 0.90 |", 1)
     assert mutated != md
-    _make_repo(tmp_path, monkeypatch, md=mutated)
+    _make_repo(tmp_path, monkeypatch, md=mutated, sql=sql)
     rc, out, err = _run(capsys)
     assert rc == 1
     mism = [line for line in err.splitlines() if "MISMATCH" in line]
@@ -135,10 +172,10 @@ def test_share_percent_vs_numeric_equal():
 
 
 def test_share_sql_changed_to_050_fails_naming_e_and_share(tmp_path, monkeypatch, capsys):
-    sql = _read(REAL_SQL_REL)
+    md, sql = _gated_fixture()
     mutated = sql.replace("NUMERIC '0.60'", "NUMERIC '0.50'", 1)
     assert mutated != sql
-    _make_repo(tmp_path, monkeypatch, sql=mutated)
+    _make_repo(tmp_path, monkeypatch, md=md, sql=mutated)
     rc, out, err = _run(capsys)
     assert rc == 1
     mism = [line for line in err.splitlines() if "MISMATCH" in line]
@@ -150,9 +187,10 @@ def test_share_sql_changed_to_050_fails_naming_e_and_share(tmp_path, monkeypatch
 # resolution -----------------------------------------------------------------------------------
 
 def test_higher_numbered_reregistration_file_supersedes(tmp_path, monkeypatch, capsys):
-    _make_repo(tmp_path, monkeypatch)
-    later = _read(REAL_SQL_REL).replace("35,", "40,", 1)
-    assert later != _read(REAL_SQL_REL)
+    md, sql = _gated_fixture()
+    _make_repo(tmp_path, monkeypatch, md=md, sql=sql)
+    later = sql.replace("35,", "40,", 1)
+    assert later != sql
     (tmp_path / "bigquery" / "999_shock_reregistration.sql").write_text(later, encoding="utf-8")
     rc, out, err = _run(capsys)
     assert rc == 1
