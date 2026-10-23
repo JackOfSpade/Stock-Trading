@@ -34,6 +34,11 @@ jobs:
         with:
           ref: main
           persist-credentials: false
+          # Full history: the marker writer's base..head range is only meaningful when
+          # git can see base's ancestry. At depth 1 a PR head that merged main walks
+          # below the shallow boundary and base..head spans old history (2026-10-23,
+          # PR #80: 218 May-Jul markers). The writer also refuses a shallow repo.
+          fetch-depth: 0
       - name: Merge only the selected validated PR and check main
         id: merge
         env:
