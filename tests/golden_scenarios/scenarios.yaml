@@ -387,12 +387,14 @@ scenarios:
     governing_files: [Experiment_Parameters.md]
     governing_sections:
       Experiment_Parameters.md: ["### Success threshold", "### Evaluation gate and termination structure"]
-    expected_decision: "TERMINATE"
+    expected_decision: "CONTINUE"
     rationale: >
-      The per-strategy 30-trade go/no-go gate requires cumulative excess real return >= 0% to pass ("the
-      gate is a real hurdle... strategies will fail it at the gate, which is the point"). -2.3% is
-      negative, so the gate fails and the strategy terminates ("if the threshold is not met, the strategy
-      terminates").
+      Experiment_Parameters.md rev 20 (owner directive 2026-10-19) retired the per-strategy 30-trade
+      go/no-go gate: "There is no trade-count gate." Termination "comes only from the kills — drawdown
+      (1), foundation change (2), runaway-success and mark-to-market reviews (3, 4), the evidence kill
+      (5) — and from SL4 discretionary retirement." The Success threshold's at-gate application is
+      annotated "[rev 20: the 30-trade gate is retired]", so -2.3% at the 30th trade fails no gate. No
+      kill trigger is stated as fired in this scenario (no 50% drawdown), so the strategy continues.
 
   - id: KT-06
     category: kill_trigger
