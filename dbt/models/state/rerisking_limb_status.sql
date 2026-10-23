@@ -4,6 +4,10 @@
 -- to it by scripts/verify_dbt_port.py. Do not hand-edit the BODY: re-generate, then re-verify.
 -- Regenerating REPLACES this header, so any hand-written provenance above the body must be put
 -- back by the person who regenerates it.
+-- RETIRED (2026-10-22, Strategy.md Rev 52, owner directive): no consumer reads state.rerisking_limb_status
+-- after Rev 52; the out-of-cycle refresh is disjunctive both ways (D2 item 4's measured triggers plus
+-- state.shock_price_leg_status, bigquery/263). The view stays defined live and is not dropped, so this
+-- port stays too. See bigquery/224's RETIRED marker.
 WITH latest_per_day AS (
   -- One activation reading per (strategy, day). bigquery/01_schema.sql's tiebreaker.
   SELECT key AS strategy, as_of_date, value

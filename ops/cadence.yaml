@@ -254,8 +254,8 @@ routines:
     depends_on: []   # deliberately independent of D1 -- the book must reconcile even if D1 failed
     writes: [events.trade_fills, events.position_events, events.daily_marks, perf.strategy_daily,
              ops.account_snapshot, events.signal_marks, events.queue_events]
-             # events.queue_events added 2026-09-05: Step 0's RE-RISKING LIMB EVALUATION writes the
-             # PENDING_REGIME_REFRESH regime-refresh item M1R drains. Dataset.table entries are documentation
+             # events.queue_events added 2026-09-05: Step 0's REFRESH REQUEST (Rev 52, 2026-10-22; until then the
+             # retired RE-RISKING LIMB EVALUATION) writes the PENDING_REGIME_REFRESH regime-refresh item M1R drains. Dataset.table entries are documentation
              # only -- OPS0 STEP 4f consumes just the FILE-PATH entries as git pathspecs, and D2a
              # deliberately declares none (it is one of the routines that lands no repo file).
     expected_trigger:
@@ -908,9 +908,11 @@ routines:
       # (1,2,3,4,5): a 13:00 UTC slot lands on the SAME Denver day, an 00:00-01:25 UTC slot on the
       # PREVIOUS one. Both spell Denver Sun-Thu; check Q derives which is expected from the hour.
     notes: >
-      Drains the PENDING_REGIME_REFRESH regime-refresh item D2a's RE-RISKING LIMB EVALUATION writes, by re-running
-      M1a's OUTPUT 2 (the strategy-blind 5-axis FUNDAMENTAL_AXIS score) with today's as_of_date, then closing
-      the item and resolving the rerisking_limb_fired alert by alert_id. Same blinding rules as M1a: no
+      Drains the PENDING_REGIME_REFRESH regime-refresh item D2a's REFRESH REQUEST writes (Strategy.md Rev 52,
+      owner directive 2026-10-22: one item whenever D2 item 4 has serviced a measured out-of-cycle trigger in
+      either direction; it replaced the retired RE-RISKING LIMB EVALUATION), by re-running M1a's OUTPUT 2 (the
+      strategy-blind 5-axis FUNDAMENTAL_AXIS score) with today's as_of_date, then closing the item and
+      resolving any legacy open rerisking_limb_fired alert by alert_id (D2a raises none since Rev 52). Same blinding rules as M1a: no
       roster/position/activation reads, no per-strategy mapping, no orders, no capital. It decides no
       activation — D2's item 4 picks the new axis row up the same evening and queues the affected router
       review(s); the activation write stays with the existing review machinery. catchup_safe: true because a

@@ -103,6 +103,17 @@
 -- APPLY: live via the BigQuery MCP, together with the generated dbt mirror
 -- (dbt/models/state/rerisking_limb_status.sql). Apply after 223. Read-only view; no writer, no
 -- alert registration -- D2a's substep is what reads it.
+--
+-- RETIRED (2026-10-22, Strategy.md Rev 52, owner directive, interactive session). NO CONSUMER READS
+-- THIS VIEW AFTER REV 52. Rev 52 retires the re-risking limb this view measured -- its conjunctive
+-- three-leg structure, leg (a)'s 15-trading-day DO-NOT-ACTIVATE dwell, and legs (b) and (c) as joint
+-- conditions -- and with it D2a's RE-RISKING LIMB EVALUATION substep, the only reader named above. The
+-- out-of-cycle refresh is now disjunctive in BOTH directions: Claude_Task_Plan.md
+-- `## D2. Daily Action Conversion` item 4's measured triggers, each with a mirror, plus the shock
+-- price-leg pair read from state.shock_price_leg_status (bigquery/263_shock_price_leg_status.sql),
+-- whose price leg replaces leg (b)'s retracement test with one threshold applied in both directions.
+-- This view stays defined live, is NOT dropped and is NOT redefined anywhere: the CREATE below is
+-- unchanged, so apply-in-order replay and live-sql-parity are unaffected. Do not wire a new reader to it.
 
 -- ===== state.rerisking_limb_status =====
 CREATE OR REPLACE VIEW `stock-trading-498512.state.rerisking_limb_status` AS
