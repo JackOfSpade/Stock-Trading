@@ -68,9 +68,13 @@ queue_lanes:
     drainers: [M1R]
     why: >
       D2a -> M1R out-of-cycle regime-refresh handoff (owner-directed shock-override package,
-      2026-09-05). D2a's re-risking-limb substep enqueues one `regime-refresh-YYYYMMDD` item when
-      state.rerisking_limb_status (bigquery/224) reports a fired limb; M1R (Out-of-cycle Regime
-      Re-score) is the lane's only drainer and closes it at status = complete after performing M1a's
+      2026-09-05; producer rewritten by Strategy.md Rev 52, owner directive 2026-10-22, interactive
+      session). D2a's REFRESH REQUEST substep enqueues one `regime-refresh-YYYYMMDD` item when D2
+      item 4 has serviced a measured out-of-cycle trigger in either direction (a de-risking trigger or
+      its re-risking mirror, including a D1-flagged qualifying geopolitical event or qualifying
+      resolution event) and no refresh has been requested or completed since; it replaced the retired
+      re-risking-limb substep, which read state.rerisking_limb_status (bigquery/224, retired by Rev 52).
+      M1R (Out-of-cycle Regime Re-score) is the lane's only drainer and closes it at status = complete after performing M1a's
       blind five-axis re-score. Registered in allowed_map by bigquery/225 in the same change that
       creates the lane -- a queue absent from that map is treated as "no legitimate venue claim is
       possible on this lane at all", so an item correctly naming M1R as its resolving venue would be
