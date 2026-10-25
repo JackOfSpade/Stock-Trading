@@ -37,6 +37,7 @@
 -- SUPERSEDED LIVE in turn by bigquery/60_shadow_stuck_cull.sql — the CURRENT single source of truth
 -- for this view. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
 -- re-apply this CREATE statement live in isolation.
+-- SUPERSEDED AGAIN (2026-10-25): the current canonical definition is bigquery/266_shadow_paper_restored.sql (EP rev 21: 5-trading-day SHADOW floor, was 20). DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.strategy_shadow_readiness` AS
 WITH agg AS (
   SELECT strategy_code,

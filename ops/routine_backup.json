@@ -369,7 +369,7 @@
       "trigger_id": "trig_01JMweJiKsWc3CWD8C7kK6qG"
     },
     "SL1": {
-      "cron_expression": "0 21 2 1,4,7,10 *",
+      "cron_expression": "0 21 2 * *",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform SL1 — deep research.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.",
       "name": "SL1 — deep research",

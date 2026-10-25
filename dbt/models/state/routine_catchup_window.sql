@@ -4,9 +4,11 @@
 -- to it by scripts/verify_dbt_port.py. Do not hand-edit the BODY: re-generate, then re-verify.
 -- Regenerating REPLACES this header, so any hand-written provenance above the body must be put
 -- back by the person who regenerates it.
+-- Provenance (kept on regeneration):
 -- Added 2026-09-01 (dbt view-coverage burn-down): this view had NO dbt presence, so
 -- scripts/check_dbt_view_coverage.py reported it uncovered and it carried no port at all.
 -- Re-generated 2026-09-05 when routine M1R joined the generated routine list.
+-- Re-generated 2026-10-25 when SL1 moved quarterly_ftd -> monthly_ftd (EP rev 21).
 WITH routines AS (
   -- GENERATED (scripts/gen_routine_lists.py --write, from ops/cadence.yaml, file order), ALL 33 ids
   -- incl. the 5 queue_driven ones. Do NOT hand-edit -- see header note above.
@@ -41,7 +43,7 @@ WITH routines AS (
     STRUCT('Q2' AS routine, 'quarterly_ftd' AS monitor_class),
     STRUCT('Q3' AS routine, 'quarterly_ftd' AS monitor_class),
     STRUCT('Q4' AS routine, 'quarterly_ftd' AS monitor_class),
-    STRUCT('SL1' AS routine, 'quarterly_ftd' AS monitor_class),
+    STRUCT('SL1' AS routine, 'monthly_ftd' AS monitor_class),
     STRUCT('A1' AS routine, 'annual_ftd' AS monitor_class),
     STRUCT('A2' AS routine, 'annual_ftd' AS monitor_class),
     STRUCT('A3' AS routine, 'annual_ftd' AS monitor_class)

@@ -28,6 +28,7 @@
 --
 -- SUPERSEDES the state.strategy_shadow_readiness VIEW definition in bigquery/52_shadow_readiness_band.sql
 -- (adds one new `stuck` column; every other column unchanged). Apply after 52_shadow_readiness_band.sql.
+-- SUPERSEDED AGAIN (2026-10-25): the current canonical definition is bigquery/266_shadow_paper_restored.sql (EP rev 21: 5-trading-day SHADOW floor, was 20). DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.strategy_shadow_readiness` AS
 WITH agg AS (
   SELECT strategy_code,

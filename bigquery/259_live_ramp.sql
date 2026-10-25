@@ -290,6 +290,7 @@ LEFT JOIN latest lt USING (strategy_code);
 -- Only change: incubating_count counts strategies in PROBE (the live ramp) instead of SHADOW+PAPER
 -- (state.strategy_roster.is_incubating, which no row will ever carry again), so k_incubate = 2 keeps
 -- meaning "at most two concurrent incubations". Every constant and every other column is byte-identical.
+-- SUPERSEDED AGAIN (2026-10-25): the current canonical definition is bigquery/266_shadow_paper_restored.sql (EP rev 21: incubating_count counts SHADOW+PAPER again, k_incubate 6, 30-day adoption window). DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.arsenal_rails` AS
 WITH consts AS (
   SELECT
@@ -327,6 +328,7 @@ FROM consts c CROSS JOIN counts n;
 -- Only change: the idempotency marker is '<code>:UNDER_REVIEW->PROBE' (SL5 branch (1) now registers a
 -- SUFFICIENT candidate straight into PROBE). Everything else (the six AND-terms of ready, the fail-closed
 -- theater_ok default, the correction-aware adversarial_reviews_current read) is unchanged.
+-- SUPERSEDED AGAIN (2026-10-25): the current canonical definition is bigquery/266_shadow_paper_restored.sql (EP rev 21: marker UNDER_REVIEW->SHADOW again). DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.strategy_adoption_readiness` AS
 WITH latest_verdict AS (
   SELECT strategy AS strategy_code, verdict, review_id

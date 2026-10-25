@@ -36,7 +36,8 @@
 #                    human PR review but the multi-scrutiny GRADUATION pipeline — a two-routine adversarial
 #                    pre-mortem (AR_att/AR_orc) + the live ramp (rev 20, 2026-10-19: PROBE from
 #                    registration at a dynamic floor, a deployment cap that grows with per-trade evidence, the
-#                    evidence kill; LIVE_RAMP_DESIGN.md; formerly SHADOW + PAPER + $2,000 PROBE + 30-trade gate) —
+#                    evidence kill; LIVE_RAMP_DESIGN.md; formerly SHADOW + PAPER + $2,000 PROBE + 30-trade gate;
+#                    rev 21, 2026-10-25: SHADOW >= 5 days + PAPER restored in front of that ramp) —
 #                    bounded by caps / rate-limits / default-no / default-KEEP / N-floor and the
 #                    ops.arsenal_control owner kill switch, exactly the "compensating control is live and
 #                    drilled" bar this register's own sequencing demands (the D2a auto-cutover precedent,
@@ -197,9 +198,9 @@ loops:
       in the path (the only residual human touches are the system-wide IBKR order-confirm tap and deposits,
       which apply to every trade equally). Unlike the four constant-tuning loops above, roster MEMBERSHIP is
       VERSIONED POLICY — not a frozen experiment parameter (each strategy's own machinery stays immutable,
-      frozen at PROBE entry / spec_locked_since; rev 20, 2026-10-19, formerly SHADOW entry) — mirroring the 2026-06 capital-allocation pivot
+      frozen at SHADOW entry / spec_locked_since again since rev 21, 2026-10-25; PROBE entry under rev 20) — mirroring the 2026-06 capital-allocation pivot
       (Experiment_Parameters.md:150-154). So an SL1-SL5 commit is a ROUTINE commit gated by the adversarial
-      + live-ramp PROBE pipeline (rev 20, 2026-10-19; formerly shadow + paper + probe + 30-trade gate), exactly like D2a's autonomous cutover (§36),
+      + shadow + paper + live-ramp PROBE pipeline (rev 21, 2026-10-25; rev 20 had dropped shadow + paper), exactly like D2a's autonomous cutover (§36),
       NOT a PR-gated change to a production trading CONSTANT. The compensating control replacing human PR
       review is that graduation pipeline plus the anti-churn/anti-runaway rails (concurrent-incubation cap
       k_incubate=2, one adoption per rolling quarter, roster floor N>=2 / ceiling N_max=8, cooldowns,
@@ -492,7 +493,7 @@ cross_cutting_guards:
       decision_log "no change" entry) on every firing, with a scheduled-query dead-man's-switch
       alerting if the expected evaluation is missing — the same pattern ops.heartbeat already uses
       for the Apps Scripts (bigquery/16_automation_health.sql). LIVE for the strategy_arsenal loop (rev
-      2026-07-10 — Strategy Arsenal autonomy conversion): SL1 (quarterly), SL4 (monthly), and SL3 (daily)
+      2026-07-10 — Strategy Arsenal autonomy conversion): SL1 (monthly since 2026-10-25; quarterly before), SL4 (monthly), and SL3 (daily)
       each write a decision_log 'evaluated, no change' heartbeat every firing.
       CORRECTED 2026-09-13 (W5 SPEC-DEFECT NOTICE INTAKE, adjudicating SL3's
       arsenal_heartbeat_deadman_declared_absent notice — the claim removed here read "and a
@@ -509,7 +510,7 @@ cross_cutting_guards:
       views (bigquery/12 + 24) and the stalled-run guard (bigquery/18), which do register SL1/SL3/SL4.
       The residue — an SL routine that RUNS and logs no arsenal-heartbeat row — is covered by exactly
       one thing: W5's weekly META-HEARTBEAT CHECK (Claude_Task_Plan.md, STRATEGY-ARSENAL LIFECYCLE
-      DIGEST + META-HEARTBEAT CHECK), which asserts SL1 within the quarter, SL3 within the trading
+      DIGEST + META-HEARTBEAT CHECK), which asserts SL1 within the month (the quarter before 2026-10-25), SL3 within the trading
       day and SL4 within the month, and raises arsenal_heartbeat_missing on a gap. That is a prose
       assertion executed by a routine, not a scheduled query, and it is now described as such.
       DO NOT "repair" this by adding loop:strategy_arsenal to that UNNEST: the leg reads
