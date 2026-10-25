@@ -3815,6 +3815,14 @@ a `<note>` nobody reads for content, or in chat output nobody monitors.
   `(routine, run_date, run_id)` rows, then go straight to `ops.run_log` for those rows' `error_msg`/
   `<note>` directly — the alert layer is exactly what is suspect here, so trust the underlying log row
   over any alert that may or may not exist for it.
+  **Before suspecting `sp_log_run`, check whether the row was hand-INSERTed** (`INFORMATION_SCHEMA.JOBS_BY_PROJECT`
+  around its `log_ts`: a raw `INSERT INTO ops.run_log` rather than a `CALL`). A raw INSERT bypasses the
+  P1 escalation by construction, so this backstop fires correctly. First seen 2026-10-25: an interactive
+  session closed a stranded D3/2026-10-22 start with a raw INSERT; the pipeline was healthy. Fix by
+  backfilling a resolved `routine_run_failed` receipt whose payload carries `routine` + `run_date` (and no
+  `issue_key`), then resolving this alert. Resolving this alert alone is not enough: the view keys on "no
+  receipt ever raised", so it re-raises nightly until the row ages out of its 14-day window. **To close a
+  stranded run by hand, always `CALL ops.sp_log_run(...)` — never `INSERT INTO ops.run_log`.**
 
 **What was deliberately NOT changed.** `missed_run` (critical) and `routine_stalled` (warning) —
 the two existing `cadence_check`-driven detectors — are untouched; neither gets `error_msg`/`<note>`
