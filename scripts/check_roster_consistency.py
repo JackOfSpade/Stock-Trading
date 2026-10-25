@@ -223,7 +223,7 @@ from lib.roster_common import roster_active_codes
 # -- were left scanning RAW text and carried the identical false-FAIL-on-a-doc-comment exposure, on the
 # one arsenal file autonomous SL1/SL3/SL5 landings edit. Both now strip too, so ALL FIVE call sites below
 # are covered; do not add a sixth raw read_text(ARSENAL_SQL) without stripping.
-from lib.sql_files import strip_sql_comments
+from lib.sql_files import OBJECT_DDL, numbered_sql_files, resolve_canonical, strip_sql_comments
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ROSTER = os.path.join(ROOT, "strategy", "roster.yaml")
@@ -232,6 +232,33 @@ STRATEGY_DIR = os.path.join(ROOT, "strategy")
 PLAN = os.path.join(ROOT, "Claude_Task_Plan.md")
 CADENCE = os.path.join(ROOT, "ops", "cadence.yaml")
 ARSENAL_SQL = os.path.join(ROOT, "bigquery", "35_strategy_arsenal.sql")
+BIGQUERY_DIR = os.path.join(ROOT, "bigquery")
+
+
+def canonical_rails_sql():
+    """Path of the CANONICAL definition of state.arsenal_rails: the highest-numbered bigquery/NN_*.sql
+    file that CREATEs it (the superseded-marker rule's apply-in-order winner), or None if none does.
+
+    WHY (2026-10-25, EP rev 21). R-E used to read the rail constants from bigquery/35 unconditionally.
+    That held while 35 was the only definition. bigquery/259 (rev 20) redefined the view with the same
+    constants, and from that day R-E checked roster.yaml against a superseded copy: a later file could
+    move k_incubate or the adoption window live while roster.yaml and 35 kept agreeing at the old
+    values, and R-E stayed green. bigquery/266 is the first file to move a rail value after 35, so the
+    comparison now follows the canonical file. ARSENAL_SQL stays bigquery/35 for the readers that want
+    35's OTHER objects (R-A's seed codes, R-J's coverage cells)."""
+    occurrences = []
+    for num, path in numbered_sql_files(BIGQUERY_DIR):
+        for m in OBJECT_DDL.finditer(strip_sql_comments(read_text(path))):
+            if (m.group(2).lower(), m.group(3).lower()) == ("state", "arsenal_rails"):
+                occurrences.append((num, path))
+    if not occurrences:
+        return None
+    _num, winners = resolve_canonical(occurrences)
+    return winners[-1]
+
+
+# R-E's input: a module global like every other path here, so tests can repoint it at a fixture copy.
+RAILS_SQL = canonical_rails_sql()
 # R-K: the golden-scenario prose-regression fixture set (tests/golden_scenarios/scenarios.yaml). A
 # module global (not a frozen constant read once) so tests can monkeypatch it, like every other path here.
 SCENARIOS_YAML = os.path.join(ROOT, "tests", "golden_scenarios", "scenarios.yaml")
@@ -865,7 +892,7 @@ def arsenal_rails_sql_consts():
     undercount guard at this function's call site stays as-is — it is unaffected by (and redundant with,
     for the duplicate case) this fix, but still the only guard for a genuine miss (a `<N> AS <name>`
     shape change dropping a rail's match count to zero)."""
-    txt = strip_sql_comments(read_text(ARSENAL_SQL))
+    txt = strip_sql_comments(read_text(RAILS_SQL))
     lines_by_name = {}
     sql_consts = {}
     for m in RAIL_CONST.finditer(txt):
@@ -876,7 +903,7 @@ def arsenal_rails_sql_consts():
     for name, seen_at in sorted(lines_by_name.items()):
         if len(seen_at) > 1:
             errors.append(
-                f"R-E: bigquery/35_strategy_arsenal.sql has {len(seen_at)} `<N> AS {name}` rail "
+                f"R-E: bigquery/{os.path.basename(RAILS_SQL)} has {len(seen_at)} `<N> AS {name}` rail "
                 f"constants at lines {', '.join(str(n) for n in seen_at)} — arsenal_rails_sql_consts() "
                 f"used to silently keep only the LAST one, the identical bug class check_sq_version_"
                 f"registry.py's parse_registry() already guards against for its own STRUCT rows. Keep "
@@ -1234,15 +1261,15 @@ def main():
 
     # ---- R-E: bigquery/35's arsenal_rails SQL constants agree with roster.yaml's rails block ----
     rails_doc = doc.get("rails", {}) or {}
-    if not os.path.exists(ARSENAL_SQL):
-        errors.append("R-E: bigquery/35_strategy_arsenal.sql absent but strategy/roster.yaml has a rails "
-                      "block — nothing to compare arsenal_rails' SQL constants against")
+    if not RAILS_SQL or not os.path.exists(RAILS_SQL):
+        errors.append("R-E: no bigquery/*.sql file defines state.arsenal_rails but strategy/roster.yaml has a "
+                      "rails block — nothing to compare arsenal_rails' SQL constants against")
     else:
         sql_consts, rail_dup_errors = arsenal_rails_sql_consts()
         errors.extend(rail_dup_errors)
         if len(sql_consts) < len(RAIL_NAMES):
             errors.append(f"R-E: parsed only {len(sql_consts)}/{len(RAIL_NAMES)} rail constants from "
-                          f"bigquery/35_strategy_arsenal.sql's consts CTE — did the `<N> AS <name>` shape "
+                          f"bigquery/{os.path.basename(RAILS_SQL)}'s consts CTE — did the `<N> AS <name>` shape "
                           f"change? (update RAIL_CONST)")
         # Both loops must fire on a MISSING yaml key too, not just a mismatched one — a key silently
         # deleted from roster.yaml's rails block (accidental deletion, bad merge, a partial rails:

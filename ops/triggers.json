@@ -93,7 +93,7 @@
   },
   "SL1": {
     "instruction": "Read Claude_Task_Plan.md. Perform SL1 — deep research.",
-    "monitor_class": "quarterly_ftd"
+    "monitor_class": "monthly_ftd"
   },
   "SL2": {
     "instruction": "Read Claude_Task_Plan.md. Perform SL2 — regular routine.",

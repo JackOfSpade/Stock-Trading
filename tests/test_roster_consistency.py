@@ -29,6 +29,7 @@ REAL_PATHS = {
     "PLAN": rc.PLAN,
     "CADENCE": rc.CADENCE,
     "ARSENAL_SQL": rc.ARSENAL_SQL,
+    "RAILS_SQL": rc.RAILS_SQL,
 }
 REAL_DERIVED_LIVE_SQL = list(rc.DERIVED_LIVE_SQL)
 REAL_DBT_RECONCILE = rc.DBT_RECONCILE
@@ -77,6 +78,10 @@ def repo_copy(tmp_path, monkeypatch):
     (dst_root / "bigquery").mkdir()
     shutil.copy(REAL_PATHS["ARSENAL_SQL"], dst_root / "bigquery" / "35_strategy_arsenal.sql")
     monkeypatch.setattr(rc, "ARSENAL_SQL", str(dst_root / "bigquery" / "35_strategy_arsenal.sql"))
+    # R-E's input is the CANONICAL state.arsenal_rails file (rc.canonical_rails_sql()), not bigquery/35.
+    rails_dst = dst_root / "bigquery" / os.path.basename(REAL_PATHS["RAILS_SQL"])
+    shutil.copy(REAL_PATHS["RAILS_SQL"], rails_dst)
+    monkeypatch.setattr(rc, "RAILS_SQL", str(rails_dst))
 
     # the roster-derived live SQL files (R-B) + the dbt reconcile test (R-C).
     derived_copies = []
@@ -1222,13 +1227,35 @@ def test_cooldown_rail_key_missing_is_caught(repo_copy):
 # ---- R-E: the rail-constant parser rot guard (parsed < RAIL_NAMES count) — the analog of the
 #      autonomy suite's regex-rot tests, previously unexercised (2026-07-17 audit) ----
 def test_rail_const_shape_rot_is_caught(repo_copy, capsys):
-    arsenal = rc.ARSENAL_SQL
+    arsenal = rc.RAILS_SQL
     txt = _read(arsenal)
     assert "8  AS n_max," in txt, "fixture assumption about the arsenal_rails consts CTE shape drifted"
     # Break one `<N> AS <name>` const so RAIL_CONST no longer matches it -> only 7/8 parse.
     _write(arsenal, txt.replace("8  AS n_max,", "n_max = 8,"))
     assert rc.main() == 1
     assert "rail constants" in capsys.readouterr().out
+
+
+# ---- R-E reads the CANONICAL state.arsenal_rails definition, not bigquery/35 (2026-10-25, EP rev 21).
+#      bigquery/259 and then bigquery/266 redefined the view; 266 moved k_incubate and the adoption window.
+#      Comparing roster.yaml against 35's superseded constants would pass while live drifted. ----
+def test_rails_sql_is_the_highest_numbered_definer():
+    assert rc.RAILS_SQL is not None
+    num = int(os.path.basename(rc.RAILS_SQL).split("_", 1)[0])
+    assert num >= 266, rc.RAILS_SQL
+    assert os.path.basename(rc.RAILS_SQL) != "35_strategy_arsenal.sql"
+
+
+def test_rails_change_only_in_35_is_not_what_r_e_compares(repo_copy):
+    # Moving k_incubate in the superseded bigquery/35 copy alone must not change R-E's verdict: R-E
+    # compares roster.yaml with the canonical file, and that file still agrees with roster.yaml.
+    arsenal = rc.ARSENAL_SQL
+    txt = _read(arsenal)
+    old = "    2  AS k_incubate,"
+    assert old in txt, "fixture assumption about bigquery/35's k_incubate const drifted"
+    _write(arsenal, txt.replace(old, "    9  AS k_incubate,", 1))
+    sql_consts, _errs = rc.arsenal_rails_sql_consts()
+    assert sql_consts["k_incubate"] == 6
 
 
 # ---- R-E: arsenal_rails_sql_consts() used to silently keep only the LAST `<N> AS <name>` match per
@@ -1242,7 +1269,7 @@ def test_rail_const_shape_rot_is_caught(repo_copy, capsys):
 #      fixture return rc.main() == 0 with no duplicate anywhere in the output, since both occurrences
 #      resolve to the SAME int and R-E's ordinary mismatch check has nothing to trip on. ----
 def test_duplicate_rail_constant_is_caught(repo_copy, capsys):
-    arsenal = rc.ARSENAL_SQL
+    arsenal = rc.RAILS_SQL
     txt = _read(arsenal)
     assert "2  AS n_min," in txt, "fixture assumption about the arsenal_rails consts CTE shape drifted"
     # A second, REAL (non-comment) `<N> AS n_min` constant elsewhere in the file — same value as the

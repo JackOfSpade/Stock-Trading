@@ -1,8 +1,12 @@
--- Parallel-run dbt port of bigquery/60_shadow_stuck_cull.sql:state.strategy_shadow_readiness — canonical source is that
--- file until owner cutover. Added 2026-08-22 (dbt view-coverage burn-down): this view had
--- NO dbt presence at all, so scripts/dbt_parity.py had nothing to compare and it carried
--- ZERO row-level parity protection. Ported MECHANICALLY from the canonical body — the only
--- edit is ref()/source() substitution for the fully-qualified table names.
+-- Parallel-run dbt port of bigquery/266_shadow_paper_restored.sql:state.strategy_shadow_readiness — canonical source is that file until
+-- owner cutover. Generated MECHANICALLY by scripts/gen_dbt_port.py from that canonical body — the
+-- only edit is ref()/source() substitution for fully-qualified names — and proved token-identical
+-- to it by scripts/verify_dbt_port.py. Do not hand-edit the BODY: re-generate, then re-verify.
+-- Regenerating REPLACES this header, so any hand-written provenance above the body must be put
+-- back by the person who regenerates it.
+-- Provenance: first added 2026-08-22 (dbt view-coverage burn-down) as a hand port of bigquery/60, when
+-- this view had NO dbt presence and so carried zero row-level parity protection; regenerated from
+-- bigquery/266 on 2026-10-25 (EP rev 21, 5-trading-day SHADOW floor).
 WITH agg AS (
   SELECT strategy_code,
     COUNT(DISTINCT incubation_day) AS shadow_days,
@@ -31,7 +35,7 @@ SELECT
   COALESCE(a.scaffolding_faults, 0) AS scaffolding_faults,
   fr.declared_annual_roundtrips,
   GREATEST(30, CAST(CEIL(COALESCE(fr.annualized_rate_floor, 10) * (20.0 / 252.0) * 15) AS INT64)) AS signal_rate_ceiling,
-  COALESCE(a.shadow_days, 0) >= 20 AS days_met,
+  COALESCE(a.shadow_days, 0) >= 5 AS days_met,
   (COALESCE(a.signals_generated, 0) >= 1
    AND COALESCE(a.signals_generated, 0) <=
        GREATEST(30, CAST(CEIL(COALESCE(fr.annualized_rate_floor, 10) * (20.0 / 252.0) * 15) AS INT64))
@@ -54,7 +58,7 @@ SELECT
           GREATEST(30, CAST(CEIL(COALESCE(fr.annualized_rate_floor, 10) * (20.0 / 252.0) * 15) AS INT64)))
      AND COALESCE(a.scaffolding_faults, 0) = 0
    )) AS stuck,
-  (COALESCE(a.shadow_days, 0) >= 20
+  (COALESCE(a.shadow_days, 0) >= 5
    AND COALESCE(a.signals_generated, 0) >= 1
    AND COALESCE(a.signals_generated, 0) <=
        GREATEST(30, CAST(CEIL(COALESCE(fr.annualized_rate_floor, 10) * (20.0 / 252.0) * 15) AS INT64))

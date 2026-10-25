@@ -1,8 +1,15 @@
--- Parallel-run dbt port of bigquery/113_never_completed_watch_fix.sql:state.cadence_period_watch — canonical source is that
+-- Parallel-run dbt port of bigquery/113_never_completed_watch_fix.sql:state.cadence_period_watch — canonical source is that file until
+-- owner cutover. Generated MECHANICALLY by scripts/gen_dbt_port.py from that canonical body — the
+-- only edit is ref()/source() substitution for fully-qualified names — and proved token-identical
+-- to it by scripts/verify_dbt_port.py. Do not hand-edit the BODY: re-generate, then re-verify.
+-- Regenerating REPLACES this header, so any hand-written provenance above the body must be put
+-- back by the person who regenerates it.
+-- Provenance (kept on regeneration):
 -- file until owner cutover. Added 2026-08-22 (dbt view-coverage burn-down): this view had
 -- NO dbt presence at all, so scripts/dbt_parity.py had nothing to compare and it carried
 -- ZERO row-level parity protection. Ported MECHANICALLY from the canonical body — the only
 -- edit is ref()/source() substitution for the fully-qualified table names.
+-- Re-generated 2026-10-25 when SL1 moved quarterly_ftd -> monthly_ftd (EP rev 21).
 WITH t AS (SELECT today FROM {{ ref('trading_day_today') }}),
 periods AS (
   SELECT
@@ -49,7 +56,7 @@ routines AS (
     STRUCT('Q2' AS routine, 'quarterly_ftd' AS monitor_class),
     STRUCT('Q3' AS routine, 'quarterly_ftd' AS monitor_class),
     STRUCT('Q4' AS routine, 'quarterly_ftd' AS monitor_class),
-    STRUCT('SL1' AS routine, 'quarterly_ftd' AS monitor_class),
+    STRUCT('SL1' AS routine, 'monthly_ftd' AS monitor_class),
     STRUCT('A1' AS routine, 'annual_ftd' AS monitor_class),
     STRUCT('A2' AS routine, 'annual_ftd' AS monitor_class),
     STRUCT('A3' AS routine, 'annual_ftd' AS monitor_class)

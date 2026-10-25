@@ -1,5 +1,8 @@
 # Live-ramp sizing for newcomer strategies — owner-review design, v1 (2026-10-19)
 
+**Amended 2026-10-25 (section 9, owner directive):** SHADOW (≥ 5 days) and PAPER are RESTORED in front of the
+ramp; sections 2 and 6 describe the rev 20 lifecycle and are superseded by section 9 where they disagree.
+
 **Status:** owner directive 2026-10-19 (interactive session). Replaces the SHADOW → PAPER → PROBE
 → 30-trade-gate incubation pipeline with a single live state whose capital grows continuously with
 evidence. Implemented the same day; this file is the design record the prose (Experiment_Parameters.md
@@ -223,3 +226,53 @@ foundation document names as the deliverable of this phase.
 - Existing gates unchanged: `check_roster_consistency`, `check_handoff_contracts` (new write target,
   NOT NULL columns named in SL5), `check_adopt_gate_coverage`, `check_dbt_view_coverage`, dbt parity,
   live SQL parity, slice generators, pytest.
+
+## 9. Amendment 2026-10-25: SHADOW and PAPER restored in front of the ramp (EP rev 21, Strategy.md Rev 54)
+
+**What the owner asked for.** On 2026-10-25 the owner restored a no-capital forward test before real money, with
+these steps: SHADOW for at least 5 trading days of non-trading signals; PAPER for at least 60 days and 10
+simulated trades; then the live ramp described above. In the same session the owner accepted these recommendations:
+PAPER also requires simulated excess return of at least zero; 6 concurrent SHADOW/PAPER slots instead of 2;
+monthly SL1 synthesis instead of quarterly; one live entry per 30 days instead of per 90. The reason given: with a
+forward test that costs no capital back in place, the arsenal should be testing many more AI-edge candidates,
+while most of the frequent strategies sit out the current regime.
+
+**Lifecycle after this amendment.**
+
+```
+CANDIDATE → QUALIFYING → AUTHORING → UNDER_REVIEW → SHADOW → PAPER → PROBE (live ramp) → ADOPTED
+                                                   ↘ REJECTED  ↘ REJECTED ↘ REJECTED ↘ RETIREMENT_PROPOSED → TERMINATED
+```
+
+| transition | fired by | gate | marker |
+|---|---|---|---|
+| UNDER_REVIEW → SHADOW | SL5 branch (1) | `state.strategy_adoption_readiness.ready` | `<code>:UNDER_REVIEW->SHADOW` |
+| SHADOW → PAPER | SL3 STEP 3 (self-executes) | `state.strategy_shadow_readiness.ready`: ≥ 5 shadow trading days, signal rate in band, zero scaffolding faults | `<code>:SHADOW->PAPER` |
+| PAPER → PROBE | SL3 enqueues `probe-register`, SL5 branch (2) | `state.strategy_paper_readiness.ready`: ≥ 60 paper days, simulated-trade floor (10 for ≥ 10 declared round-trips a year), trailing-10-day excess ≥ 0, regime coverage, adoption window, n_max | `<code>:PAPER->PROBE` |
+| PROBE → ADOPTED | SL3 R2 enqueues `adopt-register`, SL5 branch (4) | `state.strategy_ramp.graduation_ready` (score 1.0) | `<code>:PROBE->ADOPTED` |
+
+**What stays exactly as sections 3 to 5 describe.** PROBE opens at the ramp floor with the rubric opening score.
+`immutable_since` is PROBE entry, and `analytics.strategy_ramp_trades` reads only live campaigns from that date, so
+simulated PAPER trades never move the ramp score. The evidence kill and the other mechanical kills are unchanged. The
+30-trade gate stays retired.
+
+**What moved.**
+- `spec_locked_since` returns to SHADOW entry. `state.strategy_roster` (bigquery/70) already takes the first
+  SHADOW/PAPER/PROBE/ADOPTED row, so no SQL change was needed for it.
+- `state.arsenal_rails` (bigquery/266): `incubating_count` counts SHADOW+PAPER again; `k_incubate` 2 → 6;
+  `adoption_rate_window_days` 90 → 30 (and the matching `probes_in_window` interval). Live capital is bounded by
+  n_max (PROBE counts as active) and that window, not by `k_incubate`.
+- `state.strategy_shadow_readiness` (bigquery/266): floor 20 → 5 shadow trading days.
+- `state.strategy_adoption_readiness` (bigquery/266): marker back to `UNDER_REVIEW->SHADOW`.
+- `state.strategy_paper_readiness` (bigquery/189): unchanged. It reads the new window through `state.arsenal_rails`.
+- SL5: branch (1) SHADOW register (restored); branch (2) PROBE register (restored, plus the `ops.strategy_ramp_params`
+  row and a ramp-floor `capital_usd`); branch (4) ADOPT register (rev 20's branch (2), renumbered).
+- SL3: STEPS 1–4 restored, R1–R4 kept, then STEP 5.
+- SL1: monthly on the 2nd at 21:00 UTC (`0 21 2 * *`, was `0 21 2 1,4,7,10 *`); `depends_on [Q1, Q3]` kept, because
+  `ops.sp_assert_deps` windows a quarterly dependency to the calendar quarter.
+- `scripts/check_roster_consistency.py` R-E now reads the rail constants from the canonical `state.arsenal_rails`
+  file (the highest-numbered definer) instead of `bigquery/35`, which had been superseded since bigquery/259.
+
+**Known open item carried forward.** SL3 STEP 2's `regime_met` pin records a W5 trigger: the term is vacuous on the
+first graduation, and it must be resolved before the first PAPER → PROBE enqueue. Rev 20 made that unreachable; this
+amendment makes it reachable again, no earlier than about 65 trading days after the first SHADOW registration.

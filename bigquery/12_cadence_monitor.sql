@@ -118,7 +118,7 @@ routines AS (
     STRUCT('Q2' AS routine, 'quarterly_ftd' AS schedule),
     STRUCT('Q3' AS routine, 'quarterly_ftd' AS schedule),
     STRUCT('Q4' AS routine, 'quarterly_ftd' AS schedule),
-    STRUCT('SL1' AS routine, 'quarterly_ftd' AS schedule),
+    STRUCT('SL1' AS routine, 'monthly_ftd' AS schedule),
     STRUCT('A1' AS routine, 'annual_ftd' AS schedule),
     STRUCT('A2' AS routine, 'annual_ftd' AS schedule),
     STRUCT('A3' AS routine, 'annual_ftd' AS schedule)
