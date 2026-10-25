@@ -1,18 +1,19 @@
--- Parallel-run dbt port of bigquery/35_strategy_arsenal.sql:state.arsenal_regime_coverage — canonical source is that
--- file until owner cutover. Added 2026-08-22 (dbt view-coverage burn-down): this view had
--- NO dbt presence at all, so scripts/dbt_parity.py had nothing to compare and it carried
--- ZERO row-level parity protection. Ported MECHANICALLY from the canonical body — the only
--- edit is ref()/source() substitution for the fully-qualified table names.
+-- Parallel-run dbt port of bigquery/267_paper_regime_coverage_gate.sql:state.arsenal_regime_coverage — canonical source is that file until
+-- owner cutover. Generated MECHANICALLY by scripts/gen_dbt_port.py from that canonical body — the
+-- only edit is ref()/source() substitution for fully-qualified names — and proved token-identical
+-- to it by scripts/verify_dbt_port.py. Do not hand-edit the BODY: re-generate, then re-verify.
+-- Regenerating REPLACES this header, so any hand-written provenance above the body must be put
+-- back by the person who regenerates it.
+-- Provenance: first ported 2026-08-22 (dbt view-coverage burn-down), when this view had no dbt
+-- presence and no row-level parity protection; re-ported 2026-10-25 from bigquery/267.
 WITH cells AS (
   SELECT spy_trend, vix_regime, CONCAT(spy_trend, '/', vix_regime) AS regime_cell
   FROM UNNEST(['UP','NEUTRAL','DOWN']) AS spy_trend
   CROSS JOIN UNNEST(['LOW','NORMAL','HIGH']) AS vix_regime
 ),
 demonstrated AS (
-  SELECT p.strategy_code, p.regime_cell, LOGICAL_OR(p.excess >= 0) AS positive_excess
-  FROM {{ source('analytics_external', 'strategy_incubation_perf') }} p
-  WHERE p.phase = 'paper' AND p.regime_cell IS NOT NULL
-  GROUP BY p.strategy_code, p.regime_cell
+  SELECT p.strategy_code, p.regime_cell, p.demonstrated AS positive_excess
+  FROM {{ ref('strategy_paper_regime_cells') }} p
 ),
 cov AS (
   SELECT d.regime_cell,

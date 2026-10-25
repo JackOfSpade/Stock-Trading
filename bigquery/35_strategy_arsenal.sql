@@ -360,6 +360,7 @@ WHERE is_active;
 -- ADOPTED-coverage measurement leg (measuring live-capital regime coverage) is a documented follow-on —
 -- it needs a technical-regime daily series that does not yet exist — and is deliberately NOT built here.
 -- ============================================================================
+-- SUPERSEDED LIVE by bigquery/267_paper_regime_coverage_gate.sql (2026-10-25): `demonstrated` now reads state.strategy_paper_regime_cells (cells from the state.technical_regime_daily series, >= 5 paper days, compounded in-cell excess >= 0) instead of LOGICAL_OR(excess >= 0) over SL3-stamped cells; the 9-cell grid and every output column are byte-identical there. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.arsenal_regime_coverage` AS
 WITH cells AS (
   SELECT spy_trend, vix_regime, CONCAT(spy_trend, '/', vix_regime) AS regime_cell
@@ -570,6 +571,7 @@ WHERE r.current_state = 'SHADOW';
 -- and adds `stuck_reason`, deliberately keeping the arsenal-state terms out. Kept here, unmodified,
 -- for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in
 -- isolation.
+-- SUPERSEDED AGAIN (2026-10-25): the current canonical definition is bigquery/267_paper_regime_coverage_gate.sql (W5 2026-08-30 trigger: regime_met counts DEMONSTRATED cells from state.strategy_paper_regime_cells; gap_fill only once coverage is measured); bigquery/189 is itself superseded. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.strategy_paper_readiness` AS
 WITH agg AS (
   SELECT strategy_code,
