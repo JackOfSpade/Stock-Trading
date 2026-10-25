@@ -1,0 +1,45 @@
+{
+  "contract": "bigquery/268_paper_regime_cells_carry_forward.sql state.strategy_paper_regime_cells; reference scripts/paper_regime_cells.py",
+  "cases": [
+    {
+      "name": "all_days_celled",
+      "paper": [["X", "2026-11-02", 0.01], ["X", "2026-11-03", 0.02], ["X", "2026-11-04", 0.015],
+                ["X", "2026-11-05", 0.03], ["X", "2026-11-06", 0.04], ["X", "2026-11-09", 0.05]],
+      "series": {"2026-11-02": "UP/LOW", "2026-11-03": "UP/LOW", "2026-11-04": "UP/LOW",
+                 "2026-11-05": "UP/LOW", "2026-11-06": "UP/LOW", "2026-11-09": "UP/LOW"},
+      "expected": [{"strategy_code": "X", "regime_cell": "UP/LOW", "paper_days_in_cell": 6,
+                    "unloggable_days": 0, "cell_excess": 0.05, "demonstrated": true}]
+    },
+    {
+      "name": "gap_day_loss_is_carried",
+      "note": "2026-11-04 has no regime cell and the run falls from +3% to -5% that day. Kept days compound to the latest cumulative index, -2%, so the cell is NOT demonstrated. bigquery/267 used -5% as the next base and dropped the fall, reporting +6.25% and demonstrated.",
+      "paper": [["X", "2026-11-02", 0.02], ["X", "2026-11-03", 0.03], ["X", "2026-11-04", -0.05],
+                ["X", "2026-11-05", -0.04], ["X", "2026-11-06", -0.03], ["X", "2026-11-09", -0.02]],
+      "series": {"2026-11-02": "UP/LOW", "2026-11-03": "UP/LOW", "2026-11-04": null,
+                 "2026-11-05": "UP/LOW", "2026-11-06": "UP/LOW", "2026-11-09": "UP/LOW"},
+      "expected": [{"strategy_code": "X", "regime_cell": "UP/LOW", "paper_days_in_cell": 5,
+                    "unloggable_days": 0, "cell_excess": -0.02, "demonstrated": false}]
+    },
+    {
+      "name": "two_cells_split",
+      "paper": [["X", "2026-11-02", 0.01], ["X", "2026-11-03", 0.03], ["X", "2026-11-04", 0.02],
+                ["X", "2026-11-05", 0.05], ["X", "2026-11-06", null]],
+      "series": {"2026-11-02": "UP/LOW", "2026-11-03": "NEUTRAL/NORMAL", "2026-11-04": "UP/LOW",
+                 "2026-11-05": "NEUTRAL/NORMAL", "2026-11-06": "UP/LOW"},
+      "expected": [
+        {"strategy_code": "X", "regime_cell": "NEUTRAL/NORMAL", "paper_days_in_cell": 2,
+         "unloggable_days": 0, "cell_excess": 0.049796156086, "demonstrated": false},
+        {"strategy_code": "X", "regime_cell": "UP/LOW", "paper_days_in_cell": 2,
+         "unloggable_days": 0, "cell_excess": 0.000194174757, "demonstrated": false}]
+    },
+    {
+      "name": "unloggable_day_fails_closed",
+      "paper": [["X", "2026-11-02", 0.01], ["X", "2026-11-03", -1.0], ["X", "2026-11-04", 0.01],
+                ["X", "2026-11-05", 0.02], ["X", "2026-11-06", 0.03]],
+      "series": {"2026-11-02": "UP/LOW", "2026-11-03": "UP/LOW", "2026-11-04": "UP/LOW",
+                 "2026-11-05": "UP/LOW", "2026-11-06": "UP/LOW"},
+      "expected": [{"strategy_code": "X", "regime_cell": "UP/LOW", "paper_days_in_cell": 5,
+                    "unloggable_days": 2, "demonstrated": false}]
+    }
+  ]
+}

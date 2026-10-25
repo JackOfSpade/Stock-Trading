@@ -1,4 +1,4 @@
--- Parallel-run dbt port of bigquery/267_paper_regime_coverage_gate.sql:state.strategy_paper_regime_cells — canonical source is that file until
+-- Parallel-run dbt port of bigquery/268_paper_regime_cells_carry_forward.sql:state.strategy_paper_regime_cells — canonical source is that file until
 -- owner cutover. Generated MECHANICALLY by scripts/gen_dbt_port.py from that canonical body — the
 -- only edit is ref()/source() substitution for fully-qualified names — and proved token-identical
 -- to it by scripts/verify_dbt_port.py. Do not hand-edit the BODY: re-generate, then re-verify.
@@ -12,19 +12,27 @@ WITH paper AS (
   WHERE phase = 'paper'
   QUALIFY ROW_NUMBER() OVER (PARTITION BY strategy_code, incubation_day ORDER BY computed_ts DESC) = 1
 ),
+celled AS (
+  -- LEFT JOIN: every paper day stays in the sequence, with regime_cell NULL where the series has no
+  -- complete row for that day.
+  SELECT p.strategy_code, p.incubation_day, p.excess, t.regime_cell
+  FROM paper p
+  LEFT JOIN {{ ref('technical_regime_daily') }} t ON t.as_of_date = p.incubation_day
+),
 marginal AS (
-  SELECT strategy_code, incubation_day, excess,
-    COALESCE(LAST_VALUE(excess IGNORE NULLS) OVER (
+  -- The base is the cumulative excess on the last KEPT day (non-NULL excess AND a regime cell), so the
+  -- change over any skipped day rolls into the next kept day instead of being dropped.
+  SELECT strategy_code, incubation_day, excess, regime_cell,
+    COALESCE(LAST_VALUE(IF(regime_cell IS NOT NULL, excess, NULL) IGNORE NULLS) OVER (
       PARTITION BY strategy_code ORDER BY incubation_day
       ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING), 0) AS prior_excess
-  FROM paper
+  FROM celled
 ),
 daily AS (
-  SELECT m.strategy_code, m.incubation_day, t.regime_cell,
-    SAFE.LN(SAFE_DIVIDE(1 + m.excess, 1 + m.prior_excess)) AS log_rel_excess
-  FROM marginal m
-  JOIN {{ ref('technical_regime_daily') }} t ON t.as_of_date = m.incubation_day
-  WHERE m.excess IS NOT NULL AND t.regime_cell IS NOT NULL
+  SELECT strategy_code, incubation_day, regime_cell,
+    SAFE.LN(SAFE_DIVIDE(1 + excess, 1 + prior_excess)) AS log_rel_excess
+  FROM marginal
+  WHERE excess IS NOT NULL AND regime_cell IS NOT NULL
 )
 SELECT
   strategy_code, regime_cell,
