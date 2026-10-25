@@ -90,6 +90,8 @@ SELECT
 FROM pivoted;
 
 -- 2. state.strategy_paper_regime_cells --------------------------------------------------------------------
+-- SUPERSEDED LIVE by bigquery/268_paper_regime_cells_carry_forward.sql (2026-10-25): a paper day with excess but no
+-- regime cell had its change dropped instead of carried to the next kept day. DO NOT re-apply this CREATE live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.strategy_paper_regime_cells` AS
 WITH paper AS (
   -- One row per (strategy_code, incubation_day): SL3's idempotency guard should already make it unique;

@@ -281,4 +281,6 @@ amendment makes it reachable again, no earlier than about 65 trading days after 
 `SPY_TREND/VIX_REGIME` cell per trading day; `state.strategy_paper_regime_cells` assigns each paper day that cell and
 its marginal excess, and calls a cell demonstrated at 5 or more days with compounded in-cell excess of at least zero.
 `regime_met` now needs two demonstrated cells for the first graduation (the gap-fill shortcut applies only once some
-cell is covered by an active strategy). The views must be applied live before the first PAPER → PROBE enqueue.
+cell is covered by an active strategy). The views were applied live on 2026-10-25. A paper day with no cell carries
+no evidence of its own: since bigquery/268 its change rolls into the next kept day's cell (267 dropped it), so the
+cells always compound to the strategy's latest cumulative paper excess.
