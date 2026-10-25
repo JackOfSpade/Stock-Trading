@@ -83,6 +83,7 @@
 -- SUPERSEDES the state.strategy_paper_readiness VIEW definition in bigquery/35_strategy_arsenal.sql
 -- (adds `stuck_reason`, widens `stuck`; EVERY other column byte-identical). Apply after
 -- bigquery/35_strategy_arsenal.sql.
+-- SUPERSEDED LIVE by bigquery/267_paper_regime_coverage_gate.sql (2026-10-25): regime_met's inputs are rebuilt (n_positive_cells counts DEMONSTRATED cells from state.strategy_paper_regime_cells; gap_fill only once some cell is covered by an active strategy), closing the W5 2026-08-30 vacuity trigger; every column expression is byte-identical there. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.strategy_paper_readiness` AS
 WITH agg AS (
   SELECT strategy_code,

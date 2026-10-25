@@ -276,3 +276,9 @@ simulated PAPER trades never move the ramp score. The evidence kill and the othe
 **Known open item carried forward.** SL3 STEP 2's `regime_met` pin records a W5 trigger: the term is vacuous on the
 first graduation, and it must be resolved before the first PAPER → PROBE enqueue. Rev 20 made that unreachable; this
 amendment makes it reachable again, no earlier than about 65 trading days after the first SHADOW registration.
+
+**Resolved 2026-10-25 (bigquery/267).** `state.technical_regime_daily` turns D2a's TECHNICAL_SIGNAL rows into one
+`SPY_TREND/VIX_REGIME` cell per trading day; `state.strategy_paper_regime_cells` assigns each paper day that cell and
+its marginal excess, and calls a cell demonstrated at 5 or more days with compounded in-cell excess of at least zero.
+`regime_met` now needs two demonstrated cells for the first graduation (the gap-fill shortcut applies only once some
+cell is covered by an active strategy). The views must be applied live before the first PAPER → PROBE enqueue.

@@ -108,6 +108,10 @@ CHECKS
        missed and all 9 cells read is_gap=TRUE forever, biasing SL1's zero-coverage synthesis. This makes
        the arsenal_regime_coverage header's own claim ("the strategy/01 shared vocabulary") a checked
        invariant. FAIL naming the disagreeing token set and its two values.
+       Since 2026-10-25 (bigquery/267) R-J reads the CANONICAL definer of the coverage view (the
+       highest-numbered file that creates it, as R-E does for the rails) and also checks the
+       `spy_trend IN (...)` / `vix_regime IN (...)` lists of state.technical_regime_daily, the daily
+       series that assigns each PAPER day its regime_cell for the PAPER->PROBE coverage gate.
 
   R-K  GOLDEN-SCENARIO PROSE-REGRESSION COVERAGE (added 2026-07-17, finding DEF-4 — the golden-scenario
        expansion gap. Named R-K, NOT R-J: the DEF-4 brief said "R-J" but that id was already taken by the
@@ -235,6 +239,20 @@ ARSENAL_SQL = os.path.join(ROOT, "bigquery", "35_strategy_arsenal.sql")
 BIGQUERY_DIR = os.path.join(ROOT, "bigquery")
 
 
+def canonical_definer_sql(dataset, name):
+    """Path of the CANONICAL definition of `<dataset>.<name>`: the highest-numbered bigquery/NN_*.sql file
+    that CREATEs it (the superseded-marker rule's apply-in-order winner), or None if none does."""
+    occurrences = []
+    for num, path in numbered_sql_files(BIGQUERY_DIR):
+        for m in OBJECT_DDL.finditer(strip_sql_comments(read_text(path))):
+            if (m.group(2).lower(), m.group(3).lower()) == (dataset, name):
+                occurrences.append((num, path))
+    if not occurrences:
+        return None
+    _num, winners = resolve_canonical(occurrences)
+    return winners[-1]
+
+
 def canonical_rails_sql():
     """Path of the CANONICAL definition of state.arsenal_rails: the highest-numbered bigquery/NN_*.sql
     file that CREATEs it (the superseded-marker rule's apply-in-order winner), or None if none does.
@@ -245,20 +263,19 @@ def canonical_rails_sql():
     move k_incubate or the adoption window live while roster.yaml and 35 kept agreeing at the old
     values, and R-E stayed green. bigquery/266 is the first file to move a rail value after 35, so the
     comparison now follows the canonical file. ARSENAL_SQL stays bigquery/35 for the readers that want
-    35's OTHER objects (R-A's seed codes, R-J's coverage cells)."""
-    occurrences = []
-    for num, path in numbered_sql_files(BIGQUERY_DIR):
-        for m in OBJECT_DDL.finditer(strip_sql_comments(read_text(path))):
-            if (m.group(2).lower(), m.group(3).lower()) == ("state", "arsenal_rails"):
-                occurrences.append((num, path))
-    if not occurrences:
-        return None
-    _num, winners = resolve_canonical(occurrences)
-    return winners[-1]
+    35's OTHER objects (R-A's seed codes). R-J's coverage cells moved to the canonical file too
+    (COVERAGE_SQL below, 2026-10-25, bigquery/267)."""
+    return canonical_definer_sql("state", "arsenal_rails")
 
 
 # R-E's input: a module global like every other path here, so tests can repoint it at a fixture copy.
 RAILS_SQL = canonical_rails_sql()
+# R-J's inputs, resolved the same way (2026-10-25, bigquery/267): the canonical state.arsenal_regime_coverage
+# definer (its 9-cell UNNEST grid) and the canonical state.technical_regime_daily definer (the vocabulary IN
+# lists that decide which TECHNICAL_SIGNAL days get a regime_cell). bigquery/267 superseded 35's coverage
+# view, so reading 35 would check a copy live no longer runs.
+COVERAGE_SQL = canonical_definer_sql("state", "arsenal_regime_coverage")
+REGIME_SERIES_SQL = canonical_definer_sql("state", "technical_regime_daily")
 # R-K: the golden-scenario prose-regression fixture set (tests/golden_scenarios/scenarios.yaml). A
 # module global (not a frozen constant read once) so tests can monkeypatch it, like every other path here.
 SCENARIOS_YAML = os.path.join(ROOT, "tests", "golden_scenarios", "scenarios.yaml")
@@ -982,9 +999,27 @@ def shared_regime_tokens():
     return section_tokens("SPY Trend State"), section_tokens("VIX Regime"), path
 
 
+def regime_series_vocab_tokens():
+    """R-J: extract the `spy_trend IN (...)` / `vix_regime IN (...)` vocabulary lists from the canonical
+    state.technical_regime_daily definer (REGIME_SERIES_SQL). A day whose tokens fall outside them gets
+    regime_cell = NULL and counts toward no PAPER cell, so a list that drifted from strategy/01 would
+    silently drop real regime days from the PAPER->PROBE coverage gate. Returns (spy_set, vix_set); either
+    is None if its list cannot be located, and (None, None) if no file defines the view."""
+    if not REGIME_SERIES_SQL or not os.path.exists(REGIME_SERIES_SQL):
+        return None, None
+    txt = strip_sql_comments(read_text(REGIME_SERIES_SQL))
+
+    def toks(col):
+        m = re.search(r"\b" + col + r"\s+IN\s*\(([^)]*)\)", txt)
+        return set(re.findall(r"'([A-Z_]+)'", m.group(1))) if m else None
+
+    return toks("spy_trend"), toks("vix_regime")
+
+
 def arsenal_coverage_cell_tokens():
-    """R-J: extract the two `UNNEST([...]) AS spy_trend` / `... AS vix_regime` cell literals from
-    bigquery/35_strategy_arsenal.sql's state.arsenal_regime_coverage `cells` CTE. Returns
+    """R-J: extract the two `UNNEST([...]) AS spy_trend` / `... AS vix_regime` cell literals from the
+    canonical state.arsenal_regime_coverage definer's `cells` CTE (COVERAGE_SQL; bigquery/35 until
+    bigquery/267 superseded it on 2026-10-25). Returns
     (spy_set, vix_set); either element is None if its literal cannot be located. The `AS code` seed
     UNNEST (a different alias) cannot collide."""
     # strip_sql_comments() FIRST (roster-group bug, 2026-09-04) — the same false-FAIL-on-a-doc-comment
@@ -996,7 +1031,7 @@ def arsenal_coverage_cell_tokens():
     # compare strategy/01's shared vocabulary against the DEAD tokens and false-FAIL a CI-BLOCKING gate
     # with zero live SQL change. No-op on today's tree (verified: same {UP,NEUTRAL,DOWN}/{LOW,NORMAL,HIGH}
     # sets before and after), and blanking-to-spaces keeps every offset the re.search below relies on.
-    txt = strip_sql_comments(read_text(ARSENAL_SQL))
+    txt = strip_sql_comments(read_text(COVERAGE_SQL))
 
     def toks(alias):
         m = re.search(r"UNNEST\(\s*\[([^\]]*)\]\s*\)\s+AS\s+" + alias + r"\b", txt)
@@ -1431,20 +1466,35 @@ def main():
                           "'### VIX Regime' heading or the bolded-bullet shape change? (update "
                           "SHARED_VOCAB_BULLET / the section headers).")
         else:
+            cov_name = f"bigquery/{os.path.basename(COVERAGE_SQL)}" if COVERAGE_SQL else "bigquery/<none>"
             spy_cells, vix_cells = arsenal_coverage_cell_tokens()
             if spy_cells is None or vix_cells is None:
-                errors.append("R-J: could not locate both `UNNEST([...]) AS spy_trend` and "
-                              "`... AS vix_regime` cell literals in bigquery/35_strategy_arsenal.sql's "
-                              "arsenal_regime_coverage view — did the `cells` CTE shape change?")
+                errors.append(f"R-J: could not locate both `UNNEST([...]) AS spy_trend` and "
+                              f"`... AS vix_regime` cell literals in {cov_name}'s "
+                              f"arsenal_regime_coverage view — did the `cells` CTE shape change?")
             else:
                 if spy_cells != spy_vocab:
-                    errors.append(f"R-J: bigquery/35 arsenal_regime_coverage spy_trend cell tokens "
+                    errors.append(f"R-J: {cov_name} arsenal_regime_coverage spy_trend cell tokens "
                                   f"{sorted(spy_cells)} != strategy/01 shared vocabulary {sorted(spy_vocab)} "
                                   f"— align the UNNEST literal with the immutable SPY Trend State tokens.")
                 if vix_cells != vix_vocab:
-                    errors.append(f"R-J: bigquery/35 arsenal_regime_coverage vix_regime cell tokens "
+                    errors.append(f"R-J: {cov_name} arsenal_regime_coverage vix_regime cell tokens "
                                   f"{sorted(vix_cells)} != strategy/01 shared vocabulary {sorted(vix_vocab)} "
                                   f"— align the UNNEST literal with the immutable VIX Regime tokens.")
+            if REGIME_SERIES_SQL:
+                ser_name = f"bigquery/{os.path.basename(REGIME_SERIES_SQL)}"
+                spy_ser, vix_ser = regime_series_vocab_tokens()
+                if spy_ser is None or vix_ser is None:
+                    errors.append(f"R-J: could not locate both `spy_trend IN (...)` and `vix_regime IN (...)` "
+                                  f"vocabulary lists in {ser_name}'s technical_regime_daily view — did its "
+                                  f"regime_cell expression change shape?")
+                else:
+                    if spy_ser != spy_vocab:
+                        errors.append(f"R-J: {ser_name} technical_regime_daily spy_trend tokens "
+                                      f"{sorted(spy_ser)} != strategy/01 shared vocabulary {sorted(spy_vocab)}.")
+                    if vix_ser != vix_vocab:
+                        errors.append(f"R-J: {ser_name} technical_regime_daily vix_regime tokens "
+                                      f"{sorted(vix_ser)} != strategy/01 shared vocabulary {sorted(vix_vocab)}.")
 
     # ---- R-K: golden-scenario prose-regression coverage for every SHADOW/PAPER/PROBE/ADOPTED strategy
     # (2026-07-17, finding DEF-4) — SISA can adopt a strategy whose DECISION prose (activation / entry
@@ -1551,7 +1601,8 @@ def main():
           f"the shared router and own pre-mortem segments, its .md slice, and math module(s); dbt "
           f"schema.yml accepted_values(strategy) tests agree with the roster-active set; "
           f"no stray events.strategy_candidates dataset-name reference; every roster-active strategy "
-          f"declares a valid review_cadence; arsenal_regime_coverage's cell tokens equal the strategy/01 "
+          f"declares a valid review_cadence; arsenal_regime_coverage's cell tokens and "
+          f"technical_regime_daily's vocabulary lists equal the strategy/01 "
           f"shared regime vocabulary; every SHADOW/PAPER/PROBE/ADOPTED strategy has >=1 golden-scenario "
           f"fixture.")
     if notes:

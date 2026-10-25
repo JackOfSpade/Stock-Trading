@@ -1,8 +1,11 @@
--- Parallel-run dbt port of bigquery/189_paper_stuck_completeness.sql:state.strategy_paper_readiness — canonical source is that
--- file until owner cutover. Added 2026-08-22 (dbt view-coverage burn-down): this view had
--- NO dbt presence at all, so scripts/dbt_parity.py had nothing to compare and it carried
--- ZERO row-level parity protection. Ported MECHANICALLY from the canonical body — the only
--- edit is ref()/source() substitution for the fully-qualified table names.
+-- Parallel-run dbt port of bigquery/267_paper_regime_coverage_gate.sql:state.strategy_paper_readiness — canonical source is that file until
+-- owner cutover. Generated MECHANICALLY by scripts/gen_dbt_port.py from that canonical body — the
+-- only edit is ref()/source() substitution for fully-qualified names — and proved token-identical
+-- to it by scripts/verify_dbt_port.py. Do not hand-edit the BODY: re-generate, then re-verify.
+-- Regenerating REPLACES this header, so any hand-written provenance above the body must be put
+-- back by the person who regenerates it.
+-- Provenance: first ported 2026-08-22 (dbt view-coverage burn-down), when this view had no dbt
+-- presence and no row-level parity protection; re-ported 2026-10-25 from bigquery/267.
 WITH agg AS (
   SELECT strategy_code,
     COUNT(DISTINCT incubation_day) AS paper_days,
@@ -15,16 +18,24 @@ WITH agg AS (
   GROUP BY strategy_code
 ),
 positive_cells AS (
-  SELECT strategy_code, COUNT(DISTINCT regime_cell) AS n_positive_cells
-  FROM {{ source('analytics_external', 'strategy_incubation_perf') }}
-  WHERE phase = 'paper' AND excess >= 0 AND regime_cell IS NOT NULL
+  -- Name kept so SL3's prose and the n_positive_cells column keep their meaning of "cells that count";
+  -- since bigquery/267 a cell counts only if DEMONSTRATED (state.strategy_paper_regime_cells).
+  SELECT strategy_code, COUNTIF(demonstrated) AS n_positive_cells
+  FROM {{ ref('strategy_paper_regime_cells') }}
   GROUP BY strategy_code
+),
+coverage_measured AS (
+  -- TRUE once any cell is covered by an active strategy. Until then every cell is a gap and a gap-fill
+  -- disjunct would only restate "one demonstrated cell", so the >= 2 breadth bar must bind.
+  SELECT LOGICAL_OR(NOT is_gap) AS any_cell_covered
+  FROM {{ ref('arsenal_regime_coverage') }}
 ),
 gap_fill AS (
   SELECT DISTINCT p.strategy_code
-  FROM {{ source('analytics_external', 'strategy_incubation_perf') }} p
+  FROM {{ ref('strategy_paper_regime_cells') }} p
   JOIN {{ ref('arsenal_regime_coverage') }} c ON c.regime_cell = p.regime_cell
-  WHERE p.phase = 'paper' AND p.excess >= 0 AND c.is_gap
+  CROSS JOIN coverage_measured m
+  WHERE p.demonstrated AND c.is_gap AND m.any_cell_covered
 ),
 freq AS (
   -- trades_threshold computed ONCE here (adversarial self-audit fix, rev 2026-07-11) — the same CASE
@@ -62,16 +73,11 @@ SELECT
   (ars.enabled AND NOT ars.incubation_frozen) AS arsenal_ok,
   NOT EXISTS (SELECT 1 FROM {{ source('ops', 'roster_change_log') }} cl
               WHERE cl.change_key = CONCAT(r.strategy_code, ':PAPER->PROBE')) AS not_already_transitioned,
-  -- stuck (ITEM 9, 2026-07-11; WIDENED 2026-08-20 by this file to cover all three PAPER dead-ends,
-  -- mirroring bigquery/60's SHADOW flag properly — see this file's header): paper_days has run long
-  -- enough (>=400) that continuing to wait is no longer reasonable, and at least one CANDIDATE-side
-  -- gate term is still unmet. Read by Claude_Task_Plan.md SL3 STEP 4's PAPER TIME-CULL, not itself a
-  -- component of `ready` below (a stuck candidate is culled to REJECTED, not promoted). The three
-  -- covered dead-ends: too few simulated closed round-trips (the original ITEM 9 case), persistently
-  -- negative/NULL trailing excess-vs-SGOV, and regime coverage never demonstrated. Arsenal-state terms
-  -- (rate_limit_clear / ceiling_ok / arsenal_ok / not_already_transitioned) are DELIBERATELY excluded —
-  -- a candidate blocked only by a roster ceiling, a closed adoption window or the owner's freeze is
-  -- healthy and must not be culled for it.
+  -- stuck (ITEM 9, 2026-07-11; WIDENED 2026-08-20 by bigquery/189 to cover all three PAPER dead-ends,
+  -- mirroring bigquery/60's SHADOW flag): paper_days has run long enough (>=400) that continuing to wait
+  -- is no longer reasonable, and at least one CANDIDATE-side gate term is still unmet. Read by
+  -- Claude_Task_Plan.md SL3 STEP 4's PAPER TIME-CULL, not itself a component of `ready` below. Arsenal-state
+  -- terms (rate_limit_clear / ceiling_ok / arsenal_ok / not_already_transitioned) are DELIBERATELY excluded.
   (COALESCE(a.paper_days, 0) >= 400
    AND NOT (
      COALESCE(a.sim_closed_trades, 0) >= COALESCE(fr.trades_threshold, 10)
@@ -79,10 +85,8 @@ SELECT
           AND (SELECT COUNT(*) FROM UNNEST(a.trailing_excess) AS e WHERE e IS NULL OR e < 0) = 0)
      AND (COALESCE(pc.n_positive_cells, 0) >= 2 OR gf.strategy_code IS NOT NULL)
    )) AS stuck,
-  -- stuck_reason (NEW 2026-08-20): the '+'-joined list of failed candidate-side terms, so SL3 STEP 4's
-  -- required `reject_reason` is READ from the view rather than composed as free text at the write site.
-  -- NULL exactly when `stuck` is FALSE — `stuck_reason IS NOT NULL` <=> `stuck`, always; never read the
-  -- two as independent signals.
+  -- stuck_reason (2026-08-20): the '+'-joined list of failed candidate-side terms. NULL exactly when
+  -- `stuck` is FALSE — `stuck_reason IS NOT NULL` <=> `stuck`, always.
   CASE WHEN COALESCE(a.paper_days, 0) < 400 THEN NULL
        ELSE NULLIF(ARRAY_TO_STRING(ARRAY_CONCAT(
               IF(NOT (COALESCE(a.sim_closed_trades, 0) >= COALESCE(fr.trades_threshold, 10)),

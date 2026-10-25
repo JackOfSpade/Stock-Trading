@@ -30,6 +30,8 @@ REAL_PATHS = {
     "CADENCE": rc.CADENCE,
     "ARSENAL_SQL": rc.ARSENAL_SQL,
     "RAILS_SQL": rc.RAILS_SQL,
+    "COVERAGE_SQL": rc.COVERAGE_SQL,
+    "REGIME_SERIES_SQL": rc.REGIME_SERIES_SQL,
 }
 REAL_DERIVED_LIVE_SQL = list(rc.DERIVED_LIVE_SQL)
 REAL_DBT_RECONCILE = rc.DBT_RECONCILE
@@ -82,6 +84,12 @@ def repo_copy(tmp_path, monkeypatch):
     rails_dst = dst_root / "bigquery" / os.path.basename(REAL_PATHS["RAILS_SQL"])
     shutil.copy(REAL_PATHS["RAILS_SQL"], rails_dst)
     monkeypatch.setattr(rc, "RAILS_SQL", str(rails_dst))
+    # R-J's inputs are the CANONICAL coverage / regime-series definers (bigquery/267 since 2026-10-25).
+    for key in ("COVERAGE_SQL", "REGIME_SERIES_SQL"):
+        dst = dst_root / "bigquery" / os.path.basename(REAL_PATHS[key])
+        if not dst.exists():
+            shutil.copy(REAL_PATHS[key], dst)
+        monkeypatch.setattr(rc, key, str(dst))
 
     # the roster-derived live SQL files (R-B) + the dbt reconcile test (R-C).
     derived_copies = []
@@ -1175,10 +1183,11 @@ def test_retired_cell_tokens_inside_sql_comment_do_not_false_fail_r_j(repo_copy)
     # repo's habitual "prior form, kept for the DR record" idiom. toks() uses re.search, so on RAW text
     # the commented literal (which sits ABOVE the live one) WINS and R-J compares strategy/01's shared
     # vocabulary against {UPTREND,RANGE,DOWNTREND} x {LOW_VIX,ELEVATED_VIX,HIGH_VIX}.
-    arsenal = rc.ARSENAL_SQL
+    # Since 2026-10-25 R-J reads the canonical coverage definer (bigquery/267), so the aside goes there.
+    arsenal = rc.COVERAGE_SQL
     txt = _read(arsenal)
-    old = "-- H7 FIX (2026-07-17)"
-    assert old in txt, "fixture assumption about bigquery/35's H7 header shape drifted"
+    old = "-- 3. state.arsenal_regime_coverage"
+    assert old in txt, "fixture assumption about bigquery/267's coverage statement header drifted"
     _write(arsenal, txt.replace(old, (
         "-- PRIOR cells CTE (kept for the DR record, superseded by the H7 fix below):\n"
         "--   FROM UNNEST(['UPTREND','RANGE','DOWNTREND']) AS spy_trend\n"
@@ -1186,6 +1195,46 @@ def test_retired_cell_tokens_inside_sql_comment_do_not_false_fail_r_j(repo_copy)
         + old), 1))
     assert rc.arsenal_coverage_cell_tokens() == ({"UP", "NEUTRAL", "DOWN"}, {"LOW", "NORMAL", "HIGH"})
     assert rc.main() == 0
+
+
+# ---- R-J follows the canonical definers (2026-10-25, bigquery/267). bigquery/267 superseded bigquery/35's
+#      state.arsenal_regime_coverage and added state.technical_regime_daily, whose vocabulary IN lists decide
+#      which TECHNICAL_SIGNAL days get a regime_cell for the PAPER->PROBE coverage gate. ----
+def test_r_j_reads_the_canonical_coverage_and_series_definers():
+    for path in (rc.COVERAGE_SQL, rc.REGIME_SERIES_SQL):
+        assert path is not None
+        assert int(os.path.basename(path).split("_", 1)[0]) >= 267, path
+    assert rc.regime_series_vocab_tokens() == ({"UP", "NEUTRAL", "DOWN"}, {"LOW", "NORMAL", "HIGH"})
+
+
+def test_cell_change_only_in_35_is_not_what_r_j_compares(repo_copy):
+    arsenal = rc.ARSENAL_SQL
+    txt = _read(arsenal)
+    old = "FROM UNNEST(['UP','NEUTRAL','DOWN']) AS spy_trend"
+    assert old in txt, "fixture assumption about bigquery/35's coverage cells CTE drifted"
+    _write(arsenal, txt.replace(old, "FROM UNNEST(['UPTREND','RANGE','DOWNTREND']) AS spy_trend", 1))
+    assert rc.arsenal_coverage_cell_tokens() == ({"UP", "NEUTRAL", "DOWN"}, {"LOW", "NORMAL", "HIGH"})
+    assert rc.main() == 0
+
+
+def test_series_vocabulary_drift_fails_r_j(repo_copy, capsys):
+    series = rc.REGIME_SERIES_SQL
+    txt = _read(series)
+    old = "vix_regime IN ('LOW', 'NORMAL', 'HIGH')"
+    assert old in txt, "fixture assumption about bigquery/267's technical_regime_daily IN list drifted"
+    _write(series, txt.replace(old, "vix_regime IN ('LOW_VIX', 'NORMAL', 'HIGH')", 1))
+    assert rc.main() == 1
+    assert "technical_regime_daily vix_regime tokens" in capsys.readouterr().out
+
+
+def test_series_vocabulary_list_missing_fails_r_j(repo_copy, capsys):
+    series = rc.REGIME_SERIES_SQL
+    txt = _read(series)
+    old = "spy_trend IN ('UP', 'NEUTRAL', 'DOWN')"
+    assert old in txt, "fixture assumption about bigquery/267's technical_regime_daily IN list drifted"
+    _write(series, txt.replace(old, "spy_trend IS NOT NULL", 1))
+    assert rc.main() == 1
+    assert "could not locate both `spy_trend IN (...)`" in capsys.readouterr().out
 
 
 def test_retired_seed_row_inside_sql_comment_does_not_false_fail_r_a(repo_copy):
@@ -1457,7 +1506,7 @@ def test_schema_yml_nonmapping_accepted_values_is_a_clean_fail(repo_copy, capsys
 # ---- R-J: arsenal_regime_coverage cell tokens must equal the strategy/01 shared vocabulary — the H7
 #      bug class had ZERO tests (2026-07-17 audit) ----
 def test_regime_spy_trend_cell_drift_is_caught(repo_copy):
-    arsenal = rc.ARSENAL_SQL
+    arsenal = rc.COVERAGE_SQL  # the canonical definer (bigquery/267 since 2026-10-25)
     txt = _read(arsenal)
     assert "UNNEST(['UP','NEUTRAL','DOWN']) AS spy_trend" in txt
     # The exact pre-H7 mismatch: cells say UPTREND/RANGE/DOWNTREND, vocab says UP/NEUTRAL/DOWN.
@@ -1467,7 +1516,7 @@ def test_regime_spy_trend_cell_drift_is_caught(repo_copy):
 
 
 def test_regime_vix_cell_drift_is_caught(repo_copy):
-    arsenal = rc.ARSENAL_SQL
+    arsenal = rc.COVERAGE_SQL  # the canonical definer (bigquery/267 since 2026-10-25)
     txt = _read(arsenal)
     assert "UNNEST(['LOW','NORMAL','HIGH']) AS vix_regime" in txt
     _write(arsenal, txt.replace("UNNEST(['LOW','NORMAL','HIGH']) AS vix_regime",
