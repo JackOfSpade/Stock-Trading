@@ -355,9 +355,12 @@ def _is_final_create(path, txt, m, obj_type, dataset, name, final):
     return canonicalize(body) == canonicalize(entry_body)
 
 
+_TOP_LEVEL_DDL_RE = re.compile(r"^(?:CREATE|ALTER|DROP)\b", re.IGNORECASE | re.MULTILINE)
+
+
 def per_statement_dryrun_targets(path, txt, final):
-    """[(dataset, name, obj_type, statement_text), ...] for every SUBSEQUENT top-level CREATE
-    statement in `txt` (skipping the FIRST — the whole-file pass in main() already semantically
+    """[(dataset, name, obj_type, statement_text), ...] for every top-level CREATE statement in
+    `txt` other than the file's first top-level DDL statement (the whole-file pass in main() already semantically
     analyses it; see the module docstring's PER-STATEMENT PASS section) that is ALSO the apply-in-
     order FINAL definition of its object (_is_final_create()).
 
@@ -370,9 +373,15 @@ def per_statement_dryrun_targets(path, txt, final):
     scope (a free-standing DML/DDL statement can depend on live data state in a way a credential-free,
     per-statement re-submission cannot honestly evaluate any better than the whole-file pass already
     does — noise, not signal)."""
-    matches = list(CREATE_STMT.finditer(txt))
+    # The whole-file pass analyses only the file's FIRST top-level DDL statement, which is not
+    # necessarily a CREATE_STMT match: a file opening with CREATE TABLE IF NOT EXISTS / ALTER / DROP
+    # would otherwise leave its first VIEW/PROCEDURE/FUNCTION analysed by neither pass.
+    first_ddl = _TOP_LEVEL_DDL_RE.search(strip_sql_comments(txt))
+    first_ddl_start = first_ddl.start() if first_ddl else None
     targets = []
-    for m in matches[1:]:
+    for m in CREATE_STMT.finditer(txt):
+        if m.start() == first_ddl_start:
+            continue
         kind, _project, dataset, name = m.groups()
         obj_type = normalize_kind(kind)
         if not _is_final_create(path, txt, m, obj_type, dataset, name, final):

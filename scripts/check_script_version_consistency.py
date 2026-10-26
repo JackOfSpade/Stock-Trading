@@ -39,7 +39,9 @@ WEEKLY_GS = os.path.join(ROOT, "ops", "weekly_report", "weekly_report.gs")
 REGISTRY_SQL = os.path.join(ROOT, "bigquery", "43_script_version_registry.sql")
 
 # Whitespace-tolerant: alert_emailer.gs aligns with extra spaces before '=', weekly_report.gs does not.
-GS_VERSION = re.compile(r"const\s+(?:ALERT_)?SCRIPT_VERSION\s*=\s*'([^']+)'")
+# Anchored at column 0 so a commented-out `// const SCRIPT_VERSION = ...` line can never be read as the
+# live declaration; parse_gs_version() additionally requires exactly one match.
+GS_VERSION = re.compile(r"^const\s+(?:ALERT_)?SCRIPT_VERSION\s*=\s*'([^']+)'", re.MULTILINE)
 SEED_ROW = re.compile(r"STRUCT\('(\w+)'\s+AS\s+script_name,\s*'([^']+)'\s+AS\s+expected_version")
 
 # script_name (bigquery/43's MERGE seed key, == ops.heartbeat.source) -> .gs file path.
@@ -47,8 +49,8 @@ SCRIPTS = {"alert_emailer": ALERT_GS, "weekly_report": WEEKLY_GS}
 
 
 def parse_gs_version(path):
-    m = GS_VERSION.search(read_text(path))
-    return m.group(1) if m else None
+    found = GS_VERSION.findall(read_text(path))
+    return found[0] if len(found) == 1 else None
 
 
 def parse_seed_versions():
@@ -109,7 +111,7 @@ def main():
         gs_version = parse_gs_version(gs_path)
         rel = os.path.relpath(gs_path, ROOT)
         if gs_version is None:
-            errors.append(f"{rel}: could not find a SCRIPT_VERSION/ALERT_SCRIPT_VERSION const "
+            errors.append(f"{rel}: expected exactly one column-0 SCRIPT_VERSION/ALERT_SCRIPT_VERSION const "
                           f"(regex may need updating if the declaration shape changed)")
             continue
         seed_version = seed.get(script_name)

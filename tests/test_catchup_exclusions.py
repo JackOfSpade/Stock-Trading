@@ -191,6 +191,8 @@ def test_order_crafting_routines_stay_catchup_excluded():
 
     for path in (CATCHUP_AUTOFIRE_SQL, CATCHUP_INPROGRESS_GUARD_SQL, INFLIGHT_GUARD_SQL):
         ids = _all_unnest_ids(path)
+        # An empty parse (regex rot after a reformat) would make the leak check pass vacuously.
+        assert ids, f"{path.name}: no catchup_safe UNNEST([...]) allowlist parsed — check the regex"
         leaked = [rid for rid in ORDER_CRAFT_ROUTINE_IDS if rid in ids]
         assert not leaked, (
             f"{path.name}: order-crafting routine(s) {leaked} appear inside a hand-kept "

@@ -39,6 +39,9 @@ import os
 import re
 import sys
 
+from lib.sql_files import canonical_definer
+from lib.textio import read_text
+
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Each source: (label, path, extractor). An extractor returns a set of category strings, or raises
@@ -89,26 +92,14 @@ def _extract_task_plan(text):
 
 
 def _sql_canonical_rule5():
-    """The apply-in-order winner among bigquery/*.sql files defining ops.sp_auto_resolve_alerts.
-
-    Resolved rather than hardcoded to bigquery/134: that procedure has been superseded repeatedly
-    (34 -> 78 -> 94 -> 97 -> 107 -> 130 -> 134 -> 148 as of this writing), and pinning a file number
-    here would silently start checking a stale definition the next time it moves.
-    """
-    bq = os.path.join(REPO, "bigquery")
-    best = None
-    for fn in os.listdir(bq):
-        m = re.match(r"^(\d+)_.*\.sql$", fn)
-        if not m:
-            continue
-        text = open(os.path.join(bq, fn), encoding="utf-8").read()
-        if "PROCEDURE `stock-trading-498512.ops.sp_auto_resolve_alerts`" in text:
-            n = int(m.group(1))
-            if best is None or n > best[0]:
-                best = (n, fn, text)
-    if best is None:
+    """(filename, text) of the apply-in-order winner among bigquery/*.sql files defining
+    ops.sp_auto_resolve_alerts. Resolved rather than hardcoded: that procedure has been superseded
+    repeatedly, and pinning a file number here would silently start checking a stale definition the
+    next time it moves."""
+    path = canonical_definer(os.path.join(REPO, "bigquery"), "ops", "sp_auto_resolve_alerts")
+    if path is None:
         raise ValueError("no bigquery/*.sql file defines ops.sp_auto_resolve_alerts")
-    return best[1], best[2]
+    return os.path.basename(path), read_text(path)
 
 
 def main():
@@ -123,7 +114,7 @@ def main():
     found = {}
     failures = []
     for label, rel, fn, pretext in sources:
-        text = pretext if pretext is not None else open(os.path.join(REPO, rel), encoding="utf-8").read()
+        text = pretext if pretext is not None else read_text(os.path.join(REPO, rel))
         try:
             cats = fn(text)
         except ValueError as e:

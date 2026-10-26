@@ -95,7 +95,11 @@ jobs:
             # repo. Matching only one spelling false-failed runs #2-#4 (live used the mapped form) and would
             # otherwise pressure someone to mutate live IAM just to satisfy a string match. The trailing
             # non-word char after "repository" rejects the broader "repository_owner" (owner-level) form.
-            if printf '%s' "$cond" | grep -Eq "(assertion|attribute)\.repository[^[:alnum:]_].*${EXPECTED_REPO}"; then
+            # The whole condition must BE the equality pin (optionally AND-ed with further clauses, which
+            # can only narrow it): a substring match also passed `!=`, an `||` escape hatch, and a
+            # look-alike repo name such as "<repo>-evil" (2026-10-26).
+            pin_re="^[[:space:]]*\(?[[:space:]]*(assertion|attribute)\.repository[[:space:]]*==[[:space:]]*[\"']${EXPECTED_REPO}[\"'][[:space:]]*\)?[[:space:]]*(&&.*)?$"
+            if printf '%s' "$cond" | grep -Eq "$pin_re" && ! printf '%s' "$cond" | grep -q '||'; then
               : # scoped to this repo (either claim form) — OK
             else
               problems="$problems [attribute_condition does not pin (assertion|attribute).repository to $EXPECTED_REPO: '${cond:-<empty>}']"
@@ -111,8 +115,13 @@ jobs:
                           --filter='bindings.role=roles/iam.workloadIdentityUser' \
                           --format='value(bindings.members)' 2>mem_err)"; then
             echo "workloadIdentityUser members:"; printf '%s\n' "$members"
-            if ! printf '%s' "$members" | grep -q "attribute.repository/$EXPECTED_REPO"; then
+            # Line-anchored: an unanchored match also accepted ".../attribute.repository/<repo>-evil".
+            if ! printf '%s\n' "$members" | grep -Eq "/attribute\.repository/${EXPECTED_REPO}$"; then
               problems="$problems [no repo-scoped principalSet member (attribute.repository/$EXPECTED_REPO) on workloadIdentityUser]"
+            fi
+            other_repos="$(printf '%s\n' "$members" | grep -E '/attribute\.repository/' | grep -Ev "/attribute\.repository/${EXPECTED_REPO}$" | tr '\n' ' ' || true)"
+            if [ -n "$other_repos" ]; then
+              problems="$problems [workloadIdentityUser also grants other repos: $other_repos]"
             fi
             if printf '%s' "$members" | grep -Eq "workloadIdentityPools/$POOL_ID/\*"; then
               problems="$problems [POOL-WIDE workloadIdentityUser member present — any repo can impersonate $CI_SA]"

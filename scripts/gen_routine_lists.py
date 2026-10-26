@@ -82,6 +82,7 @@ except ImportError:
 from lib.routine_manifest import (
     parse_routine_headings, heading_to_id, instruction_text, cadence_routines,
 )
+from lib.sql_files import SQL_QUOTED_BODY, sql_quote, sql_unquote
 from lib.textio import read_text, load_yaml
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -120,14 +121,6 @@ def load_headings_by_id():
     return {heading_to_id(h): h for h in parse_routine_headings(PLAN) if heading_to_id(h)}
 
 
-def _sql_str(s):
-    """Escape a Python string for embedding inside a single-quoted BigQuery SQL literal: ' -> ''.
-    check_cadence_consistency.py check B (parse_catalog_sql) performs the exact inverse ('' -> ')
-    when it reads the row back, so gen_15_region's output and check B's want_catalog stay byte-
-    compatible even for a heading containing an apostrophe. The two MUST stay in lockstep."""
-    return s.replace("'", "''")
-
-
 def gen_12_region(routines):
     """state.cadence_expected_today rows: one per calendar-class routine (monitor_class !=
     queue_driven), cadence.yaml order, 4-space indent matching the surrounding UNNEST([ block."""
@@ -145,7 +138,7 @@ def gen_12_region(routines):
 
 
 CATALOG_ROW_RE = re.compile(
-    r"STRUCT\('([^']+)' AS routine, '((?:[^']|'')*)' AS canonical_instruction, "
+    r"STRUCT\('([^']+)' AS routine, '(" + SQL_QUOTED_BODY + r")' AS canonical_instruction, "
     r"DATE '(\d{4}-\d{2}-\d{2})' AS canonical_since\)")
 
 
@@ -154,7 +147,7 @@ def parse_catalog_since(path=None):
     bigquery/15 generated region. Used only to PRESERVE an existing canonical_since across a
     regeneration whose instruction text for that routine did not change (see gen_15_region)."""
     txt = read_text(path or ROUTINE_CATALOG_SQL)
-    return {rid: (instr.replace("''", "'"), since)
+    return {rid: (sql_unquote(instr), since)
             for rid, instr, since in CATALOG_ROW_RE.findall(txt)}
 
 
@@ -165,11 +158,10 @@ def gen_15_region(routines, head_by_id, prior=None, today=None):
     (should not happen in a consistent tree) gets an empty instruction string -- check B/C will flag
     that loudly rather than this generator silently guessing.
 
-    A heading may contain an apostrophe; it is escaped to '' for the single-quoted SQL literal (see
-    _sql_str). This is kept in LOCKSTEP with check_cadence_consistency.py check B (parse_catalog_sql),
-    which un-escapes ''->' when it parses the row back so its want_catalog (raw heading text) matches.
-    The two derivations are byte-identical and MUST move together: changing the escaping here without
-    the paired check B un-escape (or vice-versa) desyncs them. Byte-identical on the current tree --
+    A heading may contain an apostrophe; it is backslash-escaped for the single-quoted GoogleSQL
+    literal by lib.sql_files.sql_quote (the doubled '' form is NOT valid GoogleSQL). check B
+    (check_cadence_consistency.parse_catalog_sql) and parse_catalog_since() both read the row back
+    through the paired sql_unquote(), so the escaping and un-escaping live in one module. Byte-identical on the current tree --
     no routine heading contains an apostrophe today, so this only changes output once one does.
     (check B's regex stops at the instruction literal's closing quote and does not require the STRUCT
     to end there, so the third field below is invisible to it -- deliberately, so this column can move
@@ -214,7 +206,7 @@ def gen_15_region(routines, head_by_id, prior=None, today=None):
         # rid is a constrained \w+ id (never quoted), so only the free-text instruction needs escaping
         # -- and check B un-escapes only the instruction capture, so escaping only it keeps the two
         # derivations matched.
-        lines.append(f"  STRUCT('{rid}' AS routine, '{_sql_str(instr)}' AS canonical_instruction, "
+        lines.append(f"  STRUCT('{rid}' AS routine, '{sql_quote(instr)}' AS canonical_instruction, "
                      f"DATE '{since}' AS canonical_since){comma}")
     return "\n".join(lines)
 
@@ -357,6 +349,12 @@ def _cron_utc_to_denver_dow(routine_id, cron_utc):
     if any(d < 0 or d > 6 for d in cron_dows):
         raise SystemExit(f"{routine_id}: expected_trigger.cron_utc day-of-week field {fields[4]!r} has "
                          f"a value outside 0-6 (cron Sunday=0..Saturday=6)")
+    if hour == DENVER_UTC_OFFSET_HOURS_MDT:
+        # 06:xx UTC is 00:xx MDT (same Denver day) but 23:xx MST (the PREVIOUS Denver day): no single
+        # day-set is right all year, so refuse rather than silently encode the MDT answer.
+        raise SystemExit(f"{routine_id}: expected_trigger.cron_utc {cron_utc!r} fires in the 06:xx UTC "
+                         f"hour, which straddles Denver midnight across DST -- gen_241_region cannot "
+                         f"derive one Denver day-set for it; move the slot out of that hour")
     same_day = hour >= DENVER_UTC_OFFSET_HOURS_MDT
     denver_cron_dows = cron_dows if same_day else [(d - 1) % 7 for d in cron_dows]
     return sorted({d + 1 for d in denver_cron_dows})

@@ -18,11 +18,7 @@ of this module, in each site's thin wrapper — see the ADJUST note on finding C
 """
 from datetime import datetime, timezone
 
-try:
-    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-except ImportError:  # pragma: no cover — stdlib since 3.9; CI/runners pin >=3.9
-    ZoneInfo = None
-    ZoneInfoNotFoundError = KeyError
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError  # noqa: F401 — re-exported
 
 
 def get_display_tz(query_fn, project):

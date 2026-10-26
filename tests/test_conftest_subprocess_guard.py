@@ -168,6 +168,19 @@ def test_shell_chained_command_after_wrapper_is_blocked(stub_cli_path):
         subprocess.run(["sh", "-c", "cd /tmp && bq --version"], capture_output=True)
 
 
+@pytest.mark.parametrize("command", [
+    "cd /tmp && bq --version",
+    "cd /tmp&&bq --version",
+    "echo hi; bq --version",
+    "FOO=1 bq --version",
+])
+def test_shell_true_string_with_chained_command_is_blocked(stub_cli_path, command):
+    """The shell=True STRING form of the chained-command case above: every token of the command
+    line is a candidate program, not only the first."""
+    with pytest.raises(pytest.fail.Exception, match=GUARD_MSG):
+        subprocess.run(command, shell=True, capture_output=True)
+
+
 def test_untokenizable_shell_string_fails_closed(stub_cli_path):
     """An unbalanced quote makes shlex.split raise ValueError. Deliberately chosen so a NAIVE
     whitespace split (the pre-2026-07-30 extraction) would see argv[0]="bash" and miss the "bq"

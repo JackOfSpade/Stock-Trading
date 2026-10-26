@@ -150,6 +150,7 @@ Files are applied IN THE ORDER GIVEN, and the run STOPS at the first failure —
 matters (a view a procedure reads must exist before that procedure is created).
 """
 import hashlib
+import re
 import sys
 
 try:
@@ -225,6 +226,9 @@ def _stray_snippet(text, limit=100):
         if line.strip():
             return line.strip()[:limit]
     return text.strip()[:limit]
+
+
+_PROC_END_RE = re.compile(r"\A\s*(?:END\b)?\s*;", re.IGNORECASE)
 
 
 def check_canonical_provenance(path, sql, final=None):
@@ -321,6 +325,20 @@ def check_canonical_provenance(path, sql, final=None):
             f"{path} matched a CREATE_STMT header for `{project}.{dataset}.{name}` but extract_body() "
             "could not locate its body (no BEGIN found for a PROCEDURE, or no header AS for a "
             "VIEW/FUNCTION/TABLE FUNCTION) -- refusing rather than applying an unverifiable statement.")
+
+    # A PROCEDURE's compared body stops at its own closing END (find_procedure_body_end), not at
+    # NEXT_TOP_LEVEL -- and BEGIN/DECLARE/EXECUTE IMMEDIATE/SET are not NEXT_TOP_LEVEL keywords, so a
+    # free-standing `BEGIN DELETE ... END;` block appended after the procedure is neither compared
+    # nor caught by the tail check above. Everything between the procedure's END and stmt_end must
+    # also reduce to nothing.
+    if obj_type == "PROCEDURE":
+        body_end = sql.find(body, m.start()) + len(body)
+        after_end = _PROC_END_RE.sub("", strip_sql_comments(sql[body_end:stmt_end]), count=1).strip()
+        if after_end:
+            return False, False, (
+                f"{path}: non-comment text follows the PROCEDURE's closing END -- this script sends the "
+                "WHOLE FILE to BigQuery, so a block appended after the verified procedure would run "
+                f"right along with it, unchecked. First stray line: {_stray_snippet(after_end)!r}")
 
     key = (dataset, name)
     if key not in final:
@@ -427,6 +445,11 @@ def check_registry_lockstep(client, path, sql):
         print(f"  could not verify registry lockstep: {exc}")
 
 
+def _report_already_applied(applied):
+    if applied:
+        print(f"  NOTE: already applied earlier in this run: {', '.join(applied)}", file=sys.stderr)
+
+
 def main(argv):
     args = [a for a in argv if not a.startswith("--")]
     dry_only = "--dry-run" in argv
@@ -440,24 +463,19 @@ def main(argv):
     # parity.py's main()) already rely on.
     final = find_final_definitions()
 
-    # Constructed LAZILY, on first actual use, not up front: a run whose every file gets refused by
-    # the canonical-provenance gate below should never touch BigQuery credentials at all -- the same
-    # "refuse before constructing a client" shape scripts/adversarial_review_storage.py's main()
-    # already follows for its own pre-apply validation (see tests/test_adversarial_review_storage.py::
-    # test_main_repair_rejects_multi_file_apply_before_bigquery_client), and it is what lets tests/
-    # test_apply_sql_file.py assert a refused file never reaches BigQuery without needing live
-    # credentials to do so.
-    client = None
+    # PASS 1 -- read and gate EVERY file before anything touches BigQuery, so a refused file later
+    # in the argument list can no longer leave the earlier ones already applied (a half-applied set).
+    gated = []
     for path in args:
         try:
-            sql = open(path, encoding="utf-8").read()
+            with open(path, encoding="utf-8") as fh:
+                sql = fh.read()
         except OSError as exc:
             print(f"FAILED to read {path}: {exc}", file=sys.stderr)
             return 1
         if not sql.strip():
             print(f"FAILED: {path} is empty", file=sys.stderr)
             return 1
-
         print(f"\n=== {path} ===")
         describe(path, sql)
 
@@ -486,12 +504,29 @@ def main(argv):
         else:
             print(f"  gate      : OK -- {message}")
 
+        gated.append((path, sql))
+
+    # PASS 2 -- dry-run then apply, file by file in argument order. The dry run stays per-file (not
+    # hoisted into pass 1) because a later file may reference an object an earlier one creates.
+    # Constructed LAZILY, on first actual use, not up front: a run whose every file gets refused by
+    # the canonical-provenance gate below should never touch BigQuery credentials at all -- the same
+    # "refuse before constructing a client" shape scripts/adversarial_review_storage.py's main()
+    # already follows for its own pre-apply validation (see tests/test_adversarial_review_storage.py::
+    # test_main_repair_rejects_multi_file_apply_before_bigquery_client), and it is what lets tests/
+    # test_apply_sql_file.py assert a refused file never reaches BigQuery without needing live
+    # credentials to do so.
+    client = None
+    applied = []
+    for path, sql in gated:
+        if len(gated) > 1:
+            print(f"\n=== applying {path} ===")
         if client is None:
             client = bigquery.Client(project=PROJECT)
         try:
             client.query(sql, job_config=bigquery.QueryJobConfig(dry_run=True, use_query_cache=False))
         except Exception as exc:  # noqa: BLE001 — surface BigQuery's own message verbatim
-            print(f"  DRY RUN FAILED — nothing applied: {exc}", file=sys.stderr)
+            print(f"  DRY RUN FAILED — {path} not applied: {exc}", file=sys.stderr)
+            _report_already_applied(applied)
             return 1
         print("  dry run   : OK")
 
@@ -504,8 +539,10 @@ def main(argv):
             job.result()
         except Exception as exc:  # noqa: BLE001
             print(f"  APPLY FAILED: {exc}", file=sys.stderr)
+            _report_already_applied(applied)
             return 1
         print(f"  APPLIED   : job {job.job_id}  state={job.state}  errors={job.errors}")
+        applied.append(path)
 
         # REGISTRY LOCKSTEP REMINDER (module docstring section, added 2026-09-16) — a courtesy
         # check, never a gate: runs only here (never for --dry-run, never for a refused file, both

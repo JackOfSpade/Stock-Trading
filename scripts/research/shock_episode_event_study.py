@@ -436,7 +436,10 @@ def download_yahoo(linkmap: dict, out: Path, pace: float) -> None:
 
 def download_nasdaq(linkmap: dict, out: Path, pace: float) -> None:
     today = dt.date.today()
-    start = today.replace(year=today.year - NASDAQ_YEARS)
+    try:
+        start = today.replace(year=today.year - NASDAQ_YEARS)
+    except ValueError:  # Feb 29 -> a non-leap target year
+        start = today.replace(year=today.year - NASDAQ_YEARS, day=28)
     todo = [(t, cls) for t, cls in all_tickers(linkmap) if not (out / f"{t}.json").exists()]
     log(f"nasdaq: {len(todo)} tickers to download ({start} .. {today})")
     for i, (t, cls) in enumerate(todo, 1):
@@ -451,6 +454,12 @@ def download_nasdaq(linkmap: dict, out: Path, pace: float) -> None:
             continue
         d = json.loads(body)
         n = (d.get("data") or {}).get("totalRecords") or 0
+        if not (((d.get("data") or {}).get("tradesTable") or {}).get("rows")):
+            # A 200 with an error-shaped body must not be cached: later runs skip any existing file,
+            # so the ticker would silently stay missing forever.
+            log(f"  [{i}/{len(todo)}] {t}: no rows in the response, not cached")
+            time.sleep(pace)
+            continue
         (out / f"{t}.json").write_text(json.dumps(d))
         log(f"  [{i}/{len(todo)}] {t}: {n} rows")
         time.sleep(pace)

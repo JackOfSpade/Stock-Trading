@@ -15,11 +15,6 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 
-try:
-    from zoneinfo import ZoneInfo
-except ImportError:  # pragma: no cover — stdlib since 3.9; CI/runners pin >=3.9
-    ZoneInfo = None
-
 PROJECT = os.environ.get("PROJECT", "stock-trading-498512")
 OUT = os.path.join(os.path.dirname(__file__), "index.html")
 
@@ -94,7 +89,7 @@ def fmt_ts(v, tz_name):
     (scripts/lib/tz_render.py); this wrapper keeps this site's own falsy-v passthrough (return `v`
     unchanged, not a labeled fallback string — alert_relay.py's sibling deliberately does NOT match
     this) and its "(UTC)" fallback label."""
-    if not v or ZoneInfo is None:
+    if not v:
         return v
     try:
         return tz_render.render_ts(v, tz_name)

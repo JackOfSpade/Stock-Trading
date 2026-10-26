@@ -61,11 +61,16 @@ class MergePolicyTests(unittest.TestCase):
         for change in ["closed", "draft", "fork", "wrong-base"]:
             with self.subTest(change=change):
                 original = copy.deepcopy(self.pr)
-                if change == "closed": self.pr["state"] = "closed"
-                if change == "draft": self.pr["draft"] = True
-                if change == "fork": self.pr["head"]["repo"]["id"] = 2
-                if change == "wrong-base": self.pr["base"]["ref"] = "development"
-                with self.assertRaises(ValueError): self.validate()
+                if change == "closed":
+                    self.pr["state"] = "closed"
+                elif change == "draft":
+                    self.pr["draft"] = True
+                elif change == "fork":
+                    self.pr["head"]["repo"]["id"] = 2
+                elif change == "wrong-base":
+                    self.pr["base"]["ref"] = "development"
+                with self.assertRaises(ValueError):
+                    self.validate()
                 self.pr = original
 
     def test_all_required_checks_are_needed(self):

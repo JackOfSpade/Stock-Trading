@@ -99,6 +99,18 @@ def test_cron_firings_rejects_wrong_field_count(bad):
         list(cs.cron_firings(bad))
 
 
+def test_cron_firings_rejects_both_day_fields_restricted():
+    # cron ORs day-of-month and day-of-week when both are set; any other enumeration would DST-check
+    # a different schedule from the one that runs.
+    with pytest.raises(cs.CronParseError, match="both day-of-month and day-of-week"):
+        list(cs.cron_firings("0 0 1 * 1"))
+
+
+def test_cadence_and_backup_paths_do_not_depend_on_the_working_directory():
+    assert cs.CADENCE.is_absolute() and cs.CADENCE.exists()
+    assert cs.BACKUP.is_absolute()
+
+
 def test_cron_firings_counts():
     # 2027 has 52 Sundays; a weekly cron fires once on each.
     assert len(list(cs.cron_firings("0 6 * * 0"))) == 52

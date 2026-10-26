@@ -178,6 +178,14 @@ def test_validate_hhmm_field_rejects_a_malformed_string():
     assert "'9:30'" in err
 
 
+def test_validate_hhmm_field_rejects_an_out_of_range_time_or_trailing_newline():
+    # `^\d{2}:\d{2}$` accepted all three: `$` matches before a trailing newline, and the shape alone
+    # never bounded the hour/minute.
+    for bad in ("24:00", "21:60", "21:00\n"):
+        assert validate_hhmm_field(bad, "D1: expected_trigger.time_local") is not None, bad
+    assert validate_hhmm_field("23:59", "D1: expected_trigger.time_local") is None
+
+
 def test_validate_hhmm_field_rejects_none():
     err = validate_hhmm_field(None, "ops/cadence.yaml: cadence_watch_deadline_local")
     assert err is not None and "None" in err

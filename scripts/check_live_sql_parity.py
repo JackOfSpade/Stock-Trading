@@ -814,7 +814,11 @@ def find_final_definitions():
                 obj_type = normalize_kind(obj_type)
                 body = extract_body(txt, m.start(), obj_type)
                 if body is None:
-                    continue
+                    # Skipping would leave an EARLIER, superseded definition standing as "final" —
+                    # a false DRIFT, or a false pass against stale text. Fail loud instead.
+                    raise ValueError(
+                        f"{os.path.basename(path)}: cannot extract the body of {obj_type} "
+                        f"{dataset}.{name} — fix the statement's layout so extract_body() parses it")
                 final[(dataset, name)] = (obj_type, project, os.path.basename(path), body)
             else:  # DROP — remove from the expected set; a no-op if it was never (or no longer) present.
                 _obj_type, _project, dataset, name = m.groups()

@@ -90,7 +90,7 @@ def test_table_reexempting_e_fails_naming_e_and_exempt(tmp_path, monkeypatch, ca
     mutated = md.replace("| E | SPREAD | no |", "| E | SPREAD | yes |", 1)
     assert mutated != md
     _make_repo(tmp_path, monkeypatch, md=mutated)
-    rc, out, err = _run(capsys)
+    rc, _out, err = _run(capsys)
     assert rc == 1
     mism = [line for line in err.splitlines() if "MISMATCH" in line]
     assert len(mism) == 1
@@ -104,7 +104,7 @@ def test_table_median_gate_change_fails_naming_e_and_median(tmp_path, monkeypatc
     mutated = md.replace("| E | SPREAD | yes | 0.85 |", "| E | SPREAD | yes | 0.90 |", 1)
     assert mutated != md
     _make_repo(tmp_path, monkeypatch, md=mutated, sql=sql)
-    rc, out, err = _run(capsys)
+    rc, _out, err = _run(capsys)
     assert rc == 1
     mism = [line for line in err.splitlines() if "MISMATCH" in line]
     assert len(mism) == 1
@@ -119,7 +119,7 @@ def test_sql_struct_removed_fails_naming_missing_code(tmp_path, monkeypatch, cap
     mutated = re.sub(r"(?m)^\s*STRUCT\('D',.*\n", "", sql, count=1)
     assert mutated != sql
     _make_repo(tmp_path, monkeypatch, sql=mutated)
-    rc, out, err = _run(capsys)
+    rc, _out, err = _run(capsys)
     assert rc == 1
     assert re.search(r"Strategy\.md:\d+: strategy D present in Strategy\.md but MISSING from the SQL seed", err)
     assert "strategy C present" not in err and "strategy E present" not in err
@@ -133,7 +133,7 @@ def test_duplicated_table_row_fails(tmp_path, monkeypatch, capsys):
     mutated = md.replace(row + "\n", row + "\n" + row + "\n", 1)
     assert mutated != md
     _make_repo(tmp_path, monkeypatch, md=mutated)
-    rc, out, err = _run(capsys)
+    rc, _out, err = _run(capsys)
     assert rc == 1
     assert re.search(r"Strategy\.md:\d+: duplicate strategy code A in the Strategy\.md register table "
                      r"\(first at Strategy\.md:\d+\)", err)
@@ -158,7 +158,7 @@ def test_missing_insert_anchor_fails(tmp_path, monkeypatch, capsys):
     mutated = sql.replace(cs.INSERT_ANCHOR, "INSERT INTO `stock-trading-498512.ops.something_else`")
     assert mutated != sql
     _make_repo(tmp_path, monkeypatch, sql=mutated)
-    rc, out, err = _run(capsys)
+    rc, _out, err = _run(capsys)
     assert rc == 1
     assert "MISSING ANCHOR — no bigquery/NNN_*.sql contains" in err
 
@@ -176,7 +176,7 @@ def test_share_sql_changed_to_050_fails_naming_e_and_share(tmp_path, monkeypatch
     mutated = sql.replace("NUMERIC '0.60'", "NUMERIC '0.50'", 1)
     assert mutated != sql
     _make_repo(tmp_path, monkeypatch, md=md, sql=mutated)
-    rc, out, err = _run(capsys)
+    rc, _out, err = _run(capsys)
     assert rc == 1
     mism = [line for line in err.splitlines() if "MISMATCH" in line]
     assert len(mism) == 1
@@ -192,7 +192,7 @@ def test_higher_numbered_reregistration_file_supersedes(tmp_path, monkeypatch, c
     later = sql.replace("35,", "40,", 1)
     assert later != sql
     (tmp_path / "bigquery" / "999_shock_reregistration.sql").write_text(later, encoding="utf-8")
-    rc, out, err = _run(capsys)
+    rc, _out, err = _run(capsys)
     assert rc == 1
     assert re.search(r"strategy E column '.*max measurement age.*' \(gate_max_age_days\) MISMATCH — table 35 vs "
                      r"bigquery/999_shock_reregistration\.sql:\d+ 40", err)

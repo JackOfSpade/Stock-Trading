@@ -1,4 +1,8 @@
 name: Alert relay (webhook push)
+# The run's mode is in its title so the "Size the alerts lookback window" step can anchor on the
+# last successful ALERTS run and skip heartbeat runs (which relay nothing). The heartbeat cron
+# literal below is checked against on.schedule by the self-check step's Check C.
+run-name: "Alert relay — ${{ github.event.schedule == '15 13 * * 1' && 'heartbeat' || inputs.mode || 'alerts' }}"
 
 # Stack review 2026-06-24 (RUNBOOK §25 A1/A2/A3). A version-controlled, scheduled relay that reads
 # BigQuery via the EXISTING read-only WIF SA (gh-ci-runner@ — no new grant, §6) and POSTs to a
@@ -169,6 +173,21 @@ jobs:
             echo "::error::on.schedule has $unhandled_count cron(s) with no explicit mode-dispatch branch (only the single fast/alerts cron should be implicit):$unhandled — a drifted or newly-added cron would silently default to mode=alerts. Add an explicit branch in the mode-dispatch step."
             exit 1
           fi
+          # Check C: run-name's heartbeat cron must be a cron the mode-dispatch step also branches on,
+          # or heartbeat runs stop being labelled and the lookback window anchors on them again.
+          mapfile -t runname_crons < <(grep -oP "^run-name:.*github\.event\.schedule == '\K[^']+" "$FILE")
+          if [ "${#runname_crons[@]}" -eq 0 ]; then
+            echo "::error::cron self-check found no github.event.schedule comparison in run-name — the heartbeat label (and the lookback-window anchor that relies on it) is gone."
+            exit 1
+          fi
+          for c in "${runname_crons[@]}"; do
+            found=0
+            for d in "${dispatch_crons[@]}"; do [ "$c" = "$d" ] && found=1 && break; done
+            if [ "$found" -eq 0 ]; then
+              echo "::error::run-name labels cron [$c] as heartbeat, but the mode-dispatch step has no branch for it — keep the two in sync."
+              exit 1
+            fi
+          done
           echo "OK: on.schedule <-> mode-dispatch crons are in sync (${#schedule_crons[@]} scheduled, ${#dispatch_crons[@]} explicit branch(es), $unhandled_count implicit default)."
       - name: Gate on WIF + webhook secret
         id: guard
@@ -226,23 +245,22 @@ jobs:
           # Best-effort BY CONSTRUCTION: no `set -e`, and continue-on-error, so an API/parse failure
           # degrades to a fixed generous window (> the measured max gap) rather than blocking
           # delivery; the Relay step below re-applies the same fallback if this step wrote no output.
-          # Caveat this cannot see: the weekly heartbeat run counts as a success here although it
-          # relays no alerts, so for the alerts run following it the computed window is a floor, not
-          # proof of gapless coverage. (The daily `orders` run was a second such non-alerts anchor
-          # until it was retired 2026-09-07; removing it can only shrink that caveat, never widen
-          # it, and the +130 margin below is unchanged — it is justified by the heartbeat anchor
-          # alone.)
+          # The anchor is the last successful run NOT titled "— heartbeat" (see run-name): a heartbeat
+          # run relays no alerts, so anchoring on it hid every alert raised between the last ALERTS
+          # run and the heartbeat whenever an alerts run had failed in between (the +130 margin below
+          # only covers one alerts interval). Runs from before run-name existed carry the plain
+          # workflow name and are treated as alerts runs, which is what the margin was sized for.
           window=240
-          last_ts="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/alert-relay.yml/runs?status=success&per_page=1" --jq '.workflow_runs[0].created_at // empty' 2>/dev/null || true)"
+          last_ts="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/alert-relay.yml/runs?status=success&per_page=20" --jq '[.workflow_runs[] | select(.display_title | endswith("— heartbeat") | not)][0].created_at // empty' 2>/dev/null || true)"
           last_epoch="$(date -u -d "$last_ts" +%s 2>/dev/null || true)"
           if [ -n "$last_ts" ] && [[ "$last_epoch" =~ ^[0-9]+$ ]]; then
             gap=$(( ( $(date -u +%s) - last_epoch ) / 60 ))
             if [ "$gap" -ge 0 ]; then
-              # MARGIN = one full alerts interval + 10, NOT just 10 (2026-08-30). `gap` is measured
-              # from the last SUCCESSFUL run of ANY MODE — and the Monday heartbeat (13:15) relays
-              # NO alerts, yet still resets this anchor. (The daily orders run at 13:05 was a second
-              # such anchor until it was retired 2026-09-07; one fewer non-alerts anchor can only
-              # shrink this hole, so the margin below stays as-is.) When it
+              # MARGIN = one full alerts interval + 10, NOT just 10 (2026-08-30). It was sized when
+              # `gap` was measured from the last successful run of ANY mode, so the Monday heartbeat
+              # (13:15, relays NO alerts) could be the anchor. Heartbeat runs are now excluded by
+              # their run-name label, but the margin stays: runs from before that label existed can
+              # still be the anchor. When a non-alerts run
               # is the anchor, `gap` understates how far back coverage must reach by up to a
               # full alerts interval, silently dropping every alert raised in between (this relay is
               # stateless — a skipped row is never retried, so a hole is permanent). Brute-forced

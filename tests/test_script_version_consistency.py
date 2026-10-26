@@ -67,7 +67,20 @@ def test_gs_const_that_the_regex_cannot_find_is_caught(tmp_path, monkeypatch, ca
         "STRUCT('weekly_report' AS script_name, 'v2' AS expected_version, 'note' AS git_note)\n",
     )
     assert svc.main() == 1
-    assert "could not find a SCRIPT_VERSION" in capsys.readouterr().out
+    assert "expected exactly one column-0 SCRIPT_VERSION" in capsys.readouterr().out
+
+
+def test_commented_out_gs_const_above_the_real_one_is_ignored(tmp_path, monkeypatch, capsys):
+    # An unanchored .search() returned the FIRST match, so a stale `// const ...` line placed above
+    # the live declaration silently became "the" version.
+    _rig(
+        tmp_path, monkeypatch,
+        "// const ALERT_SCRIPT_VERSION = 'v0';\nconst ALERT_SCRIPT_VERSION = 'v1';\n",
+        "const SCRIPT_VERSION = 'v2';\n",
+        "STRUCT('alert_emailer' AS script_name, 'v1' AS expected_version, 'note' AS git_note),\n"
+        "STRUCT('weekly_report' AS script_name, 'v2' AS expected_version, 'note' AS git_note)\n",
+    )
+    assert svc.main() == 0
 
 
 def test_missing_seed_row_is_caught(tmp_path, monkeypatch):

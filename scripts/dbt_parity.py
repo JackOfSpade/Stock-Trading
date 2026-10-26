@@ -32,7 +32,6 @@ Two column adjustments make the EXCEPT well-defined:
 """
 import concurrent.futures
 import os
-import subprocess  # noqa: F401 — kept so tests can monkeypatch subprocess.run/TimeoutExpired at the module level
 
 from lib.bq_json import run_bq_query
 from lib.sql_files import DBT_DATASETS
@@ -405,10 +404,10 @@ def check_one_model(dataset, name, compiled, batch_cols):
             # parity_concurrency() for the ceiling and the DBT_PARITY_CONCURRENCY=1 escape hatch.
         row = bq(
             f"SELECT "
-            f"(SELECT COUNT(*) FROM (SELECT {exprs} FROM ({compiled}) AS {PARITY_ALIAS} "
+            f"(SELECT COUNT(*) FROM (SELECT {exprs} FROM ({compiled}\n) AS {PARITY_ALIAS} "
             f"EXCEPT DISTINCT SELECT {exprs} FROM {live} AS {PARITY_ALIAS})) AS n_missing, "
             f"(SELECT COUNT(*) FROM (SELECT {exprs} FROM {live} AS {PARITY_ALIAS} "
-            f"EXCEPT DISTINCT SELECT {exprs} FROM ({compiled}) AS {PARITY_ALIAS})) AS n_extra"
+            f"EXCEPT DISTINCT SELECT {exprs} FROM ({compiled}\n) AS {PARITY_ALIAS})) AS n_extra"
         )[0]
         n_missing, n_extra = int(row["n_missing"]), int(row["n_extra"])
     except Exception as e:  # noqa: BLE001 - routed below to error (schema-shaped) or skip (transient); see comment

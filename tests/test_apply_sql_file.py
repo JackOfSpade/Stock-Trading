@@ -19,6 +19,8 @@ non-synthetic extraction — not just against hand-built fixtures.
 """
 import os
 
+import pytest
+
 from conftest import load_module_from_path
 
 asf = load_module_from_path("apply_sql_file", "scripts", "apply_sql_file.py")
@@ -147,7 +149,7 @@ def test_comment_before_the_create_is_accepted():
     # a header COMMENT ahead of the CREATE (this repo's own bigquery/*.sql convention) must not
     # over-refuse.
     commented_prefix_sql = "-- header comment for this object\n" + CANONICAL_VIEW_SQL
-    ok, noncanonical, message = asf.check_canonical_provenance("f.sql", commented_prefix_sql, FINAL_OK)
+    ok, noncanonical, _message = asf.check_canonical_provenance("f.sql", commented_prefix_sql, FINAL_OK)
     assert ok is True
     assert noncanonical is False
 
@@ -603,3 +605,36 @@ def test_main_registry_lockstep_exception_does_not_change_exit_status_and_apply_
     assert "APPLIED" in out                              # the apply itself is still reported as such
     assert "could not verify registry lockstep" in out
     assert "network blip" in out
+
+
+@pytest.mark.parametrize("appended", [
+    "\nBEGIN\n  DELETE FROM `stock-trading-498512.ops.alerts` WHERE TRUE;\nEND;\n",
+    "\nEXECUTE IMMEDIATE 'DROP TABLE `stock-trading-498512.ops.alerts`';\n",
+])
+def test_block_appended_after_a_procedures_end_is_refused(appended):
+    # BEGIN / EXECUTE IMMEDIATE are not NEXT_TOP_LEVEL keywords, and a PROCEDURE's compared body
+    # stops at its own END, so this tail was neither compared nor caught before.
+    ok, noncanonical, message = asf.check_canonical_provenance(
+        "f.sql", CANONICAL_SP_SQ_SQL + appended, FINAL_SP_SQ)
+    assert ok is False and noncanonical is False
+    assert "follows the PROCEDURE's closing END" in message
+
+
+def test_trailing_comment_after_a_procedures_end_is_accepted():
+    ok, _noncanonical, _message = asf.check_canonical_provenance(
+        "f.sql", CANONICAL_SP_SQ_SQL + "\n-- trailing note\n/* block */\n", FINAL_SP_SQ)
+    assert ok is True
+
+
+def test_main_refuses_whole_run_before_bigquery_when_a_later_file_fails_the_gate(monkeypatch, capsys, tmp_path):
+    # Gating used to happen inside the apply loop, so `good.sql bad.sql` applied good.sql live and
+    # only then refused bad.sql -- a half-applied set.
+    good = tmp_path / "999_fake_test_object.sql"
+    good.write_text(CANONICAL_VIEW_SQL, encoding="utf-8")
+    bad = tmp_path / "999_tampered.sql"
+    bad.write_text(CANONICAL_VIEW_SQL.replace("SELECT 1", "SELECT 999"), encoding="utf-8")
+    monkeypatch.setattr(asf, "find_final_definitions", lambda: FINAL_OK)
+    monkeypatch.setattr(asf.bigquery, "Client",
+                        lambda **kw: (_ for _ in ()).throw(AssertionError("client must not be constructed")))
+    assert asf.main([str(good), str(bad)]) == 1
+    assert "REFUSED" in capsys.readouterr().err

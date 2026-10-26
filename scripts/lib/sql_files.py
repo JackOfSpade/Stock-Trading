@@ -337,3 +337,40 @@ def line_offsets(text):
     for m in re.finditer("\n", text):
         offsets.append(m.end())
     return offsets
+
+
+# GoogleSQL single-quoted literals escape with a BACKSLASH (\' and \\). The doubled-quote form
+# ('it''s') is NOT an escape there: it parses as two adjacent literals and fails with "concatenated
+# string literals must be separated by whitespace or comments". SQL_QUOTED_BODY matches a literal's
+# body in that grammar; sql_quote()/sql_unquote() are exact inverses of each other.
+SQL_QUOTED_BODY = r"(?:[^'\\\n]|\\.)*"
+
+
+def sql_quote(s):
+    """Escape `s` for embedding inside a single-quoted GoogleSQL literal."""
+    return s.replace("\\", "\\\\").replace("'", "\\'")
+
+
+def sql_unquote(body):
+    """Inverse of sql_quote(): the raw value of a single-quoted literal's body."""
+    return re.sub(r"\\(.)", r"\1", body)
+
+
+def canonical_definer(bigquery_dir, dataset, name):
+    """Path of the CANONICAL definition of `<dataset>.<name>`: the highest-numbered NN_*.sql file in
+    `bigquery_dir` whose comment-stripped text CREATEs it (OBJECT_DDL), or None if none does. Raises
+    ValueError when two DIFFERENT files tie at the winning number (see resolve_canonical()), rather
+    than silently picking one and validating a body that may not be the deployed one."""
+    occurrences = []
+    for num, path in numbered_sql_files(bigquery_dir):
+        with open(path, encoding="utf-8") as fh:
+            text = strip_sql_comments(fh.read())
+        if any((m.group(2).lower(), m.group(3).lower()) == (dataset, name) for m in OBJECT_DDL.finditer(text)):
+            occurrences.append((num, path))
+    if not occurrences:
+        return None
+    num, winners = resolve_canonical(occurrences)
+    if len(winners) > 1:
+        raise ValueError(f"{dataset}.{name}: ambiguous canonical definition -- {len(winners)} files share "
+                         f"the winning number {num}: {', '.join(os.path.basename(w) for w in winners)}")
+    return winners[0]

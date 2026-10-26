@@ -156,6 +156,7 @@ except ImportError:
 
 from lib.report import fail_or_ok
 from lib.sql_files import numbered_sql_files, resolve_canonical, strip_sql_comments
+from lib.sql_files import _string_literal_end as _skip_literal
 from lib.textio import load_yaml, read_text
 from split_task_plan import split as split_task_plan_sections
 
@@ -417,33 +418,6 @@ COLNAME_RE = re.compile(r"^([a-zA-Z_][a-zA-Z0-9_]*)\b")
 TABLE_CONSTRAINT_PREFIXES = ("PRIMARY KEY", "FOREIGN KEY", "CONSTRAINT", "CHECK")
 
 
-def _skip_literal(text, i):
-    """Index just past the SQL string literal starting at text[i] (which must be `'` or `"`).
-
-    Handles triple-quoted literals, backslash escapes, and an unterminated single-line literal
-    (which ends at the newline) -- the same literal grammar lib.sql_files.strip_sql_comments walks,
-    because both consume the same bigquery/*.sql text. The structural scanners below MUST use this:
-    strip_sql_comments deliberately copies literals through verbatim, so an OPTIONS(description=
-    "...") free-text carrying `>`, `(` or `)` would otherwise be counted as nesting and silently
-    swallow every column after it.
-    """
-    quote = text[i]
-    n = len(text)
-    triple = text[i:i + 3] == quote * 3
-    end = quote * 3 if triple else quote
-    j = i + (3 if triple else 1)
-    while j < n:
-        if not triple and text[j] == "\\":
-            j += 2
-            continue
-        if text[j:j + len(end)] == end:
-            return j + len(end)
-        if not triple and text[j] == "\n":
-            return j
-        j += 1
-    return n
-
-
 def _find_matching_paren(text, open_idx):
     """Index of the `)` matching the `(` at open_idx, or -1 if it is never closed. String literals
     are skipped whole (see _skip_literal)."""
@@ -466,11 +440,13 @@ def _find_matching_paren(text, open_idx):
 
 
 def _split_top_level_commas(s):
-    """Split `s` on commas at depth 0, treating (), [], and <> (ARRAY<...>/STRUCT<...> generics,
-    which may themselves contain a top-level comma, e.g. STRUCT<a INT64, b STRING>) as nesting.
-    String literals are copied through verbatim and never contribute depth or split points (see
-    _skip_literal)."""
-    depth = 0
+    """Split `s` on commas at depth 0, treating (), [], and <> (ARRAY<...>/STRUCT<...>/RANGE<...>
+    generics, which may themselves contain a top-level comma, e.g. STRUCT<a INT64, b STRING>) as
+    nesting. A `<`/`>` is a generic bracket only right after ARRAY/STRUCT/RANGE (or while one is
+    open); anywhere else it is a comparison operator (e.g. `DEFAULT (1>0)`) and must not unbalance
+    the depth and swallow every later column. String literals are copied through verbatim and never
+    contribute depth or split points (see _skip_literal)."""
+    stack = []
     parts, cur = [], []
     i, n = 0, len(s)
     while i < n:
@@ -480,11 +456,16 @@ def _split_top_level_commas(s):
             cur.append(s[i:j])
             i = j
             continue
-        if c in "([<":
-            depth += 1
-        elif c in ")]>":
-            depth -= 1
-        if c == "," and depth == 0:
+        if c in "([":
+            stack.append(c)
+        elif c in ")]":
+            if stack and stack[-1] != "<":
+                stack.pop()
+        elif c == "<" and ((stack and stack[-1] == "<") or _GENERIC_OPENER.search("".join(cur))):
+            stack.append(c)
+        elif c == ">" and stack and stack[-1] == "<":
+            stack.pop()
+        if c == "," and not stack:
             parts.append("".join(cur))
             cur = []
         else:
@@ -492,6 +473,9 @@ def _split_top_level_commas(s):
         i += 1
     parts.append("".join(cur))
     return parts
+
+
+_GENERIC_OPENER = re.compile(r"\b(?:ARRAY|STRUCT|RANGE)\s*$", re.IGNORECASE)
 
 
 def _type_clause(column_def):

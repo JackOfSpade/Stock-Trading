@@ -3,6 +3,7 @@
 import json
 import os
 from pathlib import Path
+import shlex
 import shutil
 import subprocess
 import sys
@@ -34,6 +35,19 @@ def commit(repo, subject, email="noreply@anthropic.com", date="2026-10-20T12:00:
     return git(repo, "rev-parse", "HEAD")
 
 
+def write_python_shim(path, body):
+    """Install an executable `path` that runs `body` under this interpreter.
+
+    The body lives beside the shim and a POSIX sh wrapper execs it, because a
+    `#!{sys.executable}` shebang breaks whenever the interpreter path contains a
+    space (a checkout under e.g. "My Apps"): the kernel splits the shebang there.
+    """
+    impl = path.with_name(path.name + "_impl.py")
+    impl.write_text("import json, os, sys\n" + body)
+    path.write_text(f'#!/bin/sh\nexec {shlex.quote(sys.executable)} {shlex.quote(str(impl))} "$@"\n')
+    path.chmod(0o755)
+
+
 @pytest.fixture
 def landed_pr(tmp_path):
     repo = tmp_path / "repo"
@@ -59,20 +73,18 @@ def landed_pr(tmp_path):
     commands = tmp_path / "git.jsonl"
     shim = tmp_path / "bin"
     shim.mkdir()
-    (shim / "bq").write_text(
-        f"#!{sys.executable}\nimport json, os, sys\n"
+    write_python_shim(
+        shim / "bq",
         "with open(os.environ['BQ_CAPTURE'], 'a') as out: out.write(json.dumps(sys.argv[1:]) + '\\n')\n"
-        "sys.exit(int(os.environ.get('BQ_FAILURE', '0')))\n"
+        "sys.exit(int(os.environ.get('BQ_FAILURE', '0')))\n",
     )
-    (shim / "git").write_text(
-        f"#!{sys.executable}\nimport json, os, sys\n"
+    write_python_shim(
+        shim / "git",
         "with open(os.environ['GIT_CAPTURE'], 'a') as out: out.write(json.dumps(sys.argv[1:]) + '\\n')\n"
         "if sys.argv[1:] == ['fetch', '--no-tags', 'origin', os.environ['VALIDATED_MERGE_SHA']]: sys.exit(0)\n"
         "if sys.argv[1] not in {'show', 'merge-base', 'rev-list', 'log', 'rev-parse'}: sys.exit(99)\n"
-        f"os.execv({REAL_GIT!r}, [{REAL_GIT!r}, *sys.argv[1:]])\n"
+        f"os.execv({REAL_GIT!r}, [{REAL_GIT!r}, *sys.argv[1:]])\n",
     )
-    for tool in shim.iterdir():
-        tool.chmod(0o755)
     env = dict(
         os.environ,
         PATH=str(shim) + os.pathsep + os.environ["PATH"],
@@ -149,6 +161,25 @@ def test_rejects_unverified_or_malformed_selected_range_before_cloud_write(lande
     result = run_writer(case, base, head, case["merged"])
     assert result.returncode != 0
     assert calls(case) == []
+
+
+def test_main_advancing_before_the_merge_still_marks_only_the_prs_own_commits(landed_pr):
+    # GitHub merges onto main's CURRENT tip, so if main moved after validation the merge's first
+    # parent is a descendant of the validated base, not the base itself. Markers used to be
+    # skipped outright in that case.
+    case = landed_pr
+    repo = case["repo"]
+    git(repo, "checkout", "--quiet", "-b", "racing-main", case["base"])
+    commit(repo, "D3 2026-10-20: landed on main while the PR was being validated")
+    racing_tip = git(repo, "rev-parse", "HEAD")
+    git(repo, "merge", "--quiet", "--no-ff", "selected-pr", "-m", "Merge selected PR onto newer main")
+    merged = git(repo, "rev-parse", "HEAD")
+    result = run_writer(case, case["base"], case["head"], merged)
+    assert result.returncode == 0, result.stdout + result.stderr
+    marked = [arg for call in calls(case) for arg in call if arg.startswith("--parameter=p_git_commit:")]
+    assert marked == ["--parameter=p_git_commit:STRING:" + case["first"],
+                      "--parameter=p_git_commit:STRING:" + case["fallback"]]
+    assert racing_tip not in "".join(marked)
 
 
 def test_stale_pr_head_cannot_supply_markers_for_new_main(landed_pr):

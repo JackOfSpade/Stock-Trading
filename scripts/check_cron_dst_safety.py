@@ -80,8 +80,9 @@ from zoneinfo import ZoneInfo
 from lib.routine_manifest import cadence_routines
 from lib.textio import load_yaml, validate_hhmm_field
 
-CADENCE = Path("ops/cadence.yaml")
-BACKUP = Path("ops/routine_backup.json")
+ROOT = Path(__file__).resolve().parent.parent
+CADENCE = ROOT / "ops" / "cadence.yaml"
+BACKUP = ROOT / "ops" / "routine_backup.json"
 DENVER = ZoneInfo("America/Denver")
 UTC = ZoneInfo("UTC")
 
@@ -218,9 +219,10 @@ def parse_field(field: str, lo: int, hi: int, what: str) -> set[int]:
 def cron_firings(cron: str):
     """Every UTC firing instant of a 5-field cron across REF_YEAR.
 
-    Day-of-month and day-of-week are intersected (AND), not unioned. Standard cron ORs them when
-    both are restricted, but no routine in this repo restricts both, and AND is the fail-closed
-    reading: it can only ever yield a subset, never invent a firing the schedule does not have.
+    A cron that restricts BOTH day-of-month and day-of-week is refused: standard cron ORs the two in
+    that case, and enumerating any other reading would DST-validate a schedule different from the one
+    that actually runs (an AND reading silently drops firings -- the unsafe direction for this check).
+    No routine in this repo restricts both.
     """
     fields = cron.split()
     if len(fields) != 5:
@@ -231,6 +233,9 @@ def cron_firings(cron: str):
     doms = parse_field(dom_f, 1, 31, "day-of-month")
     months = parse_field(mon_f, 1, 12, "month")
     dows = parse_field(dow_f, 0, 6, "day-of-week")
+    if dom_f != "*" and dow_f != "*":
+        raise CronParseError(f"both day-of-month and day-of-week are restricted in {cron!r} (cron ORs "
+                             f"them); restrict only one")
 
     day = datetime(REF_YEAR, 1, 1, tzinfo=UTC)
     end = datetime(REF_YEAR + 1, 1, 1, tzinfo=UTC)

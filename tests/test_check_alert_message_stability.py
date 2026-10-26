@@ -284,7 +284,7 @@ def test_prose_free_form_placeholder_is_reported_as_unregistered():
     # The 2026-09-07 defect shape: the whole message is an instruction to compose, so every run
     # renders a different string and _once cannot match its own open row.
     doc = _prose("sp_raise_alert_once('warning','D3','selfheal_failed','<object + error>','<JSON>')")
-    unregistered, quote, used, sql_built, anomalies = cams.find_prose_sites(doc)
+    unregistered, quote, _used, sql_built, _anomalies = cams.find_prose_sites(doc)
     assert ("selfheal_failed", "<object + error>") in unregistered
     assert not quote and not sql_built
 
