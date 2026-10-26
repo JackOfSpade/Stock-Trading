@@ -818,6 +818,25 @@ def test_per_statement_pass_dry_runs_second_create_and_skips_first(tmp_path, mon
     assert "1 additional top-level CREATE statement(s)" in out
 
 
+def test_per_statement_pass_dry_runs_first_create_when_a_leading_ddl_precedes_it():
+    # The whole-file pass analyses only the FIRST top-level DDL statement. When that is a
+    # CREATE TABLE IF NOT EXISTS (not a CREATE_STMT match), the first VIEW is analysed by neither
+    # pass unless the per-statement pass picks it up.
+    text = (
+        "-- header comment\n"
+        "CREATE TABLE IF NOT EXISTS `stock-trading-498512.ops.zz_table` (x INT64);\n"
+        "\n"
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.zz_view` AS\n"
+        "SELECT 1 AS x;\n"
+    )
+    m = next(csd.CREATE_STMT.finditer(text))
+    kind, project, dataset, name = m.groups()
+    obj_type = csd.normalize_kind(kind)
+    final = {(dataset, name): (obj_type, project, "999_lead.sql", csd.extract_body(text, m.start(), obj_type))}
+    targets = csd.per_statement_dryrun_targets("999_lead.sql", text, final)
+    assert [(d, n) for d, n, _t, _s in targets] == [("state", "zz_view")]
+
+
 def test_per_statement_pass_skips_a_superseded_non_final_definition(tmp_path, monkeypatch, capsys):
     # Mirrors bigquery/233 (still contains the statement) vs bigquery/234 (now canonical): the second
     # CREATE's own object is expected, but find_final_definitions() names a DIFFERENT source file as

@@ -104,7 +104,7 @@ from lib.routine_manifest import (
     heading_to_id, parse_routine_headings, build_triggers_manifest, instruction_text, cadence_routines,
 )
 from lib.report import fail_or_ok
-from lib.sql_files import numbered_sql_files, resolve_canonical, strip_sql_comments
+from lib.sql_files import SQL_QUOTED_BODY, numbered_sql_files, resolve_canonical, sql_unquote, strip_sql_comments
 from lib.textio import read_text, load_yaml, validate_hhmm_field, HHMM_RE
 from lib.model_of_record import (
     # Check N's extraction (2026-08-31 code-quality pass, cadence#2) moved these out of this file;
@@ -454,7 +454,6 @@ PERIOD_WATCH_ROUTINE_ROW = re.compile(
     r"STRUCT\('([^']+)'\s+AS routine,\s*'([^']+)'\s+AS monitor_class\)")
 
 # ---- check K: bigquery/31/59's hand-maintained catchup-safe UNNEST([...]) AS routine id lists.
-SQL_LINE_COMMENT = re.compile(r"--[^\n]*")
 UNNEST_ROUTINE_BRACKET = re.compile(r"UNNEST\(\[(.*?)\]\)\s*AS routine", re.S)
 QUOTED_ID = re.compile(r"'([A-Za-z0-9_]+)'")
 
@@ -676,15 +675,15 @@ def parse_expected_sql():
 def parse_catalog_sql():
     """{routine: canonical_instruction} from 15_*.sql (handles the first AS-labelled row + shorthand rows).
 
-    The instruction literal may contain BigQuery-escaped single quotes (''), emitted by
-    scripts/gen_routine_lists.py gen_15_region (_sql_str) when a routine heading contains an
-    apostrophe. Match those doubled quotes and un-escape '' -> ' so the parsed value equals check B's
-    want_catalog (derived from the RAW heading text). This is the paired half of gen_15_region's
-    escaping -- the two MUST stay in lockstep. Byte-identical on a tree with no apostrophe headings."""
+    The instruction literal may contain backslash-escaped characters (\\' for an apostrophe), emitted
+    by scripts/gen_routine_lists.py gen_15_region (lib.sql_files.sql_quote) when a routine heading
+    contains one. Un-escape with the paired sql_unquote() so the parsed value equals check B's
+    want_catalog (derived from the RAW heading text). Byte-identical on a tree with no apostrophe headings."""
     txt = read_text(CATALOG_SQL)
     pat = re.compile(
-        r"STRUCT\('([^']+)'(?:\s+AS routine)?,\s*'(Read Claude_Task_Plan\.md\. Perform (?:[^']|'')*)'")
-    return {rid: instr.replace("''", "'") for rid, instr in pat.findall(txt)}
+        r"STRUCT\('([^']+)'(?:\s+AS routine)?,\s*'(Read Claude_Task_Plan\.md\. Perform "
+        + SQL_QUOTED_BODY + r")'")
+    return {rid: sql_unquote(instr) for rid, instr in pat.findall(txt)}
 
 
 def parse_deadline_sql():
@@ -1066,7 +1065,7 @@ def parse_unnest_routine_ids(path):
     class checks A/D/E/J/L already fail loud on by returning an empty container, not None)."""
     if not os.path.exists(path):
         return None
-    txt = SQL_LINE_COMMENT.sub("", read_text(path))
+    txt = strip_sql_comments(read_text(path))
     m = UNNEST_ROUTINE_BRACKET.search(txt)
     if m is None:
         return None
@@ -1076,7 +1075,7 @@ def parse_unnest_routine_ids(path):
 def parse_catchup_safe_cte_ids(path, cte_name):
     """[[id, ...], ...] — one id list per occurrence of the NAMED catchup-safe CTE
     (`<cte_name> AS (SELECT routine FROM UNNEST([...]))`) in `path` (check K's CTE-scoped extension,
-    2026-09-04). `--` line comments are stripped FIRST, exactly as parse_unnest_routine_ids() does,
+    2026-09-04). SQL comments are stripped FIRST, exactly as parse_unnest_routine_ids() does,
     so bigquery/59/90/184's inline "-- M4 excluded — action-conversion"-style annotations inside the
     bracket can never be mistaken for entries.
 
@@ -1091,7 +1090,7 @@ def parse_catchup_safe_cte_ids(path, cte_name):
     90 and 184 each define `catchup_safe_period_routines` once."""
     if not os.path.exists(path):
         return None
-    txt = SQL_LINE_COMMENT.sub("", read_text(path))
+    txt = strip_sql_comments(read_text(path))
     brackets = CATCHUP_SAFE_CTE_RE[cte_name].findall(txt)
     if not brackets:
         return None
@@ -1459,6 +1458,11 @@ def queue_owner_slot_mirror_errors(cad):
             errs.append(f"ops/cadence.yaml: {rid} expected_trigger.cron_utc hour field is {cron[1]!r}, "
                         f"not a plain integer, so the OWNER-ELIGIBLE-DAY BRANCH's 'fires Sun-Thu' "
                         f"premise cannot be verified.")
+            continue
+        if utc_hour == DENVER_UTC_OFFSET_HOURS_MDT:
+            errs.append(f"ops/cadence.yaml: {rid} expected_trigger.cron_utc fires in the 06:xx UTC hour, "
+                        f"which is the same Denver day in MDT but the previous one in MST, so no single "
+                        f"day-set spells Denver Sun-Thu all year. Move the slot out of that hour.")
             continue
         want_dow = (DENVER_SUN_THU_UTC_DOW_SAME_DAY if utc_hour >= DENVER_UTC_OFFSET_HOURS_MDT
                     else DENVER_SUN_THU_UTC_DOW_PREV_DAY)

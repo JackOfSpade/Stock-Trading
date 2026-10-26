@@ -27,10 +27,13 @@ if [ "$(git rev-parse --is-shallow-repository)" != 'false' ]; then
   exit 1
 fi
 
-# A --merge PR result must have exactly the validated main and selected PR head
-# as its two parents. Do not mark an arbitrary range supplied by a stale caller.
-parents="$(git show --no-patch --format=%P "$merge_sha")"
-if [ "$parents" != "$base_sha $head_sha" ]; then
+# A --merge PR result must have the selected PR head as its second parent, and as its
+# first parent either the validated main or a descendant of it: main can advance between
+# validation and `gh pr merge`, and GitHub then merges onto the newer tip. Do not mark an
+# arbitrary range supplied by a stale caller.
+read -r main_parent pr_parent extra_parent <<< "$(git show --no-patch --format=%P "$merge_sha")"
+if [ "$pr_parent" != "$head_sha" ] || [ -n "${extra_parent:-}" ] \
+   || ! git merge-base --is-ancestor "$base_sha" "$main_parent"; then
   echo 'Refusing marker write: landed merge parents do not match the selected base/head.' >&2
   exit 1
 fi
@@ -38,7 +41,8 @@ if ! git merge-base --is-ancestor "$base_sha" "$head_sha"; then
   echo 'Refusing marker write: the selected PR does not contain its validated main base.' >&2
   exit 1
 fi
-commits="$(git rev-list --reverse --no-merges "$base_sha..$head_sha")"
+# Range from the merge's actual first parent, so only commits this merge landed are marked.
+commits="$(git rev-list --reverse --no-merges "$main_parent..$head_sha")"
 
 # These existing, independently tested guards retain the routine allowlist,
 # Anthropic author guard, halt/abort suppression and America/Denver fallback.

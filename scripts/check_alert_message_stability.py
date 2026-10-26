@@ -89,9 +89,12 @@ second script.
 
 Usage:  python scripts/check_alert_message_stability.py   # exit 0 = OK; 1 = new finding or stale allowlist
 """
+import os
+import re
 import sys
 
 from check_live_sql_parity import find_final_definitions, sql_tokens
+from lib.textio import read_text
 
 # NOTE: no ROOT/BIGQUERY_DIR constant here — find_final_definitions() takes no arguments and
 # resolves bigquery/*.sql through check_live_sql_parity's OWN module-level BIGQUERY_DIR. Tests
@@ -510,7 +513,7 @@ PROSE_PLACEHOLDERS = {
     "<upstream>": "upstream_marker_mismatch: the upstream routine's id.",
 }
 
-_PROSE_CALL_RE = __import__("re").compile(r"sp_raise_alert(_once)?\s*\(")
+_PROSE_CALL_RE = re.compile(r"sp_raise_alert(_once)?\s*\(")
 
 
 def _prose_call_args(text, open_paren):
@@ -574,12 +577,9 @@ def find_prose_sites(text=None):
     """(unregistered, quote_defects, used, sql_built, anomalies) over Claude_Task_Plan.md's prose CALL
     sites. `text` overrides the file read -- used by the tests to drive a synthetic document, so the
     regression suite never depends on the live plan's current contents (which change most days)."""
-    import os
-    import re as _re
     if text is None:
         root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        path = os.path.join(root, PROSE_SOURCE)
-        text = open(path, encoding="utf-8").read()
+        text = read_text(os.path.join(root, PROSE_SOURCE))
 
     unregistered, quote_defects, used, sql_built, anomalies = [], [], set(), [], []
     for m in _PROSE_CALL_RE.finditer(text):
@@ -612,7 +612,7 @@ def find_prose_sites(text=None):
         if message is None:
             # An UNQUOTED bare placeholder as the whole message ("<reasons joined>") is the free-form
             # shape rule 2 exists for -- hold it to the registry exactly as a quoted one.
-            if _re.fullmatch(r"<[^<>]*>", raw_msg):
+            if re.fullmatch(r"<[^<>]*>", raw_msg):
                 message = raw_msg
             elif raw_msg.upper().startswith(("CONCAT(", "FORMAT(")):
                 # DISCLOSED BLIND SPOT. The message is assembled by a SQL expression written inside
@@ -626,7 +626,7 @@ def find_prose_sites(text=None):
                                             "placeholder, nor a CONCAT/FORMAT expression"))
                 continue
 
-        for ph in _re.findall(r"<[^<>]*>", message):
+        for ph in re.findall(r"<[^<>]*>", message):
             if ph in PROSE_PLACEHOLDERS:
                 used.add(ph)
             else:

@@ -188,6 +188,15 @@ class Derivations(unittest.TestCase):
                 pb.norm_px(bad, "open_px")
 
 
+    def test_marks_reject_a_ticker_outside_the_pinned_set(self):
+        # A free-form ticker reached the batch file's `-- ... (N bars of <tickers>)` header verbatim,
+        # so an embedded newline put arbitrary SQL on a line of its own.
+        bar = {"mark_date": "10/20/2026", "open_px": "1", "close_px": "1"}
+        self.assertEqual(len(pb.build_marks([dict(bar, ticker=pb.ALL_TICKERS[0])])), 1)
+        for bad in ("ZZZZ", pb.ALL_TICKERS[0] + "\nDELETE FROM x WHERE TRUE;--"):
+            with self.assertRaisesRegex(pb.RowError, "is not one of the", msg=bad):
+                pb.build_marks([dict(bar, ticker=bad)])
+
 class HeadlineSelection(unittest.TestCase):
     def test_window_relevance_dedup_cap_and_fallback(self):
         with tempfile.TemporaryDirectory() as tmp:

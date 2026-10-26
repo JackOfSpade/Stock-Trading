@@ -1552,6 +1552,18 @@ def test_numbered_sql_files_sorts_numerically_not_lexically(tmp_path, monkeypatc
     assert got == ["1_a.sql", "2_b.sql", "10_c.sql"]   # numeric order; unnumbered/non-sql excluded
 
 
+def test_find_final_definitions_fails_loud_on_an_unextractable_body(tmp_path, monkeypatch):
+    # Silently skipping the later CREATE would leave 1_a.sql's superseded body standing as "final".
+    d = tmp_path / "bigquery"
+    d.mkdir()
+    (d / "1_a.sql").write_text(
+        "CREATE OR REPLACE PROCEDURE `p.ops.sp_x`()\nBEGIN\n  SELECT 1;\nEND;\n")
+    (d / "2_b.sql").write_text("CREATE OR REPLACE PROCEDURE `p.ops.sp_x`()\n  SELECT 2;\n")
+    monkeypatch.setattr(clsp, "BIGQUERY_DIR", str(d))
+    with pytest.raises(ValueError, match=r"2_b\.sql: cannot extract the body of PROCEDURE ops\.sp_x"):
+        clsp.find_final_definitions()
+
+
 # ---- canonicalize(): compare MEANING, not formatting (2026-07-18) -----------------------------
 # BigQuery RE-SERIALIZES stored view/routine definitions: comments stripped, whitespace next to
 # punctuation removed, backticks dropped, string-quote style normalized. The old raw-text compare

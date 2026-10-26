@@ -227,7 +227,7 @@ from lib.roster_common import roster_active_codes
 # -- were left scanning RAW text and carried the identical false-FAIL-on-a-doc-comment exposure, on the
 # one arsenal file autonomous SL1/SL3/SL5 landings edit. Both now strip too, so ALL FIVE call sites below
 # are covered; do not add a sixth raw read_text(ARSENAL_SQL) without stripping.
-from lib.sql_files import OBJECT_DDL, numbered_sql_files, resolve_canonical, strip_sql_comments
+from lib.sql_files import canonical_definer, strip_sql_comments
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ROSTER = os.path.join(ROOT, "strategy", "roster.yaml")
@@ -240,17 +240,9 @@ BIGQUERY_DIR = os.path.join(ROOT, "bigquery")
 
 
 def canonical_definer_sql(dataset, name):
-    """Path of the CANONICAL definition of `<dataset>.<name>`: the highest-numbered bigquery/NN_*.sql file
-    that CREATEs it (the superseded-marker rule's apply-in-order winner), or None if none does."""
-    occurrences = []
-    for num, path in numbered_sql_files(BIGQUERY_DIR):
-        for m in OBJECT_DDL.finditer(strip_sql_comments(read_text(path))):
-            if (m.group(2).lower(), m.group(3).lower()) == (dataset, name):
-                occurrences.append((num, path))
-    if not occurrences:
-        return None
-    _num, winners = resolve_canonical(occurrences)
-    return winners[-1]
+    """Path of the CANONICAL definition of `<dataset>.<name>` under BIGQUERY_DIR (the superseded-marker
+    rule's apply-in-order winner), or None if none does -- see lib.sql_files.canonical_definer."""
+    return canonical_definer(BIGQUERY_DIR, dataset, name)
 
 
 def canonical_rails_sql():

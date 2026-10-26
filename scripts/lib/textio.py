@@ -104,7 +104,7 @@ def load_yaml(path, missing=None):
 # is "is this actually a string matching HH:MM", not "does str(value) look right". HHMM_RE is the one
 # regex every caller of validate_hhmm_field() below shares, so the shape rule itself cannot drift out
 # of sync with the message that describes it.
-HHMM_RE = re.compile(r"^\d{2}:\d{2}$")
+HHMM_RE = re.compile(r"\A(?:[01]\d|2[0-3]):[0-5]\d\Z")
 
 
 def validate_hhmm_field(value, field_name):

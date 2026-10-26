@@ -14,10 +14,13 @@ reports.
 import bisect
 import os
 
+import pytest
+
 from conftest import load_module_from_path
 from lib.sql_files import (
     DBT_DATASETS,
     OBJECT_DDL,
+    canonical_definer,
     _string_literal_end,
     line_offsets,
     normalize_kind,
@@ -334,3 +337,24 @@ def test_check_sql_dryrun_blank_string_literals_calls_the_shared_literal_walker(
     about what counts as "inside a string" for the same input SQL."""
     csd = load_module_from_path("check_sql_dryrun_dedup_check", "scripts", "check_sql_dryrun.py")
     assert csd._string_literal_end is _string_literal_end
+
+
+# ---- canonical_definer(): the shared "highest-numbered file that CREATEs X" lookup -------------------
+def _proc(name):
+    return f"CREATE OR REPLACE PROCEDURE `{PROJECT}.ops.{name}`()\nBEGIN\n  SELECT 1;\nEND;\n"
+
+
+def test_canonical_definer_picks_the_numeric_winner_and_ignores_commented_mentions(tmp_path):
+    (tmp_path / "9_a.sql").write_text(_proc("sp_x"))
+    (tmp_path / "10_b.sql").write_text(_proc("sp_x"))
+    # A higher-numbered file that only QUOTES the CREATE in a comment must not win.
+    (tmp_path / "11_c.sql").write_text("-- " + _proc("sp_x").splitlines()[0] + "\n")
+    assert os.path.basename(canonical_definer(str(tmp_path), "ops", "sp_x")) == "10_b.sql"
+    assert canonical_definer(str(tmp_path), "ops", "sp_missing") is None
+
+
+def test_canonical_definer_refuses_an_ambiguous_tie(tmp_path):
+    (tmp_path / "10_a.sql").write_text(_proc("sp_x"))
+    (tmp_path / "10_b.sql").write_text(_proc("sp_x"))
+    with pytest.raises(ValueError, match="ambiguous canonical definition"):
+        canonical_definer(str(tmp_path), "ops", "sp_x")

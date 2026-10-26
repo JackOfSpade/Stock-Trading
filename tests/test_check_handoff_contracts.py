@@ -66,6 +66,14 @@ def test_split_top_level_commas_treats_parens_brackets_and_generics_as_nesting()
     assert parts == ["a INT64", "b STRUCT<x INT64, y STRING>", "c ARRAY<STRING>", "d NUMERIC(10, 2)"]
 
 
+def test_split_top_level_commas_treats_a_bare_comparison_as_an_operator_not_a_bracket():
+    # `>` outside an ARRAY/STRUCT/RANGE generic must not drive the depth negative and merge every
+    # later column into one part (which would silently drop b and c from CHECK B).
+    body = "a INT64 DEFAULT (1>0), b STRING NOT NULL, c ARRAY<STRUCT<x INT64, y STRING>>, d INT64"
+    parts = [p.strip() for p in ch._split_top_level_commas(body)]
+    assert parts == ["a INT64 DEFAULT (1>0)", "b STRING NOT NULL", "c ARRAY<STRUCT<x INT64, y STRING>>", "d INT64"]
+
+
 def test_split_top_level_commas_is_quote_aware():
     body = ('a STRING OPTIONS(description="fires when drawdown > 20% (of NAV) [sic]"), '
             'b STRING, c STRING')

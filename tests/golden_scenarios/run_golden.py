@@ -546,7 +546,7 @@ def validate_offline(scenarios):
                 )
 
         sid = sc.get("id")
-        if sid:
+        if sid and isinstance(sid, str):  # a non-str id is already reported by the field check above
             if sid in seen_ids:
                 errors.append(f"{label}: duplicate scenario id '{sid}'")
             seen_ids.add(sid)
@@ -586,7 +586,7 @@ def validate_offline(scenarios):
                     f"[heading anchor, ...], got {type(gov_sections).__name__}"
                 )
             else:
-                gov_file_set = set(gov) if isinstance(gov, list) else set()
+                gov_file_set = {g for g in gov if isinstance(g, str)} if isinstance(gov, list) else set()
                 for gf, anchors in gov_sections.items():
                     # Every governing_sections key MUST also be one of this scenario's own governing_files —
                     # a section-scoping entry for a file the scenario doesn't even read is meaningless and

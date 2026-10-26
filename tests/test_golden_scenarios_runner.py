@@ -2657,7 +2657,7 @@ def test_extract_sections_honors_supplied_headings_param_instead_of_recomputing(
     )
     assert "alpha body 1" in excerpt_supplied
 
-    excerpt_stale, n_blocks_stale, n_anchors_stale = rg.extract_sections(full_text, ["## Alpha"], headings=[])
+    excerpt_stale, n_blocks_stale, _n_anchors_stale = rg.extract_sections(full_text, ["## Alpha"], headings=[])
     assert n_blocks_stale == 0
     assert excerpt_stale == ""
 
@@ -2869,3 +2869,16 @@ def test_golden_section_scope_escape_hatch_real_scenarios_yaml_on_vs_off(monkeyp
             full_text = fh.read()
         assert full_text in unscoped_text
         assert full_text not in scoped_text
+
+
+def test_validate_offline_reports_unhashable_id_and_governing_entry_instead_of_raising(tmp_path, monkeypatch):
+    # A list-valued id or governing_files entry used to raise TypeError at the set operations,
+    # aborting the gate with a traceback instead of reporting every error.
+    monkeypatch.setattr(rg, "ROOT", str(tmp_path))
+    (tmp_path / "Strategy.md").write_text(_SPACED_MD)
+    bad_id = copy.deepcopy(VALID)
+    bad_id["id"] = ["a"]
+    bad_gov = _sc_with_sections([["Strategy.md"]], {"Strategy.md": ["## Nonexistent Heading"]})
+    errs = rg.validate_offline([bad_id, bad_gov])
+    assert any("required field 'id' must be a string" in e for e in errs), errs
+    assert any("is not a string" in e for e in errs), errs

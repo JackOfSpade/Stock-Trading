@@ -174,8 +174,7 @@ def test_gen_15_region_defaults_read_the_real_file_and_clock_when_not_passed(mon
 # ---- parse_catalog_since(): the paired reader for gen_15_region's `prior` argument -----------------
 def test_parse_catalog_since_round_trips_gen_15_region_output(tmp_path):
     # parse_catalog_since() must recover exactly what gen_15_region() emitted, INCLUDING an
-    # apostrophe-bearing instruction (escaped ' -> '' in the SQL literal, un-escaped back on read) --
-    # the same round-trip contract CATALOG_ROW_RE/_sql_str's docstrings both call out by name.
+    # apostrophe-bearing instruction (backslash-escaped in the SQL literal, un-escaped back on read).
     routines = [{"id": "D1", "monitor_class": "daily_trading"},
                 {"id": "AR_att", "monitor_class": "queue_driven"}]
     head_by_id = {"D1": "D1. Market Development Scan — deep research",
@@ -191,31 +190,32 @@ def test_parse_catalog_since_round_trips_gen_15_region_output(tmp_path):
     }
 
 
-def test_sql_str_escapes_single_quotes_and_mirrors_check_b_unescape():
-    # _sql_str escapes ' -> '' for the single-quoted SQL literal; check_cadence_consistency.py check B
-    # (parse_catalog_sql) does the exact inverse ('' -> ') when it reads the row back. Pin both the
-    # escape and its reversibility so the two byte-identical derivations stay in lockstep.
-    assert gr._sql_str("no quotes here") == "no quotes here"        # no-op when nothing to escape
-    assert gr._sql_str("O'Brien") == "O''Brien"
-    assert gr._sql_str("a'b'c").replace("''", "'") == "a'b'c"       # round-trips through check B's inverse
+def test_sql_quote_uses_googlesql_backslash_escapes_and_round_trips():
+    # GoogleSQL rejects the doubled-quote form ('O''Brien' parses as two adjacent literals), so the
+    # generator must emit backslash escapes; sql_unquote() is the exact inverse check B reads with.
+    from lib.sql_files import sql_quote, sql_unquote
+    assert sql_quote("no quotes here") == "no quotes here"
+    assert sql_quote("O'Brien") == "O\\'Brien"
+    for raw in ("a'b'c", "back\\slash", "mix\\'ed"):
+        assert sql_unquote(sql_quote(raw)) == raw
 
 
 def test_gen_15_region_escapes_apostrophe_in_heading():
-    # Apostrophe SUPPORT (coordinated with check B's un-escape): the heading's ' is escaped to '' in
-    # the single-quoted SQL literal, producing VALID BigQuery SQL (BigQuery stores the un-escaped
-    # value). check B un-escapes '' -> ' when parsing the row back so want_catalog (raw heading) matches.
+    # Apostrophe SUPPORT (coordinated with check B's un-escape): the heading's ' is backslash-escaped
+    # in the single-quoted SQL literal, producing VALID GoogleSQL (BigQuery stores the un-escaped
+    # value). check B un-escapes it when parsing the row back so want_catalog (raw heading) matches.
     # GENERIC FORM (2026-08-17): a CODED heading's description (where an apostrophe would live) is now
     # dropped from the instruction entirely, so a coded id no longer exercises this path. Use an
     # UNCODED heading (no "<id>. " prefix, same shape as AR_att/AR_orc) instead -- the one remaining
     # case where a heading's full text, apostrophe included, still reaches the generated SQL.
     got = gr.gen_15_region([{"id": "AR_att"}], {"AR_att": "O'Brien Review Attacker — regular routine"},
                             prior={}, today="2026-08-19")
-    assert got == ("  STRUCT('AR_att' AS routine, 'Read Claude_Task_Plan.md. Perform O''Brien "
+    assert got == ("  STRUCT('AR_att' AS routine, 'Read Claude_Task_Plan.md. Perform O\\'Brien "
                    "Review Attacker — regular routine.' AS canonical_instruction, "
                    "DATE '2026-08-19' AS canonical_since)")
     # Mirror of check B: un-escaping the instruction recovers the raw text want_catalog derives.
-    assert "Perform O''Brien Review Attacker" in got
-    assert got.replace("''", "'").count("O'Brien") == 1
+    assert "Perform O\\'Brien Review Attacker" in got
+    assert got.replace("\\'", "'").count("O'Brien") == 1
 
 
 # ---- gen_24_region: only the four period classes -------------------------------------------------
@@ -287,6 +287,12 @@ def test_cron_utc_to_denver_dow_shifts_to_the_previous_denver_day_before_the_off
     # cron dow 1,2,3,4,5 (Mon-Fri) each shift back one cron day (-> 0,1,2,3,4) BEFORE the +1 -- landing
     # on the identical [1,2,3,4,5] BigQuery result as the same-day case above, but via the shifted path.
     assert gr._cron_utc_to_denver_dow("AR_att", "0 0 * * 1,2,3,4,5") == [1, 2, 3, 4, 5]
+
+
+def test_cron_utc_to_denver_dow_refuses_the_dst_ambiguous_06_utc_hour():
+    # 06:xx UTC is 00:xx MDT (same Denver day) but 23:xx MST (previous Denver day).
+    with pytest.raises(SystemExit, match="straddles Denver midnight across DST"):
+        gr._cron_utc_to_denver_dow("TESTROUTINE", "30 6 * * 1")
 
 
 def test_cron_utc_to_denver_dow_sunday_wraps_to_bigquery_saturday_not_negative():
@@ -498,7 +504,7 @@ def test_main_write_check_round_trips_with_an_apostrophe_heading(tmp_path, monke
     )
     monkeypatch.setattr(sys, "argv", ["gen_routine_lists.py", "--write"])
     assert gr.main() == 0
-    assert "Perform O''Brien Review Attacker — regular routine." in f15.read_text()   # escaped in the SQL literal
+    assert "Perform O\\'Brien Review Attacker — regular routine." in f15.read_text()  # escaped in the SQL literal
     monkeypatch.setattr(sys, "argv", ["gen_routine_lists.py", "--check"])
     assert gr.main() == 0                                                       # self-consistent round-trip
 

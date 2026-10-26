@@ -104,14 +104,16 @@ def test_freshness_config_id_matches_spec_header():
     # freshness is the one id monitoring.tf DERIVES from a resource, so pin it to the id recorded in its own
     # header comment (and to the metric filter documented in RUNBOOK section 19).
     cfg = mod.MONITORS["Freshness scheduler absent >25h"][0]
-    assert f'config_id="{cfg}"' in TF or cfg in TF
+    assert f'config_id="{cfg}"' in TF
     assert cfg in open(os.path.join(ROOT, "ops", "RUNBOOK.md"), encoding="utf-8").read()
 
 
 def test_evaluation_intervals_in_spec_match_live_values():
     # The script carries each LIVE interval over untouched, so the spec must state them (measured 2026-10-03).
     want = {"freshness": "1800s", "backup": "30s", "cadence": "30s", "integrity_check": "30s", "ops_export": "30s"}
-    for key, block in _monitor_blocks().items():
+    blocks = _monitor_blocks()
+    assert set(blocks) == set(want)
+    for key, block in blocks.items():
         assert re.search(r'evaluation_interval\s*=\s*"%s"' % want[key], block), key
 
 

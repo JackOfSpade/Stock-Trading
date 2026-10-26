@@ -236,7 +236,11 @@ def _shell_tokenize_or_none(command_str):
     ValueError, so callers can fail CLOSED — still block, via a substring scan — instead of silently
     letting an unparseable string through unchecked."""
     try:
-        return shlex.split(command_str)
+        # punctuation_chars splits shell operators into their own tokens, so `cd /x&&bq` and
+        # `a;bq` still surface `bq` as a token of its own.
+        lexer = shlex.shlex(command_str, posix=True, punctuation_chars=True)
+        lexer.whitespace_split = True
+        return list(lexer)
     except ValueError:
         return None
 
@@ -335,7 +339,9 @@ def _blocked_program_in(cmd, shell):
     if tokens is None:
         m = _BLOCKED_RE.search(cmd_str)
         return m.group(0) if m else None
-    return _find_blocked_program(tokens)
+    # A shell command line can chain commands (`cd /x && bq ...`, `a; bq`, `FOO=1 bq`), so every
+    # token is a candidate program, exactly as for a wrapper's `-c` string.
+    return _scan_wrapper_body(tokens)
 
 
 @pytest.fixture(autouse=True)

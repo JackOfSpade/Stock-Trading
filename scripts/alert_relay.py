@@ -119,11 +119,7 @@ import sys
 import urllib.request
 from datetime import datetime, timezone
 
-try:
-    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-except ImportError:  # pragma: no cover — stdlib since 3.9; CI/runners pin >=3.9
-    ZoneInfo = None
-    ZoneInfoNotFoundError = KeyError
+from zoneinfo import ZoneInfoNotFoundError
 
 from lib.bq_json import run_bq_query
 from lib import tz_render
@@ -244,7 +240,7 @@ def fmt_ts(v, tz_name):
     # would escape into main()'s outer `except Exception` and drop the whole batch — exactly what this
     # function's contract forbids. get_user_tz() already coalesces to a real tz, so this is belt-and-
     # suspenders; for tz_name == "" it returns the same "... UTC" string the except-branch would.
-    if not v or not tz_name or ZoneInfo is None:
+    if not v or not tz_name:
         return f"{v} UTC"
     try:
         return tz_render.render_ts(v, tz_name)

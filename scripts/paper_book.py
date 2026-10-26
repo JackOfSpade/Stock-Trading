@@ -624,6 +624,8 @@ def build_marks(raw: list) -> list[dict]:
             if not isinstance(r, dict):
                 raise RowError("row must be a JSON object")
             ticker = text(r, "ticker").strip().upper()
+            if ticker not in ALL_TICKERS:
+                raise RowError(f"{ticker!r} is not one of the {len(ALL_TICKERS)} pinned tickers")
             mark_date = norm_date(r.get("mark_date"))
             if (ticker, mark_date) in seen:
                 raise RowError(f"duplicate mark for {ticker} on {mark_date}")
