@@ -1208,14 +1208,34 @@ Concretely, every run:
   FROM `stock-trading-498512.state.market_calendar` mc
   WHERE mc.is_trading_day
     AND mc.cal_date > COALESCE(
-          (SELECT MAX(run_date) FROM `stock-trading-498512.ops.run_log`
+          (SELECT MAX(IF(log_ts < TIMESTAMP(DATETIME(run_date, TIME '16:00:00'), 'America/New_York'),
+                         DATE_SUB(run_date, INTERVAL 1 DAY), run_date))
+             FROM `stock-trading-498512.ops.run_log`
             WHERE routine = 'D2a' AND status = 'completed'),
           DATE((SELECT cadence_fallback_window_start_ts FROM `stock-trading-498512.state.routine_catchup_window`
                 WHERE routine = 'D2a'), 'America/Denver')
         )
     AND mc.cal_date < (SELECT today FROM `stock-trading-498512.state.trading_day_today`)
   ```
-  **Never-completed guard:** the inner `MAX(run_date)` subquery returns `NULL` exactly when D2a has never
+  **PRE-OPEN COVERAGE ANCHOR (fixed 2026-10-25, interactive owner session, from D1 alert `2b09297f` and
+  info `d2a_missed_day_predicate_blind_to_preopen_catchup`).** The anchor is the last session a completed
+  D2a actually COVERED, not its raw `run_date`. A PRE-OPEN SLOT LIMB row (logged before its `run_date`'s
+  16:00 `America/New_York` close) is stamped `run_date` = today but ingests only the prior completed
+  session, so it covers through `run_date - 1`; every other row covers its own `run_date`. The
+  trading-day half of the limb predicate is deliberately omitted: on a non-trading `run_date` the bounds
+  `> run_date - 1` and `> run_date` select the same trading days, and a `market_calendar` join inside
+  this scalar subquery is rejected by BigQuery as an un-de-correlatable correlated subquery (tested). Measured: D2a's 2026-10-23 02:47 MT pre-open
+  catch-up stamped `run_date` 2026-10-23 while marks stopped at 2026-10-22, so the Sunday 2026-10-25 run
+  read `missed_trading_days = 0` and skipped the stale-baseline annotation and full-gap MARKET-MOVE TERM for
+  Friday 10-23 (its ordinary `last_trading_day` ingest still wrote the 10-23 marks). The corrected anchor
+  reads 1. Replaying both forms at every D2a start since 2026-08-01 changes ONLY that run; a pre-open row
+  followed by the same day's post-close run (2026-09-22) is unaffected because `MAX` picks the evening row.
+  Same `log_ts` vs 16:00 ET test as `bigquery/265_snapshot_stale_preopen_guard.sql`. The `cadence_watch`
+  dead-man is deliberately NOT changed: the pre-open limb on a Friday fills the missed THURSDAY slot, and
+  Friday has no D2a slot at all (Sun-Thu cron), so there was no "10-23 evening slot" to miss; and
+  `state.freshness.marks_current` reading TRUE through Saturday is its designed cadence-aware behavior
+  (`marks_due_through` advances to Friday only once Sunday's 22:40 UTC slot elapses).
+  **Never-completed guard:** the inner `MAX(...)` subquery returns `NULL` exactly when D2a has never
   logged a `completed` row — the identical condition `state.routine_catchup_window.never_completed` names
   for this routine (both derive from the same `ops.run_log` `status='completed'` predicate) — so falling
   through the `COALESCE` to that view's own `cadence_fallback_window_start_ts` (the `daily_sun_thu`
