@@ -951,7 +951,7 @@ Removal requires Tier 1 architectural-change evidence or Tier 2 with explicit co
 | **B** | 1.1, 1.4 | 2.4, 2.8, 2.13, 2.14, 2.15, 2.17, 2.18, 2.19, 2.20 |
 | **C** | 1.1, 1.4 | 2.1, 2.2, 2.4, 2.6, 2.7, 2.8, 2.11, 2.12, 2.13, 2.14, 2.15, 2.18, 2.19 |
 | **D** | 1.1, 1.4, 1.10 | 2.4, 2.6, 2.7, 2.8, 2.13, 2.14, 2.15, 2.17, 2.19, 2.20, 2.23 |
-| **E** | 1.1, 1.4, 1.10 | 2.4, 2.6, 2.7, 2.8, 2.13, 2.15, 2.17, 2.18, 2.19, 2.20, 2.23, 2.24, 2.26 |
+| **E** | 1.1, 1.4, 1.10 | 2.4, 2.6, 2.7, 2.8, 2.13, 2.15, 2.17, 2.18, 2.19, 2.20, 2.23, 2.24, 2.26 *(as of 2026-07-28; since E pre-mortem rev 6, 2026-08-03, also **2.28** — post-run annotation 2026-10-26, W5 via OPS2, alert `4066c3e7`)* |
 | *Regime router (cross-cutting)* | — | 2.4, 2.7, 2.8, 2.14, 2.24 |
 
 **Confirming the prior cycle's correction:** Strategy A does **not** cite 1.4, 2.15 or 2.17 anywhere. Independently re-derived and confirmed. **Additionally confirmed: no strategy cites 2.10 at any point** — which is what makes the 2.10 reduction analysis capital-inert.
