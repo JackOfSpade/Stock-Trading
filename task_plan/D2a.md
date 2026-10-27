@@ -150,6 +150,7 @@ If a decision genuinely cannot be made without information Claude does not have,
 - Each deferral specifies (a) the trigger that resolves it (specific date and information source), and (b) the default action if the trigger fails to resolve it.
 - The default action on trigger-failure is always the conservative branch (skip the trade, decline the GO, exit the position) — never another deferral. This biases the system toward reducing exposure on uncertainty, which is intentional given that the human is not available to adjudicate.
 - Deferrals do not chain. A decision deferred from session 1 to session 2 either resolves in session 2 or hits the conservative default. It cannot be re-deferred to session 3.
+- **ONE EXCEPTION — a single date correction for an ESTIMATED trigger date (owner decision 2026-10-27, interactive triage of W5's `spec_defect_notice_stalled` `9d17f578` on D2's notice `18834121`).** When a deferral's `due_date` came from an ESTIMATE of an external event (a forecast earnings date, "est. late-Sept"), the enqueuer records `due_date_basis: estimate` in the payload; an issuer- or authority-published date is `due_date_basis: issuer`. If the drain finds the event has NOT YET OCCURRED and the issuer has since published a dated future occurrence, it may move `due_date` ONCE to that published date — this is a correction of a wrong date, not a new deferral, because the trigger was never tested. It is bounded so it cannot chain: only `due_date_basis: estimate` items qualify, only to an issuer/authority-published date (never another estimate), and only once (the corrected row carries `date_corrected: true`; a corrected item that misses again hits its conservative default). The case that forced this: `rescreen-NKE-D-20260925` was enqueued 2026-08-04 for an estimated late-Sept print, NIKE published 2026-10-01 on 2026-08-28, and the 09-27 drain had to consume the conservative default without ever seeing the print.
 
 ## Commission policy
 
@@ -469,6 +470,7 @@ The queue is `events.queue_events` (queue `PENDING_ANALYSIS`); `state.open_queue
   strategy: <A | B | C | D | E>
   ticker_or_pair: <ticker, pair id, or n/a>
   due_date: <YYYY-MM-DD America/Denver — EARLIEST date the analysis can run: today if data is available, else when the required data lands>
+  due_date_basis: <issuer | estimate — payload field; `estimate` when due_date rests on a forecast of an external event rather than an issuer/authority-published date. Only `estimate` items are eligible for the one-time date correction (Decision discipline, ONE EXCEPTION). Omitted = issuer (no correction).>
   context: <self-contained prompt: candidate context, which Strategy.md criteria apply, references to Operating_Protocols.md / B_Sub_Pattern_Taxonomy.md / Watchlist.md, and the specific data to fetch (e.g. "Tue 6/2 regular-session close for Day-0 CTC via connector get_price_history, step=ONE_DAY, outside_rth=false — a CTC close is NEVER taken from get_price_snapshot, see Operating_Protocols.md §19 PRICE BASIS")>
   conservative_default: <action if the analysis still cannot resolve on its due_date — always the conservative branch (skip / decline GO / exit). Deferrals do not chain.>
   status: <pending | complete | superseded>
@@ -1442,9 +1444,9 @@ Concretely, every run:
   deficit clears.
 - **Owner-confirmation liveness gate (completeness-critic N-2, 2026-07-16) — the absence model for the
   one sanctioned human touch.** `SELECT * FROM state.owner_confirmation_liveness`
-  (`bigquery/209_owner_confirmation_park_tap_liveness.sql`, which supersedes the view body in
-  `bigquery/76_owner_confirmation_liveness.sql`; 76 remains the canonical home of this gate's SCOPE note
-  and its `ops.trading_control` usage convention). **PARK CONFIRM-TAPS COUNT (2026-09-02).**
+  (current body `bigquery/269_owner_confirmation_pending_age.sql`; chain 76 -> 209 -> 211 -> 269; 209 remains
+  the canonical home of the park-tap argument below, and 76 of this gate's SCOPE note and its
+  `ops.trading_control` usage convention). **PARK CONFIRM-TAPS COUNT (2026-09-02).**
   `trading_days_since_last_fill` measures from the LATER of the last `events.trade_fills` fill and the
   last `events.parking_events` `BUY`/`SELL` `action_date`, because a park sweep / cover / switch leg is an
   owner confirm-tap on the same IBKR surface as any other order (Operating_Protocols.md §13.E, "the
@@ -1458,8 +1460,15 @@ Concretely, every run:
   5 of 50 rows, no broker order id because the owner placed no order — are excluded too. The owner tapped
   nothing on those days; counting them would report responsiveness that did not happen. Inert today
   (newest such row 2026-07-23, account on Receive Cash since 2026-08-02) but re-armable per §13.C. If `entries_halted = TRUE` (>=1 `state.open_orders`
-  row still `pending` AND `trading_days_since_last_fill >= 3` — the operator has not confirmed a single
-  order in 3+ trading days while something is still waiting on a tap): (a) OPEN THE MARKER — keyed on the
+  row still `pending` AND `trading_days_pending_untapped >= 3` — a staged instruction has waited 3+ trading
+  days with no owner confirm-tap of any kind). **THE CLOCK STARTS WHEN SOMETHING IS WAITING (2026-10-27).**
+  `trading_days_pending_untapped` counts from the LATER of `last_owner_tap_date` and
+  `oldest_pending_staged_date` (the FIRST `ORDER_STAGED` row of the longest-waiting pending item_key,
+  stable across re-crafts). Do NOT gate on `trading_days_since_last_fill` again: it banks quiet days with
+  nothing to tap, so the first craft after a quiet stretch tripped the gate the evening it was staged —
+  every one of the four fires before 2026-10-27 was that artifact, and replaying every `ORDER_STAGED`
+  item_key showed each instruction was tapped within one trading day. `trading_days_since_last_fill` stays on
+  the view and in the marker reason / payload as context only: (a) OPEN THE MARKER — keyed on the
   CONTROL-ROW state, never on an alert existing: `INSERT INTO ops.trading_control (halt_all, mode, reason,
   set_by) SELECT FALSE, 'entries_halted', '<n_pending_instructions> pending instruction(s),
   <trading_days_since_last_fill> trading days since the last reconciled fill', 'D2a' FROM UNNEST([1]) AS _t
@@ -1476,8 +1485,8 @@ Concretely, every run:
   liveness: pending instructions are not being tapped — see payload for the pending count and the trading
   days since the last fill. D2 NEW-ENTRY staging (fresh GO decisions only) is paused; already-staged orders —
   entries and exits alike — keep re-crafting daily, unaffected.', <JSON:
-  n_pending_instructions, trading_days_since_last_fill, last_fill_ts, last_park_fill_date,
-  last_owner_tap_date>)` — carry BOTH tap sources in the payload, so a reader can tell a genuine absence
+  n_pending_instructions, trading_days_pending_untapped, oldest_pending_staged_date,
+  trading_days_since_last_fill, last_fill_ts, last_park_fill_date, last_owner_tap_date>)` — carry BOTH tap sources in the payload, so a reader can tell a genuine absence
   from a measurement artifact without re-querying. D2's "2. NEW ENTRY CANDIDATES"
   step reads this same view before crafting any new entry and skips staging (logging the GO as
   staged-but-paused, same pattern as the PENDING-NEWCOMER FROZEN CHECK) while `entries_halted = TRUE`;
