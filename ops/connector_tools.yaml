@@ -640,6 +640,14 @@ connectors:
       - name: create_order_instruction
         use: required
         note: order staging — D2/D2a/M4/Q4/A3 conversion routines
+      - name: create_saved_screener
+        use: unused
+        note: >
+          Auto-added by OPS1 2026-10-28. Vendor-added tool, first observed in the live
+          connector's tool inventory. `use: unused` is the conservative default — nothing
+          in this fleet calls it (mirrors the IBKR `whats_new` precedent, July 2026).
+          Promoting it to required/optional and adding routine prose that calls it is a
+          separate, deliberate feature-adoption decision this step never makes on its own.
       - name: create_watchlist
         use: unused
       - name: delete_alert
@@ -647,6 +655,14 @@ connectors:
       - name: delete_order_instruction
         use: required
         note: order re-craft / expired-DAY-order replacement (D2a park-sweep backstop)
+      - name: delete_saved_screener
+        use: unused
+        note: >
+          Auto-added by OPS1 2026-10-28. Vendor-added tool, first observed in the live
+          connector's tool inventory. `use: unused` is the conservative default — nothing
+          in this fleet calls it (mirrors the IBKR `whats_new` precedent, July 2026).
+          Promoting it to required/optional and adding routine prose that calls it is a
+          separate, deliberate feature-adoption decision this step never makes on its own.
       - name: delete_watchlist
         use: unused
       - name: edit_watchlist
@@ -677,6 +693,14 @@ connectors:
         use: unused
       - name: get_company_themes
         use: unused
+      - name: get_earnings_insight
+        use: unused
+        note: >
+          Auto-added by OPS1 2026-10-28. Vendor-added tool, first observed in the live
+          connector's tool inventory. `use: unused` is the conservative default — nothing
+          in this fleet calls it (mirrors the IBKR `whats_new` precedent, July 2026).
+          Promoting it to required/optional and adding routine prose that calls it is a
+          separate, deliberate feature-adoption decision this step never makes on its own.
       - name: get_flow_type
         use: unused
         note: >
@@ -755,6 +779,46 @@ connectors:
         use: unused
         note: >
           Auto-added by OPS1 2026-10-14. Vendor-added tool, first observed in the live connector's tool inventory. `use: unused` is the conservative default — nothing in this fleet calls it (mirrors the IBKR `whats_new` precedent, July 2026). Promoting it to required/optional and adding routine prose that calls it is a separate, deliberate feature-adoption decision this step never makes on its own.
+      - name: get_screener_asset_classes
+        use: unused
+        note: >
+          Auto-added by OPS1 2026-10-28. Vendor-added tool, first observed in the live
+          connector's tool inventory. `use: unused` is the conservative default — nothing
+          in this fleet calls it (mirrors the IBKR `whats_new` precedent, July 2026).
+          Promoting it to required/optional and adding routine prose that calls it is a
+          separate, deliberate feature-adoption decision this step never makes on its own.
+      - name: get_screener_capabilities
+        use: unused
+        note: >
+          Auto-added by OPS1 2026-10-28. Vendor-added tool, first observed in the live
+          connector's tool inventory. `use: unused` is the conservative default — nothing
+          in this fleet calls it (mirrors the IBKR `whats_new` precedent, July 2026).
+          Promoting it to required/optional and adding routine prose that calls it is a
+          separate, deliberate feature-adoption decision this step never makes on its own.
+      - name: get_screener_industries
+        use: unused
+        note: >
+          Auto-added by OPS1 2026-10-28. Vendor-added tool, first observed in the live
+          connector's tool inventory. `use: unused` is the conservative default — nothing
+          in this fleet calls it (mirrors the IBKR `whats_new` precedent, July 2026).
+          Promoting it to required/optional and adding routine prose that calls it is a
+          separate, deliberate feature-adoption decision this step never makes on its own.
+      - name: get_screener_templates
+        use: unused
+        note: >
+          Auto-added by OPS1 2026-10-28. Vendor-added tool, first observed in the live
+          connector's tool inventory. `use: unused` is the conservative default — nothing
+          in this fleet calls it (mirrors the IBKR `whats_new` precedent, July 2026).
+          Promoting it to required/optional and adding routine prose that calls it is a
+          separate, deliberate feature-adoption decision this step never makes on its own.
+      - name: get_screener_themes
+        use: unused
+        note: >
+          Auto-added by OPS1 2026-10-28. Vendor-added tool, first observed in the live
+          connector's tool inventory. `use: unused` is the conservative default — nothing
+          in this fleet calls it (mirrors the IBKR `whats_new` precedent, July 2026).
+          Promoting it to required/optional and adding routine prose that calls it is a
+          separate, deliberate feature-adoption decision this step never makes on its own.
       - name: get_theme_details
         use: unused
       - name: get_watchlist
@@ -765,6 +829,14 @@ connectors:
         use: unused
         note: >
           Auto-added by OPS1 2026-10-14. Vendor-added tool, first observed in the live connector's tool inventory. `use: unused` is the conservative default — nothing in this fleet calls it (mirrors the IBKR `whats_new` precedent, July 2026). Promoting it to required/optional and adding routine prose that calls it is a separate, deliberate feature-adoption decision this step never makes on its own.
+      - name: preview_screener
+        use: unused
+        note: >
+          Auto-added by OPS1 2026-10-28. Vendor-added tool, first observed in the live
+          connector's tool inventory. `use: unused` is the conservative default — nothing
+          in this fleet calls it (mirrors the IBKR `whats_new` precedent, July 2026).
+          Promoting it to required/optional and adding routine prose that calls it is a
+          separate, deliberate feature-adoption decision this step never makes on its own.
       - name: provide_customer_feedback
         use: unused
       - name: run_saved_screener
@@ -783,6 +855,14 @@ connectors:
           concluding a repeated price-history failure is a connector fault, re-resolve the contract id
           via `search_contracts` rather than reusing an id cited in an earlier run record. This is the
           forward fix; the 2026-09-13 run record itself is history and is not being corrected.
+      - name: search_earnings_insights
+        use: unused
+        note: >
+          Auto-added by OPS1 2026-10-28. Vendor-added tool, first observed in the live
+          connector's tool inventory. `use: unused` is the conservative default — nothing
+          in this fleet calls it (mirrors the IBKR `whats_new` precedent, July 2026).
+          Promoting it to required/optional and adding routine prose that calls it is a
+          separate, deliberate feature-adoption decision this step never makes on its own.
       - name: search_futures
         use: unused
       - name: search_investment_topics
@@ -791,6 +871,14 @@ connectors:
         use: unused
       - name: update_alert
         use: unused
+      - name: update_saved_screener
+        use: unused
+        note: >
+          Auto-added by OPS1 2026-10-28. Vendor-added tool, first observed in the live
+          connector's tool inventory. `use: unused` is the conservative default — nothing
+          in this fleet calls it (mirrors the IBKR `whats_new` precedent, July 2026).
+          Promoting it to required/optional and adding routine prose that calls it is a
+          separate, deliberate feature-adoption decision this step never makes on its own.
       - name: whats_new
         use: unused
         note: >
