@@ -54,6 +54,10 @@
 -- alike, is unaffected (see the SCOPE note above — do not read "exit re-craft" narrowly here). Auto-
 -- clears the moment a fill lands (trading_days_since_last_fill resets to 0 the next time this view is
 -- queried — no manual clear step, no write needed to un-halt).
+-- SUPERSEDED LIVE 2026-10-27 by bigquery/269_owner_confirmation_pending_age.sql — current single source
+-- of truth for this view body (entries_halted now counts trading days a pending instruction has
+-- waited untapped, not days since the last fill). Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.owner_confirmation_liveness` AS
 WITH pending AS (
   SELECT COUNT(*) AS n_pending_instructions

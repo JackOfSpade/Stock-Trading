@@ -185,6 +185,10 @@
 -- branch and hard-halt entries on a perfectly live signal. MAX ignores NULLs and is NULL only when
 -- every input is.
 
+-- SUPERSEDED LIVE 2026-10-27 by bigquery/269_owner_confirmation_pending_age.sql — current single source
+-- of truth for this view body (entries_halted now counts trading days a pending instruction has
+-- waited untapped, not days since the last fill). Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.owner_confirmation_liveness` AS
 WITH pending AS (
   SELECT COUNT(*) AS n_pending_instructions

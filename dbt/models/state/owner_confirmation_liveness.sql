@@ -13,7 +13,12 @@
 -- the RAW status, so the case-sensitive re-filter could drop a row the source admitted — and since
 -- n_pending_instructions is a conjunct of entries_halted, that failed OPEN on a gate whose job is to
 -- halt. Inert today (all 113 ORDER_STAGED rows ever are lowercase).
--- Parallel-run dbt port of bigquery/211_owner_confirmation_pending_case_fold.sql:state.owner_confirmation_liveness — canonical source is that file until
+-- REPOINTED 2026-10-27 to bigquery/269_owner_confirmation_pending_age.sql: entries_halted now counts
+-- trading days a PENDING instruction has waited untapped (from the later of the last tap and the
+-- oldest pending item's FIRST ORDER_STAGED date), not days since the last fill — the old counter
+-- banked quiet no-order days and tripped the gate the evening a fresh craft was staged (alert
+-- 8f0a42b1). trading_days_since_last_fill is kept as an output column.
+-- Parallel-run dbt port of bigquery/269_owner_confirmation_pending_age.sql:state.owner_confirmation_liveness — canonical source is that file until
 -- owner cutover. Generated MECHANICALLY by scripts/gen_dbt_port.py from that canonical body — the
 -- only edit is ref()/source() substitution for fully-qualified names — and proved token-identical
 -- to it by scripts/verify_dbt_port.py. Do not hand-edit the BODY: re-generate, then re-verify.
@@ -26,6 +31,17 @@ WITH pending AS (
   -- projects the RAW status, so a case-variant value survives the source view and would be
   -- silently dropped by a case-SENSITIVE re-filter here — in the fail-OPEN direction.
   WHERE LOWER(status) = 'pending'
+),
+oldest_pending AS (
+  -- First-staged date of the longest-waiting pending instruction. MIN(event_ts) over EVERY
+  -- ORDER_STAGED row for the item_key, never open_orders.staged_ts: a re-craft writes a new row
+  -- under the same item_key daily and would reset the clock (see the header).
+  SELECT MIN(DATE(q.event_ts, 'America/Denver')) AS oldest_pending_staged_date
+  FROM {{ source('events', 'queue_events') }} q
+  WHERE q.queue = 'ORDER_STAGED'
+    AND q.item_key IN (
+      SELECT item_key FROM {{ ref('open_orders') }} WHERE LOWER(status) = 'pending'
+    )
 ),
 last_fill AS (
   -- Strategy-trade fills, EXCLUDING IBKR's automatic dividend reinvestment (order_id '0' — no broker
@@ -53,8 +69,11 @@ ltd AS (
 tap AS (
   -- MAX over UNNEST, never GREATEST(): GREATEST returns NULL if ANY argument is NULL, which would
   -- send a book with fills in only one of the two tables straight to the 999 fail-safe.
-  SELECT (SELECT MAX(d) FROM UNNEST([lf.last_fill_date, lp.last_park_fill_date]) AS d) AS last_owner_tap_date
-  FROM last_fill lf, last_park lp
+  SELECT
+    (SELECT MAX(d) FROM UNNEST([lf.last_fill_date, lp.last_park_fill_date]) AS d) AS last_owner_tap_date,
+    (SELECT MAX(d) FROM UNNEST([lf.last_fill_date, lp.last_park_fill_date, op.oldest_pending_staged_date]) AS d)
+      AS untapped_clock_start
+  FROM last_fill lf, last_park lp, oldest_pending op
 ),
 stale AS (
   SELECT
@@ -67,7 +86,17 @@ stale AS (
           AND mc.cal_date > t.last_owner_tap_date
           AND mc.cal_date <= ltd.last_trading_day
       )
-    END AS trading_days_since_last_fill
+    END AS trading_days_since_last_fill,
+    CASE
+      WHEN t.untapped_clock_start IS NULL THEN 999  -- no tap and no pending date — fail-safe maximally stale
+      ELSE (
+        SELECT COUNT(*)
+        FROM {{ ref('market_calendar') }} mc
+        WHERE mc.is_trading_day
+          AND mc.cal_date > t.untapped_clock_start
+          AND mc.cal_date <= ltd.last_trading_day
+      )
+    END AS trading_days_pending_untapped
   FROM tap t, ltd
 )
 SELECT
@@ -77,7 +106,10 @@ SELECT
   t.last_owner_tap_date,
   s.trading_days_since_last_fill,
   ltd.last_trading_day AS as_of_trading_day,
-  -- entries_halted: unchanged predicate — >=1 pending staged instruction (something IS waiting on a
-  -- tap) AND >=3 trading days elapsed with zero owner confirm-taps of ANY kind, strategy or park.
-  (p.n_pending_instructions > 0 AND s.trading_days_since_last_fill >= 3) AS entries_halted
-FROM pending p, last_fill lf, last_park lp, tap t, stale s, ltd
+  op.oldest_pending_staged_date,
+  s.trading_days_pending_untapped,
+  -- entries_halted: >=1 pending staged instruction AND >=3 trading days that instruction has waited
+  -- with no owner confirm-tap of ANY kind, strategy or park (see the header for why the clock starts
+  -- at the later of the last tap and the oldest pending instruction's first staging).
+  (p.n_pending_instructions > 0 AND s.trading_days_pending_untapped >= 3) AS entries_halted
+FROM pending p, oldest_pending op, last_fill lf, last_park lp, tap t, stale s, ltd
