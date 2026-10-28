@@ -1,29 +1,29 @@
-2026-10-26
-<!-- d1_scan_through_utc: 2026-10-26T22:30:00Z -->
+2026-10-27
+<!-- d1_scan_through_utc: 2026-10-27T22:10:00Z -->
 
-# Daily Market Development Scan — session 2026-10-26 (Mon)
+# Daily Market Development Scan — session 2026-10-27 (Tue)
 
-Scan window: 2026-10-25 16:40 MT → 2026-10-26 16:30 MT (~23.8h). The start is the prior `Daily.md` marker `2026-10-25T22:40:00Z`, and that file's commit (22:37Z) agrees. The window holds **one completed US session, Monday 2026-10-26**, plus Sunday evening. Moves are 10-23 → 10-26 close-to-close.
+Scan window: 2026-10-26 16:30 MT → 2026-10-27 16:10 MT (~23.7h). The start is the prior `Daily.md` marker `2026-10-26T22:30:00Z`, and that file's commit (22:28Z) agrees; `state.routine_catchup_window` gives 0.98 days. The window holds **one completed US session, Tuesday 2026-10-27**. Moves are 10-26 → 10-27 close-to-close on IBKR regular-session daily bars.
 
-Tape: **an AI-led relief rally, with Brazil crashing and oil lower.**
-- **Indices.** IBKR regular-session closes, 10-23 → 10-26: SPY 759.97 → **765.37 (+0.7106%)**, QQQ +1.1073%, IWM +0.4497%, DIA +0.3069%, RSP +0.3464%, **SMH +2.7352%**. The S&P ended two days of losses.
-- **Volatility.** The VIX index fell 19.45 → 18.39 (−5.45%; IBKR CBOE bar, delayed feed).
-- **Rates and dollar.** 10Y flat at about **4.99%** (Yahoo ^TNX 4.988 → 4.986; Reuters "flat"). A 2Y close was not found. DXY rose 101.81 → 102.01. TLT +0.42%, HYG +0.19%.
-- **Oil.** Brent and WTI fell on reports of diplomatic effort in the Gulf, with no deal. **The 10-26 settle is not confirmed by any outlet**, so no level is quoted here. The only figure found is a Yahoo continuous-contract close, which is not a settle statement. The 10-23 settles were Brent December $116.72 and WTI December $103.27. USO −1.95%.
-- **Gold and crypto.** Gold about $4,030 (+0.6%), GLD +0.33%. BTC about $79.9k (−1.4%).
-- **Leadership.** XLK +1.69 led and XLC −1.57 lagged. Breadth rose to **58.05** (from 56.06).
+Tape: **a second, narrower AI-led up day, with oil and energy lower and a heavy earnings slate.**
+- **Indices.** IBKR closes, 10-26 → 10-27: SPY 765.37 → **769.66 (+0.5605%)**, QQQ +1.2707%, IWM +1.1517%, DIA +0.0593%, **RSP +0.1058%**, **SMH +3.0206%**. Leadership was cap-weighted, and equal-weight barely moved.
+- **Volatility.** The VIX fell 18.39 → 17.52 (−4.73%; IBKR CBOE bar, delayed feed).
+- **Rates and dollar.** FMP par yields: 2Y 4.70 (from 4.68), 10Y 4.99 (from 5.00), 30Y 5.30. TLT −0.06%, HYG +0.52%. The dollar was described as firm; no level was confirmed.
+- **Oil.** Brent December **settled $113.88** on 10-27, down from **$115.81** on 10-26; WTI December $99.90 from $101.76 (DTN/Rigzone; FMP Brent EOD agrees at 113.88). The two-session fall from the 10-23 settles (116.72 / 103.27) is −$2.84 Brent and −$3.37 WTI. Brent December expires 10-30, and January trades about $5 lower. USO −1.41%.
+- **Gold and crypto.** GLD +1.21% (gold about $4,027). BTC about $80.8k (+1.0%, FMP).
+- **Leadership.** XLK +1.70 led and XLE −2.05 lagged. Breadth rose to **59.24** (from 58.05).
 
 ## TL;DR
 
-- **Exits triggered: none.** Twelve Strategy D tranches carry no mechanical trigger, and no Development meets a thesis-invalidation criterion. No held name filed an 8-K or 6-K in the window.
-- **New entry candidates: none routed.** Six names cleared Strategy B's frozen ≥5% floor on their own events: SGRY, RRC, ORKA, ESLT, ASST and WULF. B is `DO-NOT-ACTIVATE` and capital-disabled, so they go to the index only. FICO (−13.2%) is recorded but not routed, because its anchor is unresolved.
-- **Add candidates: none (0 of 12).** Seven D tranches read dip-with-intact-thesis, but D is `DO-NOT-ACTIVATE` and capital-disabled.
-- **Watchlist: 6 changes.** ADD the six names to the Strategy B new-entry index.
-- **Regime review: no review.** Brazil's election crash is a domestic election, not a named geopolitical or trade channel, and `shock_overlay` already reads `acute`. Iran's ceasefire is still only proposed, so there is no qualifying resolution.
+- **Exits triggered: none.** Twelve Strategy D tranches carry no mechanical trigger, and no Development meets a thesis-invalidation criterion. No held name filed an 8-K, 6-K or 10-Q in the window (TSM only a passive 13G).
+- **New entry candidates: none routed.** 33 names cleared Strategy B's frozen ≥5% floor on their own issuer events, nearly all on earnings, led by HRI, KNSA, CTOS, XYL, HWKN, SOFI, PNR, ABG, CLS and BA. B is `DO-NOT-ACTIVATE` and capital-disabled, so they go to the index only. UNF and INOD are recorded but not routed.
+- **Add candidates: none (0 of 12).** Six D tranches read dip-with-intact-thesis, but D is `DO-NOT-ACTIVATE` and capital-disabled.
+- **Watchlist: 33 changes.** ADD the 33 names to the Strategy B new-entry index.
+- **Regime review: no review.** There was no new qualifying shock and no qualifying resolution: the Tehran talks agreed only to keep talking, the blockade and Houthi attacks continue, and Israel's election is a domestic deadlock.
 
 Park: VOO-only pin verified
 
-Paper book (J): 120 calls, 51/30 realized, net_mu -1.31%, ready=FALSE
+Paper book (J): 120 calls, 62/30 realized, net_mu -1.06%, ready=FALSE
 
 ---
 
@@ -31,106 +31,110 @@ Paper book (J): 120 calls, 51/30 realized, net_mu -1.31%, ready=FALSE
 
 ### 1. Market-wide breaking events
 
-- **Anthropic S-1 made public (10-26, 09:00 ET; EDGAR acc 0001628280-26-067168).**
-  - Terms: it lists on Nasdaq Global Select as "ANT", led by Goldman Sachs and Morgan Stanley. The price range and share count are blank.
-  - Financials: revenue was $4.585B in 2025 and $16.286B in 6M-2026 (vs $1.163B in 6M-2025). The net loss was $80.7B in 6M-2026, mostly fair-value changes on convertibles and SAFEs. WSJ says pricing could come as early as the week before Thanksgiving.
-  - Reaction: an AI and semis rally. SMH rose +2.74% and optical/AI-infrastructure names 5-8% (LITE, AXTI, COHR, AAOI, TSEM, TTMI, ARM, FIX, BE).
-  - This supersedes the 10-25 "not confirmed filed".
-- **Brazil election crash (Lula re-elected in the 10-25 runoff).** Brazilian ADRs collapsed on Monday, with a record EWZ fall reported.
-  - XP fell **−48.34%** (IBKR, 30.41 → 15.71). On Nasdaq closes: BBD −28.1, INTR −34.9, STNE −27.4, SBS −26.3, PAGS −25.2, NU −17.0, PBR −14.1, ABEV −13.9.
-  - The real fell as well (WSJ/Bloomberg; size not measured).
-  - This is a common macro driver, not an issuer event.
-- **Gulf (escalation continues; still no resolution).**
-  - On 10-24 the Houthis hit Riyadh again, and Dammam airport and the Shaybah oilfield were reported targeted (Al Jazeera/AFP). Saudi attacks were ongoing on Monday (Reuters).
-  - Iran's 7-day ceasefire is **under review, not in force**. Four regional states backed the June Islamabad MOU and demanded free Hormuz passage, which is a statement, not a settlement.
-  - Monday's oil drop was attributed to reports of diplomatic effort, not a deal. Israel votes 10-27.
-- **M&A.**
-  - **EQT/Range Resources:** an all-stock deal at 0.987 EQT per RRC share. The agreement is dated 10-25; EQT's 8-K was accepted at 06:17 ET and RRC's at 07:07 ET.
-  - **Surgery Partners:** a take-private by HealthSpan Partners, a Bon Secours Mercy Health affiliate, at **$23.50 cash**, an EV of about $5.7B. The 8-K was accepted at 09:03 ET.
-  - The RIG/VAL 10-23 8-Ks are procedural Item 8.01 filings for the existing deal: meetings on 11-24 and the Bermuda sanction hearing on 11-26.
-- **Telecom.** The selloff on SpaceX's wireless ambitions continued: CHTR −5.9% to a 52-week low, and VZ −3.49% despite a beat.
-- **Not found** in this window: China tariff, Russia-Ukraine, shutdown, bankruptcy or enforcement news. Those searches were thin.
+- **Gulf (still no resolution).**
+  - On 10-26, Saudi, Pakistani and Turkish officials met Iran's president in Tehran and agreed to keep talking, with no date or terms. The US blockade of Iranian ports continues.
+  - Houthi drones are still hitting Saudi Arabia, and a fire near Ras Tanura was contained. October is the worst month for Hormuz shipping attacks since 2017.
+  - Trump called it "decision time" and said strikes could resume after the Israeli vote or the 11-03 midterms. A WSJ headline that Oman says talks outline a plan to open Hormuz is unconfirmed (paywalled), and reports conflict on Hormuz flows.
+  - Oil fell on the talks narrative (Brent −1.7%), and refiners repriced −7% to −10%.
+- **Israel election (10-27).** Exit polls (Axios, 20:08Z) give the Eisenkot bloc 52-53 seats and Netanyahu's bloc 50, with Arab parties at 17-18. Neither reaches 61, and Reuters calls it a deadlock. Official results are unconfirmed, and no market reaction is observable yet.
+- **AI rally, day two.** The Anthropic S-1 (made public 10-26) kept the AI-chip, optical and server cohort bid: SMH +3.02%, and 46 ≥$2B cohort names moved ≥5%.
+- **Brazil.** Brazilian assets partly recovered on 10-27 after Monday's election crash (closing levels unconfirmed). This is domestic politics, not a geopolitical or trade channel.
+- **Trade and Russia.** The US and Canada are working on easing steel and auto tariffs (Reuters via ZeroHedge), with nothing concluded. US-Russia-Ukraine talks are planned in the UAE next month, with no settlement.
+- **Antitrust.** Semafor reported the FTC will sue to block Cintas's $5.5B acquisition of UniFirst: UNF −10.46%, CTAS −4.93%.
+- **Not found** in this window: China, shutdown, bankruptcy or disaster news. That absence comes from thin searches and is not a measured absence.
 
 ### 2. Scheduled events that resolved in the window
 
-- **Enumeration.** I fetched the Nasdaq key-less calendar for 10-26 and 10-23 with curl. No ≥$2B issuer released after the 10-23 close. Release times come from EDGAR acceptance stamps, and consensus figures are Nasdaq-calendar (secondary).
-- **Macro (10-26).**
-  - Chicago Fed NAI for September was **+0.07** vs −0.08 in August and a −0.10 consensus (secondary sources).
-  - The Dallas Fed Texas manufacturing survey for October (from the Dallas Fed's own page) had general business activity at **13.4** (from 9.8), production at 15.8 (−14) and new orders at 9.3 (from 30.7).
-- **Pre-open 10-26 reporters (IBKR close-to-close).**
-
-  | Ticker | Result (secondary consensus) | 10-26 move |
-  |---|---|---|
-  | **VZ** | adj EPS $1.31 vs ~$1.27; FY26 guide raised for the third straight quarter; 406k postpaid phone adds (07:00 ET) | **−3.49%** |
-  | MMYT | | −2.11% |
-  | BOH | EPS $1.49 vs $1.52 | −0.10% |
-  | CX | | −0.10% |
-  | ARLP | | +0.99% |
-
-  No reporter moved ≥5%.
-- **No EDGAR print found** for PKX, SMMT, BMRN, CLBK, BLX or ENI, so they are recorded as unresolved.
-- **After-close 10-26 (react 10-27, not measured).** 26 names of $2B or more, accepted 16:01-17:03 ET:
-  - WELL, CDNS (raised its 2026 outlook), NUE, PSA (raised guidance), HIG and CLS (Q3 revenue $5.83B vs $5.44B, 2026 revenue guide $21B);
-  - CINF, BRO, PFG, GGB, SUI, AMKR, RMBS, BRX, NE, SSD, ARE, PSMT, PECO, DORM, AGYS, PRK, HWKN, HTO, NWBI, CTOS.
-- **Pending this week.**
-  - Tuesday: KO and BA.
-  - 10-28: **GEV pre-open; the FOMC at 14:00 ET** (about 90% hold, December hike favoured); GOOGL after the close.
-  - 10-29: Q3 GDP and September PCE, the ECB, and **AMZN** after the close.
-  - 10-30: the BoJ. The midterms are 11-03.
-- **FDA.** No PDUFA decision, approval or CRL for a ≥$2B sponsor was found for 10-24..10-26. The FDA press page's newest entry is 10-22 and novel approvals' newest is 10-20, so this is unresolved, not a measured absence. MIRM released pivotal data on 10-26, which is not an FDA action.
+- **Enumeration.** I fetched the Nasdaq key-less calendar for 10-26, 10-27 and 10-28 with curl: 111 issuers of $2B or more were scheduled on 10-27, and 35 on 10-26. Release times come from EDGAR acceptance stamps. Consensus figures are the Nasdaq calendar's (secondary).
+- **Macro (10-27).** Conference Board consumer confidence was **91.7** against 81.0 expected (Proactive Investors; secondary). Durable goods, new home sales and Richmond Fed actuals were not confirmed. The FOMC (10-28, 14:00 ET) is expected to hold at 3.75-4.00%, and markets price about 73-81% odds of a December hike.
+- **10-26 after-close reporters, which reacted on 10-27.** All were accepted at 16:01-18:21 ET on 10-26, before this window opened, except CNC (19:05 ET). The ones that moved ≥5% are written up in §3: CTOS, HWKN, CLS (Q3 $3.30 vs $2.89, raised, initial 2027 revenue outlook about $40B), AMKR ($0.76 vs $0.79), CDNS ($2.11, raised), AGYS, WELL, ARE, SSD, PII, NUE, NE, PPTA (an Army tungsten agreement, not earnings) and BRO (−4.97%, below the floor). CNC posted $0.58 vs $0.07 and raised guidance.
+- **10-27 pre-open reporters (46).** Outcomes from the Ex-99.1 releases (adjusted EPS vs secondary consensus):
+  - **Beats:** IQV $3.34 vs $2.94 (raised); HCA $7.22 vs $6.74; PYPL $1.45 vs $1.31 (raised); RCL $6.57 vs $6.38 (raised); NVS core $2.46 vs $2.25 (raised core operating income guidance); KO $0.91 vs $0.87 (raised); JCI $1.66 vs $1.58 (FY27 EPS guide $6.15-6.30); UPS $1.69 vs $1.63 (raised); HLT $2.45 vs $2.36.
+  - **Misses and in-line:** BA core loss −$0.34 a share (GAAP −$0.26 vs −$0.21 expected), −10.69%; SHW $3.63 vs $3.65 (guidance narrowed); ECL $2.18, in line; ITW $3.00 vs $2.99 (raised); PCAR $1.61, in line.
+  - **Corporate:** SPGI began a strategic review of Capital IQ and its data businesses. GWRE agreed to buy Hyperexponential for $1.7B cash (8-K 07:05 ET), and GM is moving its listing from NYSE to Nasdaq (8-K 06:30 ET).
+  - **HSBC:** Q3 profit before tax of $9.6B, with targets reaffirmed. Its 6-K was accepted at 12:27 ET, and the London-hours release minute is unresolved.
+- **10-27 after-close reporters (57 of $2B or more, accepted 16:02-17:28 ET).** They react on 10-28 and are not measured here.
+  - V $3.48 vs $3.43, dividend +16%; STX $7.68 vs $7.17, FQ2 EPS guide $9.20; NXPI $4.20 vs $3.78 plus a $5B buyback; WM $2.15 vs $2.18, guidance affirmed; HOOD adjusted $0.60 (a new measure; GAAP $0.51), consensus basis ambiguous; OKE raised; BKR $0.70 vs $0.63, raised its IET orders guide to $50B+; VTR raised; ACGL operating $2.67 vs $2.15; EQT $0.42 vs $0.38.
+  - Also reporting: EXR, FE, FFIV, LPLA, PPG, EXE, ESS, LOGI, WPC, RNR (Q3 net loss of $161M), ICLR, MANH, CSGP (buying Vexcel), CR, UHS, ENSG, UMBF, BXP, ZWS, STAG, CHE, EXLS, ST, CZR, LSTR, CAKE, RUSHA/B, AKO.A/B, ENPH, RNST, MIR, INTA, FFBC, SLDE (special dividend $1.50), SBCF, BANC, NBTB, APAM, TRMK, BUSE, NTB, IVT, ROG, UCTT.
+  - **TER** released on Business Wire after 16:30 ET (revenue $1,306M), but no EDGAR 8-K was visible yet, so its figures are third-party.
+- **Unresolved** (no 8-K/6-K Ex-99.1 on EDGAR through 22:14Z): RRC and HIW (10-Qs filed, no release found), NOV, FCF, MCRI, SEB, KAI, SIM, PKX, CX, MMYT.
+- **Pending.**
+  - 10-28: **GEV pre-open**; the **FOMC at 14:00 ET**; **GOOGL** after the close.
+  - 10-29: Q3 GDP, September PCE, the ECB, and **AMZN** after the close.
+  - 10-30: the BoJ.
+  - UBER's date is not company-confirmed (Nasdaq lists 11-04 pre-open). The midterms are 11-03.
+- **FDA.** CDER's Novel Drug Approvals 2026 page (fetched about 22:12Z) has its newest entry, #47 Hibsago, on 10-20, and the press page ends at 10-22. So there was no novel approval on 10-26 or 10-27. CRLs and supplemental approvals could not be resolved from those pages and are recorded as unresolved, not as a measured absence.
 
 ### 3. Large single-name moves — AI-SIGNIFICANCE SCREEN
 
-`research-screen` `7d029722-e7f6-476e-9907-423b12af4cd7` (`surfaced_count` 10 = `ARRAY_LENGTH(passed)`: 9 floor clearers plus VZ below the floor; agreement both 9 / ai_only 1 / rule_only 79). Every written-up figure is an IBKR regular-session daily-bar close-to-close (close array), 10-23 → 10-26. Every pair agreed with the Nasdaq closes within 0.15pp.
+`research-screen` `3b0ca8cf-58a6-4193-90d0-355368d80aad` (`surfaced_count` 37 = `ARRAY_LENGTH(passed)`: 35 floor clearers plus CTAS and BRO below the floor; agreement both 35 / ai_only 2 / rule_only 151). Every written-up figure is an IBKR regular-session daily-bar close-to-close (close array), 10-26 → 10-27.
 
-- **Discovery (unmetered).**
-  - The Nasdaq screener `pctchange` was **stale** (10-23 values), and Nasdaq historical bars had no 10-26 row at about 22:10Z.
-  - So the 10-26 closes came from Nasdaq quote/info ("Closed at Oct 26 4:00 PM ET") against the 10-23 bar, for **2,014 of 2,015** ≥$2B US stocks and ADRs. **513 moved ≥2% and 88 moved ≥5%.**
-  - EDGAR 8-K/6-K filings were pulled for all 513.
-- **Layer 2.** Every non-reporter moving ≥5% was examined, clustered by theme (18 searches). The 2-5% non-reporters were not individually attributed (`selection_rule`).
-- **Fan-out reconciliation.** Legs were compared by (ticker, event date). SGRY was named with two different buyer names; its 8-K Ex-99.1 resolves both as HealthSpan Partners (BSMH). There were no date conflicts.
-- **Close-chain check.** No CHAIN HIT among the passed items. CART's 10-26 pair chains forward from its 10-23 item, and it is rejected below as a continuation.
+- **Discovery (unmetered).** The Nasdaq screener's `pctchange` was stale (10-26 values). So 10-27 closes came from Nasdaq quote/info ("Closed at Oct 27, 2026 4:00 PM ET") for **1,934 of 1,945** ≥$2B US stocks and ADRs. **697 moved ≥2% and 186 moved ≥5%.** Eleven were unmeasured: CCZ, GJS and WLYB failed to fetch, and BATRA, CCC, CHYM, GDS, HLNE, PLBL, RDY and TBB returned a blank change.
+- **Attribution.** EDGAR 8-K/6-K filings were pulled for all 186 ≥5% names and for the ≥2% reporters. There were 11 cluster-level searches, and the 2-5% non-reporters were not individually attributed (`selection_rule`). `rail_tally` 62 is a lower bound.
+- **Fan-out reconciliation.** The screen leg and the EDGAR scheduled-events leg were compared by (ticker, event date) on every overlapping name, and they agree. EDGAR acceptance stamps are the tiebreak. Two corrections came from that pass: GWRE −8.05% is an acquisition, not an earnings reaction, and GM +5.54% is a listing transfer.
+- **Close-chain check.** No CHAIN HIT and no same-name, same-anchor earlier disposition. Coverage is limited, so a clean pass is not a clearance.
+- **Market cap near the rail.** CTOS and PPTA were re-derived from 10-Q cover share counts. CTOS has 227,173,348 shares (cover as of 2026-10-22), worth $2.05B at its 10-26 close. PPTA has 125,095,803 shares (cover as of 2026-08-05), worth $2.08B. Both clear $2B.
 
-| Ticker | Move (close → close) | Release and anchor | Conviction | Notes |
+| Ticker | Move (close → close) | Release and anchor | Conv. | Notes |
 |---|---|---|---|---|
-| **SGRY** | +47.6190% (15.75 → 23.25) | pre-open 10-26, 8-K 09:03 ET; anchor 2026-10-26 | 75 | $23.50 cash take-private (EV ~$5.7B); trades at a ~1% spread to the deal; cap ~$2.06B pre-move; 1 other ≥5% session (10-20) |
-| **RRC** | +17.6626% (45.52 → 53.56) | pre-open 10-26, 8-K 07:07 ET; anchor 2026-10-26 | 75 | All-stock merger into EQT at 0.987 (implied ~54.14); EQT −1.40% |
-| **FICO** | −13.1533% (815.31 → 708.07) | announcement described as Friday 10-23, minute not established; **anchor UNRESOLVED**, reaction 2026-10-26 | 60 | Held the $10 mortgage-score price, then a Wells Fargo downgrade and FHFA's Pulte on score competition; **not routed** |
-| **ORKA** | +12.7012% (80.15 → 90.33) | pre-open 10-26, 8-K 08:00 ET; anchor 2026-10-26 | 60 | Phase 2b EVERLAST-B psoriasis: PASI100 61% vs 0% placebo; 1 other ≥5% session (10-20) |
-| **ASST** | −9.1474% (28.97 → 26.32) | pre-open 10-26, 8-K 07:50 ET; anchor 2026-10-26 | 30 | New $1.0B preferred ATM; the crypto cohort was also weak; 6 other ≥5% sessions |
-| TENB | +8.1184% (44.59 → 48.21) | Baird PT raise (analyst action) | 30 | Not an issuer event; not B-eligible |
-| **WULF** | +5.8304% (11.32 → 11.98) | after-close 10-23, 8-K 17:13 ET; anchor 2026-10-23, reaction 2026-10-26 | 30 | Revolver upsized to ~$400M; mostly beta; 5 other ≥5% sessions |
-| **ESLT** | +5.7960% (735.34 → 777.96) | pre-open 10-26, 6-K 06:01 ET; anchor 2026-10-26 | 30 | ~$200M ISTAR contract, small vs a ~$36B cap; defense firm; 2 other ≥5% sessions |
-| TSLA | +5.2120% (372.22 → 391.62) | Barclays upgrade (analyst action) | 30 | Not an issuer event; not B-eligible |
-| VZ | −3.4931% (44.66 → 43.10) | pre-open 10-26, 8-K 07:00 ET | 30 | Beat and raise, but moved with the telecom selloff; below the floor, context only |
+| **HRI** | +22.7562% (127.13 → 156.06) | pre-open 10-27, 8-K 06:31 ET; anchor 10-27 | 75 | Q3; 1 other ≥5% session |
+| **KNSA** | +22.2253% (72.98 → 89.20) | pre-open 10-27, 8-K 07:32 ET; anchor 10-27 | 75 | Q3; 1 other ≥5% session |
+| **XYL** | −14.2092% (108.24 → 92.86) | pre-open 10-27, 8-K 07:01 ET; anchor 10-27 | 75 | Q3 plus strategic actions and an officer change (Item 5.02) |
+| **SOFI** | +13.4163% (14.46 → 16.40) | pre-open 10-27, 8-K 07:02 ET; anchor 10-27 | 75 | Q3; 2 other ≥5% sessions |
+| **BA** | −10.6898% (188.31 → 168.18) | pre-open 10-27, 8-K 07:30 ET; anchor 10-27 | 75 | Q3 core loss −$0.34 a share |
+| **CTOS** | +16.6482% (9.01 → 10.51) | after-close 10-26, 8-K 16:13 ET; anchor 10-26, reaction 10-27 | 60 | Q3; cap $2.05B on the filed share count |
+| **HWKN** | +13.5927% (135.44 → 153.85) | after-close 10-26, 8-K 16:13 ET; anchor 10-26, reaction 10-27 | 60 | FQ2 |
+| **PNR** | +12.8033% (55.22 → 62.29) | pre-open 10-27, 8-K 06:51 ET; anchor 10-27 | 60 | Q3 |
+| **ABG** | +12.7370% (172.96 → 194.99) | pre-open 10-27, 8-K 07:02 ET; anchor 10-27 | 60 | Q3 |
+| **CLS** | +12.1184% (246.65 → 276.54) | after-close 10-26, 8-K 16:23 ET; anchor 10-26, reaction 10-27 | 60 | Q3 beat, raise, 2027 outlook; 3 other ≥5% sessions |
+| **PPTA** | +10.6627% (16.60 → 18.37) | after-close 10-26, 8-K 17:30 ET; anchor 10-26, reaction 10-27 | 45 | Army tungsten agreement; 3 other ≥5% sessions |
+| **GLXY** | +9.5663% (15.68 → 17.18) | pre-open 10-27, 8-K 07:04 ET; anchor 10-27 | 45 | Q3; 5 other ≥5% sessions |
+| **LECO** | +9.1707% (258.65 → 282.37) | pre-open 10-27, 8-K 09:03 ET; anchor 10-27 | 60 | Q3 |
+| **AMKR** | +8.5031% (36.81 → 39.94) | after-close 10-26, 8-K 16:07 ET; anchor 10-26, reaction 10-27 | 45 | Q3 miss, inside the semis bid; 4 other ≥5% sessions |
+| **AIT** | −8.3467% (324.68 → 297.58) | 8-K 09:31 ET 10-27 (at the open); anchor 10-27 | 60 | FQ1 |
+| **GWRE** | −8.0507% (183.96 → 169.15) | pre-open 10-27, 8-K 07:05 ET; anchor 10-27 | 60 | $1.7B cash acquisition of Hyperexponential |
+| **ITRI** | +7.7739% (87.73 → 94.55) | pre-open 10-27, 8-K 08:35 ET; anchor 10-27 | 60 | Q3 |
+| **EEFT** | −7.7248% (63.95 → 59.01) | pre-open 10-27, 8-K 08:15 ET; anchor 10-27 | 60 | Q3 |
+| **CDNS** | +6.4904% (322.17 → 343.08) | after-close 10-26, 8-K 16:03 ET; anchor 10-26, reaction 10-27 | 60 | Q3, raised |
+| **AGYS** | −6.1887% (123.45 → 115.81) | after-close 10-26, 8-K 16:05 ET; anchor 10-26, reaction 10-27 | 45 | FQ2 |
+| **ARE** | −5.8525% (43.40 → 40.86) | after-close 10-26, 8-K 16:08 ET; anchor 10-26, reaction 10-27 | 45 | Q3 |
+| **WELL** | −5.7728% (240.61 → 226.72) | after-close 10-26, 8-K 16:33 ET; anchor 10-26, reaction 10-27 | 60 | Q3; rare for a $173B REIT |
+| **AWI** | −5.7396% (164.82 → 155.36) | pre-open 10-27, 8-K 06:00 ET; anchor 10-27 | 45 | Q3 |
+| **HSBC** | −5.7011% (91.21 → 86.01) | London-hours release 10-27 (6-K 12:27 ET, minute unresolved); anchor 10-27 | 45 | Q3 PBT $9.6B |
+| **JCI** | +5.6814% (147.50 → 155.88) | pre-open 10-27, 8-K 06:58 ET; anchor 10-27 | 45 | FQ4, FY27 guide |
+| **GM** | +5.5432% (76.31 → 80.54) | pre-open 10-27, 8-K 06:30 ET; anchor 10-27 | 45 | NYSE-to-Nasdaq listing transfer (index-eligibility expectation) |
+| **HUBB** | −5.4680% (459.40 → 434.28) | pre-open 10-27, 8-K 08:05 ET; anchor 10-27 | 45 | Q3 |
+| **RCL** | +5.4597% (280.60 → 295.92) | pre-open 10-27, 8-K 06:32 ET; anchor 10-27 | 45 | Q3 beat, raised |
+| **NE** | −5.4173% (47.81 → 45.22) | after-close 10-26, 8-K 17:03 ET; anchor 10-26, reaction 10-27 | 30 | Q3; gives back +8.5% from 10-23 |
+| **SSD** | +5.3135% (181.99 → 191.66) | after-close 10-26, 8-K 16:18 ET; anchor 10-26, reaction 10-27 | 45 | Q3; IBKR basis (Nasdaq read +5.85%) |
+| **PII** | +5.2765% (55.15 → 58.06) | after-close 10-26, 8-K 18:21 ET; anchor 10-26, reaction 10-27 | 45 | Q3 |
+| **TRU** | −5.2751% (79.62 → 75.42) | pre-open 10-27, 8-K 06:15 ET; anchor 10-27 | 30 | Q3; 3 other ≥5% sessions |
+| **NUE** | +5.2225% (257.35 → 270.79) | after-close 10-26, 8-K 16:54 ET; anchor 10-26, reaction 10-27 | 30 | Q3 |
+| UNF | −10.4563% (279.64 → 250.40) | Semafor report 10-27, minute unresolved; anchor 10-27 | 60 | FTC suit to block the Cintas merger; merger-pinned, **not routed** |
+| INOD | −25.3213% (59.91 → 44.74) | press reports 10-27, minute unresolved; anchor 10-27 | 45 | About 550 layoffs reported, with no company filing; **not routed** |
+| CTAS | −4.9263% (225.93 → 214.80) | same Semafor report | 30 | Acquirer side; below the floor, context only |
+| BRO | −4.9662% (71.08 → 67.55) | after-close 10-26, 8-K 17:03 ET | 30 | Q3 organic growth 1.2%; below the floor, context only |
 
-- **Rejected or common driver** (Nasdaq-basis unless noted):
-  - **XP −48.34% (IBKR)** and 25+ Brazil ADRs at −12% to −35%: the election.
-  - **AI-infrastructure cohort +5-8%**: the Anthropic S-1.
-  - **Refiners +5-8%**: PARR, CVI, PBF, DK, CLMT.
-  - **Telecom/cable**: CHTR −5.9, VSAT +8.0.
-  - **Crypto, mixed**: CRCL −7.1, GLXY +6.8, BMNR −6.5.
-  - **CART +7.87% (IBKR)**: a continuation of the 10-23 sale report.
-  - **No event found**: DAVE −8.9, VICR +10.6, INIO +9.3.
-  - BSP +5.8 (Miro deal closing). BAH +6.5 is a following session after its 10-23 print.
-  - The after-close 10-26 reporters AMKR −6.3, RMBS +5.5 and CLS −5.3 moved before their releases.
+- **Rejected or common driver** (Nasdaq basis unless noted; 151 names, each listed in the row):
+  - **AI-chip, optical, neocloud and server cohort (46)**, on the Anthropic S-1 aftermath.
+  - **Biotech sector beta (19)**; nuclear, uranium and AI-power (16); critical minerals (13); space and eVTOL rebound (11); crypto miners (7); quantum (4); fintech sympathy with SOFI (3).
+  - **Refiners −7% to −10% (8)**: VLO, MPC, PSX, DK, PARR, PBF, CVI, DINO, on lower oil.
+  - **10-27 after-close reporters whose move came before the release**: UCTT +10.2, INTA −8.9, BKR +5.3, CSGP −5.0.
+  - **Continuations of 10-26 events**: ORKA, RRC (EQT merger pin), STM, RHI.
+  - **15 unattributed** idiosyncratic ≥5% moves with no EDGAR filing and no search. This is limited search, not proof of absence.
 
 ### 4. Sector-level moves — AI-SIGNIFICANCE SCREEN
 
-`research-screen` `cb06c3e0-7916-4ab8-8490-ac25122263f6` (`surfaced_count` 4). Registry contract ids were used, and the guard closes on 10-23 matched the prior run (XLE 69.33, XLP 88.26, XLC 105.51, XLK 183.23).
+`research-screen` `56a602d2-cb78-475c-a5c7-c38cd833e3f1` (`surfaced_count` 3). Registry contract ids were used, the guard 10-26 closes matched the prior run (XLK 186.32, XLC 103.85, XLI 166.96, XLY 114.26), and every bar is stamped 2026-10-27.
 
-- **XLK +1.6864%** (183.23 → 186.32), conviction 45: the AI and semis rally on the Anthropic S-1, led by SMH +2.74%.
-- **XLC −1.5733%** (105.51 → 103.85), conviction 45: the telecom and cable selloff on SpaceX wireless (CHTR, VZ). It is the second down day.
-- **XLI +1.4215%**, conviction 30: defense (RTX +3.39%, LMT +5.2%) and AI-infrastructure contractors.
-- **XLY +1.0256%**, conviction 30: TSLA +5.21% carries the cap-weighted ETF.
-- None of the four reaches 2%, so `legacy_rule_pass=false` for all.
-- **Under 1%, not surfaced:** XLRE +0.54, XLE +0.45, XLF +0.21, XLB +0.14, XLV 0.00, XLU −0.02, XLP −0.34. The XLE vs USO dispersion (−1.95%) reflects refiners up against upstream, and is not surfaced.
+- **XLE −2.0534%** (69.64 → 68.21), conviction 45, `legacy_rule_pass=true`. Crude fell (Brent December settled 113.88 on 10-27, from 115.81 on 10-26) and refiners repriced −7% to −10%.
+- **XLK +1.7014%** (186.32 → 189.49), conviction 45: the second day of the AI and semis bid after the Anthropic S-1 (SMH +3.02%). With equal-weight RSP at only +0.11%, leadership was narrow.
+- **XLY +1.0415%** (114.26 → 115.45), conviction 30: AMZN +1.61% and RCL +5.46% carry the cap-weighted ETF.
+- **Under 1%, not surfaced:** XLB +0.78, XLU +0.71, XLI +0.58, XLV −0.06, XLF −0.25, XLC −0.26, XLRE −0.84, XLP −0.92.
 
 ### 5. Notable commentary
 
-- RBC (Calvasina): the top-10 S&P names have started to falter again against the rest of the market.
-- An Apollo analysis (via Semafor, 10-25) found AI capex shows "zero financial payoff" outside the Magnificent 7, and a PM told Bloomberg investors have "absolutely no patience" for higher capex. Monday's S-1 rally cut against that.
-- Bloomberg (Authers, 10-26): a post-election Iran escalation could mean an oil wipeout.
+- The dedicated strategist search returned nothing. BofA, Capital.com and BNY were quoted only in passing in wraps, with nothing market-moving.
 - The Fed is in blackout before the 10-28 FOMC. No sell-side notes on held names were captured.
 
 ## ANALYSIS — RISK TO EXISTING POSITIONS
@@ -139,129 +143,318 @@ Paper book (J): 120 calls, 51/30 realized, net_mu -1.31%, ready=FALSE
 
 - I swept the union of `state.current_positions` (12 tranches, re-read before the appends and unchanged) and IBKR `get_account_positions`, and they agree on every name:
   - AMZN 0.3464, DIS 0.7244, GEV 0.1244, GOOGL 0.2577, ISRG 0.1091, RTX 0.1601, TSM 0.155, UBER 0.5156.
-  - VOO 17.7307 is the park. There is no reconciliation-lag position.
+  - VOO 16.895 is the park (it was 17.7307 in the prior run's sweep; that reconciliation is D2a's, not D1's). There is no reconciliation-lag position.
 - All 12 tranches are Strategy D, with no `convergence_target` and no `time_exit_date`, so **no exit is triggered**.
 
 ### Per-strategy kill-trigger sweep
 
-- **D** (`perf.kill_flags` as of 2026-10-23):
-  - unit 1.0335 vs peak 1.1065 (−6.59%); `runaway_review`, `m2m_underperf_review`, `evidence_kill` and `interim_underperf_warning` all FALSE.
-  - **Refreshed on IBKR 10-26 closes**, the D book rose +0.85% ($530.51 → $535.04), which puts the unit at ≈1.0423 and the drawdown at **≈−5.79%** against the −50% kill.
+- **D** (`perf.kill_flags` as of 2026-10-26): unit 1.0423 vs peak 1.1065 (−5.79%). `drawdown_kill`, `runaway_review`, `m2m_underperf_review`, `evidence_kill` and `interim_underperf_warning` are all FALSE.
+  - **Refreshed on IBKR 10-27 closes**, the D book rose +1.47% ($535.04 → $542.92), which puts the unit at ≈1.0577 and the drawdown at **≈−4.41%**, against the −50% kill.
 - **B:** no open position. The `analytics.b_pairwise_correlation` check is inert (n_positions 0).
 - No other strategy holds positions. **No termination and no runaway review.** There is no open `interim_underperf_warning` alert to heal.
 
 ### Thesis-invalidation review
 
-EDGAR shows no 8-K or 6-K from any of the eight held names in 10-23..10-26. Web coverage was one wide search, so "none found" is not proof of none.
-- **GEV** (+4.92% to 855.12): no company news. Q3 is **10-28 pre-open** (CNBC consensus revenue $11.99B, EPS $3.97), and that is when the orders-growth criterion becomes testable. UNBREACHED.
-- **ISRG** (−0.15%): Form 4s on 10-26 and four Form 144s on 10-23 are routine insider-sale notices, not a criterion. UNBREACHED.
-- **GOOGL** (−1.06%, Q3 10-28 after the close), **AMZN** (+0.44%, Q3 10-29 after the close), **RTX** (+3.39%), **TSM** (+1.40%), **DIS** (−1.88%) and **UBER** (−0.85%; earnings date not found): no news. All criteria are UNBREACHED or not testable this window.
-- **The Anthropic S-1** is reinforcing context for AMZN's criterion 4 (Anthropic commitments), not a breach.
+EDGAR shows no 8-K, 6-K or 10-Q from any of the eight held names in the window. TSM filed only a passive SCHEDULE 13G at 20:21Z. Web coverage was two wide searches, so "none found" is not proof of none.
+- **GEV** (+4.67% to 895.08): Q3 is **10-28 pre-open** (consensus EPS about $3.97-3.99 on $11.99B revenue). The orders criterion needs two consecutive quarters, so one print cannot trip it. UNBREACHED.
+- **RTX** (−1.46%): the only news was a $100M Pratt & Whitney Poland plant announcement. UNBREACHED.
+- **GOOGL** (+1.19%, Q3 10-28 after the close), **AMZN** (+1.61%, Q3 10-29 after the close), **TSM** (+2.95%), **ISRG** (−1.27%), **DIS** (−0.15%; the Skydance chatter concerns SKYD, not DIS) and **UBER** (−0.53%; Q3 date not company-confirmed, Nasdaq lists 11-04): no news. All criteria are UNBREACHED or not testable this window.
 
-**Watchlist candidacy:** the Strategy B new-entry index gains 6 names (below). No A or C watchlist name was materially moved by a Development.
+**Watchlist candidacy:** the Strategy B new-entry index gains 33 names (below). No A or C watchlist name was materially moved by a Development.
 
 ## ANALYSIS — OPPORTUNITY CHECK
 
-- **B.** Six own-event floor clearers are B-eligible, but B is `DO-NOT-ACTIVATE` (div-B-202609-1) and capital-disabled, so they go to the index only.
-  - SGRY and RRC are merger targets pinned to deal terms. A thesis session would have to clear criterion 4 (information-driven repricing) against them.
+- **B.** 33 own-event floor clearers are B-eligible, but B is `DO-NOT-ACTIVATE` (div-B-202609-1) and capital-disabled, so they go to the index only.
+  - A thesis session would need to weigh the pattern of prior ≥5% sessions against criterion 4 (information vs sentiment) for GLXY (5 others), AMKR (4), CLS, PPTA and TRU (3 each).
+  - GM's move is a listing-venue change and GWRE's is an acquirer reaction. Both are weak information-repricing cases.
+  - UNF (merger-pinned) and INOD (unconfirmed press report, no filing) are not indexed.
 - **C.** Strategy C stays HYBRID ACTIVATE (FOMC-only). The 10-28 FOMC is already gated under `thesis-FOMC-C-20261020`. No new qualifying catalyst within 45 days was found.
 - **A** (`DO-NOT-ACTIVATE`, div-A-202610-1): not a candidate.
 - **E** (`DO-NOT-ACTIVATE`, div-E-202610-1). These intra-group divergences are recorded for M2, not routed:
-  - E&P: RRC +17.7 vs EQT −1.4 (deal arbitrage, not a divergence trade);
-  - refiners +5-8% vs upstream (XLE +0.45);
-  - cybersecurity: TENB +8.1 vs a mixed group.
+  - water: XYL −14.2 vs PNR +12.8 (both on own earnings);
+  - uniforms: UNF −10.5 vs CTAS −4.9 (deal risk);
+  - refiners −7% to −10% vs XLE −2.05 (upstream).
 
 ## ANALYSIS — ADD-CANDIDATE CHECK (Strategies A, B, D only)
 
-`add-candidate-review` `d53668fc-9c77-43dc-a056-898d269ca821`. All 12 open D tranches were evaluated, 0 were flagged and 0 were declined at the hard gate. The three-disjunct, COALESCE-wrapped evaluability test passes for all 12, and positions were re-read immediately before the append. Each tranche is marked at its IBKR 10-26 close against its own cost basis per share.
+`add-candidate-review` `3584fad9-c720-443c-8f62-f95a71fe49c2`. All 12 open D tranches were evaluated, 0 were flagged and 0 were declined at the hard gate. The three-disjunct, COALESCE-wrapped evaluability test passes for all 12, and positions were re-read immediately before the append. Each tranche is marked at its IBKR 10-27 close against its own cost basis per share.
 
 | Tranche | Mark vs cost | Trigger | Disposition |
 |---|---|---|---|
-| D:ISRG:2026-07-20 | +29.22% | none | declined |
-| D:RTX:2026-04-27 | +11.63% | none | declined |
-| D:TSM:2026-07-29 | +8.01% | none | declined |
-| D:DIS:2026-08-05 | +6.37% | none | declined |
-| D:AMZN:2026-07-09 | +3.25% | none | declined |
-| D:DIS:2026-05-07 | −0.83% | dip-with-intact-thesis | declined: no funding path |
-| D:TSM:2026-07-21 | −0.82% | dip-with-intact-thesis | declined: no funding path |
-| D:GOOGL:2026-07-26 | −3.37% | dip-with-intact-thesis | declined: no funding path |
-| D:AMZN:2026-07-30 | −6.25% | dip-with-intact-thesis | declined: no funding path |
-| D:UBER:2026-07-09 | −9.67% | dip-with-intact-thesis | declined: no funding path |
-| D:GEV:2026-08-03 | −11.83% | dip-with-intact-thesis | declined: no funding path; Q3 10-28 |
-| D:GOOGL:2026-07-09 | −11.96% | dip-with-intact-thesis | declined: no funding path |
+| D:ISRG:2026-07-20 | +27.57% | none | declined |
+| D:TSM:2026-07-29 | +11.20% | none | declined |
+| D:RTX:2026-04-27 | +10.01% | none | declined |
+| D:DIS:2026-08-05 | +6.21% | none | declined |
+| D:AMZN:2026-07-09 | +4.91% | none | declined |
+| D:TSM:2026-07-21 | +2.11% | none | declined |
+| D:DIS:2026-05-07 | −0.98% | dip-with-intact-thesis | declined: no funding path |
+| D:GOOGL:2026-07-26 | −2.22% | dip-with-intact-thesis | declined: no funding path |
+| D:AMZN:2026-07-30 | −4.74% | dip-with-intact-thesis | declined: no funding path |
+| D:GEV:2026-08-03 | −7.71% | dip-with-intact-thesis | declined: no funding path; Q3 10-28 |
+| D:UBER:2026-07-09 | −10.15% | dip-with-intact-thesis | declined: no funding path |
+| D:GOOGL:2026-07-09 | −10.91% | dip-with-intact-thesis | declined: no funding path |
 
 ## ANALYSIS — REGIME CHECK
 
 **No inter-monthly router review.**
-- **Technical side.** SPY closed at 765.37 (+0.71%), the VIX at 18.39, and breadth at 58.05 (D2a classifies them). The measured refresh triggers are D2's to detect.
+- **Technical side.** SPY closed at 769.66 (+0.56%), the VIX at 17.52, and breadth at 59.24 (D2a classifies them). The measured refresh triggers are D2's to detect.
 - **Geopolitical-trigger duty.**
-  - The 10-24 Houthi strikes on Riyadh, Dammam and Shaybah are further escalation inside the standing `acute` overlay, so no scenario-3 flag is owed.
-  - The Brazil election crash is a domestic political event. It is not a named geopolitical or trade channel under the `Qualifying shock event` definition, and the overlay is `acute` regardless.
-  - **Mirror:** Brent fell sharply on Monday, but on diplomacy reports. There is no ceasefire in force, no blockade lifted and no sanctions settlement, so it is not a qualifying resolution event.
+  - Houthi strikes on Saudi Arabia continue inside the standing `acute` overlay, so no scenario-3 escalation flag is owed.
+  - **Mirror:** the 10-26 Tehran meeting only agreed to keep talking. There is no ceasefire in force, the blockade is not lifted, attacks continue, and there is no sanctions settlement. That is narrative de-escalation, not a `Qualifying resolution event`. Brent's two-session fall of −$2.84 is attributed to the talks narrative.
+  - Israel's election deadlock is domestic politics and not a named geopolitical or trade channel.
 - No other Development plausibly shifts any strategy's activation state.
 
 ## EQUITY-BREADTH OBSERVATION
 
-`events.regime_events` `TECHNICAL_INPUT` / `EQUITY_BREADTH_PCT` = **58.05 for 2026-10-26**. The value is source-dated by Barchart `$S5TH`: "Quote Overview for Mon, Oct 26th, 2026", 58.05 +1.99 (+3.55%) stamped **16:57 ET**, so it is settled. Previous Close is 56.06, equal to the stored 10-23 value. O/H/L 58.25/59.24/57.85 is a real bar, not a carry. It was fetched via tavily_extract at about 22:08Z.
+`events.regime_events` `TECHNICAL_INPUT` / `EQUITY_BREADTH_PCT` = **59.24 for 2026-10-27**. The value is source-dated by Barchart `$S5TH`: "Quote Overview for Tue, Oct 27th, 2026", 59.24 +1.19 (+2.05%) stamped **16:56 ET**, so it is settled. Previous Close is 58.05, equal to the stored 10-26 value. O/H/L 58.84/59.44/57.05 is a real bar, not a carry. It was fetched via tavily_extract at about 22:08Z.
 
-- **Single usable source.** EODData's 26 Oct row agrees exactly (its header clock read 15:51, but its row matches the settled print). Barchart and EODData are one feed.
-- **Independent check.** ChartRow (as of the 10-26 close) shows 288 of 497 = 57.95%, against 55.73% on 10-23. Its day-over-day change of +2.22pp vs `$S5TH` +1.99pp gives `chartrow_dod_gap=0.23`, and the level gap is 0.10pp.
-- No MacroMicro probe (Monday). Not an exact repeat.
+- **Single usable source.** EODData read 59.44 stamped 15:55 ET, with Close equal to High. That is an unsettled running print (`eoddata_unsettled_at_fetch=15:55 ET`), 0.20pp from Barchart, and it was not used. Barchart and EODData are one feed in any case.
+- **Independent check unconfirmed.** ChartRow still dates its 200-day count to Oct 26 (288 of 497, unchanged), so it neither confirms nor refutes (`chartrow_unconfirmed=session 2026-10-26`). This was reported through `sp_report_run_issue` (`breadth_chartrow_cross_check_unconfirmed`). The direction is consistent with the tape (QQQ +1.28, IWM +1.15).
+- No MacroMicro probe (Tuesday). Not an exact repeat.
 
 ## RECOMMENDED ACTIONS
 
 **Exits triggered: none.** No open position carries a mechanical trigger, and no Development met any thesis-invalidation criterion.
 
-**New entry candidates: none routed.** Strategy B is `DO-NOT-ACTIVATE` and capital-disabled. The six eligible own-event floor clearers are indexed below instead. FICO is not indexed: its anchor is UNRESOLVED, so its window cannot be dated.
+**New entry candidates: none routed.** Strategy B is `DO-NOT-ACTIVATE` and capital-disabled. The 33 eligible own-event floor clearers are indexed below instead. UNF (merger-pinned) and INOD (unconfirmed press report) are not indexed.
 
 **Add candidates: none.**
 
 **Router reviews: none.**
 
-Watchlist updates go to the Strategy B new-entry index. Each window runs 10 trading days from the anchor, and D2 computes the close date on the inclusive convention. Source `research-screen` `7d029722-e7f6-476e-9907-423b12af4cd7`.
+Watchlist updates go to the Strategy B new-entry index. Each window runs 10 trading days from the anchor, and D2 computes the close date on the inclusive convention. Source `research-screen` `3b0ca8cf-58a6-4193-90d0-355368d80aad`.
 
-- ADD **SGRY** (Strategy B, `qualifying_event_date` 2026-10-26) — +47.6190% (15.75 → 23.25); $23.50 all-cash take-private by HealthSpan Partners (BSMH), EV ~$5.7B, 8-K 09:03 ET; trades at a ~1% deal spread; index only. 1 other ≥5% session in the window.
-- ADD **RRC** (Strategy B, `qualifying_event_date` 2026-10-26) — +17.6626% (45.52 → 53.56); all-stock merger into EQT at 0.987 EQT per share, 8-K 07:07 ET; index only.
-- ADD **ORKA** (Strategy B, `qualifying_event_date` 2026-10-26) — +12.7012% (80.15 → 90.33); Phase 2b EVERLAST-B psoriasis topline, PASI100 61% vs 0% placebo, 8-K 08:00 ET; index only. 1 other ≥5% session in the window.
-- ADD **ASST** (Strategy B, `qualifying_event_date` 2026-10-26) — −9.1474% (28.97 → 26.32); new $1.0B 15% Series A perpetual preferred ATM, 8-K 07:50 ET, inside a weak crypto cohort; index only. 6 other ≥5% sessions in the window.
-- ADD **WULF** (Strategy B, `qualifying_event_date` 2026-10-23) — +5.8304% (11.32 → 11.98); revolver upsized from $250M to ~$400M, 8-K after the 10-23 close (17:13 ET), reaction 10-26; mostly beta; index only. 5 other ≥5% sessions in the window.
-- ADD **ESLT** (Strategy B, `qualifying_event_date` 2026-10-26) — +5.7960% (735.34 → 777.96); ~$200M Asia-Pacific ISTAR contract, 6-K 06:01 ET, small against a ~$36B cap and partly defense-sector; index only. 2 other ≥5% sessions in the window.
+- ADD **HRI** (Strategy B, `qualifying_event_date` 2026-10-27) — +22.7562% (127.13 → 156.06); Q3 earnings (8-K 2.02), pre-open; 8-K accepted 2026-10-27 06:31 ET; index only. 1 other ≥5% session(s) in the window.
+- ADD **KNSA** (Strategy B, `qualifying_event_date` 2026-10-27) — +22.2253% (72.98 → 89.2); Q3 earnings (8-K 2.02), pre-open; 8-K accepted 2026-10-27 07:32 ET; index only. 1 other ≥5% session(s) in the window.
+- ADD **CTOS** (Strategy B, `qualifying_event_date` 2026-10-26) — +16.6482% (9.01 → 10.51); Q3 earnings (8-K 2.02/7.01), after-close 10-26; 8-K accepted 2026-10-26 16:13 ET, reaction 2026-10-27; index only. 1 other ≥5% session(s) in the window.
+- ADD **XYL** (Strategy B, `qualifying_event_date` 2026-10-27) — -14.2092% (108.24 → 92.86); Q3 earnings + strategic actions (8-K 2.02/5.02), pre-open; 8-K accepted 2026-10-27 07:01 ET; index only.
+- ADD **HWKN** (Strategy B, `qualifying_event_date` 2026-10-26) — +13.5927% (135.44 → 153.85); FQ2 earnings (8-K 2.02), after-close 10-26; 8-K accepted 2026-10-26 16:13 ET, reaction 2026-10-27; index only.
+- ADD **SOFI** (Strategy B, `qualifying_event_date` 2026-10-27) — +13.4163% (14.46 → 16.4); Q3 earnings (8-K 2.02), pre-open; 8-K accepted 2026-10-27 07:02 ET; index only. 2 other ≥5% session(s) in the window.
+- ADD **PNR** (Strategy B, `qualifying_event_date` 2026-10-27) — +12.8033% (55.22 → 62.29); Q3 earnings (8-K 2.02), pre-open; 8-K accepted 2026-10-27 06:51 ET; index only.
+- ADD **ABG** (Strategy B, `qualifying_event_date` 2026-10-27) — +12.7370% (172.96 → 194.99); Q3 earnings (8-K 2.02), pre-open; 8-K accepted 2026-10-27 07:02 ET; index only. 1 other ≥5% session(s) in the window.
+- ADD **CLS** (Strategy B, `qualifying_event_date` 2026-10-26) — +12.1184% (246.65 → 276.54); Q3 earnings (8-K 2.02), after-close 10-26; 8-K accepted 2026-10-26 16:23 ET, reaction 2026-10-27; index only. 3 other ≥5% session(s) in the window.
+- ADD **BA** (Strategy B, `qualifying_event_date` 2026-10-27) — -10.6898% (188.31 → 168.18); Q3 earnings (8-K 2.02), pre-open; 8-K accepted 2026-10-27 07:30 ET; index only.
+- ADD **PPTA** (Strategy B, `qualifying_event_date` 2026-10-26) — +10.6627% (16.6 → 18.37); US Army tungsten OTIA agreement + warrant extension (8-K 8.01/3.02), 8-K accepted 17:30 ET 10-26; 8-K accepted 2026-10-26 17:30 ET, reaction 2026-10-27; index only. 3 other ≥5% session(s) in the window.
+- ADD **GLXY** (Strategy B, `qualifying_event_date` 2026-10-27) — +9.5663% (15.68 → 17.18); Q3 earnings (8-K 2.02/7.01), pre-open; 8-K accepted 2026-10-27 07:04 ET; index only. 5 other ≥5% session(s) in the window.
+- ADD **LECO** (Strategy B, `qualifying_event_date` 2026-10-27) — +9.1707% (258.65 → 282.37); Q3 earnings (8-K 2.02), pre-open; 8-K accepted 2026-10-27 09:03 ET; index only.
+- ADD **AMKR** (Strategy B, `qualifying_event_date` 2026-10-26) — +8.5031% (36.81 → 39.94); Q3 earnings (8-K 2.02), after-close 10-26; 8-K accepted 2026-10-26 16:07 ET, reaction 2026-10-27; index only. 4 other ≥5% session(s) in the window.
+- ADD **AIT** (Strategy B, `qualifying_event_date` 2026-10-27) — -8.3467% (324.68 → 297.58); FQ1 earnings (8-K 2.02), 8-K accepted 09:31 ET; 8-K accepted 2026-10-27 09:31 ET; index only. 1 other ≥5% session(s) in the window.
+- ADD **GWRE** (Strategy B, `qualifying_event_date` 2026-10-27) — -8.0507% (183.96 → 169.15); Acquisition of Hyperexponential Ltd for $1.7B cash + up to $400M contingent (8-K 1.01/2.03/7.01), pre-open; 8-K accepted 2026-10-27 07:05 ET; index only. 2 other ≥5% session(s) in the window.
+- ADD **ITRI** (Strategy B, `qualifying_event_date` 2026-10-27) — +7.7739% (87.73 → 94.55); Q3 earnings (8-K 2.02), pre-open; 8-K accepted 2026-10-27 08:35 ET; index only.
+- ADD **EEFT** (Strategy B, `qualifying_event_date` 2026-10-27) — -7.7248% (63.95 → 59.01); Q3 earnings (8-K 2.02), pre-open; 8-K accepted 2026-10-27 08:15 ET; index only.
+- ADD **CDNS** (Strategy B, `qualifying_event_date` 2026-10-26) — +6.4904% (322.17 → 343.08); Q3 earnings (8-K 2.02/8.01), after-close 10-26; 8-K accepted 2026-10-26 16:03 ET, reaction 2026-10-27; index only. 1 other ≥5% session(s) in the window.
+- ADD **AGYS** (Strategy B, `qualifying_event_date` 2026-10-26) — -6.1887% (123.45 → 115.81); FQ2 earnings (8-K 2.02), after-close 10-26; 8-K accepted 2026-10-26 16:05 ET, reaction 2026-10-27; index only. 1 other ≥5% session(s) in the window.
+- ADD **ARE** (Strategy B, `qualifying_event_date` 2026-10-26) — -5.8525% (43.4 → 40.86); Q3 earnings (8-K 2.02), after-close 10-26; 8-K accepted 2026-10-26 16:08 ET, reaction 2026-10-27; index only. 1 other ≥5% session(s) in the window.
+- ADD **WELL** (Strategy B, `qualifying_event_date` 2026-10-26) — -5.7728% (240.61 → 226.72); Q3 earnings (8-K 2.02/7.01), after-close 10-26; 8-K accepted 2026-10-26 16:33 ET, reaction 2026-10-27; index only.
+- ADD **AWI** (Strategy B, `qualifying_event_date` 2026-10-27) — -5.7396% (164.82 → 155.36); Q3 earnings (8-K 2.02/7.01), 06:00 ET; 8-K accepted 2026-10-27 06:00 ET; index only.
+- ADD **HSBC** (Strategy B, `qualifying_event_date` 2026-10-27) — -5.7011% (91.21 → 86.01); Q3 earnings (6-K), UK-hours release; 6-K accepted 2026-10-27 12:27 ET; index only.
+- ADD **JCI** (Strategy B, `qualifying_event_date` 2026-10-27) — +5.6814% (147.5 → 155.88); FQ4 earnings (8-K 2.02), pre-open; 8-K accepted 2026-10-27 06:58 ET; index only. 1 other ≥5% session(s) in the window.
+- ADD **GM** (Strategy B, `qualifying_event_date` 2026-10-27) — +5.5432% (76.31 → 80.54); Exchange transfer NYSE to Nasdaq (8-K 3.01/5.03/7.01), pre-open; 8-K accepted 2026-10-27 06:30 ET; index only. 1 other ≥5% session(s) in the window.
+- ADD **HUBB** (Strategy B, `qualifying_event_date` 2026-10-27) — -5.4680% (459.4 → 434.28); Q3 earnings (8-K 2.02), pre-open; 8-K accepted 2026-10-27 08:05 ET; index only.
+- ADD **RCL** (Strategy B, `qualifying_event_date` 2026-10-27) — +5.4597% (280.6 → 295.92); Q3 earnings (8-K 2.02), pre-open; 8-K accepted 2026-10-27 06:32 ET; index only.
+- ADD **NE** (Strategy B, `qualifying_event_date` 2026-10-26) — -5.4173% (47.81 → 45.22); Q3 earnings (8-K 2.02/7.01), after-close 10-26; 8-K accepted 2026-10-26 17:03 ET, reaction 2026-10-27; index only. 1 other ≥5% session(s) in the window.
+- ADD **SSD** (Strategy B, `qualifying_event_date` 2026-10-26) — +5.3135% (181.99 → 191.66); Q3 earnings (8-K 2.02/7.01), after-close 10-26; 8-K accepted 2026-10-26 16:18 ET, reaction 2026-10-27; index only.
+- ADD **PII** (Strategy B, `qualifying_event_date` 2026-10-26) — +5.2765% (55.15 → 58.06); Q3 earnings (8-K 2.02), after-close 10-26 (8-K 18:21 ET); 8-K accepted 2026-10-26 18:21 ET, reaction 2026-10-27; index only. 1 other ≥5% session(s) in the window.
+- ADD **TRU** (Strategy B, `qualifying_event_date` 2026-10-27) — -5.2751% (79.62 → 75.42); Q3 earnings (8-K 2.02/7.01), pre-open; 8-K accepted 2026-10-27 06:15 ET; index only. 3 other ≥5% session(s) in the window.
+- ADD **NUE** (Strategy B, `qualifying_event_date` 2026-10-26) — +5.2225% (257.35 → 270.79); Q3 earnings (8-K 2.02/7.01), after-close 10-26; 8-K accepted 2026-10-26 16:54 ET, reaction 2026-10-27; index only.
 
 ```yaml d1_actions
 - action: watchlist
-  ticker: SGRY
+  ticker: HRI
+  strategy: B
+  qualifying_event_date: 2026-10-27
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — +22.7562% (127.13 -> 156.06); Q3 earnings (8-K 2.02), pre-open; 8-K accepted 2026-10-27 06:31 ET; index only; 1 other >=5% session(s) in window
+- action: watchlist
+  ticker: KNSA
+  strategy: B
+  qualifying_event_date: 2026-10-27
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — +22.2253% (72.98 -> 89.2); Q3 earnings (8-K 2.02), pre-open; 8-K accepted 2026-10-27 07:32 ET; index only; 1 other >=5% session(s) in window
+- action: watchlist
+  ticker: CTOS
   strategy: B
   qualifying_event_date: 2026-10-26
-  source_research_screen_id: 7d029722-e7f6-476e-9907-423b12af4cd7
-  detail: ADD to B new-entry index — +47.6190% (15.75 -> 23.25); $23.50 all-cash take-private by HealthSpan Partners (BSMH), EV ~$5.7B, 8-K 09:03 ET; index only; 1 other >=5% session(s) in window
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — +16.6482% (9.01 -> 10.51); Q3 earnings (8-K 2.02/7.01), after-close 10-26; 8-K accepted 2026-10-26 16:13 ET, reaction 2026-10-27; index only; 1 other >=5% session(s) in window
 - action: watchlist
-  ticker: RRC
+  ticker: XYL
+  strategy: B
+  qualifying_event_date: 2026-10-27
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — -14.2092% (108.24 -> 92.86); Q3 earnings + strategic actions (8-K 2.02/5.02), pre-open; 8-K accepted 2026-10-27 07:01 ET; index only
+- action: watchlist
+  ticker: HWKN
   strategy: B
   qualifying_event_date: 2026-10-26
-  source_research_screen_id: 7d029722-e7f6-476e-9907-423b12af4cd7
-  detail: ADD to B new-entry index — +17.6626% (45.52 -> 53.56); all-stock merger into EQT at 0.987, 8-K 07:07 ET; index only
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — +13.5927% (135.44 -> 153.85); FQ2 earnings (8-K 2.02), after-close 10-26; 8-K accepted 2026-10-26 16:13 ET, reaction 2026-10-27; index only
 - action: watchlist
-  ticker: ORKA
+  ticker: SOFI
+  strategy: B
+  qualifying_event_date: 2026-10-27
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — +13.4163% (14.46 -> 16.4); Q3 earnings (8-K 2.02), pre-open; 8-K accepted 2026-10-27 07:02 ET; index only; 2 other >=5% session(s) in window
+- action: watchlist
+  ticker: PNR
+  strategy: B
+  qualifying_event_date: 2026-10-27
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — +12.8033% (55.22 -> 62.29); Q3 earnings (8-K 2.02), pre-open; 8-K accepted 2026-10-27 06:51 ET; index only
+- action: watchlist
+  ticker: ABG
+  strategy: B
+  qualifying_event_date: 2026-10-27
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — +12.7370% (172.96 -> 194.99); Q3 earnings (8-K 2.02), pre-open; 8-K accepted 2026-10-27 07:02 ET; index only; 1 other >=5% session(s) in window
+- action: watchlist
+  ticker: CLS
   strategy: B
   qualifying_event_date: 2026-10-26
-  source_research_screen_id: 7d029722-e7f6-476e-9907-423b12af4cd7
-  detail: ADD to B new-entry index — +12.7012% (80.15 -> 90.33); Phase 2b psoriasis topline PASI100 61% vs 0%, 8-K 08:00 ET; index only; 1 other >=5% session(s) in window
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — +12.1184% (246.65 -> 276.54); Q3 earnings (8-K 2.02), after-close 10-26; 8-K accepted 2026-10-26 16:23 ET, reaction 2026-10-27; index only; 3 other >=5% session(s) in window
 - action: watchlist
-  ticker: ASST
+  ticker: BA
+  strategy: B
+  qualifying_event_date: 2026-10-27
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — -10.6898% (188.31 -> 168.18); Q3 earnings (8-K 2.02), pre-open; 8-K accepted 2026-10-27 07:30 ET; index only
+- action: watchlist
+  ticker: PPTA
   strategy: B
   qualifying_event_date: 2026-10-26
-  source_research_screen_id: 7d029722-e7f6-476e-9907-423b12af4cd7
-  detail: ADD to B new-entry index — -9.1474% (28.97 -> 26.32); new $1.0B preferred ATM, 8-K 07:50 ET; index only; 6 other >=5% session(s) in window
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — +10.6627% (16.6 -> 18.37); US Army tungsten OTIA agreement + warrant extension (8-K 8.01/3.02), 8-K accepted 17:30 ET 10-26; 8-K accepted 2026-10-26 17:30 ET, reaction 2026-10-27; index only; 3 other >=5% session(s) in window
 - action: watchlist
-  ticker: WULF
+  ticker: GLXY
   strategy: B
-  qualifying_event_date: 2026-10-23
-  source_research_screen_id: 7d029722-e7f6-476e-9907-423b12af4cd7
-  detail: ADD to B new-entry index — +5.8304% (11.32 -> 11.98); revolver upsized to ~$400M, 8-K after close 10-23 17:13 ET, reaction 10-26; index only; 5 other >=5% session(s) in window
+  qualifying_event_date: 2026-10-27
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — +9.5663% (15.68 -> 17.18); Q3 earnings (8-K 2.02/7.01), pre-open; 8-K accepted 2026-10-27 07:04 ET; index only; 5 other >=5% session(s) in window
 - action: watchlist
-  ticker: ESLT
+  ticker: LECO
+  strategy: B
+  qualifying_event_date: 2026-10-27
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — +9.1707% (258.65 -> 282.37); Q3 earnings (8-K 2.02), pre-open; 8-K accepted 2026-10-27 09:03 ET; index only
+- action: watchlist
+  ticker: AMKR
   strategy: B
   qualifying_event_date: 2026-10-26
-  source_research_screen_id: 7d029722-e7f6-476e-9907-423b12af4cd7
-  detail: ADD to B new-entry index — +5.7960% (735.34 -> 777.96); ~$200M ISTAR contract, 6-K 06:01 ET; index only; 2 other >=5% session(s) in window
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — +8.5031% (36.81 -> 39.94); Q3 earnings (8-K 2.02), after-close 10-26; 8-K accepted 2026-10-26 16:07 ET, reaction 2026-10-27; index only; 4 other >=5% session(s) in window
+- action: watchlist
+  ticker: AIT
+  strategy: B
+  qualifying_event_date: 2026-10-27
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — -8.3467% (324.68 -> 297.58); FQ1 earnings (8-K 2.02), 8-K accepted 09:31 ET; 8-K accepted 2026-10-27 09:31 ET; index only; 1 other >=5% session(s) in window
+- action: watchlist
+  ticker: GWRE
+  strategy: B
+  qualifying_event_date: 2026-10-27
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — -8.0507% (183.96 -> 169.15); Acquisition of Hyperexponential Ltd for $1.7B cash + up to $400M contingent (8-K 1.01/2.03/7.01), pre-open; 8-K accepted 2026-10-27 07:05 ET; index only; 2 other >=5% session(s) in window
+- action: watchlist
+  ticker: ITRI
+  strategy: B
+  qualifying_event_date: 2026-10-27
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — +7.7739% (87.73 -> 94.55); Q3 earnings (8-K 2.02), pre-open; 8-K accepted 2026-10-27 08:35 ET; index only
+- action: watchlist
+  ticker: EEFT
+  strategy: B
+  qualifying_event_date: 2026-10-27
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — -7.7248% (63.95 -> 59.01); Q3 earnings (8-K 2.02), pre-open; 8-K accepted 2026-10-27 08:15 ET; index only
+- action: watchlist
+  ticker: CDNS
+  strategy: B
+  qualifying_event_date: 2026-10-26
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — +6.4904% (322.17 -> 343.08); Q3 earnings (8-K 2.02/8.01), after-close 10-26; 8-K accepted 2026-10-26 16:03 ET, reaction 2026-10-27; index only; 1 other >=5% session(s) in window
+- action: watchlist
+  ticker: AGYS
+  strategy: B
+  qualifying_event_date: 2026-10-26
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — -6.1887% (123.45 -> 115.81); FQ2 earnings (8-K 2.02), after-close 10-26; 8-K accepted 2026-10-26 16:05 ET, reaction 2026-10-27; index only; 1 other >=5% session(s) in window
+- action: watchlist
+  ticker: ARE
+  strategy: B
+  qualifying_event_date: 2026-10-26
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — -5.8525% (43.4 -> 40.86); Q3 earnings (8-K 2.02), after-close 10-26; 8-K accepted 2026-10-26 16:08 ET, reaction 2026-10-27; index only; 1 other >=5% session(s) in window
+- action: watchlist
+  ticker: WELL
+  strategy: B
+  qualifying_event_date: 2026-10-26
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — -5.7728% (240.61 -> 226.72); Q3 earnings (8-K 2.02/7.01), after-close 10-26; 8-K accepted 2026-10-26 16:33 ET, reaction 2026-10-27; index only
+- action: watchlist
+  ticker: AWI
+  strategy: B
+  qualifying_event_date: 2026-10-27
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — -5.7396% (164.82 -> 155.36); Q3 earnings (8-K 2.02/7.01), 06:00 ET; 8-K accepted 2026-10-27 06:00 ET; index only
+- action: watchlist
+  ticker: HSBC
+  strategy: B
+  qualifying_event_date: 2026-10-27
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — -5.7011% (91.21 -> 86.01); Q3 earnings (6-K), UK-hours release; 6-K accepted 2026-10-27 12:27 ET; index only
+- action: watchlist
+  ticker: JCI
+  strategy: B
+  qualifying_event_date: 2026-10-27
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — +5.6814% (147.5 -> 155.88); FQ4 earnings (8-K 2.02), pre-open; 8-K accepted 2026-10-27 06:58 ET; index only; 1 other >=5% session(s) in window
+- action: watchlist
+  ticker: GM
+  strategy: B
+  qualifying_event_date: 2026-10-27
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — +5.5432% (76.31 -> 80.54); Exchange transfer NYSE to Nasdaq (8-K 3.01/5.03/7.01), pre-open; 8-K accepted 2026-10-27 06:30 ET; index only; 1 other >=5% session(s) in window
+- action: watchlist
+  ticker: HUBB
+  strategy: B
+  qualifying_event_date: 2026-10-27
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — -5.4680% (459.4 -> 434.28); Q3 earnings (8-K 2.02), pre-open; 8-K accepted 2026-10-27 08:05 ET; index only
+- action: watchlist
+  ticker: RCL
+  strategy: B
+  qualifying_event_date: 2026-10-27
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — +5.4597% (280.6 -> 295.92); Q3 earnings (8-K 2.02), pre-open; 8-K accepted 2026-10-27 06:32 ET; index only
+- action: watchlist
+  ticker: NE
+  strategy: B
+  qualifying_event_date: 2026-10-26
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — -5.4173% (47.81 -> 45.22); Q3 earnings (8-K 2.02/7.01), after-close 10-26; 8-K accepted 2026-10-26 17:03 ET, reaction 2026-10-27; index only; 1 other >=5% session(s) in window
+- action: watchlist
+  ticker: SSD
+  strategy: B
+  qualifying_event_date: 2026-10-26
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — +5.3135% (181.99 -> 191.66); Q3 earnings (8-K 2.02/7.01), after-close 10-26; 8-K accepted 2026-10-26 16:18 ET, reaction 2026-10-27; index only
+- action: watchlist
+  ticker: PII
+  strategy: B
+  qualifying_event_date: 2026-10-26
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — +5.2765% (55.15 -> 58.06); Q3 earnings (8-K 2.02), after-close 10-26 (8-K 18:21 ET); 8-K accepted 2026-10-26 18:21 ET, reaction 2026-10-27; index only; 1 other >=5% session(s) in window
+- action: watchlist
+  ticker: TRU
+  strategy: B
+  qualifying_event_date: 2026-10-27
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — -5.2751% (79.62 -> 75.42); Q3 earnings (8-K 2.02/7.01), pre-open; 8-K accepted 2026-10-27 06:15 ET; index only; 3 other >=5% session(s) in window
+- action: watchlist
+  ticker: NUE
+  strategy: B
+  qualifying_event_date: 2026-10-26
+  source_research_screen_id: 3b0ca8cf-58a6-4193-90d0-355368d80aad
+  detail: ADD to B new-entry index — +5.2225% (257.35 -> 270.79); Q3 earnings (8-K 2.02/7.01), after-close 10-26; 8-K accepted 2026-10-26 16:54 ET, reaction 2026-10-27; index only
 ```
