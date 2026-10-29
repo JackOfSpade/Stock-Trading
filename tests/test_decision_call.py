@@ -1,0 +1,166 @@
+"""Pins scripts/decision_call.py, the generator of digest-checked ops.sp_log_decision_checked CALLs.
+
+VECTOR's digest was reproduced by BigQuery on 2026-10-29 from the procedure's own expression
+(bigquery/270), so a change here that moves it means the Python and SQL renderings have diverged and
+every generated call would be refused.
+"""
+
+import contextlib
+import importlib.util
+import io
+import json
+import re
+import tempfile
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+_SPEC = importlib.util.spec_from_file_location("decision_call", ROOT / "scripts" / "decision_call.py")
+dc = importlib.util.module_from_spec(_SPEC)
+_SPEC.loader.exec_module(dc)
+
+VECTOR = {
+    "entry_date": "2026-10-28", "entry_type": "research-screen", "strategy": None, "ticker": "ORCL",
+    "conviction_pct": 100,
+    "title": "D1 2026-10-28 screen — “quoted” it's a\\b",
+    "body_md": "line1\nline2 ✓ \U0001d11e tab\tend",
+    "fields": {"routine": "D1", "n": [1, 2.5, -0.25], "s": "x’y", "nested": {"z": None, "b": True}},
+    "refs": ["a", "b’"], "tags": [], "source_session": "sess-1",
+}
+VECTOR_SHA = "19edf671479d4ba9dea4e2bc81882238e15d8f315cee5a3760e99e1142aae002"
+
+_ESC = re.compile(r"\\(U[0-9a-fA-F]{8}|u[0-9a-fA-F]{4}|.)")
+
+
+def decode_sql_str(lit: str) -> str:
+    """Decode the subset of GoogleSQL quoted-string escapes sql_str emits."""
+    assert lit[0] == lit[-1] == "'"
+
+    def one(m):
+        e = m.group(1)
+        return chr(int(e[1:], 16)) if e[0] in "uU" and len(e) > 1 else e
+
+    return _ESC.sub(one, lit[1:-1])
+
+
+_LIT = re.compile(r"'(?:[^'\\]|\\.)*'")
+
+
+def arg_value(call: str, key: str) -> str:
+    """The value of one string argument: its adjacent wrapped pieces, decoded and concatenated."""
+    block = re.search(r"(?:\(|  -- in_\w+)\n(.*?),  -- in_" + key + "$", call, re.S | re.M).group(1)
+    block = block.rsplit("  -- in_", 1)[-1].split("\n", 1)[-1] if "  -- in_" in block else block
+    return "".join(decode_sql_str(m) for m in _LIT.findall(block))
+
+
+def run(raw, extra=()):
+    with tempfile.TemporaryDirectory() as d:
+        src = Path(d) / "in.json"
+        src.write_text(json.dumps(raw, ensure_ascii=False), encoding="utf-8")
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()):
+            code = dc.main([str(src), "--out", str(Path(d) / "out"), *extra])
+        out = Path(d) / "out"
+        files = {p.name: p.read_text(encoding="ascii") for p in out.iterdir()} if out.exists() else {}
+        return code, files, err.getvalue()
+
+
+class DigestVector(unittest.TestCase):
+    def test_bigquery_reproduced_vector(self):
+        self.assertEqual(dc.digest(dc.normalise(VECTOR)), VECTOR_SHA)
+
+    def test_fields_string_and_object_agree_when_text_matches(self):
+        args = dc.normalise(VECTOR)
+        as_string = dict(VECTOR, fields=args["fields"])
+        self.assertEqual(dc.digest(dc.normalise(as_string)), VECTOR_SHA)
+
+    def test_every_argument_is_covered(self):
+        base = dc.normalise(VECTOR)
+        for key, kind in dc.ARGS:
+            changed = dict(base)
+            if kind == "array":
+                changed[key] = (base[key] or []) + ["x"]
+            elif base[key] is None:
+                changed[key] = "1" if kind == "numeric" else "x"
+            else:
+                changed[key] = base[key] + "1"
+            self.assertNotEqual(dc.digest(changed), VECTOR_SHA, key)
+
+    def test_null_empty_and_empty_array_are_distinct(self):
+        base = dc.normalise(VECTOR)
+        self.assertNotEqual(dc.digest(dict(base, strategy=None)), dc.digest(dict(base, strategy="")))
+        self.assertNotEqual(dc.digest(dict(base, tags=[])), dc.digest(dict(base, tags=[""])))
+        self.assertEqual(dc.digest(dict(base, tags=None)), dc.digest(dict(base, tags=[])))
+
+
+class NumericRendering(unittest.TestCase):
+    # Each pair reproduced live 2026-10-29 by CAST(NUMERIC ... AS STRING).
+    def test_matches_bigquery_cast(self):
+        for value, want in [(100, "100"), ("0.50", "0.5"), ("1E2", "100"), ("-0.000000001", "-0.000000001"),
+                            (0, "0"), (75.5, "75.5")]:
+            self.assertEqual(dc.render_numeric("x", value), want, value)
+
+    def test_rejects_what_numeric_would_round(self):
+        for bad in ["0.0000000001", "nan", True, "1e40"]:
+            with self.assertRaises(dc.InputError):
+                dc.render_numeric("x", bad)
+
+
+class GeneratedSql(unittest.TestCase):
+    def test_call_is_ascii_and_literals_decode_to_the_input(self):
+        code, files, _ = run(VECTOR)
+        self.assertEqual(code, 0)
+        call = files["call.sql"]
+        self.assertRegex(call, r"\A[\x20-\x7e\n]*\Z")
+        self.assertIn(f"'{VECTOR_SHA}'", call)
+        args = dc.normalise(VECTOR)
+        for key in ("title", "body_md", "fields"):
+            self.assertEqual(arg_value(call, key), args[key], key)
+        self.assertIn("NUMERIC '100'", call)
+        self.assertIn("CAST([] AS ARRAY<STRING>),  -- in_tags", call)
+
+    def test_argument_order_matches_the_procedure(self):
+        sql = (ROOT / "bigquery" / "270_decision_log_checked_write.sql").read_text(encoding="utf-8")
+        sig = re.search(r"sp_log_decision_checked`\((.*?)\)\nBEGIN", sql, re.S).group(1)
+        names = re.findall(r"\bin_(\w+) ", sig)
+        want = [("fields_json" if k == "fields" else k) for k, _ in dc.ARGS] + ["expected_sha256"]
+        self.assertEqual(names, want)
+
+    def test_readback_carries_no_payload(self):
+        code, files, _ = run(VECTOR)
+        self.assertEqual(code, 0)
+        rb = files["readback.sql"]
+        self.assertNotIn("line1", rb)
+        self.assertIn(f"'sha256:{VECTOR_SHA}' IN UNNEST(tags)", rb)
+
+    def test_long_literals_wrap_without_splitting_escapes(self):
+        body = ("x\u2019'\\" * 300) + "\U0001d11e" * 50
+        code, files, _ = run(dict(VECTOR, body_md=body, fields={"k": "v" * 5000}))
+        self.assertEqual(code, 0)
+        call = files["call.sql"]
+        self.assertLessEqual(max(len(line) for line in call.splitlines()), dc.WRAP + 40)
+        self.assertEqual(arg_value(call, "body_md"), body)
+        self.assertEqual(arg_value(call, "fields"), json.dumps({"k": "v" * 5000}, separators=(",", ":")))
+
+
+class Rejections(unittest.TestCase):
+    def test_invalid_inputs_exit_2_and_write_nothing(self):
+        cases = [
+            dict(VECTOR, bogus=1),
+            {k: v for k, v in VECTOR.items() if k != "title"},
+            dict(VECTOR, source_session="  "),
+            dict(VECTOR, entry_date="2026-10-28T00:00"),
+            dict(VECTOR, fields="[1,2]"),
+            dict(VECTOR, fields="{not json"),
+            dict(VECTOR, tags=["ok", 3]),
+            dict(VECTOR, fields={"x": float("nan")}),
+        ]
+        for raw in cases:
+            code, files, err = run(raw)
+            self.assertEqual(code, 2, raw)
+            self.assertEqual(files, {}, raw)
+            self.assertIn("decision_call:", err)
+
+
+if __name__ == "__main__":
+    unittest.main()
