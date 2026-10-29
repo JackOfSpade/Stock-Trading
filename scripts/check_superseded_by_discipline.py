@@ -185,6 +185,11 @@ ALLOWLIST = {
         "Its correction branch must inspect the exact physical target named by p_superseded_by and "
         "prove every carried review field matches before appending. The current view intentionally "
         "hides that target, so it cannot validate correction identity or preserve immutable metadata.",
+    ("270_decision_log_checked_write.sql", "ops.sp_log_decision_checked"):
+        "Its two reads ask whether THIS exact append physically exists (the idempotency guard before the "
+        "write, the readback after it), never which row is current. An identical row that was later "
+        "superseded still exists, so a re-issue must find it rather than append a duplicate, and the "
+        "current view would hide it.",
     # ---- events.decision_log (bigquery/144). Audited 2026-08-06; this population is genuinely
     # HETEROGENEOUS, unlike adversarial_reviews. Forcing these onto the filtered view would break a
     # dead-man's switch and a row-count parity check, so decision_log gets an allowlist rather than
