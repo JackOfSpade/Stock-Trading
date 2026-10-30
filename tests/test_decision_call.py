@@ -162,5 +162,106 @@ class Rejections(unittest.TestCase):
             self.assertIn("decision_call:", err)
 
 
+class StagedSql(unittest.TestCase):
+    PART = re.compile(
+        r"\ACALL `stock-trading-498512\.ops\.sp_stage_decision_part`\(\n"
+        r"  '([0-9a-f]{64})',  -- in_call_sha256\n"
+        r"  '(fields|body_md)',  -- in_arg_name\n"
+        r"  (\d+),  -- in_part_no\n"
+        r"  (\d+),  -- in_n_parts\n"
+        r"  '([0-9a-f]{64})',  -- in_part_sha256\n"
+        r"(.*?)  -- in_payload\n\);\n\Z", re.S)
+    LITERALS = re.compile(r"\s*'(?:[^'\\]|\\.)*'(?:\s+'(?:[^'\\]|\\.)*')*\s*\Z")
+
+    def check_parts(self, files, raw, keys):
+        import hashlib
+
+        args = dc.normalise(raw)
+        sha = dc.digest(args)
+        for name, text in files.items():
+            self.assertLessEqual(len(text), dc.FILE_BUDGET, name)
+            self.assertRegex(text, r"\A[\x20-\x7e\n]*\Z", name)
+        call = files["call.sql"]
+        self.assertTrue(call.startswith(f"CALL {dc.PROC_STAGED}(\n"))
+        self.assertIn(f"  '{sha}'  -- in_expected_sha256\n", call)
+        self.assertIn("  CAST([" + ", ".join(f"'{k}'" for k in keys) +
+                      "] AS ARRAY<STRING>),  -- in_staged_args\n", call)
+        for key in keys:
+            self.assertIn(f"  CAST(NULL AS STRING),  -- in_{key}\n", call)
+            numbered = []
+            for name, text in files.items():
+                if not name.startswith(f"part_{key}_"):
+                    continue
+                m = self.PART.fullmatch(text)
+                self.assertIsNotNone(m, name)
+                call_sha, arg, part_no, n_parts, part_sha, literal = m.groups()
+                self.assertEqual(call_sha, sha)
+                self.assertEqual(arg, key)
+                self.assertEqual(name, f"part_{key}_{int(part_no):02d}.sql")
+                self.assertRegex(literal, self.LITERALS)
+                payload = "".join(decode_sql_str(lit) for lit in _LIT.findall(literal))
+                self.assertEqual(part_sha, hashlib.sha256(payload.encode("utf-8")).hexdigest())
+                numbered.append((int(part_no), int(n_parts), payload))
+            self.assertGreater(len(numbered), 0)
+            numbered.sort()
+            self.assertEqual([n for n, _, _ in numbered], list(range(1, len(numbered) + 1)))
+            self.assertTrue(all(total == len(numbered) for _, total, _ in numbered))
+            self.assertEqual("".join(payload for _, _, payload in numbered), args[key])
+        self.assertEqual({name for name in files if name.startswith("part_")},
+                         {f"part_{key}_{n:02d}.sql" for key in keys
+                          for n in range(1, 1 + sum(name.startswith(f"part_{key}_") for name in files))})
+
+    def test_small_call_is_unchanged(self):
+        code, files, _ = run(VECTOR)
+        self.assertEqual(code, 0)
+        self.assertEqual(set(files), {"call.sql", "readback.sql"})
+        self.assertEqual(files["call.sql"], dc.call_sql(dc.normalise(VECTOR)))
+        self.assertEqual(files["readback.sql"], dc.readback_sql(dc.normalise(VECTOR)))
+
+    def test_large_fields_parts_reconstruct(self):
+        raw = dict(VECTOR, fields={"payload": ("ASCII'\\\né中𝄞🚀" * 11000)})
+        code, files, err = run(raw)
+        self.assertEqual(code, 0, err)
+        self.check_parts(files, raw, ["fields"])
+        self.assertEqual(arg_value(files["call.sql"], "body_md"), raw["body_md"])
+
+    def test_large_body_and_fields_both_staged(self):
+        raw = dict(VECTOR, fields={"payload": "abcé🚀" * 24000},
+                   body_md="quote' slash\\ music𝄞\n" * 5000)
+        code, files, err = run(raw)
+        self.assertEqual(code, 0, err)
+        self.check_parts(files, raw, ["fields", "body_md"])
+
+    def test_stale_parts_removed_on_regeneration(self):
+        with tempfile.TemporaryDirectory() as d:
+            src, out = Path(d) / "input.json", Path(d) / "out"
+            src.write_text(json.dumps(dict(VECTOR, fields={"x": "🚀" * 10000})), encoding="utf-8")
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(dc.main([str(src), "--out", str(out)]), 0)
+            self.assertTrue(list(out.glob("part_*.sql")))
+            src.write_text(json.dumps(VECTOR), encoding="utf-8")
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(dc.main([str(src), "--out", str(out)]), 0)
+            self.assertEqual({p.name for p in out.iterdir()}, {"call.sql", "readback.sql"})
+            self.assertEqual((out / "call.sql").read_text(encoding="ascii"), dc.call_sql(dc.normalise(VECTOR)))
+
+    def test_unsplittable_input_writes_nothing(self):
+        raw = dict(VECTOR, title="x" * 30000, fields=None, body_md=None)
+        code, files, err = run(raw)
+        self.assertEqual(code, 2)
+        self.assertEqual(files, {})
+        self.assertEqual(err, "decision_call: call exceeds the 24000-character budget even after staging fields and body_md; reduce other arguments\n")
+
+    def test_staged_signature_matches_checked_signature(self):
+        checked = (ROOT / "bigquery" / "270_decision_log_checked_write.sql").read_text(encoding="utf-8")
+        staged = (ROOT / "bigquery" / "271_decision_log_staged_write.sql").read_text(encoding="utf-8")
+        old_sig = re.search(r"sp_log_decision_checked`\((.*?)\)\nBEGIN", checked, re.S).group(1)
+        new_sig = re.search(r"sp_log_decision_staged`\((.*?)\)\nBEGIN", staged, re.S).group(1)
+        old_params = re.findall(r"\b(in_\w+) (DATE|STRING|NUMERIC|ARRAY<STRING>)", old_sig)
+        new_params = re.findall(r"\b(in_\w+) (DATE|STRING|NUMERIC|ARRAY<STRING>)", new_sig)
+        self.assertEqual(len(old_params), 17)
+        self.assertEqual(new_params, old_params[:-1] + [("in_staged_args", "ARRAY<STRING>"), old_params[-1]])
+
+
 if __name__ == "__main__":
     unittest.main()

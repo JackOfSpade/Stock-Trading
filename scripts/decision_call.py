@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate a digest-checked `ops.sp_log_decision_checked` CALL (bigquery/270) from a saved JSON file.
+"""Generate digest-checked decision_log CALLs (bigquery/270 and 271) from a saved JSON file.
 Standard library only; it writes to BigQuery nothing -- the routine issues the generated SQL itself.
 
 WHY THIS EXISTS. The BigQuery MCP tool takes SQL text, never a file, so a decision_log row is copied
@@ -23,6 +23,13 @@ without an error. D1 found it by an improvised per-key readback and replaced it 
     is the re-typing this exists to remove;
   * readback.sql is short and carries no payload, so it can be re-typed safely.
 
+On 2026-10-29 D1's 85,925- and 66,399-byte CALLs were truncated at ~30-45KB of agent output;
+a smaller landed call had lost source URLs and release stamps. For oversized calls, stage fields first,
+then body_md if needed, as individually digest-checked, bounded part files. The final staged CALL
+assembles those exact values and delegates to the checked procedure with the unchanged full-call digest.
+Issue every part file verbatim, one at a time, then call.sql. A part refused for a digest mismatch is
+re-issued alone, never edited. A missing-parts refusal names what to issue before re-issuing call.sql.
+
 Digest: lowercase hex SHA-256 of the 16 arguments, in the procedure's order, joined by U+001F. A STRING,
 DATE or NUMERIC argument is 'N' when NULL, else 'S' + its rendering (a DATE as YYYY-MM-DD, a NUMERIC as
 BigQuery's CAST(... AS STRING), e.g. 75, 0.5, 100). An ARRAY argument is 'A' followed by its elements,
@@ -36,12 +43,13 @@ here, compactly, with non-ASCII kept) or an already-serialised string. Any other
 Usage (<S> is a scratch directory outside the repository):
   python3 scripts/decision_call.py <S>/decision.json --out <S>/decision
 writes <S>/decision/call.sql (issue it verbatim; it returns entry_id, outcome, sha256) and
-<S>/decision/readback.sql (lists the landed row by date and digest tag; empty = not written). Exits 2, writing
-nothing, on any invalid input.
+<S>/decision/readback.sql (lists the landed row by date and digest tag; empty = not written). Large calls
+also emit part_*.sql, to issue before call.sql. Exits 2, writing nothing, on invalid or unsplittable input.
 """
 from __future__ import annotations
 
 import argparse
+import glob
 import hashlib
 import json
 import os
@@ -52,6 +60,8 @@ from decimal import Decimal, InvalidOperation
 
 PROJECT = "stock-trading-498512"
 PROC = f"`{PROJECT}.ops.sp_log_decision_checked`"
+PROC_STAGE = f"`{PROJECT}.ops.sp_stage_decision_part`"
+PROC_STAGED = f"`{PROJECT}.ops.sp_log_decision_staged`"
 TABLE = f"`{PROJECT}.events.decision_log`"
 FIELD_SEP = "\x1f"
 ELEM_SEP = "\x1e"
@@ -68,6 +78,8 @@ REQUIRED = {"entry_date", "entry_type", "title", "source_session"}
 NUMERIC_SCALE = 9  # BigQuery NUMERIC keeps 9 decimals; a rounded value could never match its digest
 NUMERIC_INT_DIGITS = 29
 WRAP = 400  # max characters of one literal piece per line of call.sql
+# Measured truncation at ~30-45KB of agent output 2026-10-29; paper book uses <30,000.
+FILE_BUDGET = 24000
 
 
 class InputError(ValueError):
@@ -220,6 +232,47 @@ def call_sql(args: dict) -> str:
     return f"CALL {PROC}(\n" + "\n".join(lines) + "\n);\n"
 
 
+def staged_call_sql(args: dict, staged: list[str]) -> str:
+    lines = [f"  {sql_value(kind, None if key in staged else args[key])},  -- in_{key}"
+             for key, kind in ARGS]
+    lines.append(f"  {sql_value('array', staged)},  -- in_staged_args")
+    lines.append(f"  '{digest(args)}'  -- in_expected_sha256")
+    return f"CALL {PROC_STAGED}(\n" + "\n".join(lines) + "\n);\n"
+
+
+def split_value(value: str) -> list[str]:
+    """Split on code points, accounting for escaping and adjacent-literal wrapping.
+
+    Reserve 1,000 characters for the procedure name, two digests, part numbers and SQL wrapper.
+    """
+    pieces = []
+    start = 0
+    rendered = 2  # outer quotes
+    line = 0
+    for i, ch in enumerate(value):
+        token = len(sql_str(ch)) - 2
+        wrap_cost = 5 if line and line + token > WRAP else 0  # quote, newline, indent, quote
+        if rendered + wrap_cost + token > FILE_BUDGET - 1000:
+            pieces.append(value[start:i])
+            start, rendered, line, wrap_cost = i, 2, 0, 0
+        rendered += wrap_cost + token
+        line = token if wrap_cost else line + token
+    pieces.append(value[start:])  # an empty string still needs one part
+    return pieces
+
+
+def part_sql(call_sha: str, key: str, part_no: int, n_parts: int, payload: str) -> str:
+    part_sha = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    return (f"CALL {PROC_STAGE}(\n"
+            f"  '{call_sha}',  -- in_call_sha256\n"
+            f"  '{key}',  -- in_arg_name\n"
+            f"  {part_no},  -- in_part_no\n"
+            f"  {n_parts},  -- in_n_parts\n"
+            f"  '{part_sha}',  -- in_part_sha256\n"
+            f"  {sql_str(payload, WRAP, '  ')}  -- in_payload\n"
+            ");\n")
+
+
 def readback_sql(args: dict) -> str:
     return (
         "SELECT entry_id, event_ts, entry_type, superseded_by, BYTE_LENGTH(body_md) AS body_bytes,\n"
@@ -244,13 +297,40 @@ def main(argv=None) -> int:
         print(f"decision_call: {e}", file=sys.stderr)
         return 2
     call = call_sql(args)
-    assert re.fullmatch(r"[\x20-\x7e\n]*", call), "emitted SQL must be printable ASCII"
+    staged = []
+    parts = {}
+    if len(call) > FILE_BUDGET:
+        for key in ("fields", "body_md"):
+            if args[key] is not None:
+                staged.append(key)
+                call = staged_call_sql(args, staged)
+                if len(call) <= FILE_BUDGET:
+                    break
+        if len(call) > FILE_BUDGET or not staged:
+            print("decision_call: call exceeds the 24000-character budget even after staging fields and body_md; reduce other arguments", file=sys.stderr)
+            return 2
+        sha = digest(args)
+        for key in staged:
+            pieces = split_value(args[key])
+            for number, piece in enumerate(pieces, 1):
+                parts[f"part_{key}_{number:02d}.sql"] = part_sql(sha, key, number, len(pieces), piece)
+    files = {**parts, "call.sql": call, "readback.sql": readback_sql(args)}
+    for name, text in files.items():
+        assert re.fullmatch(r"[\x20-\x7e\n]*", text), f"{name} must be printable ASCII"
+        assert len(text) <= FILE_BUDGET, f"{name} exceeds the file budget"
     os.makedirs(a.out, exist_ok=True)
-    with open(os.path.join(a.out, "call.sql"), "w", encoding="ascii") as f:
-        f.write(call)
-    with open(os.path.join(a.out, "readback.sql"), "w", encoding="ascii") as f:
-        f.write(readback_sql(args))
-    print(f"call.sql {len(call)} bytes, sha256 {digest(args)}")
+    for stale in glob.glob(os.path.join(a.out, "part_*.sql")):
+        os.remove(stale)
+    for name, text in files.items():
+        with open(os.path.join(a.out, name), "w", encoding="ascii") as f:
+            f.write(text)
+    if not staged:
+        # Preserve the original small-call output byte for byte.
+        print(f"call.sql {len(call)} bytes, sha256 {digest(args)}")
+    else:
+        for name, text in files.items():
+            print(f"{name} {len(text)} bytes")
+        print("Issue order: every part file, then call.sql (all verbatim).")
     return 0
 
 
