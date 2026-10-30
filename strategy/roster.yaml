@@ -152,7 +152,7 @@ strategies:
     adopted_date: 2026-04-23
     spec_locked_since: 2026-04-23
     immutable_since: 2026-04-23
-    spec_hash: "95f7e8c6ffa8ce6ee53758535c7f833e5897c1f1166865391881ca320ff30051"   # sha256(shared 00/01/02/09 prose || router pre-mortem || strategy/03_strategy_a.md || A pre-mortem || strategy_math/strategy_a.py || strategy_math/common.py), rev 2026-10-29 (owner-authorized code-quality audit; see revision_history below; NOT a restart).
+    spec_hash: "012e468afa5ffa4a002a43e63e644dea7545fc11415aee36ec142ab0253554e8"   # sha256(shared 00/01/02/09 prose || router pre-mortem || strategy/03_strategy_a.md || A pre-mortem || strategy_math/strategy_a.py || strategy_math/common.py), rev 2026-10-30 (Strategy.md Rev 55, owner directive; see revision_history below; NOT a restart).
     retired_date: null
     is_restart_of: null
     revision_history:
@@ -206,6 +206,8 @@ strategies:
         note: "spec_hash recomputed - Rev 54 (2026-10-25, owner directive; provenance: the owner in-session instruction this date to restore SHADOW (at least 5 trading days) and PAPER (at least 60 days and 10 simulated trades, excess at or above zero) in front of the live ramp, with 6 concurrent incubation slots, monthly SL1 and one live entry per 30 days). SHARED-PROSE-ONLY change for this strategy: the one shared hash input that moved is strategy/00_preamble.md, which gained the Rev 54 changelog paragraph and the amended Document date line. Roster policy only; runtime mirror bigquery/266. This strategy's own slice, own pre-mortem segment and math modules are byte-unchanged. No strategy machinery changed; NOT a restart: is_restart_of and spec_locked_since deliberately untouched."
       - date: 2026-10-29
         note: "spec_hash recomputed - owner-authorized code-quality audit, 2026-10-29: the user requested optimization, technical-debt reduction, refactoring and all discovered bug fixes across first-party code and delegated implementation decisions. Shared strategy_math/common.py now rejects non-finite return observations before Pearson/OLS gates and computes scale-stable correlation with anchor-first centering to preserve near-constant variation; the exact-fraction regression reference verifies that rounded-mean artifacts are corrected without changing thresholds. Strategy A math and all prose are unchanged. No trading threshold or strategy policy changes; spec_locked_since, immutable_since and is_restart_of are unchanged. Verified by focused math regressions, module self-test and check_roster_consistency.py R-F."
+      - date: 2026-10-30
+        note: "spec_hash recomputed — NO machinery change: Strategy.md Rev 55 changelog edited the shared preamble prose (strategy/00_preamble.md), including the amended Document date line. This strategy's own slice, own pre-mortem segment, the shared router pre-mortem and math modules are byte-unchanged. No activation rule, entry/exit rule, threshold, sizing rule or kill criterion of this strategy changed. NOT a restart: is_restart_of and spec_locked_since deliberately untouched. strategy_math/** and c_options_math.py byte-unchanged."
   - code: B
     name: "Post-event mispricing exploitation"
     archetype: post-event-mispricing-long-bias
@@ -219,7 +221,7 @@ strategies:
     adopted_date: 2026-04-23
     spec_locked_since: 2026-04-23
     immutable_since: 2026-04-23
-    spec_hash: "8d0106776e71481734c790c6e7f41a56f573c1b13c35a6882d004988b9f415cb"   # sha256(shared 00/01/02/09 prose || router pre-mortem || strategy/04_strategy_b.md || B pre-mortem || strategy_math/strategy_b.py || strategy_math/common.py), rev 2026-10-29 (owner-authorized code-quality audit; see revision_history below; NOT a restart).
+    spec_hash: "2c3945d2bce52ee0bc011add1bc9b2b03adbfbee77dcc6954d6a542cee863e6c"   # sha256(shared 00/01/02/09 prose || router pre-mortem || strategy/04_strategy_b.md || B pre-mortem || strategy_math/strategy_b.py || strategy_math/common.py), rev 2026-10-30 (Strategy.md Rev 55, owner directive; see revision_history below; NOT a restart).
     retired_date: null
     is_restart_of: null
     revision_history:
@@ -281,6 +283,8 @@ strategies:
         note: "spec_hash recomputed - Rev 54 (2026-10-25, owner directive; provenance: the owner in-session instruction this date to restore SHADOW (at least 5 trading days) and PAPER (at least 60 days and 10 simulated trades, excess at or above zero) in front of the live ramp, with 6 concurrent incubation slots, monthly SL1 and one live entry per 30 days). SHARED-PROSE-ONLY change for this strategy: the one shared hash input that moved is strategy/00_preamble.md, which gained the Rev 54 changelog paragraph and the amended Document date line. Roster policy only; runtime mirror bigquery/266. This strategy's own slice, own pre-mortem segment and math modules are byte-unchanged. No strategy machinery changed; NOT a restart: is_restart_of and spec_locked_since deliberately untouched."
       - date: 2026-10-29
         note: "spec_hash recomputed - owner-authorized code-quality audit, 2026-10-29: the user requested optimization, technical-debt reduction, refactoring and all discovered bug fixes across first-party code and delegated implementation decisions. Shared strategy_math/common.py now rejects non-finite return observations before Pearson/OLS gates and computes scale-stable correlation with anchor-first centering to preserve near-constant variation; the exact-fraction regression reference verifies that rounded-mean artifacts are corrected without changing thresholds. strategy_b.py also validates the event-day close and borrow rate, preserving zero prices and free borrow. No trading threshold or strategy policy changes; spec_locked_since, immutable_since and is_restart_of are unchanged. Verified by focused math regressions, module self-test and check_roster_consistency.py R-F."
+      - date: 2026-10-30
+        note: "spec_hash recomputed — NO machinery change: Strategy.md Rev 55 changelog edited the shared preamble prose (strategy/00_preamble.md), including the amended Document date line. This strategy's own slice, own pre-mortem segment, the shared router pre-mortem and math modules are byte-unchanged. No activation rule, entry/exit rule, threshold, sizing rule or kill criterion of this strategy changed. NOT a restart: is_restart_of and spec_locked_since deliberately untouched. strategy_math/** and c_options_math.py byte-unchanged."
   - code: C
     name: "Defined-risk options structures around known events"
     archetype: defined-risk-options-on-catalysts
@@ -292,7 +296,7 @@ strategies:
     adopted_date: 2026-04-23
     spec_locked_since: 2026-04-23
     immutable_since: 2026-04-23
-    spec_hash: "bc378dfd0bb4c56359e1fb68b94805b03dc674f4831335cc555beb2ff2632de8"   # sha256(shared 00/01/02/09 prose || router pre-mortem || strategy/05_strategy_c.md || C pre-mortem || c_options_math.py), rev 2026-10-29 (owner-authorized code-quality audit; see revision_history below; NOT a restart).
+    spec_hash: "8cc12032afc8d36b8c2cb998f02e0e4bcbe096130c282a8e3099ab2eeabcad56"   # sha256(shared 00/01/02/09 prose || router pre-mortem || strategy/05_strategy_c.md || C pre-mortem || c_options_math.py), rev 2026-10-30 (Strategy.md Rev 55, owner directive; see revision_history below; NOT a restart).
     retired_date: null
     is_restart_of: null
     revision_history:
@@ -366,6 +370,8 @@ strategies:
         note: "spec_hash recomputed - Rev 54 (2026-10-25, owner directive; provenance: the owner in-session instruction this date to restore SHADOW (at least 5 trading days) and PAPER (at least 60 days and 10 simulated trades, excess at or above zero) in front of the live ramp, with 6 concurrent incubation slots, monthly SL1 and one live entry per 30 days). SHARED-PROSE-ONLY change for this strategy: the one shared hash input that moved is strategy/00_preamble.md, which gained the Rev 54 changelog paragraph and the amended Document date line. Roster policy only; runtime mirror bigquery/266. This strategy's own slice, own pre-mortem segment and math modules are byte-unchanged. No strategy machinery changed; NOT a restart: is_restart_of and spec_locked_since deliberately untouched."
       - date: 2026-10-29
         note: "spec_hash recomputed - owner-authorized code-quality audit, 2026-10-29: the user requested optimization, technical-debt reduction, refactoring and all discovered bug fixes across first-party code and delegated implementation decisions. c_options_math.py now validates finite rates/yields, signed integer leg quantities and strategy NAV; solves the piecewise-linear breakevens including zero-touching and out-of-grid roots; and prices the entry debit once in the max-loss computation. No trading threshold or strategy policy changes; spec_locked_since, immutable_since and is_restart_of are unchanged. Verified by focused math regressions, module self-test and check_roster_consistency.py R-F."
+      - date: 2026-10-30
+        note: "spec_hash recomputed — NO machinery change: Strategy.md Rev 55 changelog edited the shared preamble prose (strategy/00_preamble.md), including the amended Document date line. This strategy's own slice, own pre-mortem segment, the shared router pre-mortem and math modules are byte-unchanged. No activation rule, entry/exit rule, threshold, sizing rule or kill criterion of this strategy changed. NOT a restart: is_restart_of and spec_locked_since deliberately untouched. strategy_math/** and c_options_math.py byte-unchanged."
   - code: D
     name: "Long-horizon narrative-screened equity core"
     archetype: long-horizon-concentrated-equity
@@ -382,7 +388,7 @@ strategies:
     adopted_date: 2026-04-23
     spec_locked_since: 2026-04-23
     immutable_since: 2026-04-23
-    spec_hash: "1348ef89a23cd98c3f9420ab3e26c8bb9575d0deff3157180d94feb786047ab9"   # sha256(shared 00/01/02/09 prose || router pre-mortem || strategy/06_strategy_d.md || D pre-mortem || strategy_math/strategy_d.py || strategy_math/common.py), rev 2026-10-29 (owner-authorized code-quality audit; see revision_history below; NOT a restart).
+    spec_hash: "dbf1dfac2ddd88c6d643d024e3dc2a555a2a270b6c4b5c2b25bb8049da5d7e36"   # sha256(shared 00/01/02/09 prose || router pre-mortem || strategy/06_strategy_d.md || D pre-mortem || strategy_math/strategy_d.py || strategy_math/common.py), rev 2026-10-30 (Strategy.md Rev 55, owner directive; see revision_history below; NOT a restart).
     retired_date: null
     is_restart_of: null
     revision_history:
@@ -452,6 +458,8 @@ strategies:
         note: "spec_hash recomputed - Rev 54 (2026-10-25, owner directive; provenance: the owner in-session instruction this date to restore SHADOW (at least 5 trading days) and PAPER (at least 60 days and 10 simulated trades, excess at or above zero) in front of the live ramp, with 6 concurrent incubation slots, monthly SL1 and one live entry per 30 days). SHARED-PROSE-ONLY change for this strategy: the one shared hash input that moved is strategy/00_preamble.md, which gained the Rev 54 changelog paragraph and the amended Document date line. Roster policy only; runtime mirror bigquery/266. This strategy's own slice, own pre-mortem segment and math modules are byte-unchanged. No strategy machinery changed; NOT a restart: is_restart_of and spec_locked_since deliberately untouched."
       - date: 2026-10-29
         note: "spec_hash recomputed - owner-authorized code-quality audit, 2026-10-29: the user requested optimization, technical-debt reduction, refactoring and all discovered bug fixes across first-party code and delegated implementation decisions. Shared strategy_math/common.py now rejects non-finite return observations before Pearson/OLS gates and computes scale-stable correlation with anchor-first centering to preserve near-constant variation; the exact-fraction regression reference verifies that rounded-mean artifacts are corrected without changing thresholds. Strategy D math and all prose are unchanged. No trading threshold or strategy policy changes; spec_locked_since, immutable_since and is_restart_of are unchanged. Verified by focused math regressions, module self-test and check_roster_consistency.py R-F."
+      - date: 2026-10-30
+        note: "spec_hash recomputed — MACHINERY CHANGE via Rev 55 (2026-10-30, owner directive; provenance: owner approval in chat on 2026-10-30). Applied via the established Rev-N owner-directive direct-edit convention (as Rev 35/38/39/40/41/43), NOT a terminate-and-restart. Strategy.md D Entry criterion 4 gained a marked forward-only dominant-segment quantitative invalidation construction requirement for theses constructed on or after 2026-10-30; strategy/06_strategy_d.md was regenerated and the live-rule restatement in strategy/08_pre_mortems.md gained a forward pointer. Shared strategy/00_preamble.md gained the Rev 55 changelog and amended Document date. All original criterion text is unchanged; existing positions' immutable criteria and ADD tranches inheriting their parent's criteria verbatim are unaffected. This is not a price stop, size cap, capital gate or human approval step. Segment means the issuer's own reported disclosure at thesis formation; later reporting changes follow the existing metric-immutability rule. strategy_math/** and c_options_math.py are byte-unchanged. NOT a restart: is_restart_of and spec_locked_since deliberately untouched."
   - code: E
     name: "Market-neutral narrative-divergence pairs"
     archetype: market-neutral-pairs
@@ -464,7 +472,7 @@ strategies:
     adopted_date: 2026-04-23
     spec_locked_since: 2026-04-23
     immutable_since: 2026-04-23
-    spec_hash: "0e41a9f4afb2fd0630bbac9a4d9eed6bc4b613e94a0f8762df555619ba855f56"   # sha256(shared 00/01/02/09 prose || router pre-mortem || strategy/07_strategy_e.md || E pre-mortem || strategy_math/strategy_e.py || strategy_math/common.py), rev 2026-10-29 (owner-authorized code-quality audit; see revision_history below; NOT a restart).
+    spec_hash: "eb5a81ecc69a4b8625c8eab0677933d3b1cf523e8bd5bd4ec8e7799915ed127b"   # sha256(shared 00/01/02/09 prose || router pre-mortem || strategy/07_strategy_e.md || E pre-mortem || strategy_math/strategy_e.py || strategy_math/common.py), rev 2026-10-30 (Strategy.md Rev 55, owner directive; see revision_history below; NOT a restart).
     retired_date: null
     is_restart_of: null
     revision_history:
@@ -524,3 +532,5 @@ strategies:
         note: "spec_hash recomputed - Rev 54 (2026-10-25, owner directive; provenance: the owner in-session instruction this date to restore SHADOW (at least 5 trading days) and PAPER (at least 60 days and 10 simulated trades, excess at or above zero) in front of the live ramp, with 6 concurrent incubation slots, monthly SL1 and one live entry per 30 days). SHARED-PROSE-ONLY change for this strategy: the one shared hash input that moved is strategy/00_preamble.md, which gained the Rev 54 changelog paragraph and the amended Document date line. Roster policy only; runtime mirror bigquery/266. This strategy's own slice, own pre-mortem segment and math modules are byte-unchanged. No strategy machinery changed; NOT a restart: is_restart_of and spec_locked_since deliberately untouched."
       - date: 2026-10-29
         note: "spec_hash recomputed - owner-authorized code-quality audit, 2026-10-29: the user requested optimization, technical-debt reduction, refactoring and all discovered bug fixes across first-party code and delegated implementation decisions. Shared strategy_math/common.py now rejects non-finite return observations before Pearson/OLS gates and computes scale-stable correlation with anchor-first centering to preserve near-constant variation; the exact-fraction regression reference verifies that rounded-mean artifacts are corrected without changing thresholds. Strategy E math and all prose are unchanged. No trading threshold or strategy policy changes; spec_locked_since, immutable_since and is_restart_of are unchanged. Verified by focused math regressions, module self-test and check_roster_consistency.py R-F."
+      - date: 2026-10-30
+        note: "spec_hash recomputed — NO machinery change: Strategy.md Rev 55 changelog edited the shared preamble prose (strategy/00_preamble.md), including the amended Document date line. This strategy's own slice, own pre-mortem segment, the shared router pre-mortem and math modules are byte-unchanged. No activation rule, entry/exit rule, threshold, sizing rule or kill criterion of this strategy changed. NOT a restart: is_restart_of and spec_locked_since deliberately untouched. strategy_math/** and c_options_math.py byte-unchanged."
