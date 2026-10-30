@@ -446,7 +446,7 @@ function isExtrapolated_(deployedDays, tradingDaysPerPeriod) {
 // Shapes a benchmark's OWN cumulative return into the {returnPct, avg/month, avg/year, extrapolated?}
 // shape the VOO table row shares with the strategy rows. Hardcodes 21/252 (matching
 // TRADING_DAYS_PER.month/.year) rather than referencing that file-level const, so this stays a
-// self-contained pure function safe to copy verbatim into test_pure_helpers.js.
+// self-contained pure function exercised directly by test_pure_helpers.js.
 function benchmarkRow_(returnPct, days) {
   return {
     returnPct: returnPct,
@@ -558,7 +558,7 @@ function signPct_(p){ const s = Math.abs(p).toFixed(2); return (p >= 0 || s === 
 function fmtRetPct_(p){ return p == null ? 'n/a' : signPct_(p * 100); }
 function clr_(p)  { return p >= 0 ? '#1a7f5a' : '#c0392b'; }
 // KEEP IN SYNC MANUALLY with esc2_() in ops/monitoring/alert_emailer.gs — byte-for-byte identical on
-// purpose (separate Apps Script projects can't share a module), also copied verbatim into
+// purpose (each file can be redeployed independently), tested directly by
 // ops/weekly_report/test_pure_helpers.js. A future escaping fix (e.g. backticks for a template-literal
 // context) applied to one twin must be applied to both, or one of the two operator-facing HTML emails
 // silently stops getting it (2026-07-09 code-review finding).
@@ -596,7 +596,7 @@ function niceNum_(x) {
 // lines fill the plot instead of being squished into a thin band by the auto-range; (c) snap the bounds
 // to a nice round step (targeting ~8 intervals) so labels and gridlines are legible. `values` is the
 // list of ALL plotted points across every series (already ×100, in %); nulls/NaNs (line gaps) are
-// ignored. Pure — mirrored in test_pure_helpers.js.
+// ignored. Pure — tested directly by test_pure_helpers.js.
 function niceYRange_(values) {
   const nums = (values || []).filter(v => v != null && isFinite(v));
   if (!nums.length) return { min: -1, max: 1, step: 1, gridlines: 3 };

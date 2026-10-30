@@ -244,8 +244,12 @@ def _string_literal_end(text, i):
     j = i + (3 if triple else 1)
     end = quote * 3 if triple else quote
     while j < n:
-        if not triple and text[j] == "\\":
-            j += 2
+        if text[j] == "\\":
+            # A quote escaped inside a triple-quoted literal cannot start its closing delimiter.
+            # Single-line literals still stop at a newline, including after a backslash.
+            if not triple and text[j + 1:j + 2] == "\n":
+                return j + 1
+            j = min(j + 2, n)
             continue
         if text[j:j + len(end)] == end:
             j += len(end)

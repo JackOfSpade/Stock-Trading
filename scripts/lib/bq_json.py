@@ -25,7 +25,8 @@ def parse_bq_json_stdout(stdout: str) -> list[dict]:
     `bq query --format=json` should emit a JSON array of row objects, but the CLI can prepend
     human-readable status output. Older call sites sliced from the first '['; that still fails
     closed when a banner itself contains bracketed text. Try each possible array boundary until
-    one parses as the complete trailing value.
+    one parses as the complete trailing value. Missing JSON is an error: only an explicit []
+    establishes that a successful query returned no rows.
     """
     s = stdout.strip()
     last_error = None
@@ -44,7 +45,7 @@ def parse_bq_json_stdout(stdout: str) -> list[dict]:
         return rows
     if last_error is not None:
         raise last_error
-    return []
+    raise ValueError("bq output did not contain a JSON row array")
 
 
 def run_bq_query(sql, project, max_rows=None, timeout=600):

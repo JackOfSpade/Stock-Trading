@@ -31,7 +31,7 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 import yaml  # noqa: E402
 from lib.dynload import load_module_from_path  # noqa: E402
-from lib.sql_files import DBT_DATASETS  # noqa: E402
+from lib.sql_files import DBT_DATASETS, _string_literal_end, strip_sql_comments  # noqa: E402
 
 PROJECT = "stock-trading-498512"
 MODELS_ROOT = os.path.join(REPO, "dbt", "models")
@@ -64,12 +64,12 @@ def _load(name, *rel):
 
 
 def model_names():
-    """{name} for every existing dbt model file (model names are globally unique in dbt)."""
+    """{(dataset, name)} for existing models; ref() must resolve to the same dataset."""
     out = set()
     for ds in DBT_DATASETS:
         d = os.path.join(MODELS_ROOT, ds)
         if os.path.isdir(d):
-            out |= {fn[:-4] for fn in os.listdir(d) if fn.endswith(".sql")}
+            out |= {(ds, fn[:-4]) for fn in os.listdir(d) if fn.endswith(".sql")}
     return out
 
 
@@ -110,7 +110,7 @@ QUALIFIED = re.compile(
 
 
 def substitute(body, known_models, sources, self_name):
-    """Return (new_body, unresolved). Never rewrites the object's own name."""
+    """Rewrite qualified identifiers, preserving comments and string values verbatim."""
     unresolved = set()
 
     def repl(m):
@@ -118,7 +118,7 @@ def substitute(body, known_models, sources, self_name):
         name = m.group(2) or m.group(4)
         if (ds, name) in UDF_PASSTHROUGH:
             return m.group(0)
-        if name != self_name and ds in DBT_DATASETS and name in known_models:
+        if name != self_name and (ds, name) in known_models:
             return "{{ ref('%s') }}" % name
         src = sources.get((ds, name))
         if src:
@@ -126,7 +126,34 @@ def substitute(body, known_models, sources, self_name):
         unresolved.add(f"{ds}.{name}")
         return m.group(0)
 
-    return QUALIFIED.sub(repl, body), unresolved
+    # Comment stripping preserves offsets. Scan the remaining SQL so names printed inside a
+    # description/error string never turn into Jinja or spurious unresolved dependencies.
+    sql = strip_sql_comments(body)
+    parts = []
+    i = copied = 0
+    while i < len(sql):
+        if sql[i] in ("'", '"'):
+            i = _string_literal_end(sql, i)
+        elif sql[i] == "`":
+            match = QUALIFIED.match(sql, i)
+            if match:
+                parts.extend((body[copied:i], repl(match)))
+                copied = i = match.end()
+            else:
+                # Skip an unrelated quoted identifier, including any escaped backticks.
+                i += 1
+                while i < len(sql):
+                    if sql[i] == "\\":
+                        i += 2
+                    elif sql[i] == "`":
+                        i += 1
+                        break
+                    else:
+                        i += 1
+        else:
+            i += 1
+    parts.append(body[copied:])
+    return "".join(parts), unresolved
 
 
 # HEADER is stamped on EVERY generated port, including a REGENERATION of a port that has existed for
@@ -169,6 +196,22 @@ def resolvable_targets(targets, final):
     return [v for v in targets if _structurally_eligible(v, final)]
 
 
+def resolvable_models(targets, final, existing, sources):
+    """Models that exist or can be generated without refs to skipped batch members.
+
+    Remove unresolved candidates until the set stops shrinking. A helper skipped for its own
+    missing dependency must also invalidate its dependents, regardless of target order or depth.
+    Existing models remain usable even when their requested regeneration is skipped.
+    """
+    candidates = {tuple(v.split(".", 1)) for v in resolvable_targets(targets, final)}
+    while True:
+        known = existing | candidates
+        valid = {key for key in candidates if not substitute(final[key][3], known, sources, key[1])[1]}
+        if valid == candidates:
+            return known
+        candidates = valid
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("views", nargs="*")
@@ -195,36 +238,8 @@ def main():
         covered = cov.dbt_model_names() | cov.dbt_source_names()
         targets = [f"{ds}.{n}" for (ds, n) in sorted(cov.live_views() - covered)]
 
-    # A view being ported may reference another view being ported in the same pass -- but ONLY if
-    # that co-processed view will actually be WRITTEN this run. `known` used to be built from every
-    # name in `targets` unconditionally, before the per-target loop below had checked whether each
-    # one even survives the NOT_PORTED / no-CREATE / not-a-VIEW / unresolved-refs skip branches.
-    #
-    # BUG (dbt view-coverage burn-down, 2026-09-02 audit): a batch containing state.foo_helper (a
-    # TABLE, so it hits the "not a VIEW" skip) and state.foo_derived (a VIEW whose body references
-    # foo_helper) put "foo_helper" into `known` regardless of the skip. substitute() then rewrote
-    # foo_derived's reference to `{{ ref('foo_helper') }}` -- a ref to a model that is never written
-    # to disk. foo_derived.sql landed with a dangling ref, and `dbt compile`/`dbt parse` (including
-    # verify_dbt_port.py's own compile step and CI's `dbt` job) failed on it with "depends on a node
-    # named 'foo_helper' which was not found" -- with nothing in this script's own SKIP output
-    # pointing at foo_derived as the file that would break. --list mode had the identical bug: it
-    # runs the same substitute() call and would have reported "foo_derived: OK".
-    #
-    # Fix: pre-filter `targets` to the names that are STRUCTURALLY eligible (resolvable_targets():
-    # not NOT_PORTED, has a live CREATE, and that CREATE is a VIEW) before folding them into `known`.
-    # This closes 3 of the 4 skip categories exactly, since all three are knowable up front with no
-    # dependency on substitute() itself. The 4th (a same-batch VIEW that is itself skipped for ITS
-    # OWN unresolved refs, and is in turn referenced by a third same-batch view -- a two-hop cascade)
-    # is a rarer, separate case that would need a small fixed-point loop to close fully; not
-    # attempted here since it is not the scenario this fix targets. The per-target loop below still
-    # walks the FULL `targets` list unchanged, so every SKIP message still prints exactly as before.
-    known = model_names() | {v.split(".", 1)[1] for v in resolvable_targets(targets, final)}
+    known = resolvable_models(targets, final, model_names(), sources)
 
-    # LINT FIX (2026-09-02 audit): the `append(...); continue` one-liners below used to pack an
-    # append and a `continue` onto the same physical line with a semicolon (ruff E702, part of the
-    # E7 group this repo's pyproject.toml selects). Pre-existing on every branch in this loop, not
-    # behavioral -- splitting each onto two lines changes nothing about which branch is taken or
-    # what gets appended, it only lets `ruff check scripts/gen_dbt_port.py` actually pass.
     written, skipped = [], []
     for v in targets:
         ds, name = v.split(".", 1)

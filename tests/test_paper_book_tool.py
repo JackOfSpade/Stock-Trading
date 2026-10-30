@@ -187,6 +187,18 @@ class Derivations(unittest.TestCase):
             with self.assertRaises(pb.RowError, msg=bad):
                 pb.norm_px(bad, "open_px")
 
+    def test_prices_keep_full_numeric_precision_and_ignore_context_rounding(self):
+        from decimal import localcontext
+
+        with localcontext() as ctx:
+            ctx.prec = 6
+            self.assertEqual(pb.norm_px("12345678901234567890123456789.1234567890", "open_px"),
+                             "12345678901234567890123456789.123456789")
+            self.assertEqual(pb.norm_px("1.0000000000", "open_px"), "1")
+        for bad in ("1e29", "1e999999999", "1.0000000001"):
+            with self.assertRaises(pb.RowError):
+                pb.norm_px(bad, "open_px")
+
 
     def test_marks_reject_a_ticker_outside_the_pinned_set(self):
         # A free-form ticker reached the batch file's `-- ... (N bars of <tickers>)` header verbatim,

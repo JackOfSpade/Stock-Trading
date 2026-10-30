@@ -24,8 +24,8 @@ VECTOR = {
     "conviction_pct": 100,
     "title": "D1 2026-10-28 screen — “quoted” it's a\\b",
     "body_md": "line1\nline2 ✓ \U0001d11e tab\tend",
-    "fields": {"routine": "D1", "n": [1, 2.5, -0.25], "s": "x’y", "nested": {"z": None, "b": True}},
-    "refs": ["a", "b’"], "tags": [], "source_session": "sess-1",
+    "fields": {"routine": "D1", "n": [1, 2.5, -0.25], "s": "x\u2019y", "nested": {"z": None, "b": True}},
+    "refs": ["a", "b\u2019"], "tags": [], "source_session": "sess-1",
 }
 VECTOR_SHA = "19edf671479d4ba9dea4e2bc81882238e15d8f315cee5a3760e99e1142aae002"
 
@@ -105,6 +105,18 @@ class NumericRendering(unittest.TestCase):
             with self.assertRaises(dc.InputError):
                 dc.render_numeric("x", bad)
 
+    def test_full_numeric_precision_survives_a_small_decimal_context(self):
+        from decimal import localcontext
+
+        with localcontext() as ctx:
+            ctx.prec = 6
+            for value in ["99999999999999999999999999999.999999999", "-12345678901234567890123456789.123456789"]:
+                self.assertEqual(dc.render_numeric("x", value), value)
+
+    def test_huge_exponent_is_rejected_before_rendering(self):
+        with self.assertRaisesRegex(dc.InputError, "out of NUMERIC range"):
+            dc.render_numeric("x", "1e999999999")
+
 
 class GeneratedSql(unittest.TestCase):
     def test_call_is_ascii_and_literals_decode_to_the_input(self):
@@ -154,6 +166,8 @@ class Rejections(unittest.TestCase):
             dict(VECTOR, fields="{not json"),
             dict(VECTOR, tags=["ok", 3]),
             dict(VECTOR, fields={"x": float("nan")}),
+            dict(VECTOR, fields='{"x": NaN}'),
+            dict(VECTOR, fields='{"x": Infinity}'),
         ]
         for raw in cases:
             code, files, err = run(raw)
@@ -260,7 +274,7 @@ class StagedSql(unittest.TestCase):
         old_params = re.findall(r"\b(in_\w+) (DATE|STRING|NUMERIC|ARRAY<STRING>)", old_sig)
         new_params = re.findall(r"\b(in_\w+) (DATE|STRING|NUMERIC|ARRAY<STRING>)", new_sig)
         self.assertEqual(len(old_params), 17)
-        self.assertEqual(new_params, old_params[:-1] + [("in_staged_args", "ARRAY<STRING>"), old_params[-1]])
+        self.assertEqual(new_params, [*old_params[:-1], ("in_staged_args", "ARRAY<STRING>"), old_params[-1]])
 
 
 if __name__ == "__main__":

@@ -64,6 +64,7 @@ import pathlib
 import shutil
 import stat
 import subprocess
+import sys
 
 import pytest
 
@@ -293,6 +294,20 @@ def test_unrelated_program_still_works_through_every_entry_point():
     genuinely unrelated program (echo/true) through every entry point patched in this pass, including
     the new os-level ones, and confirms none of them are touched by the wrapper-indirection scan
     either (a wrapper invoking a non-blocked program must not be flagged)."""
+    # os.spawnv/spawnve fork before exec. Other test modules import clients that
+    # start native threads, making these probes unsafe in the full-suite process.
+    # A fresh pytest process retains the real autouse guard without those imports.
+    if os.environ.get("STOCK_TRADING_SPAWN_PROBE") != "1":
+        result = subprocess.run(
+            [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
+             f"{__file__}::test_unrelated_program_still_works_through_every_entry_point",
+             "-W", "error::DeprecationWarning"],
+            capture_output=True, text=True, timeout=30,
+            env={**os.environ, "STOCK_TRADING_SPAWN_PROBE": "1"},
+        )
+        assert result.returncode == 0, result.stdout + result.stderr
+        return
+
     # subprocess.run / Popen (list and shell-string forms).
     assert subprocess.run(["echo", "hi"], capture_output=True, text=True).stdout.strip() == "hi"
     assert subprocess.run("echo hi", shell=True, capture_output=True, text=True).stdout.strip() == "hi"

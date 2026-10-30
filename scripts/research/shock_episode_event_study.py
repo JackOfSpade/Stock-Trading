@@ -609,13 +609,13 @@ def hop_return_series(
             continue
         p = PROXIES[c]
         etf = p["etf"] if etf_first and p["etf"] else None
-        if etf and _covered(rets, etf, start, end):
+        if etf and etf not in exclude and etf not in used and _covered(rets, etf, start, end):
             cov[c] = {"kind": "etf", "members": [etf]}
             parts.append(rets[etf])
             per[c] = rets[etf]
             used.add(etf)
             continue
-        members = [t for t in p["basket"] if t not in used and _covered(rets, t, start, end)]
+        members = [t for t in p["basket"] if t not in exclude and t not in used and _covered(rets, t, start, end)]
         if len(members) >= MIN_BASKET_MEMBERS:
             cov[c] = {"kind": "basket", "members": members}
             parts.append(rets[members].mean(axis=1))
@@ -628,10 +628,8 @@ def hop_return_series(
     return pd.concat(parts, axis=1).mean(axis=1), cov, used, per
 
 
-def car_profile(hop: pd.Series, mkt: pd.Series, onset_pos: int, dates: pd.DatetimeIndex) -> dict | None:
-    """Beta from the BETA_WINDOW days before onset. d0 = hedged return on the onset day itself (the
-    announcement reaction, not tradeable by a strategy that reads the news that morning); car_{h}w =
-    cumulative hedged return over trading days 1..5h AFTER onset (the drift a day-1 entry could earn)."""
+def estimate_beta(hop: pd.Series, mkt: pd.Series, onset_pos: int) -> float | None:
+    """Pre-event OLS beta, absent when history or market variation cannot identify it."""
     pre = slice(max(0, onset_pos - BETA_WINDOW), onset_pos)
     x = mkt.iloc[pre]
     y = hop.iloc[pre]
@@ -639,7 +637,20 @@ def car_profile(hop: pd.Series, mkt: pd.Series, onset_pos: int, dates: pd.Dateti
     if ok.sum() < MIN_BETA_OBS:
         return None
     x, y = x[ok], y[ok]
-    beta = float(np.cov(x, y, ddof=1)[0, 1] / np.var(x, ddof=1))
+    variance = float(np.var(x, ddof=1))
+    if not math.isfinite(variance) or variance <= 0:
+        return None
+    beta = float(np.cov(x, y, ddof=1)[0, 1] / variance)
+    return beta if math.isfinite(beta) else None
+
+
+def car_profile(hop: pd.Series, mkt: pd.Series, onset_pos: int, dates: pd.DatetimeIndex) -> dict | None:
+    """Beta from the BETA_WINDOW days before onset. d0 = hedged return on the onset day itself (the
+    announcement reaction, not tradeable by a strategy that reads the news that morning); car_{h}w =
+    cumulative hedged return over trading days 1..5h AFTER onset (the drift a day-1 entry could earn)."""
+    beta = estimate_beta(hop, mkt, onset_pos)
+    if beta is None:
+        return None
     max_h = max(HORIZONS_WEEKS) * 5
     if onset_pos + max_h >= len(dates):
         return None

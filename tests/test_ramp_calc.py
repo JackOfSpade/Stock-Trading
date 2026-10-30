@@ -127,6 +127,27 @@ class ExplicitBehaviour(unittest.TestCase):
             shuffled["trades"] = trades
             self.assertEqual(ramp_calc.run_case(shuffled), base)
 
+    def test_overlap_counts_match_closed_interval_reference(self):
+        rng = random.Random(821)
+        trades = []
+        for n in range(250):
+            entry = rng.randrange(1, 24)
+            exit_day = rng.randrange(entry, 29)
+            trades.append({"key": str(n), "entry_date": f"2026-01-{entry:02d}",
+                           "exit_date": f"2026-01-{exit_day:02d}", "r": 0.02})
+        by_key = {t["key"]: t for t in trades}
+        path = ramp_calc.ramp_path(trades, mu=0.02, sigma=0.06, opening_score=0.2)
+        for row in path:
+            t = by_key[row["key"]]
+            expected = sum(other["entry_date"] <= t["exit_date"] and t["entry_date"] <= other["exit_date"]
+                           for other in trades) - 1
+            self.assertEqual(row["n_overlap"], expected)
+
+    def test_inverted_trade_dates_are_rejected(self):
+        with self.assertRaisesRegex(ValueError, "entry_date"):
+            ramp_calc.ramp_path([dict(self.TRADE[0], entry_date="2026-01-03")],
+                                mu=0.02, sigma=0.06, opening_score=0.2)
+
     def test_increment_clip_on_huge_win(self):
         trades = [{"key": "w", "entry_date": "2026-01-01", "exit_date": "2026-01-02", "r": 0.5}]
         path = ramp_calc.ramp_path(trades, mu=0.02, sigma=0.06, opening_score=0.2)

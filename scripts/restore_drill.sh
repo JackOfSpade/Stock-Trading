@@ -17,21 +17,9 @@
 # Env: PROJECT (default stock-trading-498512), BUCKET (default gs://stock-trading-backups),
 #      SCRATCH (default events_restore_drill_adhoc), DATE (default = newest dt= partition found in the bucket).
 #
-# WHY THE DEFAULT SCRATCH IS *_adhoc AND NOT `events_restore_drill` (2026-09-04 quality pass):
-# `events_restore_drill` is NOT a throwaway name — it is owned by the AUTOMATED monthly drill
-# (ops.sp_restore_drill, bigquery/17_restore_drill.sql, scheduled via
-# bigquery/scheduled_queries/restore_drill.sql). That dataset is PRE-CREATED once by hand and carries a
-# dataset-SCOPED `roles/bigquery.dataEditor` grant to bq-scheduler@ (ops/RUNBOOK.md §3) precisely so the
-# scheduled-query identity never needs project-level dataEditor; the procedure body only does
-# `LOAD DATA OVERWRITE ...events_restore_drill.<table>` and deliberately never creates or drops it
-# ("Scratch tables persist between runs (overwritten each run) by design, so no dataset-delete
-# permission is needed"). Dropping a BigQuery dataset destroys its dataset-level ACL along with it, and
-# the `bq mk --force` below re-creates the dataset WITHOUT re-applying that grant — so this ad-hoc
-# script defaulting to the shared name and then cleaning up would permanently disarm the monthly DR
-# drill: every table would fall into sp_restore_drill's per-table `EXCEPTION WHEN ERROR` handler ->
-# `failed != ''` -> a critical `scheduled.restore_drill` ops.alerts row (itself a trading-gate input),
-# until the operator re-ran the console GRANT by hand. The cleanup branch at the bottom therefore also
-# REFUSES to drop that name even when it is passed explicitly.
+# The scratch dataset must be NEW. Reusing an existing dataset would overwrite its
+# tables during load and delete its data/ACLs during cleanup. This also prevents
+# concurrent drills from sharing a destination. Pick a fresh SCRATCH after KEEP=1.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -41,10 +29,21 @@ source "$SCRIPT_DIR/bq_csv.sh"
 PROJECT="${PROJECT:-stock-trading-498512}"
 BUCKET="${BUCKET:-gs://stock-trading-backups}"
 BUCKET="${BUCKET%/}"
-# Default is *_adhoc, NOT the automated drill's pre-created, IAM-granted `events_restore_drill` —
-# see the "WHY THE DEFAULT SCRATCH IS *_adhoc" note in the header above before changing this.
 SCRATCH="${SCRATCH:-events_restore_drill_adhoc}"
 KEEP="${KEEP:-0}"
+
+# Validate before any cloud call; these names belong to the operating system,
+# including the automated drill's persistent, dataset-scoped-IAM destination.
+if ! [[ "$SCRATCH" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+  echo "invalid scratch dataset identifier" >&2
+  exit 1
+fi
+case "$SCRATCH" in
+  events|state|perf|analytics|ops|events_restore_drill)
+    echo "refusing reserved scratch dataset: $SCRATCH" >&2
+    exit 1
+    ;;
+esac
 
 command -v bq >/dev/null || { echo "bq CLI not found (install Google Cloud SDK)"; exit 1; }
 command -v gcloud >/dev/null || { echo "gcloud CLI not found (install Google Cloud SDK)"; exit 1; }
@@ -128,7 +127,12 @@ fi
 [ -n "${DATE:-}" ] || { echo "could not resolve a backup date under $BUCKET/events/ for any table; pass DATE=YYYY-MM-DD"; exit 1; }
 
 echo "Restore drill: project=$PROJECT  bucket=$BUCKET  dt=$DATE  scratch=$SCRATCH"
-bq --project_id="$PROJECT" mk --force --dataset --location=US "$PROJECT:$SCRATCH" >/dev/null 2>&1 || true
+# Do not use --force or ignore failure: successful creation establishes that
+# this invocation owns the destination before any destructive load or cleanup.
+if ! bq --project_id="$PROJECT" mk --dataset --location=US "$PROJECT:$SCRATCH"; then
+  echo "could not create a new scratch dataset; choose an unused SCRATCH (no tables loaded or deleted)" >&2
+  exit 1
+fi
 
 rc=0
 printf '%-26s %12s %12s   %s\n' "TABLE" "RESTORED" "LIVE" "STATUS"
@@ -158,6 +162,9 @@ for t in "${TABLES[@]}"; do
   if ! live="$(bqq "SELECT COUNT(*) FROM \`$PROJECT.events.$t\`")"; then
     printf '%-26s %12s %12s   %s\n' "$t" "$restored" "-" "QUERY FAILED (live count)"; rc=1; continue
   fi
+  if ! [[ "$restored" =~ ^[0-9]+$ && "$live" =~ ^[0-9]+$ ]]; then
+    printf '%-26s %12s %12s   %s\n' "$t" "$restored" "$live" "INVALID COUNT"; rc=1; continue
+  fi
   status="ok"
   # append-only tables grow, so restored (a past snapshot) must never EXCEED live; and must be non-empty
   # UNLESS the live table is itself empty (a genuinely-empty table restoring to 0 is fine).
@@ -166,24 +173,11 @@ for t in "${TABLES[@]}"; do
   printf '%-26s %12s %12s   %s\n' "$t" "$restored" "$live" "$status"
 done
 
-# Checked BEFORE the KEEP branch (2026-09-04 quality pass) so an explicit
-# `SCRATCH=events_restore_drill` override is never even HANDED the "drop with: bq rm -r -f -d ..."
-# hint the KEEP branch prints. That dataset is the automated monthly drill's pre-created,
-# dataset-scoped-IAM-granted one (see the header note): dropping it takes bq-scheduler@'s
-# `roles/bigquery.dataEditor` grant with it and disarms ops.sp_restore_drill until the operator
-# re-runs the console GRANT by hand. REUSING it is otherwise harmless, which is why this guards the
-# drop rather than rejecting the name outright — the `bq mk --force` above is a NO-OP on an existing
-# dataset (-f suppresses the already-exists error; it does not recreate the dataset or touch its ACL),
-# and the per-table `bq load --replace` overwrites exactly the tables the monthly drill itself
-# overwrites on every run.
-if [ "$SCRATCH" = "events_restore_drill" ]; then
-  echo "Scratch dataset kept: $PROJECT:$SCRATCH — NOT dropping it; it is the pre-created dataset"
-  echo "  ops.sp_restore_drill depends on (bigquery/17_restore_drill.sql), and its dataset-scoped"
-  echo "  bq-scheduler@ dataEditor grant would be destroyed along with it."
-elif [ "$KEEP" = "1" ]; then
+if [ "$KEEP" = "1" ]; then
   echo "Scratch dataset kept: $PROJECT:$SCRATCH (drop with: bq rm -r -f -d $PROJECT:$SCRATCH)"
-else
-  bq --project_id="$PROJECT" rm -r -f -d "$PROJECT:$SCRATCH" >/dev/null 2>&1 || true
+elif ! bq --project_id="$PROJECT" rm -r -f -d "$PROJECT:$SCRATCH"; then
+  echo "scratch dataset cleanup FAILED: $PROJECT:$SCRATCH" >&2
+  rc=1
 fi
 
 [ "$rc" -eq 0 ] && echo "RESTORE DRILL: OK — all tables restored from dt=$DATE." \

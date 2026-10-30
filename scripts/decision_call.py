@@ -58,6 +58,8 @@ import sys
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
+from lib.bq_numeric import INTEGER_DIGITS, SCALE, numeric_text
+
 PROJECT = "stock-trading-498512"
 PROC = f"`{PROJECT}.ops.sp_log_decision_checked`"
 PROC_STAGE = f"`{PROJECT}.ops.sp_stage_decision_part`"
@@ -75,8 +77,8 @@ ARGS = [
     ("source_session", "str"),
 ]
 REQUIRED = {"entry_date", "entry_type", "title", "source_session"}
-NUMERIC_SCALE = 9  # BigQuery NUMERIC keeps 9 decimals; a rounded value could never match its digest
-NUMERIC_INT_DIGITS = 29
+NUMERIC_SCALE = SCALE
+NUMERIC_INT_DIGITS = INTEGER_DIGITS
 WRAP = 400  # max characters of one literal piece per line of call.sql
 # Measured truncation at ~30-45KB of agent output 2026-10-29; paper book uses <30,000.
 FILE_BUDGET = 24000
@@ -134,16 +136,10 @@ def render_numeric(key: str, value) -> str:
         d = Decimal(str(value))
     except InvalidOperation:
         raise InputError(f"{key} is not a number: {value!r}") from None
-    if not d.is_finite():
-        raise InputError(f"{key} is not finite")
-    if d.as_tuple().exponent < -NUMERIC_SCALE:
-        raise InputError(f"{key} has more than {NUMERIC_SCALE} decimals; BigQuery NUMERIC would round it")
-    if d == 0:
-        return "0"
-    s = format(d.normalize(), "f")
-    if len(s.lstrip("-").split(".")[0]) > NUMERIC_INT_DIGITS:
-        raise InputError(f"{key} is out of NUMERIC range")
-    return s
+    try:
+        return numeric_text(d)
+    except ValueError as e:
+        raise InputError(f"{key} {e}") from None
 
 
 def normalise(raw: dict) -> dict:
@@ -183,6 +179,8 @@ def normalise(raw: dict) -> dict:
             if isinstance(value, str):
                 try:
                     parsed = json.loads(value)
+                    # Python accepts NaN/Infinity when decoding JSON; BigQuery does not.
+                    json.dumps(parsed, allow_nan=False)
                 except ValueError as e:
                     raise InputError(f"{key} is not valid JSON: {e}") from None
                 text = value

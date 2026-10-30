@@ -94,15 +94,17 @@ def test_q_parses_banner_prefixed_json(monkeypatch):
     assert gd.q("SELECT 1") == [{"strategy": "A"}]
 
 
-def test_q_empty_when_no_array(monkeypatch):
-    # No JSON array in stdout (e.g. an empty result printed as nothing) -> [], not a crash.
+def test_q_rejects_status_text_without_an_array(monkeypatch):
+    # Missing wire data must not render an apparently successful empty dashboard.
     monkeypatch.setattr(gd.subprocess, "run", _fake_run(0, "No rows.\n"))
-    assert gd.q("SELECT 1") == []
+    with pytest.raises(ValueError, match="JSON row array"):
+        gd.q("SELECT 1")
 
 
-def test_q_empty_stdout(monkeypatch):
+def test_q_rejects_empty_stdout(monkeypatch):
     monkeypatch.setattr(gd.subprocess, "run", _fake_run(0, ""))
-    assert gd.q("SELECT 1") == []
+    with pytest.raises(ValueError, match="JSON row array"):
+        gd.q("SELECT 1")
 
 
 def test_q_raises_on_nonzero_returncode(monkeypatch):

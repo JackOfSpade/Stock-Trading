@@ -237,8 +237,8 @@ function checkAlerts_() {
       // and plainAlerts_ render the same routine-authored payload UNFENCED and are evaluated FIRST
       // (JS argument order), so one malformed payload row could still black out the entire channel —
       // permanently, for a roster-category row exempt from the lookback bound. Fence here, at the one
-      // place that gates delivery, rather than triplicating try/catch inside the renderers (those are
-      // copied verbatim into test_pure_helpers.js and must not drift): on any render throw, degrade to
+      // place that gates delivery, rather than triplicating try/catch inside the renderers:
+      // on any render throw, degrade to
       // a payload-free rendering. A degraded email is always preferable to no email — the same
       // rationale htmlAlerts_'s inner fence already states.
       let subject, plainBody, htmlBody;
@@ -253,9 +253,7 @@ function checkAlerts_() {
         htmlBody = null;
       }
       // ALERT-PROBE TOKEN (v10, 2026-08-31 BUG FIX). Appended HERE, at the send site, rather than
-      // inside plainAlerts_/htmlAlerts_ -- those two renderers are copied verbatim into
-      // ops/weekly_report/test_pure_helpers.js and their own comments say they must not drift.
-      // Appending here also means BOTH branches above are covered, including the
+      // inside plainAlerts_/htmlAlerts_. This covers BOTH branches above, including the
       // payload-render-failure fallback body: that fallback is exactly the case where the inbox probe
       // must not go blind (a malformed payload should never also blind the delivery-health check).
       // See verifyInboxDelivery_ below for what reads this token and why it replaced the old
@@ -677,7 +675,7 @@ function fmtAlertTs_(a) {
 
 // ===== rendering =====
 // KEEP IN SYNC MANUALLY with esc_() in ops/weekly_report/weekly_report.gs — byte-for-byte identical on
-// purpose (separate Apps Script projects can't share a module), also copied verbatim into
+// purpose (each file can be redeployed independently), tested directly by
 // ops/weekly_report/test_pure_helpers.js. A future escaping fix (e.g. backticks for a template-literal
 // context) applied to one twin must be applied to both, or one of the two operator-facing HTML emails
 // silently stops getting it (2026-07-09 code-review finding).
@@ -777,8 +775,8 @@ function rosterDetail_(a) {
 // collapse; this had already drifted once, see bigquery/43's git_note). "new" must count only
 // genuinely-new alerts (from `fresh`), NOT the recurring re-sends — otherwise the subject over-reports
 // new incidents (e.g. "3 new" when 2 are new + 1 is a recurring re-notify) and mis-attributes the
-// recurring critical to the "(N critical)" new-count. Pure (no Apps-Script-service calls) — mirrored
-// verbatim in ops/weekly_report/test_pure_helpers.js; keep both in sync.
+// recurring critical to the "(N critical)" new-count. Pure (no Apps-Script-service calls) — tested
+// directly by ops/weekly_report/test_pure_helpers.js.
 function alertSubject_(fresh, recurringCount) {
   const rosterNew = fresh.filter(isRealRosterNotice_);                        // completed autonomous roster changes
   const newReal = fresh.filter(r => !isTest_(r) && !isRosterNotice_(r));      // genuinely new, non-test INCIDENTS

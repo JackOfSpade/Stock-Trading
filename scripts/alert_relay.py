@@ -116,6 +116,7 @@ Env: WEBHOOK_URL (required — else clean no-op), RELAY_MODE, RELAY_WINDOW_MIN (
 import json
 import os
 import sys
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
@@ -283,7 +284,7 @@ def post(text, silent=False):
     endpoint has no equivalent, so on such an endpoint the heartbeat stays audible. That is accepted
     and not worth a second code path: the live channel is ntfy (RUNBOOK §25 A2/A3, OAE-6), and the
     fallback direction is the safe one (an extra ping, never a missed alert)."""
-    if "ntfy.sh" in WEBHOOK_URL:
+    if (urllib.parse.urlsplit(WEBHOOK_URL).hostname or "").removesuffix(".") == "ntfy.sh":
         headers = {"Title": "Stock-Trading", "Content-Type": "text/plain; charset=utf-8"}
         if silent:
             headers.update({"Priority": "min", "Tags": "heartbeat",

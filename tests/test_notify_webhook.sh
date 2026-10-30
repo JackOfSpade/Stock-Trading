@@ -51,7 +51,7 @@ cat > "$SCRATCH/bin/curl" <<'STUB'
 #!/usr/bin/env bash
 set -euo pipefail
 printf '%s\0' "$@" > "${CURL_CAPTURE_FILE:?CURL_CAPTURE_FILE must be set}"
-exit 0
+exit "${CURL_STUB_EXIT:-0}"
 STUB
 chmod +x "$SCRATCH/bin/curl"
 
@@ -74,7 +74,10 @@ assert_eq "ntfy.sh branch: curl -fsS is present" "${argv[0]:-}" "-fsS"
 assert_eq "ntfy.sh branch: -H Title header is sent unquoted-literal" "${argv[4]:-}" "Title: Stock-Trading"
 assert_eq "ntfy.sh branch: uses --data-raw (not --data), the C18 fix" "${argv[5]:-}" "--data-raw"
 assert_eq "ntfy.sh branch: message body is sent literally" "${argv[6]:-}" "$msg"
-assert_eq "ntfy.sh branch: WEBHOOK_URL is the last arg" "${argv[7]:-}" "https://ntfy.sh/some-topic"
+assert_eq "ntfy.sh branch: connection timeout is bounded" "${argv[7]:-} ${argv[8]:-}" "--connect-timeout 10"
+assert_eq "ntfy.sh branch: whole request timeout is bounded" "${argv[9]:-} ${argv[10]:-}" "--max-time 30"
+assert_eq "ntfy.sh branch: URL cannot become a curl option" "${argv[11]:-}" "--"
+assert_eq "ntfy.sh branch: WEBHOOK_URL is the last arg" "${argv[12]:-}" "https://ntfy.sh/some-topic"
 
 # ---- default/JSON branch: {"text": ...} body via --data ------------------------------------------
 
@@ -86,7 +89,8 @@ assert_eq "default branch: uses --data (JSON body always starts with '{', unaffe
   "${argv[5]:-}" "--data"
 expected_json="$(printf '%s' "$msg" | python3 -c 'import json,sys;print(json.dumps({"text":sys.stdin.read()}))')"
 assert_eq "default branch: JSON body matches {\"text\": <message>} exactly" "${argv[6]:-}" "$expected_json"
-assert_eq "default branch: WEBHOOK_URL is the last arg" "${argv[7]:-}" "https://hooks.example.com/generic"
+assert_eq "default branch: whole request timeout is bounded" "${argv[9]:-} ${argv[10]:-}" "--max-time 30"
+assert_eq "default branch: WEBHOOK_URL is the last arg" "${argv[12]:-}" "https://hooks.example.com/generic"
 
 # ---- message starting with '@': the exact C18 regression ------------------------------------------
 # A stubbed curl can't reproduce real curl's own "--data '@x' reads file x" parsing quirk directly, but
@@ -98,6 +102,27 @@ run_notify "https://ntfy.sh/some-topic" "$msg"
 read_argv
 assert_eq "leading-'@' message: still --data-raw, not --data" "${argv[5]:-}" "--data-raw"
 assert_eq "leading-'@' message: body reaches curl byte-for-byte literal, '@' and all" "${argv[6]:-}" "$msg"
+
+for url in 'https://notntfy.sh/topic' 'https://hooks.example.com/ntfy.sh' 'https://hooks.example.com/?next=ntfy.sh' 'https://ntfy.sh@hooks.example.com/topic'; do
+  run_notify "$url" "payload"
+  read_argv
+  assert_eq "unrelated host uses JSON: $url" "${argv[5]:-}" "--data"
+done
+run_notify 'https://NTFY.SH:443/topic' "payload"
+read_argv
+assert_eq "hostname matching handles case and port" "${argv[5]:-}" "--data-raw"
+run_notify 'https://ntfy.sh./topic' "payload"
+read_argv
+assert_eq "hostname matching handles a DNS root dot" "${argv[5]:-}" "--data-raw"
+
+warning="$(CURL_STUB_EXIT=28 run_notify 'https://ntfy.sh/topic' 'timed out')"
+assert_eq "curl timeout remains best effort" "$warning" "::warning::webhook post failed (the caller's own failure still stands)."
+rm "$CAPTURE"
+warning="$(run_notify 'https://[invalid' 'invalid URL')"
+assert_eq "malformed URL remains best effort" "$warning" "::warning::webhook URL could not be parsed (the caller's own failure still stands)."
+assert_eq "malformed URL never posts" "$([ -e "$CAPTURE" ] && echo yes || echo no)" "no"
+run_notify '' 'disabled'
+assert_eq "unset webhook never posts" "$([ -e "$CAPTURE" ] && echo yes || echo no)" "no"
 
 echo
 if [ "$fail" -ne 0 ]; then

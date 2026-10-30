@@ -310,6 +310,27 @@ def test_string_literal_end_backslash_escape_does_not_end_the_literal_early():
     assert text[:end] == r"'a\'b'"
 
 
+@pytest.mark.parametrize("quote", ["'", '"'])
+def test_string_literal_end_triple_quoted_escaped_delimiter(quote):
+    literal = quote * 3 + "before\\" + quote * 3 + " -- still literal\nafter" + quote * 3
+    text = literal + " -- real comment\nSELECT 1"
+    assert _string_literal_end(text, 0) == len(literal)
+    stripped = strip_sql_comments(text)
+    assert stripped.startswith(literal)
+    assert "real comment" not in stripped
+    assert len(stripped) == len(text)
+
+
+def test_string_literal_end_backslash_at_eof_stays_within_input():
+    text = "'unterminated\\"
+    assert _string_literal_end(text, 0) == len(text)
+
+
+def test_string_literal_end_backslash_cannot_escape_a_single_line_newline():
+    text = "'unterminated\\\nSELECT 1"
+    assert text[_string_literal_end(text, 0):] == "\nSELECT 1"
+
+
 def test_string_literal_end_unterminated_single_line_literal_stops_at_newline():
     # No closing quote before end-of-line: the walk must stop at the newline rather than running on
     # into the next line looking for a close (would otherwise swallow real SQL on the next line).

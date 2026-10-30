@@ -242,6 +242,10 @@ class OptionInputs:
         _require_finite_positive(self.underlying_price, "underlying_price")
         _require_finite_positive(self.strike, "strike")
         _require_finite_positive(self.volatility, "volatility", allow_zero=True)
+        for name in ("risk_free_rate", "dividend_yield"):
+            value = getattr(self, name)
+            if not math.isfinite(value):
+                raise ValueError(f"{name} = {value} (must be a finite number).")
         if self.option_type not in ('call', 'put'):
             raise ValueError(
                 f"option_type = {self.option_type!r} (must be 'call' or 'put'). "
@@ -562,6 +566,10 @@ class OptionLeg:
     option: ATMOption
     quantity: int  # positive = long, negative = short
 
+    def __post_init__(self):
+        if not isinstance(self.quantity, int) or isinstance(self.quantity, bool) or self.quantity == 0:
+            raise ValueError(f"quantity = {self.quantity!r} (must be a nonzero signed int).")
+
     def price(self) -> float:
         """Price of this leg (signed by quantity). Positive = position cost,
         negative = credit received.
@@ -678,36 +686,33 @@ class Structure:
         return self.payoff_at_expiration(underlying_price_at_exp) - self.net_debit()
 
     def breakeven_points(self) -> List[float]:
-        """Find breakeven point(s) by scanning a wide grid + bisection refinement.
+        """Solve the piecewise-linear expiration P&L on the nonnegative price domain.
 
-        Generic implementation works for any payoff diagram. Returns underlying
-        prices at which P&L crosses zero at expiration.
+        Includes roots at strikes, even when P&L only touches zero, and roots
+        beyond the highest strike. For a zero-P&L interval, return its boundary
+        with a nonzero segment; an identically zero structure has no crossings.
         """
-        S0 = self.underlying_price
-        # Grid bounds derived from the STRIKES (not just S0): a long put's
-        # breakeven can sit far below 0.5*S0 and a wide structure's breakeven far
-        # above 2.0*S0, so an S0-relative window silently drops them. Span from
-        # near-zero to well above the highest strike (and above S0).
-        strikes = [leg.option.strike for leg in self.legs]
-        hi = max(max(strikes), S0) * 3.0
-        lo = 0.001
-        n = 30000
-        prices = [lo + (hi - lo) * i / n for i in range(n + 1)]
-        pnls = [self.pnl_at_expiration(p) for p in prices]
-
+        prices = [0.0, *sorted({leg.option.strike for leg in self.legs})]
+        debit = self.net_debit()
+        pnls = [self.payoff_at_expiration(price) - debit for price in prices]
+        tail_slope = self._net_quantity('call') * CONTRACT_MULTIPLIER
         breakevens = []
-        for i in range(len(prices) - 1):
-            if (pnls[i] <= 0 < pnls[i + 1]) or (pnls[i] >= 0 > pnls[i + 1]):
-                # Bisect for accuracy
-                lo, hi = prices[i], prices[i + 1]
-                for _ in range(50):
-                    mid = (lo + hi) / 2
-                    if self.pnl_at_expiration(mid) * pnls[i] < 0:
-                        hi = mid
-                    else:
-                        lo = mid
-                breakevens.append(round((lo + hi) / 2, 4))
-        return breakevens
+        for index, (price, pnl) in enumerate(zip(prices, pnls, strict=True)):
+            left_nonzero = index > 0 and pnls[index - 1] != 0
+            right_nonzero = pnls[index + 1] != 0 if index + 1 < len(prices) else tail_slope != 0
+            if pnl == 0 and (left_nonzero or right_nonzero):
+                breakevens.append(price)
+            if index + 1 < len(prices):
+                next_pnl = pnls[index + 1]
+                if (pnl < 0 < next_pnl) or (pnl > 0 > next_pnl):
+                    fraction = -pnl / (next_pnl - pnl)
+                    breakevens.append(price + fraction * (prices[index + 1] - price))
+        # The sign test establishes a root on the positive-price tail even if
+        # its premium offset is smaller than one ULP at the last strike.
+        if (pnls[-1] < 0 < tail_slope) or (pnls[-1] > 0 > tail_slope):
+            root = prices[-1] - pnls[-1] / tail_slope
+            breakevens.append(root)
+        return sorted({round(root, 4) for root in breakevens})
 
     def max_loss_closed_form(self) -> float:
         """Maximum loss at expiration, computed by scanning expiration payoff
@@ -751,7 +756,8 @@ class Structure:
         max_strike = max(strikes)
         test_prices = [0.0] + strikes + [max_strike * 5]
 
-        worst_pnl = min(self.pnl_at_expiration(p) for p in test_prices)
+        net_debit = self.net_debit()
+        worst_pnl = min(self.payoff_at_expiration(p) - net_debit for p in test_prices)
         # max_loss is magnitude of worst case (negative pnl → positive loss)
         return max(0.0, -worst_pnl)
 
@@ -1567,6 +1573,7 @@ def size_position(
             f"max_pct_nav = {max_pct_nav} (must be in (0, 1])."
         )
 
+    _require_finite_positive(strategy_nav, "strategy_nav", allow_zero=True)
     nav_cap = strategy_nav * max_pct_nav
     # Small epsilon so an exact integer multiple (cap == N * loss) doesn't drop
     # to N-1 from binary floating-point representation error.

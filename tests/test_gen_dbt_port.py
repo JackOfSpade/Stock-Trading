@@ -14,6 +14,8 @@ models/ writes outside tmp_path).
 """
 import sys
 
+import pytest
+
 from conftest import load_module_from_path
 
 gdp = load_module_from_path("gen_dbt_port", "scripts", "gen_dbt_port.py")
@@ -23,7 +25,7 @@ gdp = load_module_from_path("gen_dbt_port", "scripts", "gen_dbt_port.py")
 
 def test_substitute_rewrites_a_known_model_to_ref():
     body = f"SELECT a FROM `{gdp.PROJECT}.state.foo`"
-    new_body, unresolved = gdp.substitute(body, {"foo"}, {}, self_name="bar")
+    new_body, unresolved = gdp.substitute(body, {("state", "foo")}, {}, self_name="bar")
     assert new_body == "SELECT a FROM {{ ref('foo') }}"
     assert unresolved == set()
 
@@ -43,7 +45,7 @@ def test_substitute_never_rewrites_the_objects_own_name():
     # not declared as a source either), leaving the original text untouched — a self-referencing
     # view is exactly the case gen_dbt_port.py's docstring says to report rather than mis-port.
     body = f"SELECT a FROM `{gdp.PROJECT}.state.foo` -- see state.foo above"
-    new_body, unresolved = gdp.substitute(body, {"foo"}, {}, self_name="foo")
+    new_body, unresolved = gdp.substitute(body, {("state", "foo")}, {}, self_name="foo")
     assert "ref(" not in new_body
     assert new_body == body  # left completely untouched, not partially rewritten
     assert unresolved == {"state.foo"}
@@ -51,7 +53,7 @@ def test_substitute_never_rewrites_the_objects_own_name():
 
 def test_substitute_leaves_a_udf_passthrough_fully_qualified():
     body = f"SELECT `{gdp.PROJECT}.analytics.fn_is_occ_option_symbol`(sym) AS is_occ FROM t"
-    new_body, unresolved = gdp.substitute(body, {"fn_is_occ_option_symbol"}, {}, self_name="bar")
+    new_body, unresolved = gdp.substitute(body, {("analytics", "fn_is_occ_option_symbol")}, {}, self_name="bar")
     assert "ref(" not in new_body
     assert f"`{gdp.PROJECT}.analytics.fn_is_occ_option_symbol`" in new_body
     assert unresolved == set()
@@ -67,9 +69,56 @@ def test_substitute_reports_unresolved_for_a_name_that_is_neither_known_nor_a_so
 def test_substitute_handles_both_bigquery_quoting_styles():
     dotted = f"SELECT a FROM `{gdp.PROJECT}.state.foo`"
     split = f"SELECT a FROM `{gdp.PROJECT}`.`state`.`foo`"
-    a, _ = gdp.substitute(dotted, {"foo"}, {}, self_name="bar")
-    b, _ = gdp.substitute(split, {"foo"}, {}, self_name="bar")
+    a, _ = gdp.substitute(dotted, {("state", "foo")}, {}, self_name="bar")
+    b, _ = gdp.substitute(split, {("state", "foo")}, {}, self_name="bar")
     assert a == b == "SELECT a FROM {{ ref('foo') }}"
+
+
+@pytest.mark.parametrize("wrapper", ["'{}'", '"{}"', "'''{}'''", '"""{}"""', "r'''{}'''", "-- {}\n", "/* {} */"])
+def test_substitute_preserves_qualified_names_in_strings_and_comments(wrapper):
+    text = wrapper.format(f"`{gdp.PROJECT}.state.missing`")
+    body = text + f"\nSELECT * FROM `{gdp.PROJECT}.state.foo`"
+    rewritten, unresolved = gdp.substitute(body, {("state", "foo")}, {}, self_name="bar")
+    assert rewritten == text + "\nSELECT * FROM {{ ref('foo') }}"
+    assert not unresolved
+
+
+def test_substitute_does_not_resolve_a_model_in_a_different_dataset():
+    body = f"SELECT * FROM `{gdp.PROJECT}.analytics.foo`"
+    rewritten, unresolved = gdp.substitute(body, {("state", "foo")}, {}, self_name="bar")
+    assert rewritten == body
+    assert unresolved == {"analytics.foo"}
+
+
+def test_model_names_preserves_dataset_identity(monkeypatch, tmp_path):
+    (tmp_path / "state").mkdir()
+    (tmp_path / "state" / "foo.sql").write_text("SELECT 1")
+    monkeypatch.setattr(gdp, "MODELS_ROOT", str(tmp_path))
+    assert gdp.model_names() == {("state", "foo")}
+
+
+def test_resolvable_models_propagates_missing_dependencies_in_any_target_order():
+    final = {
+        ("state", name): ("VIEW", gdp.PROJECT, "999_test.sql", f"SELECT * FROM `{gdp.PROJECT}.state.{dependency}`")
+        for name, dependency in [("a", "b"), ("b", "c"), ("c", "missing")]
+    }
+    final[("state", "ok")] = ("VIEW", gdp.PROJECT, "999_test.sql", "SELECT 1")
+    targets = ["state.a", "state.b", "state.c", "state.ok"]
+    for order in (targets, targets[::-1]):
+        assert gdp.resolvable_models(order, final, set(), {}) == {("state", "ok")}
+
+
+def test_resolvable_models_keeps_successful_batch_dependencies_and_source_fallbacks():
+    final = {
+        ("state", "a"): ("VIEW", gdp.PROJECT, "999_test.sql", f"SELECT * FROM `{gdp.PROJECT}.state.b`"),
+        ("state", "b"): ("VIEW", gdp.PROJECT, "999_test.sql", "SELECT 1"),
+    }
+    targets = ["state.a", "state.b"]
+    expected = {("state", "a"), ("state", "b")}
+    assert gdp.resolvable_models(targets, final, set(), {}) == expected
+    final[("state", "b")] = ("VIEW", gdp.PROJECT, "999_test.sql", f"SELECT * FROM `{gdp.PROJECT}.state.missing`")
+    assert gdp.resolvable_models(targets, final, set(), {("state", "b"): "state"}) == {("state", "a")}
+    assert gdp.resolvable_models(targets, final, {("state", "b")}, {}) == expected
 
 
 # ---- resolvable_targets() / _structurally_eligible() ------------------------------------------
@@ -118,7 +167,14 @@ def test_resolvable_targets_filters_the_batch_to_eligible_names_only():
 
 # ---- end-to-end: main() must never write a dangling ref() to a same-batch skip ----------------
 
-def test_gen_dbt_port_does_not_write_a_dangling_ref_to_a_skipped_same_batch_view(monkeypatch, tmp_path, capsys):
+@pytest.mark.parametrize("helper_kind, helper_body, reason", [
+    ("TABLE", "SELECT 1", "not a VIEW (TABLE)"),
+    ("VIEW", f"SELECT * FROM `{gdp.PROJECT}.state.missing`", "unresolved refs: state.missing"),
+])
+@pytest.mark.parametrize("dry_run", [False, True])
+def test_gen_dbt_port_does_not_write_a_dangling_ref_to_a_skipped_same_batch_view(
+    monkeypatch, tmp_path, capsys, helper_kind, helper_body, reason, dry_run,
+):
     """The concrete failure scenario the finding describes, run through the REAL main().
 
     A batch of state.foo_helper (a TABLE, so it hits the "not a VIEW" skip) and state.foo_derived
@@ -139,7 +195,7 @@ def test_gen_dbt_port_does_not_write_a_dangling_ref_to_a_skipped_same_batch_view
     monkeypatch.setattr(gdp, "source_index", dict)  # no sources.yml entries in play
 
     final = {
-        ("state", "foo_helper"): ("TABLE", gdp.PROJECT, "bigquery/999_x.sql", "SELECT 1 AS x"),
+        ("state", "foo_helper"): (helper_kind, gdp.PROJECT, "bigquery/999_x.sql", helper_body),
         ("state", "foo_derived"): (
             "VIEW", gdp.PROJECT, "bigquery/1000_y.sql",
             f"SELECT x FROM `{gdp.PROJECT}.state.foo_helper`",
@@ -170,13 +226,15 @@ def test_gen_dbt_port_does_not_write_a_dangling_ref_to_a_skipped_same_batch_view
         return {"check_live_sql_parity": _FakeClsp, "check_dbt_view_coverage": _FakeCov}[name]
 
     monkeypatch.setattr(gdp, "_load", fake_load)
-    monkeypatch.setattr(sys, "argv", ["gen_dbt_port.py", "state.foo_helper", "state.foo_derived"])
+    monkeypatch.setattr(sys, "argv", ["gen_dbt_port.py", "state.foo_helper", "state.foo_derived"]
+                        + (["--list"] if dry_run else []))
 
     rc = gdp.main()
     out = capsys.readouterr().out
 
-    assert "SKIP  state.foo_helper: not a VIEW (TABLE)" in out
+    assert f"SKIP  state.foo_helper: {reason}" in out
     # THE regression check: foo_derived must be skipped too (its ref is unresolved), never written.
     assert "SKIP  state.foo_derived: unresolved refs: state.foo_helper" in out
     assert not (models_root / "state" / "foo_derived.sql").exists()
+    assert f"{'would write' if dry_run else 'wrote'} 0, skipped 2" in out
     assert rc == 1  # both targets skipped -> non-zero exit

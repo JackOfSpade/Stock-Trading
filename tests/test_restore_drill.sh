@@ -136,6 +136,65 @@ old_out="$(PATH="$SCRATCH/bin:$PATH" old_buggy_resolve "gs://x" aaa_stale mmm_em
 assert_eq "discrimination check: the OLD stop-at-first-hit loop DOES get this wrong (anchors on aaa_stale's 2026-08-20)" \
   "$old_out" "2026-08-20"
 
+# Exercise the whole script with cloud CLIs stubbed. Creation must succeed before
+# any load/delete; an existing destination must never be treated as disposable.
+cat > "$SCRATCH/bin/bq" <<'STUB'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$*" >> "${BQ_CAPTURE:?}"
+case " $* " in
+  *' mk '*) exit "${BQ_MK_EXIT:-0}" ;;
+  *' load '*) exit 0 ;;
+  *' rm '*) exit "${BQ_RM_EXIT:-0}" ;;
+  *'INFORMATION_SCHEMA.TABLES'*) printf 'table_name\ntrade_fills\n' ;;
+  *'COUNT(*)'*) printf 'f0_\n%s\n' "${BQ_COUNT:-2}" ;;
+  *) echo 'Unexpected bq invocation' >&2; exit 99 ;;
+esac
+STUB
+chmod +x "$SCRATCH/bin/bq"
+run_drill() {
+  env BQ_CAPTURE="$SCRATCH/bq_calls" PATH="$SCRATCH/bin:$PATH" DATE=2026-08-30 \
+    SCRATCH="$1" PROJECT=fixture-project BUCKET=gs://fixture KEEP="${2:-0}" \
+    bash "$DRILL" > "$SCRATCH/drill_output" 2>&1
+}
+
+for dataset in events state perf analytics ops events_restore_drill 'bad.name'; do
+  : > "$SCRATCH/bq_calls"
+  rc=0
+  run_drill "$dataset" || rc=$?
+  assert_eq "unsafe scratch $dataset is rejected" "$rc" "1"
+  assert_eq "unsafe scratch $dataset makes no cloud calls" "$(cat "$SCRATCH/bq_calls")" ""
+done
+
+: > "$SCRATCH/bq_calls"
+rc=0
+BQ_MK_EXIT=1 run_drill existing_dataset || rc=$?
+assert_eq "existing destination aborts the drill" "$rc" "1"
+assert_eq "failed creation never loads or deletes tables" \
+  "$(grep -Ec ' (load|rm) ' "$SCRATCH/bq_calls" || true)" "0"
+assert_eq "dataset creation cannot suppress already-exists errors" \
+  "$(grep -c -- '--force' "$SCRATCH/bq_calls" || true)" "0"
+
+: > "$SCRATCH/bq_calls"
+run_drill new_dataset
+assert_eq "owned destination is restored" "$(grep -c ' load ' "$SCRATCH/bq_calls")" "1"
+assert_eq "owned destination is cleaned up" "$(grep -c ' rm ' "$SCRATCH/bq_calls")" "1"
+
+: > "$SCRATCH/bq_calls"
+run_drill kept_dataset 1
+assert_eq "KEEP preserves the owned destination" "$(grep -c ' rm ' "$SCRATCH/bq_calls" || true)" "0"
+
+: > "$SCRATCH/bq_calls"
+rc=0
+BQ_COUNT=invalid run_drill bad_count || rc=$?
+assert_eq "malformed count cannot report success" "$rc" "1"
+assert_eq "malformed count is diagnosed" "$(grep -c 'INVALID COUNT' "$SCRATCH/drill_output")" "1"
+assert_eq "count failure still cleans up owned destination" "$(grep -c ' rm ' "$SCRATCH/bq_calls")" "1"
+
+rc=0
+BQ_RM_EXIT=1 run_drill cleanup_failure || rc=$?
+assert_eq "cleanup failure cannot report a successful drill" "$rc" "1"
+
 echo
 # Banner names THIS file (2026-09-04 quality pass). It previously self-identified as
 # "test_restore_drill_date_resolution", a filename that has never existed here -- ci.yml and

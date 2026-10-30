@@ -44,6 +44,23 @@ def test_optioninputs_alias_is_intact():
     assert OptionInputs is ATMOption
 
 
+@pytest.mark.parametrize("name", ["risk_free_rate", "dividend_yield"])
+@pytest.mark.parametrize("bad", [float('nan'), float('inf'), float('-inf')])
+def test_optioninputs_rejects_nonfinite_rates(name, bad):
+    args = {"underlying_price": 100, "strike": 100, "days_to_expiration": 30,
+            "risk_free_rate": 0.045, "volatility": 0.30, "option_type": 'call'}
+    args[name] = bad
+    with pytest.raises(ValueError, match=name):
+        OptionInputs(**args)
+
+
+@pytest.mark.parametrize("quantity", [0, True, False, 1.5, float('nan'), float('inf')])
+def test_direct_optionleg_rejects_invalid_contract_quantities(quantity):
+    option = ATMOption(100, 100, 30, 0.045, 0.30, 'call')
+    with pytest.raises(ValueError, match="quantity"):
+        OptionLeg(option, quantity)
+
+
 # ---------------------------------------------------------------------------
 # OptionInputs.__post_init__ validation (2026-07-04 audit finding: a negative
 # days_to_expiration used to be silently priced as "already expired" instead
@@ -693,21 +710,51 @@ def test_breakeven_points_long_call_and_debit_spread():
                    risk_free_rate=0.045, volatility=0.30, contracts=1)
     bes = lc.breakeven_points()
     assert len(bes) == 1
-    assert bes[0] == pytest.approx(100 + lc.net_debit() / CONTRACT_MULTIPLIER, abs=0.05)
+    assert bes[0] == pytest.approx(100 + lc.net_debit() / CONTRACT_MULTIPLIER, abs=0.00005)
     # Debit call spread: single breakeven at long_strike + net-debit-per-share.
     dcs = debit_call_spread(100, long_strike=100, short_strike=105,
                             days_to_expiration=30, risk_free_rate=0.045,
                             volatility_long=0.30, volatility_short=0.28, contracts=1)
     bes2 = dcs.breakeven_points()
     assert len(bes2) == 1
-    assert bes2[0] == pytest.approx(100 + dcs.net_debit() / CONTRACT_MULTIPLIER, abs=0.05)
+    assert bes2[0] == pytest.approx(100 + dcs.net_debit() / CONTRACT_MULTIPLIER, abs=0.00005)
 
 
-# breakeven_points() is a SINGLE-PATH computation (grid scan + bisection) with no dual-path backstop —
+def test_breakeven_includes_zero_touching_strike_and_zero_interval_boundary():
+    call = ATMOption(100, 100, 30, 0.0, 0.0, 'call')
+    put = ATMOption(100, 100, 30, 0.0, 0.0, 'put')
+    straddle = Structure([OptionLeg(call, 1), OptionLeg(put, 1)], 'straddle', 'straddle')
+    assert straddle.breakeven_points() == [100.0]
+    zero_cost_call = Structure([OptionLeg(call, 1)], 'zero-cost call', 'long_call')
+    assert zero_cost_call.breakeven_points() == [100.0]
+    cancelled = Structure([OptionLeg(call, 1), OptionLeg(call, -1)], 'cancelled', 'custom')
+    assert cancelled.breakeven_points() == []
+
+
+def test_breakeven_has_no_fixed_upper_scan_limit():
+    # Per-leg volatility can differ. This bounded structure's net +1 call has
+    # a large premium and a root above the former 3*max(strike, spot) cutoff.
+    structure = Structure([
+        OptionLeg(ATMOption(100, 100, 365, 0.0, 5.0, 'call'), 10),
+        OptionLeg(ATMOption(100, 100, 365, 0.0, 0.0, 'call'), -9),
+    ], 'high-debit calls', 'custom')
+    expected = 100 + structure.net_debit() / CONTRACT_MULTIPLIER
+    assert expected > 300
+    assert structure.breakeven_points() == [round(expected, 4)]
+
+
+def test_breakeven_retains_tail_root_with_sub_ulp_premium():
+    structure = long_call(underlying_price=100, strike=200, days_to_expiration=30,
+                          risk_free_rate=0.02, volatility=0.3098966218812815, contracts=1)
+    assert 0 < structure.net_debit() / CONTRACT_MULTIPLIER < math.ulp(200.0)
+    assert structure.breakeven_points() == [200.0]
+
+
+# breakeven_points() is a SINGLE-PATH computation with no dual-path backstop —
 # unlike max loss, nothing independently recomputes it at runtime, so these cases ARE the check. Each
 # expectation is the closed-form breakeven derived from the structure's own net_debit() (negative =
-# credit received), not a hardcoded float, so the cases stay valid if a fixture vol ever moves. abs=0.05
-# matches the sibling test above and is ~5x the scan's grid cell (max(strike, S0) * 3 / 30000).
+# credit received), not a hardcoded float, so the cases stay valid if a fixture vol ever moves.
+# The absolute tolerance allows only the public method's four-decimal output rounding.
 # len() is asserted too: a regression that drops or duplicates a root must fail, not just a misplaced one.
 @pytest.mark.parametrize("build,expected", [
     # Iron condor — the only permitted structure with TWO breakevens: short put - credit, short call + credit.
@@ -754,7 +801,7 @@ def test_breakeven_points_matches_closed_form_across_structures(build, expected)
     want = expected(struct)
     assert len(bes) == len(want)
     for got, exp in zip(bes, want, strict=True):
-        assert got == pytest.approx(exp, abs=0.05)
+        assert got == pytest.approx(exp, abs=0.00005)
 
 
 def test_realized_vol_uses_only_trailing_31_closes():
@@ -928,6 +975,16 @@ def test_structure_rejects_empty_legs():
 def test_size_position_rejects_nonfinite_or_nonpositive_max_loss(bad):
     with pytest.raises(ValueError):
         size_position(bad, 1389.37, 0.02)
+
+
+@pytest.mark.parametrize("bad", [-1.0, float('nan'), float('inf'), float('-inf')])
+def test_size_position_rejects_invalid_strategy_nav(bad):
+    with pytest.raises(ValueError, match="strategy_nav"):
+        size_position(50.0, bad, 0.02)
+
+
+def test_size_position_with_zero_strategy_nav_defers():
+    assert size_position(50.0, 0.0, 0.02) == (0, True)
 
 
 @pytest.mark.parametrize("bad", [0.0, -1.0, float('nan'), float('inf'), float('-inf')])

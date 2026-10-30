@@ -12,9 +12,15 @@ def test_parse_bq_json_stdout_accepts_clean_json_array():
     assert parse_bq_json_stdout('[{"x": "1"}]') == [{"x": "1"}]
 
 
-def test_parse_bq_json_stdout_accepts_empty_stdout_as_no_rows():
-    assert parse_bq_json_stdout("") == []
-    assert parse_bq_json_stdout("No rows.\n") == []
+def test_parse_bq_json_stdout_accepts_an_explicit_empty_array():
+    assert parse_bq_json_stdout("[]") == []
+    assert parse_bq_json_stdout("Waiting on bqjob\n[]\n") == []
+
+
+@pytest.mark.parametrize("stdout", ["", " \n\t", "No rows.\n", "Waiting on bqjob\n", "null", '{"x": 1}'])
+def test_parse_bq_json_stdout_rejects_absent_row_array(stdout):
+    with pytest.raises(ValueError, match="did not contain a JSON row array"):
+        parse_bq_json_stdout(stdout)
 
 
 def test_parse_bq_json_stdout_skips_bracketed_status_text_before_json():
@@ -54,6 +60,13 @@ def test_run_bq_query_parses_banner_prefixed_json(monkeypatch):
     monkeypatch.setattr(bq_json.subprocess, "run",
                         _fake_run(0, 'Waiting on bqjob [RUNNING]\n[{"view_definition": "SELECT 1"}]'))
     assert run_bq_query("SELECT 1", "proj") == [{"view_definition": "SELECT 1"}]
+
+
+@pytest.mark.parametrize("stdout", ["", "No rows.\n", "Waiting on bqjob\n", "[truncated"])
+def test_run_bq_query_rejects_successful_exit_without_json_rows(monkeypatch, stdout):
+    monkeypatch.setattr(bq_json.subprocess, "run", _fake_run(0, stdout))
+    with pytest.raises(ValueError):
+        run_bq_query("SELECT 1", "proj")
 
 
 def test_run_bq_query_raises_on_nonzero_returncode(monkeypatch):

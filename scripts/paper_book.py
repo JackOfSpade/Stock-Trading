@@ -56,6 +56,8 @@ from decimal import Decimal, InvalidOperation
 from email.utils import parsedate_to_datetime
 from urllib.parse import quote_plus
 
+from lib.bq_numeric import numeric_text
+
 PROJECT = "stock-trading-498512"
 CALLS_TABLE = f"`{PROJECT}.events.news_reaction_calls`"
 MARKS_TABLE = f"`{PROJECT}.events.news_reaction_marks`"
@@ -296,10 +298,10 @@ def norm_px(value, key: str) -> str:
         raise RowError(f"{key} {value!r} is not a number") from None
     if not d.is_finite() or d <= 0:
         raise RowError(f"{key} {value!r} must be a positive price")
-    d = d.normalize()
-    if d.as_tuple().exponent < -9:  # NUMERIC keeps 9 decimals; a rounded value could never match its digest
-        raise RowError(f"{key} {value!r} has more than 9 decimal places")
-    return format(d, "f")  # the same text CAST(NUMERIC AS STRING) renders
+    try:
+        return numeric_text(d, trim_scale=True)
+    except ValueError as e:
+        raise RowError(f"{key} {value!r} {e}") from None
 
 
 def call_direction(votes: list[str]) -> tuple[str, str]:

@@ -129,13 +129,9 @@ NOT_COUNTED = [
 def partial_profile(hop: pd.Series, mkt: pd.Series, pos: int, dates: pd.DatetimeIndex) -> dict | None:
     """Same arithmetic as onset.car_profile, but reports each horizon only if its 5h post-event trading
     days are observable (None otherwise) instead of refusing the whole window."""
-    pre = slice(max(0, pos - onset.BETA_WINDOW), pos)
-    x, y = mkt.iloc[pre], hop.iloc[pre]
-    ok = x.notna() & y.notna()
-    if ok.sum() < onset.MIN_BETA_OBS:
+    beta = onset.estimate_beta(hop, mkt, pos)
+    if beta is None:
         return None
-    x, y = x[ok], y[ok]
-    beta = float(np.cov(x, y, ddof=1)[0, 1] / np.var(x, ddof=1))
     avail = len(dates) - 1 - pos  # trading days observable after the event day
     post_m = mkt.iloc[pos : pos + avail + 1]
     post_y = hop.iloc[pos : pos + avail + 1]

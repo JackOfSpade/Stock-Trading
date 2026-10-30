@@ -46,6 +46,7 @@ def event_reaction_qualifies(close_before_event: float, close_on_event_day: floa
     # not just <= 0 (NaN compares False against every ordering operator, so a bare
     # `<= 0` guard let it through silently before) -- see that function's docstring.
     require_finite_positive(close_before_event, "close_before_event")
+    require_finite_positive(close_on_event_day, "close_on_event_day", allow_zero=True)
     pct_move = abs(close_on_event_day - close_before_event) / close_before_event
     return pct_move >= MIN_EVENT_REACTION_PCT
 
@@ -69,6 +70,7 @@ def short_borrow_rate_exceeded(borrow_rate_annualized: float) -> bool:
     """Exit rule (short positions only): "borrow rate spike above 10% annualized
     (short-financing cost overwhelms thesis)".
     """
+    require_finite_positive(borrow_rate_annualized, "borrow_rate_annualized", allow_zero=True)
     return borrow_rate_annualized > SHORT_BORROW_RATE_LIMIT
 
 

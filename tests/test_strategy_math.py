@@ -7,6 +7,8 @@ practically buildable; see strategy_math/__init__.py docstring for the full rati
 """
 
 import datetime
+import math
+from fractions import Fraction
 
 import pytest
 
@@ -111,6 +113,56 @@ def test_ols_regression_exact_linear_no_noise():
     assert result.n == 5
 
 
+@pytest.mark.parametrize("scale", [1e-200, 1e200, 1e308])
+def test_pearson_correlation_is_stable_across_finite_scales(scale):
+    x = [-scale, 0.0, scale]
+    assert common.pearson_correlation(x, x) == pytest.approx(1.0)
+    assert common.pearson_correlation(x, [-value for value in x]) == pytest.approx(-1.0)
+
+
+def test_pearson_correlation_preserves_near_constant_variation():
+    x = [0.010000000000000005, 0.010000000000000004, 0.010000000000000002,
+         0.010000000000000002, 0.010000000000000005, 0.010000000000000007]
+    y = [0.010000000000000009, 0.010000000000000004, 0.010000000000000007,
+         0.010000000000000004, 0.010000000000000005, 0.010000000000000009]
+    # Form an independent exact reference from the actual binary float values;
+    # computing rounded floating means first loses variation in this example.
+    exact_x = [Fraction(value) for value in x]
+    exact_y = [Fraction(value) for value in y]
+    mean_x, mean_y = sum(exact_x) / len(x), sum(exact_y) / len(y)
+    cov = sum((xi - mean_x) * (yi - mean_y) for xi, yi in zip(exact_x, exact_y, strict=True))
+    var_x = sum((xi - mean_x) ** 2 for xi in exact_x)
+    var_y = sum((yi - mean_y) ** 2 for yi in exact_y)
+    expected = math.sqrt(float(cov * cov / (var_x * var_y)))
+    assert expected == pytest.approx(0.5990422978731538)
+    assert common.pearson_correlation(x, y) == pytest.approx(expected)
+    assert strategy_e.pair_correlation_qualifies(x, y) is True
+
+
+def test_pearson_correlation_handles_overflowing_finite_means():
+    x = [1e308, 1.1e308, 1.2e308]
+    assert common.pearson_correlation(x, x) == pytest.approx(1.0)
+
+
+@pytest.mark.parametrize("bad", [float('nan'), float('inf'), float('-inf')])
+@pytest.mark.parametrize("name", ["x", "y"])
+def test_return_series_reject_nonfinite_observations(bad, name):
+    inputs = {"x": [0.01, 0.02, -0.01], "y": [0.02, 0.01, -0.02]}
+    inputs[name][1] = bad
+    for calculate in (common.pearson_correlation, common.ols_regression):
+        with pytest.raises(ValueError, match=rf"{name}\[1\]"):
+            calculate(**inputs)
+
+
+def test_invalid_return_data_cannot_silently_disable_exit_gates():
+    bad_returns = [0.01, float('nan'), -0.01]
+    market_returns = [0.02, -0.01, 0.01]
+    with pytest.raises(ValueError):
+        strategy_e.correlation_breakdown(bad_returns, market_returns)
+    with pytest.raises(ValueError):
+        strategy_d.beta_adjusted_alpha_test(bad_returns, market_returns)
+
+
 def test_ols_regression_zero_variance_x_raises():
     with pytest.raises(ValueError):
         common.ols_regression(y=[1.0, 2.0, 3.0], x=[5.0, 5.0, 5.0])
@@ -204,6 +256,19 @@ def test_b_timeline_expired_boundary():
 def test_b_short_borrow_rate_boundary():
     assert strategy_b.short_borrow_rate_exceeded(0.10) is False  # "above 10%", not >=
     assert strategy_b.short_borrow_rate_exceeded(0.1001) is True
+
+
+@pytest.mark.parametrize("bad", [-1.0, float('nan'), float('inf'), float('-inf')])
+def test_b_event_close_and_borrow_rate_reject_invalid_values(bad):
+    with pytest.raises(ValueError, match="close_on_event_day"):
+        strategy_b.event_reaction_qualifies(100.0, bad)
+    with pytest.raises(ValueError, match="borrow_rate_annualized"):
+        strategy_b.short_borrow_rate_exceeded(bad)
+
+
+def test_b_zero_event_close_and_free_borrow_remain_valid():
+    assert strategy_b.event_reaction_qualifies(100.0, 0.0) is True
+    assert strategy_b.short_borrow_rate_exceeded(0.0) is False
 
 
 def test_b_short_stop_loss_boundary():

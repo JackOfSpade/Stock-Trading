@@ -208,8 +208,10 @@ def _capturing_urlopen(captured):
     return _fake_urlopen
 
 
-def test_post_ntfy_url_sends_plain_text_body(monkeypatch):
-    monkeypatch.setattr(ar, "WEBHOOK_URL", "https://ntfy.sh/stock-trading-testtopic")
+@pytest.mark.parametrize("url", ["https://ntfy.sh/stock-trading-testtopic", "https://NTFY.SH:443/topic",
+                                 "https://ntfy.sh./topic"])
+def test_post_ntfy_url_sends_plain_text_body(monkeypatch, url):
+    monkeypatch.setattr(ar, "WEBHOOK_URL", url)
     captured = {}
     monkeypatch.setattr(ar.urllib.request, "urlopen", _capturing_urlopen(captured))
     status = ar.post("hello from the test")
@@ -225,6 +227,17 @@ def test_post_non_ntfy_url_still_sends_json_body(monkeypatch):
     ar.post("hello")
     assert json.loads(captured["data"]) == {"text": "hello"}
     assert captured["headers"]["Content-type"] == "application/json"
+
+
+def test_ntfy_substring_on_another_host_keeps_the_generic_webhook_shape(monkeypatch):
+    for url in ("https://notntfy.sh/topic", "https://example.invalid/ntfy.sh?host=ntfy.sh",
+                "https://ntfy.sh.example.invalid/topic"):
+        monkeypatch.setattr(ar, "WEBHOOK_URL", url)
+        captured = {}
+        monkeypatch.setattr(ar.urllib.request, "urlopen", _capturing_urlopen(captured))
+        ar.post("hello", silent=True)
+        assert json.loads(captured["data"]) == {"text": "hello"}
+        assert captured["headers"]["Content-type"] == "application/json"
 
 
 # ---- main()'s "best-effort — swallow the exception, return 0" contract for alerts

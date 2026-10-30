@@ -9,6 +9,7 @@ Standard library only. Usage: python3 scripts/ramp_calc.py tests/fixtures/ramp_v
 import json
 import math
 import sys
+from bisect import bisect_left, bisect_right
 
 DEFAULTS = {
     "calibration_trades": 10,
@@ -55,18 +56,15 @@ def ramp_path(
         raise ValueError("tail_loss_5pct must be < 0")
 
     ordered = sorted(trades, key=_order_key)
-    n = len(ordered)
-    overlaps = []
-    for a in range(n):
-        ta = ordered[a]
-        cnt = 0
-        for b in range(n):
-            if a == b:
-                continue
-            tb = ordered[b]
-            if tb["entry_date"] <= ta["exit_date"] and ta["entry_date"] <= tb["exit_date"]:
-                cnt += 1
-        overlaps.append(cnt)
+    if any(t["entry_date"] > t["exit_date"] for t in ordered):
+        raise ValueError("trade entry_date must not be after exit_date")
+    entries = sorted(t["entry_date"] for t in ordered)
+    exits = sorted(t["exit_date"] for t in ordered)
+    # Closed intervals overlap when entry <= exit. Count entries through this
+    # exit, subtract intervals ending before this entry, and remove the trade
+    # itself. O(n log n), including same-day and duplicate intervals.
+    overlaps = [bisect_right(entries, t["exit_date"]) - bisect_left(exits, t["entry_date"]) - 1
+                for t in ordered]
 
     if tail_loss_5pct is None:
         tail_loss_5pct = mu - 1.645 * sigma

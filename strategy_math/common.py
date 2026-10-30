@@ -102,15 +102,43 @@ def pearson_correlation(x: list[float], y: list[float]) -> float:
         raise ValueError(f"x and y must be equal length (got {n} and {len(y)}).")
     if n < 2:
         raise ValueError(f"need at least 2 observations to compute correlation (got {n}).")
-    mean_x = sum(x) / n
-    mean_y = sum(y) / n
-    cov = sum((xi - mean_x) * (yi - mean_y) for xi, yi in zip(x, y))
-    var_x = sum((xi - mean_x) ** 2 for xi in x)
-    var_y = sum((yi - mean_y) ** 2 for yi in y)
-    denom = math.sqrt(var_x * var_y)
-    if denom == 0:
+    _require_finite_series(x, "x")
+    _require_finite_series(y, "y")
+    # Center relative to an observation before normalizing: scaling originals
+    # or rounding a large mean first can erase near-constant variation.
+    centered_x = _scaled_centered_offsets(x)
+    centered_y = _scaled_centered_offsets(y)
+    norm_x = math.hypot(*centered_x)
+    norm_y = math.hypot(*centered_y)
+    if norm_x == 0 or norm_y == 0:
         return 0.0
-    return cov / denom
+    correlation = math.fsum(
+        (xi / norm_x) * (yi / norm_y)
+        for xi, yi in zip(centered_x, centered_y, strict=True)
+    )
+    return max(-1.0, min(1.0, correlation))
+
+
+def _scaled_centered_offsets(values: list[float]) -> list[float]:
+    """Preserve small differences before scaling centered offsets to a safe range."""
+    offsets = [value - values[0] for value in values]
+    if not all(map(math.isfinite, offsets)):
+        # Opposite-sign observations near the float limit can overflow even
+        # during subtraction. Only that case needs scaling before anchoring.
+        scale = max(map(abs, values))
+        anchor = values[0] / scale
+        offsets = [value / scale - anchor for value in values]
+    scale = max(map(abs, offsets)) or 1.0
+    scaled = [value / scale for value in offsets]
+    mean = math.fsum(scaled) / len(scaled)
+    return [value - mean for value in scaled]
+
+
+def _require_finite_series(values: list[float], name: str) -> None:
+    """Missing/non-finite returns cannot silently disable a correlation/alpha gate."""
+    for index, value in enumerate(values):
+        if not math.isfinite(value):
+            raise ValueError(f"{name}[{index}] = {value} (must be a finite number).")
 
 
 @dataclass(frozen=True)
@@ -140,6 +168,8 @@ def ols_regression(y: list[float], x: list[float]) -> RegressionResult:
     if n < 3:
         # need >=3 to have a meaningful residual-based SE (n-2 degrees of freedom)
         raise ValueError(f"need at least 3 observations for a regression with SE (got {n}).")
+    _require_finite_series(x, "x")
+    _require_finite_series(y, "y")
     mean_x = sum(x) / n
     mean_y = sum(y) / n
     sxx = sum((xi - mean_x) ** 2 for xi in x)
