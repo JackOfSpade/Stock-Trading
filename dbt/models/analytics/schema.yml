@@ -394,3 +394,47 @@ models:
         description: Curated fills in the last 7 days (America/Denver).
       - name: pending_orders
         description: Count of ORDER_STAGED pending registry rows.
+
+  - name: factor_cluster_exposure
+    description: >-
+      Informational direct-holding AI_CAPEX exposure for M3 finding F-9 (bigquery/272,
+      2026-10-30). One row per cluster and held strategy plus ALL; NULL strategies excluded.
+      Membership is a versioned literal. VOO/SGOV park look-through is excluded because index
+      weights are absent from the warehouse; readers must state this. Account NAV includes park.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [cluster, strategy]
+    columns:
+      - name: cluster
+        description: Versioned cross-sector cohort, currently AI_CAPEX.
+        tests: [not_null]
+      - name: strategy
+        description: Held strategy code or ALL for the combined deployed book.
+        tests: [not_null]
+      - name: as_of_date
+        description: Current date in America/Denver, not a historical valuation date.
+        tests: [not_null]
+      - name: n_cluster_names
+        description: Distinct held cluster tickers, deduplicated across strategies for ALL; zero if none.
+        tests: [not_null]
+      - name: cluster_tickers
+        description: Distinct held cluster tickers sorted alphabetically; empty string if none.
+      - name: cluster_cost_basis
+        description: Summed cluster position-tranche cost basis, rounded to two decimals.
+      - name: cluster_market_value
+        description: >-
+          Shares times each ticker's latest close, summed and rounded to two decimals. Zero for
+          no cluster holdings; missing closes leave partial or NULL values, not invented prices.
+      - name: book_market_value
+        description: All strategy holdings (all strategies for ALL) at latest closes, rounded to two decimals.
+      - name: cluster_share_of_book_pct
+        description: Cluster market value divided by book market value, percent to two decimals.
+      - name: account_nav
+        description: Latest account NAV including park, rounded to two decimals.
+      - name: cluster_share_of_account_pct
+        description: Direct cluster market value divided by account NAV, percent to two decimals.
+      - name: latest_mark_date
+        description: Minimum of held cluster tickers' latest mark dates; NULL if none have marks.
+      - name: names_missing_mark
+        description: Distinct held cluster tickers without a usable latest close; zero if none.
+        tests: [not_null]
