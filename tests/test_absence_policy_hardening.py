@@ -13,9 +13,10 @@ import re
 import pytest
 
 from conftest import ROOT, load_module_from_path
+from lib.textio import read_text
 
 mod = load_module_from_path("apply_absence_policy_hardening", "infra", "terraform", "apply_absence_policy_hardening.py")
-TF = open(os.path.join(ROOT, "infra", "terraform", "monitoring.tf"), encoding="utf-8").read()
+TF = read_text(os.path.join(ROOT, "infra", "terraform", "monitoring.tf"))
 
 
 def _hcl_str(raw):
@@ -105,7 +106,7 @@ def test_freshness_config_id_matches_spec_header():
     # header comment (and to the metric filter documented in RUNBOOK section 19).
     cfg = mod.MONITORS["Freshness scheduler absent >25h"][0]
     assert f'config_id="{cfg}"' in TF
-    assert cfg in open(os.path.join(ROOT, "ops", "RUNBOOK.md"), encoding="utf-8").read()
+    assert cfg in read_text(os.path.join(ROOT, "ops", "RUNBOOK.md"))
 
 
 def test_evaluation_intervals_in_spec_match_live_values():
@@ -129,7 +130,7 @@ def test_integrity_doc_does_not_claim_to_be_the_only_detector():
 
 
 def test_runbook_cites_the_script_and_the_section():
-    rb = open(os.path.join(ROOT, "ops", "RUNBOOK.md"), encoding="utf-8").read()
+    rb = read_text(os.path.join(ROOT, "ops", "RUNBOOK.md"))
     assert "## 56." in rb and "apply_absence_policy_hardening.py" in rb
     assert "§56" in TF and "section 56" in mod.TRIAGE
 

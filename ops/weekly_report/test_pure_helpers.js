@@ -389,7 +389,16 @@ t('esc_ and esc2_ (the two hand-synced HTML-escape twins) agree for every input'
 function withBqStubs_(stubs, fn) {
   const savedBQ = global.BigQuery, savedUtil = global.Utilities, savedLogger = global.Logger;
   global.BigQuery = { Jobs: { query: stubs.query, getQueryResults: stubs.getQueryResults } };
-  global.Utilities = { sleep: () => {} }; // no-op: a real 1s x10 sleep would make the "never completes" case slow
+  // sleep is a no-op: a real 1s x10 sleep would make the "never completes" case slow. formatDate mimics
+  // Apps Script's zone validation: it throws unless the zone is one of the few valid names these tests use.
+  const validZones_ = ['America/Toronto', 'America/Denver'];
+  global.Utilities = {
+    sleep: () => {},
+    formatDate: (date, tz, fmt) => {
+      if (!validZones_.includes(tz)) throw new Error('Unknown timezone: ' + tz);
+      return '2026';
+    }
+  };
   global.Logger = { log: () => {} };
   try {
     return fn();
@@ -494,6 +503,26 @@ t('getUserTzWeekly_ and getUserTzAlerts_ both fall back to America/Denver, witho
     assert.strictEqual(getUserTzWeekly_(), 'America/Denver');
     assert.strictEqual(getUserTzAlerts_(), 'America/Denver');
   });
+  _tzCache = null; _alertTzCache = null;
+});
+
+t('getUserTzWeekly_ and getUserTzAlerts_ both fall back to America/Denver, and cache that, when state.user_tz holds an invalid zone', () => {
+  _tzCache = null; _alertTzCache = null;
+  const fields = [{ name: 'tz' }];
+  const stubs = {
+    query: () => ({ jobComplete: true, schema: { fields }, rows: [{ f: [{ v: 'America/Torontoo' }] }],
+                     jobReference: { jobId: 'job-bad-tz' } }),
+    getQueryResults: () => { throw new Error('getQueryResults must not be called for a single-page, already-complete job'); }
+  };
+  withBqStubs_(stubs, () => {
+    assert.strictEqual(getUserTzWeekly_(), 'America/Denver');
+    assert.strictEqual(getUserTzAlerts_(), 'America/Denver');
+  });
+  // The cache must hold the validated fallback, never the bad zone (no stub installed: a cache miss would throw).
+  assert.strictEqual(_tzCache, 'America/Denver');
+  assert.strictEqual(_alertTzCache, 'America/Denver');
+  assert.strictEqual(getUserTzWeekly_(), 'America/Denver');
+  assert.strictEqual(getUserTzAlerts_(), 'America/Denver');
   _tzCache = null; _alertTzCache = null;
 });
 

@@ -247,6 +247,15 @@ def _split_args(text, start, end):
         if c in "'\"":
             i = _skip_string(text, i)
             continue
+        if c == "-" and text.startswith("--", i):
+            # Same `--` skip _scan_close() already does: a line comment between STRUCT fields used to
+            # be split as a VALUE (a quote or comma inside it then failed the parse, a false red --
+            # 2026-10-31). Blank it so the field text stays comment-free for _parse_sql_value().
+            nl = text.find("\n", i)
+            j = end if nl == -1 or nl > end else nl
+            text = text[:i] + " " * (j - i) + text[j:]
+            i = j
+            continue
         if c in "([":
             depth += 1
         elif c in ")]":

@@ -123,6 +123,10 @@ assert_eq "malformed URL remains best effort" "$warning" "::warning::webhook URL
 assert_eq "malformed URL never posts" "$([ -e "$CAPTURE" ] && echo yes || echo no)" "no"
 run_notify '' 'disabled'
 assert_eq "unset webhook never posts" "$([ -e "$CAPTURE" ] && echo yes || echo no)" "no"
+rc=0
+warning="$(run_notify 'https://ntfy.sh/topic' '')" || rc=$?
+assert_eq "empty message exits 0 (never-non-zero contract)" "$rc" "0"
+assert_eq "empty message never posts" "$([ -e "$CAPTURE" ] && echo yes || echo no)" "no"
 
 echo
 if [ "$fail" -ne 0 ]; then

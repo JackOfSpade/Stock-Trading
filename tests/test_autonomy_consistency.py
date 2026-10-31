@@ -218,7 +218,7 @@ def test_check_stage_ceiling_invariant_clean_cases_are_silent():
 
 
 def test_check_stage_ceiling_invariant_against_real_autonomy_levels_is_clean():
-    doc = ac.yaml.safe_load(open(ac.AUTONOMY, encoding="utf-8")) or {}
+    doc = ac.load_yaml(ac.AUTONOMY)
     assert ac.check_stage_ceiling_invariant(doc.get("loops", [])) == []
 
 
@@ -238,7 +238,7 @@ def test_duplicate_loop_ids_clean_case_is_silent():
 
 
 def test_duplicate_loop_ids_against_real_autonomy_levels_is_clean():
-    doc = ac.yaml.safe_load(open(ac.AUTONOMY, encoding="utf-8")) or {}
+    doc = ac.load_yaml(ac.AUTONOMY)
     assert ac.duplicate_loop_ids(doc.get("loops", [])) == []
 
 

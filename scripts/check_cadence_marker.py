@@ -79,13 +79,16 @@ MARKER_SHAPE = {
 }
 
 
-def _git(*args):
-    """Run a git command; return stripped stdout, or None if git failed."""
+def _git(*args, strip=True):
+    """Run a git command; return its stdout (whitespace-stripped unless strip=False), or None if git
+    failed. strip=False is for `git show <rev>:<path>`: a blob whose real first line is blank must
+    not have that line removed before the caller reads "line 1" (2026-10-31)."""
     try:
-        return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True,
-                              check=True).stdout.strip()
+        out = subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True,
+                             check=True).stdout
     except (subprocess.CalledProcessError, FileNotFoundError):
         return None
+    return out.strip() if strip else out
 
 
 def resolve_base():
@@ -104,7 +107,7 @@ def resolve_base():
 
 def first_line_at(rev, rel_path):
     """First line of rel_path at revision `rev`, or None if the file did not exist there."""
-    blob = _git("show", f"{rev}:{rel_path}")
+    blob = _git("show", f"{rev}:{rel_path}", strip=False)
     if blob is None:
         return None
     return blob.split("\n", 1)[0].rstrip()
@@ -113,13 +116,14 @@ def first_line_at(rev, rel_path):
 def write_dt(base, rel_path):
     """When the marker under test was written: the newest commit in base..HEAD touching rel_path.
 
-    Falls back to HEAD's own date (a working-tree edit not yet committed, which is the local
-    pre-commit case) so the check is usable before the commit exists.
+    Falls back to NOW for a working-tree edit not yet committed (the local pre-commit case), so the
+    check is usable before the commit exists. It used to fall back to HEAD's author date, which is
+    when the LAST commit was written, not when this edit was made -- a marker stamped on the 2nd of
+    a month over a HEAD authored on the 31st read as a false period mismatch (2026-10-31).
     """
-    stamp = _git("log", "-1", "--format=%aI", f"{base}..HEAD", "--", rel_path) or _git(
-        "log", "-1", "--format=%aI", "HEAD")
+    stamp = _git("log", "-1", "--format=%aI", f"{base}..HEAD", "--", rel_path)
     if not stamp:
-        return None
+        return datetime.now(OPERATING_TZ)
     return datetime.fromisoformat(stamp).astimezone(OPERATING_TZ)
 
 

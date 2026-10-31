@@ -339,3 +339,11 @@ def test_prose_registry_has_no_stale_entries_against_the_live_plan():
     # prose message must be deleted from PROSE_PLACEHOLDERS rather than sit there forever.
     _unreg, _quote, used, _sql, _anom = cams.find_prose_sites()
     assert sorted(set(cams.PROSE_PLACEHOLDERS) - used) == []
+
+
+
+def test_prose_two_backslash_escaped_quotes_are_not_a_doubled_quote_defect():
+    # 2026-10-31: _as_literal() unescapes \' before the '' test, so a valid \'\' read as a defect.
+    ok = _prose("sp_raise_alert('info','Q4','synced','quoted \\'\\'x\\'\\' text','<JSON>')")
+    _unreg, quote, _used, _sql, _anom = cams.find_prose_sites(ok)
+    assert quote == []

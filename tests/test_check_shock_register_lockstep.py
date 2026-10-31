@@ -196,3 +196,13 @@ def test_higher_numbered_reregistration_file_supersedes(tmp_path, monkeypatch, c
     assert rc == 1
     assert re.search(r"strategy E column '.*max measurement age.*' \(gate_max_age_days\) MISMATCH — table 35 vs "
                      r"bigquery/999_shock_reregistration\.sql:\d+ 40", err)
+
+
+
+def test_split_args_ignores_line_comments_between_fields():
+    # 2026-10-31: a `--` comment between STRUCT fields was split as a value (a comma or quote inside it
+    # broke the field count / parse). Each segment's offset still indexes the ORIGINAL text.
+    text = "('a', -- note, with 'quote'\n 'b')"
+    args = cs._split_args(text, 1, len(text) - 1)
+    assert [a.strip() for _pos, a in args] == ["'a'", "'b'"]
+    assert [pos for pos, _a in args] == [1, text.index(",") + 1]

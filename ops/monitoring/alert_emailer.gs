@@ -72,7 +72,7 @@ const ALERT_RECIPIENT  = Session.getActiveUser().getEmail(); // self-email
 const ALERT_SENDER     = 'Stock-Trading Alerts';
 const SEVERITIES       = ['critical', 'warning']; // set to ['critical'] for criticals only
 const POLL_HOURS       = 2;                        // how often to check
-const ALERT_SCRIPT_VERSION = 'v10';                // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep. Named ALERT_SCRIPT_VERSION (not SCRIPT_VERSION) because this file and weekly_report.gs share ONE Apps Script project's top-level scope -- a same-named const in both would throw a project-wide SyntaxError on the next paste (2026-07-14 audit finding).
+const ALERT_SCRIPT_VERSION = 'v11';                // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep. Named ALERT_SCRIPT_VERSION (not SCRIPT_VERSION) because this file and weekly_report.gs share ONE Apps Script project's top-level scope -- a same-named const in both would throw a project-wide SyntaxError on the next paste (2026-07-14 audit finding).
 
 // ALERT-PROBE TOKEN (v10, 2026-08-31 BUG FIX). A single ASCII lowercase alphanumeric word, appended
 // to the body of every alert email this script sends (see the send site in checkAlerts_ below) so
@@ -200,6 +200,10 @@ function checkAlerts_() {
       seen = new Set();
     }
     const fresh = rows.filter(r => !seen.has(r.alert_id));
+    // Rows returned by the query (so notified_ts is still NULL) that the cache already holds: their
+    // earlier stamp must have failed. Re-stamped alongside fresh below (see stampNotified_ call).
+    const seenIds = rows.filter(r => seen.has(r.alert_id)).map(r => r.alert_id);
+    const stampIds = fresh.map(r => r.alert_id).concat(seenIds);
 
     // RECURRING RE-NOTIFY for termination_close_staged (ITEM 17, self-improvement audit 2026-07-11): a
     // kill-trigger liquidation close order is urgent from hour 1 -- the notified_ts-once semantics above
@@ -268,9 +272,18 @@ function checkAlerts_() {
       GmailApp.sendEmail(ALERT_RECIPIENT, subject, plainBody,
         htmlBody ? { htmlBody: htmlBody, name: ALERT_SENDER } : { name: ALERT_SENDER });
       Logger.log('Emailed %s new alerts (%s recurring termination-close)', combined.length, recurringCount);
-      stampNotified_(fresh.map(r => r.alert_id)); // recurring termination_close_staged rows NEVER stamped
+      // Stamp fresh ids PLUS ids already in seen that this poll's query still returned: the query
+      // selects notified_ts IS NULL, so a seen-and-returned row is one whose earlier stamp FAILED
+      // (stampNotified_ swallows its own exception). Without re-stamping it, the id would age out of the
+      // bounded cache below and be re-emailed. Idempotent: stampNotified_'s UPDATE carries
+      // AND notified_ts IS NULL. Recurring-only termination_close_staged rows (not in rows) are
+      // still NEVER stamped -- both id lists below come from rows only.
+      stampNotified_(stampIds);
       // Bounded de-dup guard for ids we just emailed (in case the notified_ts stamp failed).
-      const keep = [...seen, ...fresh.map(r => r.alert_id)].slice(-500);
+      // .slice(-200), NOT -500: a Script Property value is capped at 9 KB, and a UUID serializes to
+      // ~39 bytes in JSON (500 ids ~ 19.5 KB would make setProperty throw and freeze the cache once
+      // ~230 ids accumulate); 200 UUIDs is ~7.8 KB, safely under the cap.
+      const keep = [...seen, ...fresh.map(r => r.alert_id)].slice(-200);
       try {
         props.setProperty('notified_alert_ids', JSON.stringify(keep));
       } catch (e) { Logger.log('notified_alert_ids property write skipped: ' + e); }
@@ -283,6 +296,8 @@ function checkAlerts_() {
       // Saying only "in the last 168 h" would misdescribe a quiet poll as having checked a narrower
       // set than it did — and this line is the sole evidence a human reads when confirming a paste.
       Logger.log('No un-notified alerts (last %s h, plus roster-change notices of any age)', LOOKBACK_HOURS);
+      // Nothing to send, but cache-seen rows may still be un-stamped (earlier stamp failed): retry.
+      stampNotified_(seenIds);
     }
     pollOk = true;
   } catch (e) {
@@ -651,6 +666,12 @@ function getUserTzAlerts_() {
   if (_alertTzCache) return _alertTzCache;
   try {
     _alertTzCache = (bqAlerts_(`SELECT tz FROM \`${ALERT_PROJECT_ID}.state.user_tz\``)[0] || {}).tz || 'America/Denver';
+    try {
+      Utilities.formatDate(new Date(), _alertTzCache, 'yyyy');  // validate: throws on an unknown zone
+    } catch (e) {
+      Logger.log('getUserTzAlerts_: invalid timezone ' + JSON.stringify(_alertTzCache) + ', defaulting to America/Denver: ' + e);
+      _alertTzCache = 'America/Denver';
+    }
   } catch (e) {
     Logger.log('getUserTzAlerts_ failed, defaulting to America/Denver: ' + e);
     _alertTzCache = 'America/Denver';

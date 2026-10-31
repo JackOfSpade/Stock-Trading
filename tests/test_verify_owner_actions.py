@@ -1163,3 +1163,36 @@ def test_main_write_failure_is_fail_open_not_crash(tmp_path, monkeypatch, capsys
     out = capsys.readouterr().out
     assert "could not write" in out
     assert "will retry next run" in out
+
+
+
+# ---- check_S: "no override" requires having SEEN the per-user limit (2026-10-31) -------------------
+
+def _check_s_with(monkeypatch, body):
+    calls = iter([(True, "tok", ""), (True, body, "")])
+    monkeypatch.setattr(voa, "_run", lambda cmd: next(calls))
+    return voa.check_S()
+
+
+def test_check_s_empty_response_is_not_a_pass(monkeypatch):
+    ok, reason = _check_s_with(monkeypatch, "{}")
+    assert ok is False and "not present" in reason
+
+
+def test_check_s_limit_seen_without_override_passes(monkeypatch):
+    import json
+    body = json.dumps({"metrics": [{"metric": "bigquery.googleapis.com/quota/query/usage",
+                                    "consumerQuotaLimits": [{"unit": "1/d/{project}/{user}",
+                                                             "quotaBuckets": [{"effectiveLimit": "-1"}]}]}]})
+    ok, _reason = _check_s_with(monkeypatch, body)
+    assert ok is True
+
+
+def test_check_s_override_present_fails(monkeypatch):
+    import json
+    body = json.dumps({"metrics": [{"metric": "bigquery.googleapis.com/quota/query/usage",
+                                    "consumerQuotaLimits": [{"unit": "1/d/{project}/{user}",
+                                                             "quotaBuckets": [{"consumerOverride":
+                                                                               {"overrideValue": "32768"}}]}]}]})
+    ok, reason = _check_s_with(monkeypatch, body)
+    assert ok is False and "32768" in reason

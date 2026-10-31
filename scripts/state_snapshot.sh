@@ -25,7 +25,18 @@ dump () {  # dump <name> <sql>
   # bq_csv_query() (scripts/bq_csv.sh, extracted 2026-08-31 -- shell-workflows#1) keeps the CSV
   # header row -- unlike backup_events.sh/restore_drill.sh's table-enumeration use, this file's
   # whole point is a human-diffable CSV meant to be committed to git, so the header must survive.
-  bq_csv_query "$PROJECT" "$2" > "$OUT/$1.csv"
+  # Write to a sibling temp file and rename on success: a plain `> "$OUT/$1.csv"` truncates the
+  # previous snapshot BEFORE bq runs, so a failed query (set -e aborts here) left a zero-byte file
+  # that reads as "this view is now empty" next to views already overwritten with today's data
+  # (verified 2026-10-31 with a stubbed bq). The rename is atomic, so the old CSV survives intact.
+  local tmp
+  tmp="$(mktemp "$OUT/$1.csv.XXXXXX")"
+  if bq_csv_query "$PROJECT" "$2" > "$tmp"; then
+    mv -f "$tmp" "$OUT/$1.csv"
+  else
+    rm -f "$tmp"
+    return 1
+  fi
 }
 
 echo "Snapshotting state -> $OUT/"

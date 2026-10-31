@@ -19,7 +19,14 @@
 # query, or credentials is never sent the wrong payload format.
 set -euo pipefail
 
-msg="${1:?Usage: WEBHOOK_URL=... notify_webhook.sh <message>}"
+# `${1-}` (unset -> empty), NOT `${1:?...}`: the `:?` form also rejects an EMPTY first argument with a
+# non-zero exit, contradicting the never-exits-non-zero contract above (same null-vs-unset class
+# scripts/ci_finding.sh documents for its `detail` argument; 2026-10-31). An empty message is a no-op.
+msg="${1-}"
+if [ -z "$msg" ]; then
+  echo "::warning::notify_webhook.sh called with an empty message (nothing posted; the caller's own failure still stands)."
+  exit 0
+fi
 
 if [ -z "${WEBHOOK_URL:-}" ]; then
   exit 0

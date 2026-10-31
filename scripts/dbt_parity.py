@@ -99,7 +99,10 @@ VOLATILE_COLS = {"checked_at"}
 # per-model and partial: main()'s `checked == 0` guard only catches a TOTAL skip (systemic bq/auth
 # outage), never a single genuinely-broken model among many.
 SCHEMA_DRIFT_MARKERS = ("unrecognized name", "not found inside", "set operations", "not groupable",
-                        "no matching signature", "does not have a column", "incompatible types")
+                        "no matching signature", "does not have a column", "incompatible types",
+                        # A compiled dbt artifact that does not even parse is a broken port, not a
+                        # transient to skip -- it vanished from the compare with exit 0 before (2026-10-31).
+                        "syntax error")
 
 # Client-side concurrency for the per-model parity queries (owner-authorized 2026-07-30, Actions cost
 # audit). Each live-scope model (dbt/parity_live_scope.yml; 85 as of 2026-09-01, was 43 pre-scoping —

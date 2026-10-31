@@ -84,6 +84,11 @@ def routine_sections(text: str) -> dict[str, str]:
         # The routine prompts themselves are fenced, so retain fenced BODY text;
         # fence masking above is structural only (a heading-shaped example must not
         # split the section into a fictitious sibling routine).
+        if routine in sections:
+            # A second heading with the same id used to silently OVERWRITE the first section, dropping
+            # its text from every rule below (2026-10-31). split_task_plan.py dedupes slice names and
+            # check_handoff_contracts.routine_bodies() concatenates; here the only safe answer is loud.
+            raise ValueError(f"duplicate routine heading id {routine!r} in Claude_Task_Plan.md")
         sections[routine] = "".join(lines[start:end])
     return sections
 

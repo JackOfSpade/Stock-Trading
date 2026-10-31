@@ -79,7 +79,10 @@ jobs:
           if gcloud storage rsync -r "$SRC" "$DEST"; then
             echo "off-site mirror OK: $SRC -> $DEST"
           else
-            msg="🗄 Stock-Trading OFF-SITE backup mirror FAILED ($SRC -> $DEST). The off-project copy is stale — the events/ops truth has no out-of-trust-domain backup until this is fixed. See ops/RUNBOOK.md §27."
+            msg="🗄 Stock-Trading OFF-SITE backup mirror FAILED ($SRC -> <OFFSITE_BACKUP_GCS>). The off-project copy is stale — the events/ops truth has no out-of-trust-domain backup until this is fixed. See ops/RUNBOOK.md §27."
+            # $DEST is a repo SECRET: Actions masks it in the run log only, and this message also
+            # becomes a PUBLIC issue body (next step) and a push notification, so the destination is
+            # named by its secret's NAME, never its value (2026-10-31).
             echo "::error::$msg"
             scripts/notify_webhook.sh "$msg"
             printf '%s\n' "$msg" > /tmp/mirror_finding.txt

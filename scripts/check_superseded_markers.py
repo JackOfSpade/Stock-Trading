@@ -227,7 +227,10 @@ def violations():
                 continue
             entry = (kind, ds, name, fn)
             if fn not in cache:
-                lines = read_text(os.path.join(BIGQUERY_DIR, fn)).splitlines()
+                # split("\n"), not splitlines(): line indexes here come from lib.sql_files.line_offsets(),
+                # which counts ONLY "\n" -- splitlines() also breaks on \x0b/\x0c/\x1c-\x1e/\x85/\u2028/
+                # \u2029 and would shift every later index by one per such character (2026-10-31).
+                lines = read_text(os.path.join(BIGQUERY_DIR, fn)).split("\n")
                 cache[fn] = (lines, _header_block(lines))
             lines, header = cache[fn]
             # Evaluate the two comment blocks INDEPENDENTLY, never as one concatenated blob
@@ -350,7 +353,7 @@ def contradiction_violations():
             if number == canonical:
                 continue
             if fn not in cache:
-                cache[fn] = read_text(os.path.join(BIGQUERY_DIR, fn)).splitlines()
+                cache[fn] = read_text(os.path.join(BIGQUERY_DIR, fn)).split("\n")  # see the split("\n") note above
             own_comment = _preceding_comment(cache[fn], idx)
             claims = sorted({int(n) for n in SUPERSEDED_LIVE_CLAIM.findall(own_comment)})
             if len(claims) <= 1:

@@ -415,7 +415,11 @@ CREATE_TABLE_RE = re.compile(
     re.IGNORECASE,
 )
 COLNAME_RE = re.compile(r"^([a-zA-Z_][a-zA-Z0-9_]*)\b")
-TABLE_CONSTRAINT_PREFIXES = ("PRIMARY KEY", "FOREIGN KEY", "CONSTRAINT", "CHECK")
+# Word-bounded: a bare `startswith("CHECK")` also matched a COLUMN named check_id / check_date
+# (ops.monitor_promotion_log, ops.monitor_health_history) and silently dropped it from the NOT NULL
+# requirement list (2026-10-31), so a table whose only required column is check_*/constraint_* was
+# invisible to the completeness sweep.
+TABLE_CONSTRAINT_RE = re.compile(r"^(?:PRIMARY\s+KEY|FOREIGN\s+KEY|CONSTRAINT|CHECK)\b", re.IGNORECASE)
 
 
 def _find_matching_paren(text, open_idx):
@@ -541,7 +545,7 @@ def required_not_null_columns(column_body):
         part = part.strip()
         if not part:
             continue
-        if part.upper().startswith(TABLE_CONSTRAINT_PREFIXES):
+        if TABLE_CONSTRAINT_RE.match(part):
             continue
         cm = COLNAME_RE.match(part)
         if not cm:

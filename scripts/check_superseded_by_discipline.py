@@ -101,7 +101,9 @@ GUARDED_TABLES = {
 # decision had yet been corrected inside its 2-to-9-day window. bigquery/122:43 warns against exactly
 # this form in prose; prose did not stop it, so this does.
 INVERTED_PREDICATE = re.compile(
-    r"\b(?:WHERE|AND|OR)\s+(?:[A-Za-z_][A-Za-z0-9_]*\.)?superseded_by\s+IS\s+NULL\b",
+    # `(?:\(\s*)*`: a parenthesized predicate -- `WHERE (superseded_by IS NULL)`, `AND ( t.superseded_by
+    # IS NULL` -- is the same raw read and must not slip past on punctuation (2026-10-31).
+    r"\b(?:WHERE|AND|OR)\s+(?:\(\s*)*(?:[A-Za-z_][A-Za-z0-9_]*\.)?superseded_by\s+IS\s+NULL\b",
     re.IGNORECASE,
 )
 
@@ -297,8 +299,13 @@ ALLOWLIST = {
 # A free-standing statement at column 0. Used to find where an object's own CREATE statement ENDS.
 # Column-0 anchored on purpose: inside a PROCEDURE body (and inside any CTE/MERGE) this repo always
 # indents, so an indented `WHEN MATCHED THEN UPDATE SET` or a nested `INSERT` never matches.
+# Procedural/script statements (BEGIN, DECLARE, SET, IF, EXECUTE IMMEDIATE, ASSERT, CREATE TEMP TABLE)
+# are cut too (2026-10-31): a column-0 `BEGIN ... END` or `SET x = (SELECT ... FROM events.decision_log)`
+# after a VIEW used to ride that view's ALLOWLIST entry by text position -- the bigquery/143 attribution
+# bug this file's docstring describes, just for statement kinds the old list did not name.
 STANDALONE_STMT = re.compile(
-    r"^(?:ALTER|UPDATE|INSERT|DELETE|MERGE|CALL|DROP|TRUNCATE|GRANT|REVOKE)\b",
+    r"^(?:ALTER|UPDATE|INSERT|DELETE|MERGE|CALL|DROP|TRUNCATE|GRANT|REVOKE"
+    r"|BEGIN|DECLARE|SET|IF|EXECUTE\s+IMMEDIATE|ASSERT|CREATE\s+(?:OR\s+REPLACE\s+)?TEMP(?:ORARY)?\s+TABLE)\b",
     re.IGNORECASE | re.MULTILINE,
 )
 

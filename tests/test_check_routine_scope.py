@@ -278,3 +278,12 @@ def test_human_owner_and_surface_owner_are_not_routine_assignments():
 def test_contractual_owners_need_no_declared_walk_step():
     premortem = "**Owner: AR_orc** adjudicates this by queue contract.\n"
     assert crs.check_premortem_consumers(_plan(), premortem) == []
+
+
+
+def test_duplicate_routine_heading_id_is_loud_not_silently_overwritten():
+    # 2026-10-31: a second "## W2." heading used to replace the first section's text in the dict.
+    import pytest
+    text = _plan() + "\n## W2. Second copy — regular routine\nduplicate body\n"
+    with pytest.raises(ValueError, match="duplicate routine heading id 'W2'"):
+        crs.routine_sections(text)

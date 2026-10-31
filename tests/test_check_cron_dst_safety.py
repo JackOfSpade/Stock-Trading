@@ -573,3 +573,33 @@ def test_time_local_matching_no_firing_of_a_multi_firing_cron_is_still_caught(tm
     monkeypatch.setattr(cs, "NON_WINDOW_DAILY_SUN_THU_IDS", {"DX"})
     assert cs.check() == 1
     assert "16:00, 17:00 MDT" in capsys.readouterr().err
+
+
+def test_evening_window_routine_without_a_checkable_cron_fails(tmp_path, monkeypatch, capsys):
+    # 2026-10-31: an EVENING_WINDOW_ROUTINE_IDS member whose cron_utc is the TO_POPULATE placeholder
+    # used to be skipped before check 2, so the checker exited green with the window unchecked.
+    write_cadence(tmp_path, monkeypatch, [
+        {"id": "DX", "monitor_class": "daily_sun_thu", "cron": "TO_POPULATE"},
+    ])
+    monkeypatch.setattr(cs, "EVENING_WINDOW_ROUTINE_IDS", {"DX"})
+    assert cs.check() == 1
+    assert "DX: is in EVENING_WINDOW_ROUTINE_IDS but has no checkable cron" in capsys.readouterr().err
+
+
+def test_non_window_routine_with_placeholder_cron_is_still_skipped(tmp_path, monkeypatch):
+    write_cadence(tmp_path, monkeypatch, [
+        {"id": "MX", "monitor_class": "monthly", "cron": "TO_POPULATE"},
+    ])
+    assert cs.check() == 0
+
+
+def test_backup_snapshot_with_a_non_mapping_top_level_is_reported_not_raised(tmp_path, monkeypatch):
+    write_cadence(tmp_path, monkeypatch, [
+        {"id": "MX", "monitor_class": "monthly", "cron": "0 15 1 * *"},
+    ])
+    backup = tmp_path / "routine_backup.json"
+    backup.write_text("[]", encoding="utf-8")
+    monkeypatch.setattr(cs, "BACKUP", backup)
+    routines, _deadline = cs.load_cadence()
+    errs = cs.backup_snapshot_errors(routines)
+    assert len(errs) == 1 and "unreadable" in errs[0]

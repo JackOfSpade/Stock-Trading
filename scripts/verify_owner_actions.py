@@ -311,17 +311,28 @@ def check_S():
     if not ok:
         return False, f"serviceusage GET failed: {reason}"
     try:
-        overrides = [
-            bucket["consumerOverride"]
+        limits = [
+            limit
             for metric in json.loads(stdout).get("metrics", [])
             if metric.get("metric") == "bigquery.googleapis.com/quota/query/usage"
             for limit in metric.get("consumerQuotaLimits", [])
             if limit.get("unit") == "1/d/{project}/{user}"
+        ]
+        overrides = [
+            bucket["consumerOverride"]
+            for limit in limits
             for bucket in limit.get("quotaBuckets", [])
             if bucket.get("consumerOverride")
         ]
-    except (ValueError, KeyError, TypeError) as e:
+    except (ValueError, KeyError, TypeError, AttributeError) as e:
         return False, f"could not parse consumerQuotaMetrics response: {e}"
+    if not limits:
+        # "No override" is only evidence once the per-user limit itself was SEEN. An empty/truncated/
+        # paginated response, or a renamed metric, used to read as PASS and auto-close the item for
+        # good -- the module's "any probe error means still open" promise, broken for the metric-not-
+        # found case (2026-10-31).
+        return False, ("per-user query/usage limit not present in the consumerQuotaMetrics response "
+                       "(empty, paginated, or renamed metric) -- cannot verify the override is gone")
     if not overrides:
         return True, "per-user query/usage limit has no consumerOverride (default unlimited)"
     vals = ",".join(o.get("overrideValue", "?") for o in overrides)
