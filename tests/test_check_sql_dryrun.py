@@ -936,3 +936,18 @@ def test_main_blocks_on_whole_file_pass_analysis_error_even_without_the_flag(tmp
     out = capsys.readouterr().out
     assert rc == 1
     assert "ANALYSIS ERROR" in out
+
+
+
+def test_is_distinct_from_is_not_mistaken_for_the_from_clause():
+    # 2026-10-31: `SELECT a IS DISTINCT FROM b WHERE ...` has no FROM clause; the operator's FROM
+    # used to satisfy the lint.
+    for op in ("IS DISTINCT FROM", "IS NOT DISTINCT FROM", "is  not\n distinct from"):
+        sql = f"SELECT 1 {op} 2 AS same\nWHERE TRUE;\n"
+        assert len(csd.no_from_where_violations(sql)) == 1, op
+    assert csd.no_from_where_violations("SELECT 1 IS DISTINCT FROM 2 AS d FROM t WHERE TRUE;\n") == []
+
+
+def test_unknown_flag_is_rejected_not_silently_ignored(capsys):
+    assert csd.main(["check_sql_dryrun.py", "--per-statment", "bigquery/34_real.sql"]) == 2
+    assert "unknown flag" in capsys.readouterr().err

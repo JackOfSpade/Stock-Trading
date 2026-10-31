@@ -81,7 +81,7 @@ const SENDER_NAME  = 'Stock-Trading Bot';
 const LABEL_NAME   = 'Trading/Weekly';
 const SEND_HOUR    = 7;
 const SEND_WEEKDAY = ScriptApp.WeekDay.SUNDAY;
-const SCRIPT_VERSION = 'v10';                      // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep
+const SCRIPT_VERSION = 'v11';                      // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep
 const SUBJECT_LABEL = 'Deployed vs Benchmarks';    // Single source for this phrase across buildSubject_, the post-send GmailApp.search() match, and the HTML/plain-text banners below. Edit only here on a rename (2026-07-14 audit finding -- this already drifted once by hand across 4 sites during the 2026-07-13 VOO rename).
 
 // Fixed per-strategy identity colors (CVD-validated) — never reassigned by rank/presence. VOO is a
@@ -132,6 +132,9 @@ function sendWeeklyReport_() {
     Utilities.sleep(3000);
     // Search string derives from SUBJECT_LABEL, same single source as buildSubject_ below.
     const threads = GmailApp.search(`subject:"${SUBJECT_LABEL} — ${d.dateLabel}" newer_than:1d`, 0, 5);
+    if (threads.length === 0) {
+      Logger.log('Post-send housekeeping: just-sent weekly thread not found yet (search returned 0 threads); unread/label skipped.');
+    }
     threads.forEach(t => t.markUnread());
     if (LABEL_NAME) {
       const label = GmailApp.getUserLabelByName(LABEL_NAME) || GmailApp.createLabel(LABEL_NAME);
@@ -543,6 +546,12 @@ function getUserTzWeekly_() {
   if (_tzCache) return _tzCache;
   try {
     _tzCache = (bq_(`SELECT tz FROM \`${PROJECT_ID}.state.user_tz\``)[0] || {}).tz || 'America/Denver';
+    try {
+      Utilities.formatDate(new Date(), _tzCache, 'yyyy');  // validate: throws on an unknown zone
+    } catch (e) {
+      Logger.log('getUserTzWeekly_: invalid timezone ' + JSON.stringify(_tzCache) + ', defaulting to America/Denver: ' + e);
+      _tzCache = 'America/Denver';
+    }
   } catch (e) { Logger.log('getUserTzWeekly_ failed, defaulting to America/Denver: ' + e); _tzCache = 'America/Denver'; }
   return _tzCache;
 }

@@ -490,3 +490,11 @@ def test_sql_keyword_regexes_are_case_insensitive():
     a lowercase `select` in a future hand-written plan snippet."""
     assert ch.SELECT_TOKEN.flags & re.IGNORECASE
     assert ch.terminal_status_pattern("complete").flags & re.IGNORECASE
+
+
+def test_required_not_null_columns_keeps_columns_named_check_or_constraint():
+    # 2026-10-31: a bare startswith("CHECK") skipped ops.monitor_promotion_log's check_id (and
+    # monitor_health_history's check_id/check_date) as if they were table constraints.
+    body = ("check_id STRING NOT NULL, check_date DATE NOT NULL, constraint_name STRING NOT NULL, "
+            "CHECK (check_id IS NOT NULL), CONSTRAINT pk PRIMARY KEY (check_id) NOT ENFORCED")
+    assert ch.required_not_null_columns(body) == ["check_id", "check_date", "constraint_name"]

@@ -406,7 +406,12 @@ def per_statement_dryrun_targets(path, txt, final):
 
 _DDL_KEYWORD_RE = re.compile(r"\b(CREATE|ALTER|DROP)\b", re.IGNORECASE)
 _SELECT_KEYWORD_RE = re.compile(r"\bSELECT\b", re.IGNORECASE)
+# _DISTINCT_BEFORE_RE keeps the comparison operator `a IS [NOT] DISTINCT FROM b` from being read as this
+# SELECT's own FROM clause: `SELECT a IS DISTINCT FROM b WHERE ...` with no real FROM used to pass the
+# no-FROM/WHERE lint (2026-10-31). It is matched against the text just BEFORE a FROM (a lookbehind
+# cannot express the variable-width whitespace).
 _FROM_KEYWORD_RE = re.compile(r"\bFROM\b", re.IGNORECASE)
+_DISTINCT_BEFORE_RE = re.compile(r"\bIS\s+(?:NOT\s+)?DISTINCT\s+$", re.IGNORECASE)
 _WHERE_KEYWORD_RE = re.compile(r"\bWHERE\b", re.IGNORECASE)
 _SET_OP_KEYWORD_RE = re.compile(r"\b(?:UNION|INTERSECT|EXCEPT)\b", re.IGNORECASE)
 
@@ -532,7 +537,7 @@ def _scan_select_clause(masked, start):
         if depth == 0:
             if ch == ";":
                 return "ok", None
-            if _FROM_KEYWORD_RE.match(masked, pos):
+            if _FROM_KEYWORD_RE.match(masked, pos) and not _DISTINCT_BEFORE_RE.search(masked, max(0, pos - 40), pos):
                 return "ok", None
             if _WHERE_KEYWORD_RE.match(masked, pos):
                 return "violation", pos
@@ -607,6 +612,13 @@ def main(argv):
     # nothing about ci.yml or sql-dryrun-sweep.yml, which never pass it and so see byte-identical
     # behavior and cost to before this change.
     per_statement = "--per-statement" in argv[1:]
+    unknown = sorted({a for a in argv[1:] if a.startswith("-")} - {"--per-statement"})
+    if unknown:
+        # A mistyped flag (`--per-statment`) used to be dropped silently, so the opt-in pass the
+        # operator asked for simply did not run and the whole-file pass reported green (2026-10-31).
+        print(f"check_sql_dryrun: unknown flag(s) {', '.join(unknown)} (known: --per-statement)",
+              file=sys.stderr)
+        return 2
     files = [a for a in argv[1:] if not a.startswith("-")]
     templates = [f for f in files if is_template(f)]
     files = [f for f in files if not is_template(f)]

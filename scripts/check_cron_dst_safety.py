@@ -288,8 +288,12 @@ def backup_snapshot_errors(routines) -> list[str]:
     if not BACKUP.exists():
         return []
     try:
-        snap = json.loads(BACKUP.read_text()).get("routines", {})
-    except (OSError, ValueError) as exc:
+        # encoding="utf-8" explicitly: the snapshot is written with ensure_ascii=False (em dashes),
+        # and a locale-default read mis-decodes it on a non-UTF-8 host into a false "unreadable"
+        # (2026-10-31). AttributeError: a top-level list / null "routines" is a malformed snapshot,
+        # reported, not a crash.
+        snap = json.loads(BACKUP.read_text(encoding="utf-8")).get("routines", {}) or {}
+    except (OSError, ValueError, AttributeError) as exc:
         return [f"ops/routine_backup.json unreadable: {exc}"]
     errs = []
     for r in routines:
@@ -318,11 +322,22 @@ def check() -> int:
     for r in routines:
         rid = r.get("id")
         et = r.get("expected_trigger") or {}
-        if et.get("recurrence") != "custom_cron":
-            continue
         cron = et.get("cron_utc")
-        if not cron or cron == "TO_POPULATE":
-            continue  # bootstrap placeholder; check_cadence_consistency.py owns that case
+        checkable = et.get("recurrence") == "custom_cron" and cron and cron != "TO_POPULATE"
+        if not checkable:
+            # A bootstrap placeholder / non-cron recurrence has nothing to validate -- EXCEPT for a
+            # routine check 2 below exists to constrain: an evening-window id with no checkable cron
+            # used to fall straight through to a green exit (verified 2026-10-31 with D1's cron_utc set
+            # to TO_POPULATE), i.e. the one routine class this checker was re-keyed to protect could
+            # silently leave its window check. Fail loudly instead; check_cadence_consistency.py still
+            # owns the generic "cron_utc must be populated" message for everything else.
+            if rid in EVENING_WINDOW_ROUTINE_IDS:
+                errors.append(
+                    f"{rid}: is in EVENING_WINDOW_ROUTINE_IDS but has no checkable cron "
+                    f"(recurrence={et.get('recurrence')!r}, cron_utc={cron!r}) -- its local-window "
+                    f"check cannot run; populate expected_trigger.cron_utc as a custom_cron."
+                )
+            continue
 
         try:
             firings = list(cron_firings(cron))

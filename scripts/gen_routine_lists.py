@@ -83,7 +83,7 @@ from lib.routine_manifest import (
     parse_routine_headings, heading_to_id, instruction_text, cadence_routines,
 )
 from lib.sql_files import SQL_QUOTED_BODY, sql_quote, sql_unquote
-from lib.textio import read_text, load_yaml
+from lib.textio import read_text, read_text_preserving_newlines, load_yaml
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLAN = os.path.join(ROOT, "Claude_Task_Plan.md")
@@ -274,11 +274,16 @@ def wanted_region(body):
 
 
 def write_region(path, body):
-    txt = read_text(path)
+    # Newline-preserving read AND write (lib.textio.read_text_preserving_newlines + newline=""): the
+    # generator rewrites only the marked region, so the rest of the file must round-trip byte-exact;
+    # read_text()'s universal-newline translation plus a plain "w" open would have rewritten a CRLF
+    # file as LF outside the region on the first --write (2026-10-31; same reason split_task_plan.py
+    # uses this pair).
+    txt = read_text_preserving_newlines(path)
     b, e = _region_bounds(txt, path)
     new_txt = txt[:b + len(BEGIN_MARKER)] + wanted_region(body) + txt[e:]
     if new_txt != txt:
-        with open(path, "w", encoding="utf-8") as f:
+        with open(path, "w", encoding="utf-8", newline="") as f:
             f.write(new_txt)
         return True
     return False

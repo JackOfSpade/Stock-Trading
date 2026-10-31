@@ -186,6 +186,14 @@ required_column_naming:
       why: "SL2 route (C) authors the post-mortem record on a TERMINATED transition."
     - table: events.strategy_research_leads
       why: "SL1 STEP 2 and A3's arsenal-handoff bullet write research leads here (the WRITE CONTRACT pinned 2026-08-19, defect instance 6)."
+    - table: ops.monitor_promotion_log
+      why: >
+        D3's MONITOR-PROMOTION step does a literal `INSERT INTO ops.monitor_promotion_log` (the
+        idempotency receipt that flips the readiness views' not_already_promoted FALSE forever) and
+        names check_id, its one NOT NULL column, in the same sentence. Surfaced 2026-10-31: CHECK B's
+        constraint-prefix skip used a bare startswith("CHECK") and silently dropped every column named
+        check_* (this table's check_id, ops.monitor_health_history's check_id/check_date), so this
+        table was invisible to the completeness sweep rather than classified.
     - table: state.expected_scheduled_query_versions
       why: "D3's monitor-promotion step bumps 'the matching state.expected_scheduled_query_versions row (bigquery/63)' in the same commit as a live procedure re-apply; sq_name/expected_version are the row's own NOT NULL columns and both already appear in Claude_Task_Plan.md's D3 drift-check text (state.scheduled_query_version_drift read)."
     - table: state.param_change_provenance

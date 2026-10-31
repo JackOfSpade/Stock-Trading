@@ -216,3 +216,32 @@ SELECT 1 AS a;
     assert rc == 1
     assert "STALE ALLOWLIST" in out, out
     assert filename in out and "state.clean_view" in out, out
+
+
+def test_free_standing_begin_block_after_a_view_does_not_ride_its_allowlist(tmp_path, monkeypatch, capsys):
+    # 2026-10-31: STANDALONE_STMT only cut DML/DDL keywords, so a column-0 BEGIN...END or SET after an
+    # allowlisted VIEW stayed inside the view's segment and passed on the view's ALLOWLIST reason.
+    filename = "10_writer.sql"
+    _tree(tmp_path, {
+        filename: """
+CREATE OR REPLACE VIEW `stock-trading-498512.state.decision_log_current` AS
+SELECT *
+FROM `stock-trading-498512.events.decision_log`
+WHERE entry_id NOT IN (SELECT superseded_by FROM `stock-trading-498512.events.decision_log` WHERE superseded_by IS NOT NULL);
+
+BEGIN
+  SELECT * FROM `stock-trading-498512.events.decision_log`;
+END;
+""",
+    }, monkeypatch)
+    monkeypatch.setattr(cs, "ALLOWLIST", {
+        (filename, "state.decision_log_current"): "test fixture: this view IS the anti-join.",
+    })
+    assert cs.main() == 1
+    assert "a file-level statement (outside any CREATE definition)" in capsys.readouterr().out
+
+
+def test_parenthesized_inverted_predicate_is_caught():
+    for sql in ("SELECT 1 FROM t WHERE (superseded_by IS NULL)",
+                "SELECT 1 FROM t WHERE x = 1 AND ( t.superseded_by IS NULL)"):
+        assert cs.INVERTED_PREDICATE.search(sql), sql

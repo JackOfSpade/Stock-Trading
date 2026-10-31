@@ -50,18 +50,20 @@ import argparse
 import os
 import sys
 
-from lib.bq_json import run_bq_query
-from lib.textio import load_yaml
-from lib.roster_common import roster_active_codes as _roster_active_codes_for_doc
-
 try:
     # This module's own read now goes through lib.textio.load_yaml() (2026-07-29 textio adoption), so
     # `yaml` is not referenced directly below, but the import stays as the fail-fast "pip install pyyaml"
-    # guard (same pattern as check_roster_consistency.py / check_autonomy_consistency.py).
+    # guard (same pattern as check_roster_consistency.py / check_autonomy_consistency.py). It must come
+    # BEFORE the lib.textio import below, which imports yaml itself -- otherwise a missing PyYAML died
+    # with a bare traceback there and this guard was unreachable (2026-10-31).
     import yaml  # noqa: F401
 except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
     raise SystemExit(2) from None
+
+from lib.bq_json import run_bq_query
+from lib.textio import load_yaml
+from lib.roster_common import roster_active_codes as _roster_active_codes_for_doc
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ROSTER = os.path.join(ROOT, "strategy", "roster.yaml")

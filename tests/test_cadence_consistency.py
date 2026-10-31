@@ -8,7 +8,8 @@ that rots is caught by CI instead of silently disarming the gate.
 
 No warehouse, no creds — pure offline parser tests (run in the always-on `test` job).
 """
-import yaml
+
+from lib.textio import load_yaml
 
 from conftest import load_module_from_path
 
@@ -335,7 +336,7 @@ def _cadence_ids_from_yaml(cadence_path):
     requires cc.CADENCE to already be monkeypatched to this exact path -- this helper is called from
     _patch_fixture_paths() itself while that patching is still happening, so it must not depend on
     it)."""
-    doc = yaml.safe_load(open(cadence_path, encoding="utf-8")) or {}
+    doc = load_yaml(cadence_path)
     return [r["id"] for r in (doc.get("routines") or [])]
 
 
@@ -346,7 +347,7 @@ def _cadence_deadline_from_yaml(cadence_path):
     Used to DERIVE the fixture bigquery/*.sql deadline-guard literal from cadence.yaml's own value
     (cadence#0, 2026-08-31 code-quality pass) instead of a hardcoded "21:00" that only ever matched by
     coincidence."""
-    doc = yaml.safe_load(open(cadence_path, encoding="utf-8")) or {}
+    doc = load_yaml(cadence_path)
     return doc.get("cadence_watch_deadline_local")
 
 
@@ -384,7 +385,7 @@ def _cadence_daily_catchup_safe_ids_from_yaml(cadence_path):
     (bigquery/208) and its bigquery/90 daily-copy check both compare against. Same call-time-
     independence rationale as _cadence_ids_from_yaml above (called from _patch_fixture_paths() itself
     while cc.CADENCE is still being patched, so it must not depend on that patch having landed)."""
-    doc = yaml.safe_load(open(cadence_path, encoding="utf-8")) or {}
+    doc = load_yaml(cadence_path)
     return [r["id"] for r in (doc.get("routines") or [])
             if r.get("catchup_safe") is True and r.get("monitor_class") in cc.DAILY_CLASSES]
 
@@ -457,7 +458,7 @@ def _cadence_period_routines_from_yaml(cadence_path):
     hand-mirrored `routines` CTE against. Same call-time-independence rationale as
     _cadence_ids_from_yaml above (called from _patch_fixture_paths() itself while cc.CADENCE is still
     being patched, so it must not depend on that patch having landed)."""
-    doc = yaml.safe_load(open(cadence_path, encoding="utf-8")) or {}
+    doc = load_yaml(cadence_path)
     return [(r["id"], r["monitor_class"]) for r in (doc.get("routines") or [])
             if r.get("monitor_class") in cc.PERIOD_CLASSES]
 
@@ -465,7 +466,7 @@ def _cadence_period_routines_from_yaml(cadence_path):
 def _cadence_period_grace_from_yaml(cadence_path):
     """A fixture cadence.yaml's top-level period_grace_days mapping (or {} when it declares none) --
     same call-time-independence rationale as _cadence_ids_from_yaml above."""
-    doc = yaml.safe_load(open(cadence_path, encoding="utf-8")) or {}
+    doc = load_yaml(cadence_path)
     return doc.get("period_grace_days") or {}
 
 

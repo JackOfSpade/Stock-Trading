@@ -37,8 +37,8 @@ to land on this side of the repo:
 scripts/lib/ imports nothing but the stdlib here, so nothing about that fix is undone: a checker
 importing this does NOT acquire a pytest dependency. It also resolves for both sides with no new
 sys.path line -- production scripts get scripts/ at sys.path[0] from CPython itself (`python
-scripts/<name>.py`), and tests get it from tests/conftest.py's single central insert. See
-scripts/lib/README.md for both halves of that convention.
+scripts/<name>.py`), and tests get it from tests/conftest.py's single central insert (that conftest's
+own docstring is where both halves of the convention are written down; there is no scripts/lib/README).
 
 DELIBERATELY NOT REGISTERED IN sys.modules -- preserved from all three copies, which likewise did not.
 Two consequences the call sites are written against: each call re-EXECUTES the file and returns a

@@ -168,16 +168,7 @@ def event_window(rets, dates, d0: pd.Timestamp, first_codes, source, etf_first) 
 def same_placebos_as_onset_study(rets, dates, first_codes, second_codes, source, etf_first):
     """Reproduce the onset study's placebo draws exactly: same eligibility, same SEED, same order."""
     rng = np.random.default_rng(onset.SEED)
-    event_onsets = [onset.first_trading_day(dates, t) for _, t, _ in onset.EPISODES]
-    excl_days = onset.PLACEBO_EXCLUSION_WEEKS * 5
-    lo, hi = onset.BETA_WINDOW, len(dates) - max(HORIZONS) * 5 - 1
-    eligible = []
-    for pos in range(lo, hi):
-        if dates[pos] < pd.Timestamp("1991-01-01"):
-            continue
-        if all(abs(pos - dates.get_indexer([e])[0]) > excl_days for e in event_onsets):
-            eligible.append(pos)
-    eligible = np.array(eligible)
+    eligible = onset.placebo_eligible_positions(dates, max(HORIZONS))
 
     def draw(n):
         rows, tries = [], 0

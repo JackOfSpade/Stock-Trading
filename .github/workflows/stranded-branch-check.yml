@@ -122,8 +122,11 @@ jobs:
           now=$(date -u +%s)
 
           : > /tmp/stranded.txt
+          # dependabot/* is excluded (2026-10-31): those branches carry no routine output, wait for an
+          # explicit human merge by design, and were the bulk of every stranded issue measured
+          # 2026-10-18..10-31 (#70, #77, #89, #122) -- a false page every time a weekly bump sat >6h.
           for ref in $(git for-each-ref --format='%(refname)' refs/remotes/origin/ \
-                        | grep -v -E '^refs/remotes/origin/(main|HEAD)$' || true); do
+                        | grep -v -E '^refs/remotes/origin/(main|HEAD|dependabot/.*)$' || true); do
             br=${ref#refs/remotes/}
             # Skip anything already contained in main.
             if git merge-base --is-ancestor "$ref" origin/main; then continue; fi

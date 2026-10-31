@@ -682,8 +682,13 @@ jobs:
           # FAIL OPEN: unknown/new-branch base (merge-base above also failed, e.g. missing origin/main or
           # unrelated histories) -> validate ALL bigquery/*.sql rather than skip a real check.
           fail_open=false
-          if [ -n "$base" ]; then
-            mapfile -t files < <(git diff --name-only "$base" "$HEAD_SHA" -- 'bigquery/*.sql' 'bigquery/scheduled_queries/*.sql')
+          changed=""
+          # `mapfile < <(git diff ...)` reports only mapfile's OWN status, so a failing git diff would
+          # have yielded an empty list and a green "nothing to dry-run" -- fail-open for a BLOCKING
+          # gate. Capture first (the && makes a diff failure take the validate-everything branch),
+          # same shape as the change-scope step above (2026-10-31).
+          if [ -n "$base" ] && changed="$(git diff --name-only "$base" "$HEAD_SHA" -- 'bigquery/*.sql' 'bigquery/scheduled_queries/*.sql')"; then
+            mapfile -t files < <(printf '%s' "$changed")
           else
             fail_open=true
             # BUG FIX (rev 2026-07-20b, Finding 2): nullglob so a non-matching pattern vanishes instead of

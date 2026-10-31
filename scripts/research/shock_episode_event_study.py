@@ -699,10 +699,30 @@ def run_window(rets, dates, onset: pd.Timestamp, first_codes, second_codes, sour
     return res
 
 
-def first_trading_day(dates: pd.DatetimeIndex, d: str) -> pd.Timestamp:
+def first_trading_day(dates: pd.DatetimeIndex, d: str) -> pd.Timestamp | None:
+    """First trading day on/after `d`, or None when `d` is past the last date in the series (a price
+    cache that ends before a listed episode). Indexing past the end used to raise IndexError out of the
+    placebo block even though the episode loop already skipped that episode (2026-10-31)."""
     ts = pd.Timestamp(d)
     i = dates.searchsorted(ts)
-    return dates[i]
+    return dates[i] if i < len(dates) else None
+
+
+def placebo_eligible_positions(dates: pd.DatetimeIndex, max_horizon_weeks: int) -> np.ndarray:
+    """Trading-day positions eligible as placebo onsets: >= PLACEBO_EXCLUSION_WEEKS from every listed
+    EPISODES onset, on/after 1991-01-01, with a full beta window behind and `max_horizon_weeks` ahead.
+
+    The ONE definition both this study and shock_nononset_event_study.py draw from. The non-onset study
+    promises a byte-for-byte reproduction of this study's placebo draws, and that promise used to rest
+    on two hand-copied loops staying identical (2026-10-31). Episodes beyond the series end contribute
+    no exclusion zone (they cannot overlap any eligible day)."""
+    event_pos = [dates.get_indexer([e])[0]
+                 for e in (first_trading_day(dates, t) for _, t, _ in EPISODES) if e is not None]
+    excl_days = PLACEBO_EXCLUSION_WEEKS * 5
+    hi = len(dates) - max_horizon_weeks * 5 - 1
+    floor = pd.Timestamp("1991-01-01")
+    return np.array([pos for pos in range(BETA_WINDOW, hi)
+                     if dates[pos] >= floor and all(abs(pos - e) > excl_days for e in event_pos)])
 
 
 def pooled_stats(rows: list[dict], key: str, rng: np.random.Generator) -> dict:
@@ -747,17 +767,7 @@ def cmd_study(data_dir: Path, source: str, hop2_rule: str, etf_first: bool) -> d
 
     # placebos: trading days >= 26 weeks from any listed event, within the span where windows fit
     rng = np.random.default_rng(SEED)
-    event_onsets = [first_trading_day(dates, t) for _, t, _ in EPISODES]
-    excl_days = PLACEBO_EXCLUSION_WEEKS * 5
-    lo = BETA_WINDOW
-    hi = len(dates) - max(HORIZONS_WEEKS) * 5 - 1
-    eligible = []
-    for pos in range(lo, hi):
-        if dates[pos] < pd.Timestamp("1991-01-01"):
-            continue
-        if all(abs(pos - dates.get_indexer([e])[0]) > excl_days for e in event_onsets):
-            eligible.append(pos)
-    eligible = np.array(eligible)
+    eligible = placebo_eligible_positions(dates, max(HORIZONS_WEEKS))
 
     def draw_placebos(n: int) -> list[dict]:
         rows = []

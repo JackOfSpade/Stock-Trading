@@ -638,3 +638,30 @@ def test_main_refuses_whole_run_before_bigquery_when_a_later_file_fails_the_gate
                         lambda **kw: (_ for _ in ()).throw(AssertionError("client must not be constructed")))
     assert asf.main([str(good), str(bad)]) == 1
     assert "REFUSED" in capsys.readouterr().err
+
+
+# ---- whole-file comment structure (2026-10-31): a prefix /* that swallows the CREATE is refused ------
+def test_unterminated_block_comment_before_the_create_is_refused():
+    # Each slice stripped on its own looks clean (the prefix is "a comment", the tail is a `--` line),
+    # but BigQuery would parse the whole file as one block comment ending at the hidden `*/` and then
+    # execute the DELETE. Verified bypass before the fix.
+    smuggled = "/* \n" + CANONICAL_VIEW_SQL + "\n-- x */ DELETE FROM `stock-trading-498512.ops.alerts` WHERE TRUE;\n"
+    ok, noncanonical, message = asf.check_canonical_provenance("f.sql", smuggled, FINAL_OK)
+    assert ok is False
+    assert noncanonical is False
+    assert "WHOLE file" in message
+
+
+def test_closed_block_comment_before_the_create_is_accepted():
+    ok, noncanonical, _ = asf.check_canonical_provenance(
+        "f.sql", "/* header\n   block */\n" + CANONICAL_VIEW_SQL, FINAL_OK)
+    assert ok is True and noncanonical is False
+
+
+def test_main_rejects_unknown_flags_before_reading_any_file(monkeypatch, capsys, tmp_path):
+    # `--dry_run` (underscore) used to be silently dropped and the file applied LIVE.
+    monkeypatch.setattr(asf, "find_final_definitions", lambda: (_ for _ in ()).throw(AssertionError("walked")))
+    f = tmp_path / "x.sql"
+    f.write_text(CANONICAL_VIEW_SQL, encoding="utf-8")
+    assert asf.main(["--dry_run", str(f)]) == 2
+    assert "unknown flag" in capsys.readouterr().err

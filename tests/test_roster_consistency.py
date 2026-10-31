@@ -176,7 +176,8 @@ def _read(p):
 
 
 def _write(p, text):
-    open(p, "w", encoding="utf-8").write(text)
+    with open(p, "w", encoding="utf-8") as f:
+        f.write(text)
 
 
 # ---- (a) the real repo passes cleanly, unmodified ----
@@ -1586,8 +1587,8 @@ def test_scenarios_absent_skips_r_k_cleanly(repo_copy):
 
 def test_shadow_strategy_with_slice_but_no_coverage_is_caught(repo_copy, capsys):
     # A SHADOW strategy WITH a slice file but no golden-scenario coverage must FAIL R-K.
-    (open(os.path.join(rc.STRATEGY_DIR, "08_strategy_f.md"), "w", encoding="utf-8")
-     .write("## Strategy F [CANDIDATE]: shadow test strategy\n\nbody\n"))
+    _write(os.path.join(rc.STRATEGY_DIR, "08_strategy_f.md"),
+           "## Strategy F [CANDIDATE]: shadow test strategy\n\nbody\n")
     _write(rc.ROSTER, _read(rc.ROSTER) + _shadow_f_entry())
     _write(rc.SCENARIOS_YAML, _scenarios_covering("ABCDE"))   # A-E covered, F is not
     assert rc.main() == 1

@@ -333,3 +333,23 @@ def test_mirror_file_scan_closes_handle_when_the_loop_body_raises(monkeypatch, t
         "only by the exception's traceback, until something eventually garbage-collects it"
     )
     assert exc_info.value is not None  # keep the reference alive through the assertion above
+
+
+def test_every_real_model_mirror_file_exists():
+    """Every mirror file the REAL repo registers for the stale-model check must exist on disk.
+
+    lib/model_of_record.check_model_of_record deliberately skips an absent mirror file (pinned by
+    test_check_model_of_record_skips_an_absent_mirror_file), so a rename or deletion of a real mirror
+    would silently drop it from the stale-model check with no failure anywhere. This test catches that
+    for the real repo.
+    """
+    from conftest import load_module_from_path
+
+    cc = load_module_from_path("check_cadence_consistency", "scripts", "check_cadence_consistency.py")
+    mirrors = cc.model_mirror_files()
+    assert mirrors, "model_mirror_files() returned no paths -- the stale-model check would cover nothing"
+    for mirror in mirrors:
+        assert os.path.exists(mirror), (
+            f"model mirror file is missing: {mirror} -- check_model_of_record skips absent mirrors, "
+            "so it would silently drop out of the stale-model check; update the mirror path"
+        )

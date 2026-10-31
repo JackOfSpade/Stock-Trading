@@ -422,7 +422,8 @@ def test_no_push_categories_matches_alert_emailer_roster_lane():
     # drift fails in the ordinary pytest run a developer actually watches, not just in the dedicated
     # guard step.
     repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    gs = open(os.path.join(repo_root, "ops", "monitoring", "alert_emailer.gs")).read()
+    with open(os.path.join(repo_root, "ops", "monitoring", "alert_emailer.gs"), encoding="utf-8") as f:
+        gs = f.read()
     block = re.search(r"ROSTER_NOTICE_CATEGORIES\s*=\s*\[(.*?)\]", gs, re.DOTALL)
     assert block, "could not find ROSTER_NOTICE_CATEGORIES in alert_emailer.gs"
     emailer = set(re.findall(r"'([a-z0-9_]+)'", block.group(1)))

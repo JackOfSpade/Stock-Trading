@@ -303,6 +303,22 @@ def check_canonical_provenance(path, sql, final=None):
             "the WHOLE FILE to BigQuery, so text ahead of the verified statement would run "
             f"unchecked. First stray line: {_stray_snippet(stray_prefix)!r}")
 
+    # FIX A, whole-file half (2026-10-31). The prefix and tail checks above/below each strip comments
+    # over their OWN slice in isolation, but BigQuery tokenizes the whole file: an UNTERMINATED `/*`
+    # in the prefix strips to nothing on its own slice while swallowing the verified CREATE in the
+    # real parse, and a `*/` hidden behind a `--` in the tail then re-opens live text -- so
+    # `/* \n<canonical CREATE>\n-- x */ DELETE ...` passed both slice checks and would have run the
+    # DELETE. Stripping comments ONCE over the whole file and requiring the same CREATE header to
+    # survive at top level closes that: a header that is inside a comment in the whole-file parse is
+    # not the statement BigQuery would execute, whatever its own slice looked like.
+    whole = strip_sql_comments(sql)
+    wm = CREATE_STMT.search(whole)
+    if wm is None or wm.groups() != m.groups() or whole[:wm.start()].strip():
+        return False, False, (
+            f"{path}: the CREATE OR REPLACE header is not the first top-level statement once comments "
+            "are stripped over the WHOLE file (an unterminated /* ahead of it, or a */ hidden in a "
+            "later line comment, changes what BigQuery would actually execute) -- refusing.")
+
     # FIX A, append half (module docstring point 4). Reuses the SAME boundary extract_body() computes
     # internally (check_live_sql_parity.NEXT_TOP_LEVEL: the next top-level CREATE/DML/DDL keyword, or
     # EOF) rather than a second, independently-derived boundary. Everything from there to EOF must
@@ -450,10 +466,23 @@ def _report_already_applied(applied):
         print(f"  NOTE: already applied earlier in this run: {', '.join(applied)}", file=sys.stderr)
 
 
+KNOWN_FLAGS = frozenset({"--dry-run", "--allow-noncanonical"})
+
+
 def main(argv):
     args = [a for a in argv if not a.startswith("--")]
-    dry_only = "--dry-run" in argv
-    allow_noncanonical = "--allow-noncanonical" in argv
+    flags = {a for a in argv if a.startswith("--")}
+    unknown = sorted(flags - KNOWN_FLAGS)
+    if unknown:
+        # Fail LOUDLY on a flag this script does not define. Silently dropping one is the fail-
+        # dangerous direction for a tool that writes to production: `--dry_run` / `--dryrun` used to
+        # be ignored and the file applied LIVE (2026-10-31; scripts/verify_dbt_port.py fixed the same
+        # class the same way).
+        print(f"FAILED: unknown flag(s) {', '.join(unknown)}; known: {', '.join(sorted(KNOWN_FLAGS))}",
+              file=sys.stderr)
+        return 2
+    dry_only = "--dry-run" in flags
+    allow_noncanonical = "--allow-noncanonical" in flags
     if not args:
         print(__doc__, file=sys.stderr)
         return 2

@@ -319,10 +319,11 @@ def _find_top_level(tokens, start, end, words):
 
 def _find_string_aggs(tokens, start, end):
     """[(expr_start, expr_end, order_start_or_None, order_end_or_None, whole_start, whole_end)]
-    for every STRING_AGG(...) call in tokens[start:end]. The scan resumes right after each match's
-    own closing paren (not before it), so a STRING_AGG nested inside another STRING_AGG's <expr>
-    (not seen in this repo, but not ruled out) is still found on a later iteration of the same
-    linear walk -- no actual recursion needed."""
+    for every STRING_AGG(...) call in tokens[start:end]. The scan resumes just INSIDE each match's
+    opening paren, so a STRING_AGG nested inside another STRING_AGG's <expr> (not seen in this repo,
+    but not ruled out) is found on a later iteration of the same linear walk -- no recursion needed.
+    It used to resume at the closing paren, which skipped the whole interior and contradicted this
+    docstring (2026-10-31)."""
     out = []
     i = start
     while i < end:
@@ -351,7 +352,7 @@ def _find_string_aggs(tokens, start, end):
                     pre_args = _split_args(tokens, open_i, expr_arg_end)
                     expr_start, expr_end = pre_args[0] if pre_args else (open_i + 1, expr_arg_end)
                     out.append((expr_start, expr_end, keys_start, keys_end, i, close_i + 1))
-                    i = close_i
+                    i = open_i + 1
                     continue
         i += 1
     return out
@@ -601,7 +602,10 @@ def find_prose_sites(text=None):
         # not raise a degraded alert, it raises nothing.
         for idx, raw in enumerate(args):
             lit = _as_literal(raw)
-            if lit is not None and "''" in lit:
+            # Test the RAW literal body, not the unescaped one: _as_literal() turns a valid `\'\'`
+            # (two escaped quotes, e.g. 'it\'\'s') into `''` and used to report a false quote defect
+            # (2026-10-31). A genuine `''` inside the raw body is unchanged by that unescape.
+            if lit is not None and "''" in raw.strip()[1:-1]:
                 quote_defects.append((category, idx, lit[:90]))
 
         if not is_once:
