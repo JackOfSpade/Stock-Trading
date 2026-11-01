@@ -1,28 +1,28 @@
-2026-10-29
-<!-- d1_scan_through_utc: 2026-10-29T22:03:00Z -->
+2026-11-01
+<!-- d1_scan_through_utc: 2026-11-01T22:30:01Z -->
 
-# Daily Market Development Scan — session 2026-10-29 (Thu)
+# Daily Market Development Scan — session 2026-10-30 (Fri), run 2026-11-01 (Sun)
 
-Scan window: 2026-10-28 16:10 MT → 2026-10-29 16:03 MT (~24h). The start is the prior `Daily.md` marker `2026-10-28T22:10:00Z`, which agrees with that file's commit. The window holds **one completed US session, Thursday 2026-10-29**. Moves are 10-28 → 10-29 close-to-close on IBKR regular-session daily bars.
+Scan window: 2026-10-29 16:03 MT → 2026-11-01 15:30 MT (~72h). The start is the prior `Daily.md` marker `2026-10-29T22:03:00Z`, which agrees with that file's commit (22:44Z) and with `state.routine_catchup_window` (last completion 22:49Z). **The window exceeds 50 hours** because D1 runs Sunday to Thursday and there is no Friday or Saturday run; it holds **one completed US session, Friday 2026-10-30**, plus Thursday after-hours and the weekend. Moves are 10-29 → 10-30 close-to-close on IBKR regular-session daily bars.
 
-Tape: **a rotation day under a weaker cap-weighted index.** Alphabet fell 12.6% on its print and software sold off, while health care, rate-sensitives and equal-weight rallied.
-- **Indices.** IBKR closes, 10-28 → 10-29: SPY 772.31 → **769.36 (−0.38%)**, QQQ −1.42%, DIA −0.37%, **RSP +1.20%**, **IWM +0.97%**, SMH −1.06%. Equal-weight beat cap-weight by 1.58pp.
-- **Rates and credit.** TLT +0.62%, HYG −0.01%. Q3 GDP printed +3.4% and core PCE +0.3% m/m (in line).
-- **Oil.** Brent (BZUSD, provisional same-evening read) was **111.57 on 10-29**, against 115.32 on 10-28 in the same series (−3.25%). USO +0.97% on IBKR.
-- **Volatility.** The VIX 10-29 close was unavailable: IBKR index bars returned "Details currently unavailable" on 3 tries, and D2a owns the ^VIX mark. GLD −1.32%.
-- **Breadth.** Up to **63.81** (from 58.25), the largest one-day gain this month.
+Tape: **an AI/semis liquidation.** Intel's 10-29 after-close print set off the selloff, on top of Alphabet's 10-29 drop and Amazon's capex. Defensives and energy rallied.
+- **Indices.** IBKR closes, 10-29 → 10-30: SPY 769.36 → **755.72 (−1.77%, 2.05x volume)**, QQQ −3.47%, DIA −1.07%, RSP −0.79%, IWM −1.65%, **SMH −6.98% (3.1x volume)**. SPX 7720.39 → 7580.07 (−1.82%).
+- **Volatility.** VIX 17.20 → **19.42** (IBKR IND/CBOE bar; intraday high 23.93), still inside the 15–25 NORMAL band.
+- **Rates and havens.** TLT +0.43%, HYG −0.19%, GLD −3.47%. The 10Y was about 4.93% (investing.com, discovery only).
+- **Oil.** Brent (BZUSD, FMP read 2026-11-01) was **113.43 on 10-30**, against **110.80 on 10-29** in the same series (+2.37%). The stored 10-29 value is the provisional 111.57, which the vendor has since revised. USO +0.38%.
+- **Breadth.** Down to **59.44** (from 63.81), from a single EODData source. ChartRow agrees (−4.02pp vs −4.37pp).
 
 ## TL;DR
 
-- **Exits triggered: none.** No mechanical trigger is set on any of the twelve D tranches. AMZN's Q3 (out after the close: AWS +39.3%, margin 38.65%) and GOOGL's 10-Q (backlog $567.7B; ad-tech structural divestiture denied) breach no criterion.
-- **New entry candidates: none routed.** 82 names cleared Strategy B's frozen ≥5% floor on their own events, led by IOVA, GKOS, BHC, PRCH, NOW, CROX, ALNY, SFM, FTNT, FTAI. B is `DO-NOT-ACTIVATE` and capital-disabled, so 80 go to the index only (ADT is deal-pinned; GOOG is indexed under GOOGL).
-- **Add candidates: none (0 of 12).** Seven tranches carry a trigger (GOOGL ×2 dip-with-intact-thesis; AMZN ×2 and GEV strengthened conviction; UBER and DIS dip), but D is `DO-NOT-ACTIVATE` and capital-disabled.
-- **Watchlist: 80 changes.** ADD the 80 names to the Strategy B new-entry index.
-- **Regime review: no review.** The IRGC's claim that tankers hit mines in Hormuz is unverified and falls inside the standing `acute` overlay. There is no ceasefire, settlement or blockade lift: Iran called the draft deal's ideas "unacceptable".
+- **Exits triggered: none.** None of the twelve D tranches has a mechanical trigger. AMZN's 10-Q (AWS +39.3%, 38.7% margin, backlog about $578B against $496B) and GOOGL's 10-Q (Cloud +102.6%, backlog $560.8B) breach no criterion.
+- **New entry candidates: none routed.** 50 names cleared Strategy B's frozen ≥5% floor on their own events, led by RDDT, INTC, CDNA, CACC, ILMN, RBLX, BFAM, TFII, TWLO and FDXF. B is `DO-NOT-ACTIVATE` and capital-disabled, so all 50 go to the index only.
+- **Add candidates: none (0 of 12).** Eight tranches carry a trigger: AMZN ×2 strengthened conviction; GOOGL ×2, TSM ×2, ISRG and GEV dip-with-intact-thesis. D is `DO-NOT-ACTIVATE` and capital-disabled.
+- **Watchlist: 50 changes.** ADD the 50 names to the Strategy B new-entry index.
+- **Regime review: no review.** Iran's 11-01 48-hour Hormuz reopening plan is a conditional proposal, not a settlement in force. The US blockade of Iranian ports is still in force and Brent rose +2.37% into the 10-30 close, so this is not a qualifying resolution event. New tanker-mine and strike-threat headlines fall inside the standing `acute` overlay.
 
 Park: VOO-only pin verified
 
-Paper book (J): 120 calls, 119/30 realized, net_mu -0.40%, ready=FALSE
+Paper book (J): 120 calls, 189/30 realized, net_mu -0.54%, ready=FALSE
 
 ---
 
@@ -30,934 +30,593 @@ Paper book (J): 120 calls, 119/30 realized, net_mu -0.40%, ready=FALSE
 
 ### 1. Market-wide breaking events
 
-- **Hormuz / Gulf (ongoing war; no resolution event).** The Strait of Hormuz remains closed, and the IRGC said again on 10-29 that it "will never be opened until the Islamic Republic's conditions are fully met" (Fars, via Drop Site 10-29). In the 10-29 live blog (Dawn, citing Reuters) the IRGC said three tankers caught fire after hitting mines while trying to cross the strait. That is an unverified IRGC claim, with no independent confirmation found. The IRGC also said it captured one US drone and downed another. The US told ships to stay clear of Hormuz, and AP (10-28/29) reported Washington warned allies to prepare for possible strikes and retaliation after the 11-03 midterms. VP Vance sent a letter to Iran asking for renewed talks. An Iranian official said a new draft deal contains "only unacceptable ideas" (Reuters via Business Times, 10-29), so there is no ceasefire, settlement or blockade lift. Reuters and Business Times described the US-Iran draft deal as awaiting an Iranian response "by the end of the week".
-- **Houthi / Saudi.** The Houthi attack on the Ras Tanura refinery was reported on 10-27/28, before the window. In the window, the Saudi-led coalition said it intercepted a Houthi ballistic missile on 10-29 and two more fired at Riyadh (Al Jazeera, Reuters). Aden airport was struck and reopened by about 18:42 local (Dawn). I found no new damage to Saudi oil infrastructure inside the window; that is unmeasured, not confirmed absent.
-- **Brent reaction (FMP BZUSD, provisional same-evening read).** Brent closed at **115.32 on 10-28 and 111.57 on 10-29 (-3.25%)**, from 113.88 on 10-27. It fell on the day despite the Hormuz headlines, and I did not find a driver. Cross-checks: the Kuwait/KUNA print had Brent at 113.72 for 10-27, and Centrino had it at +1.55% to 111.08 intraday on 10-28.
-- **Israel election.** The count is complete with no overall majority, and both Netanyahu and Eisenkot claim victory (Al Jazeera 10-29; The Australian). Seat figures of about 56 vs 49 for the two blocs come from a social-media roundup and are unconfirmed. The shekel and Israeli bonds fell on 10-28 (CNBC). There is no resolution yet and a new election is possible.
-- **Central-bank shock.** The ECB announced that President Lagarde will resign on 7 Feb 2027 (Japan Times, Reuters, 10-28/29). French government bonds sold off, and MUFG reported European gas up about 40% in October. The Fed's hold was a 10-2 vote with both dissenters favouring a hike (10-28, pre-window; see item 2).
-- **Other.** A Spain high-speed train collision near Toledo killed at least 68 (10-28; AP/Al Jazeera). Cyclone Arnab hit Andhra Pradesh. Neither is market-moving. Brazil: Flavio Bolsonaro left for the US after losing the runoff to Lula. M&A: DoorDash agreed to buy Instacart for about $17B of equity, and ADT agreed to be acquired at $10.00 per share by Thrive Holdings (StockTitan digest 10-29). Unmeasured: US-China or tariff actions, sanctions, bankruptcies (a JetBlue creditors/PJT report dated 10-25 is pre-window) and SEC or other enforcement actions. A broad search turned up nothing new dated inside the window, and I cannot call that a confirmed absence.
+- **Hormuz / Gulf (ongoing war; no resolution event).**
+  - **The 11-01 offer.** Foreign Minister Araghchi offered to reopen Hormuz within 48 hours, via Qatari mediators: the US acts on day 1 and shipping resumes on day 2 (investing.com; houseofsaud.com, 11-01). It is a **conditional proposal**. The conditions are sanctions relief, release of about $12B in frozen funds, restored oil waivers, recognition of an Oman-designated route, a smaller US military presence, and an end to attacks on Lebanon.
+  - **Status.** The US has not accepted it. Security chief Rezaei says the strait stays shut until the conditions are met. Iran held a third day of talks with Qatar in Doha, and no direct US-Iran talks are planned. Iran rejected a Qatari draft on 10-30.
+  - **In force.** The US naval blockade of Iranian ports (CENTCOM: 144 commercial ships redirected) and the Hormuz closure. Iran's "Persian Gulf Strait Authority" threatened legal action against Sinokor ships from 11-01 (Gulf News 10-29).
+  - **Escalation, inside the standing `acute` overlay.**
+    - Trump's pre-midterm strike moratorium expires on 11-03, and he renewed threats against the "Pickaxe Mountain" nuclear site.
+    - Mojtaba Khamenei ordered commanders to prepare an immediate response to any attack.
+    - Iran says four tankers hit mines; the US called the claim false.
+    - A Qatari gas carrier was reportedly hit (UNCONFIRMED; the source page returned 403).
+  - **Brent (context).** About 113.10 at the 10-30 close (investing.com) and +13.6% in October. The measured level is in item 4.
+- **Crypto shock.** Binance disclosed a **$6.3B exploit** on 10-29/30, which the FBI and TRM attribute to North Korea. BTC fell to a six-week low of about $76.1k with $1.57B of liquidations (CNBC, CoinDesk), and was about $78.0k on 11-01. Binance says about 90% of the stolen funds have been replenished. COIN (−10.6% on its own print) and MSTR (−7.8%) sold off with crypto equities.
+- **Other geopolitics.**
+  - Israel's election left both blocs short of a majority, with more than 96% counted.
+  - Lula won Brazil's runoff with 51.79%.
+  - The US approved a $2.1B sale of 500 Patriot interceptors to Ukraine and eased some Russian diesel sanctions.
+  - US-China tariffs and sanctions: unmeasured.
+- **M&A.** These deals are in or near the window:
+  - DoorDash–Instacart, $17B (10-29, pre-window)
+  - Thrive–ADT take-private, $7.6B (10-29)
+  - Affle–Perion, about $420M at $11.70 per share (11-01)
+  - GE Vernova agreed to buy a high-voltage grid component maker (Bloomberg 10-30; a held name, with no criterion bearing)
+  - REGN expanded its Sanofi collaboration ($1.0B upfront)
+  - Rumour, UNCONFIRMED: Marvell in talks for Lumentum.
+- **Unmeasured:** bankruptcies and enforcement actions. Anthropic filed US IPO paperwork earlier in the week (Economic Times).
 
 ### 2. Scheduled events that resolved in the window
 
-- **Macro (10-29, 08:30 ET).**
-  - **Q3 GDP advance:** +3.4% annualized against about 3.1-3.2% expected and 2.2% in Q2 (Commerce/BEA via Reuters/TalkMarkets; Haver; JEC).
-  - **September PCE:** headline +0.5% m/m, +3.6% y/y, in line on the year (secondary). Core PCE was +0.3% m/m and +3.1% y/y, in line (Yahoo Finance). The BEA tables were not read directly.
-  - **Initial claims:** 194k for the week of 10-24, against 199k expected and 195k prior (Reuters via TalkMarkets).
-  - **Reaction:** Dow, S&P and Nasdaq futures were lower after the inflation print (Yahoo, pre-market).
-- **ECB (10-29, 13:15 GMT).** It held all three rates: deposit 2.50%, MRO 2.65%, marginal lending 2.90% (ECB statement, as reproduced by Insight EU Monitoring). The statement points to upside inflation risks and downside growth risks from the energy shock, with euro-area inflation at 3.8%. Reuters sources say governors see a December hike as likely, followed by a pause. The euro was about $1.116.
-- **Other central banks.** The BoJ decides on 10-30, with a hold expected (Reuters), so it is pending. The RBNZ held at 2.75% on a 4-3 vote and the Bank of Canada raised to 2.50% (both 10-28/29, secondary, tmgm). The Fed held at 3.75-4.00% on 10-28, 10-2 with two dissents for a hike (pre-window). I found no Fed speakers after the hold; that is unmeasured.
-- **Enumeration (Nasdaq key-less calendar, curl).** 10-29 lists 303 rows, 201 at or above $2B: 114 pre-market, 80 after-hours, 7 not supplied (this includes the held name AMZN). 10-30 lists 63 rows, 38 at or above $2B: 35 pre-market and 3 not supplied. The 10-30 pre-market names include XOM, ABBV, CVX, AZN, BP, SNY, GD, REGN, CL, D, EXC and CCJ.
-- **Pre-open reporters verified from EDGAR 8-K Ex-99.1 (release time ET).** Consensus is Nasdaq's epsForecast (secondary), and "adj" means the company's adjusted or non-GAAP figure.
-  - **LLY** (07:03, Q3): non-GAAP EPS $7.48 against $5.38, including $4.57 of acquired IPR&D charges. Reported EPS was $7.22 and revenue $24.4B. 2026 revenue guidance was raised by $5.5B to $91-92B.
-  - **MA** (08:04): adj EPS $5.31 against $5.14.
-  - **MRK** (06:43): non-GAAP EPS $2.49 against $2.12 (includes a $0.12 charge).
-  - **CAT** (06:33): adj EPS $7.20 against $7.12, on revenue of $20.7B.
-  - **LIN** (07:10): adj EPS $4.59 against $4.52.
-  - **BMY** (07:05): non-GAAP EPS $1.35 against $1.21, with revenue up 7% to $13.1B.
-  - **MO** (07:04): adj EPS $1.52 against $1.51, with guidance raised.
-  - **TT** (06:40): the Ex-99.1 does not show EPS in its headline. Its guidance was raised on revenue and reaffirmed on EPS, and the EPS figure was not extracted.
-  - **HWM** (07:05): adj EPS $1.46 against $1.37.
-  - **CARR** (07:26): adj EPS $0.87 against $0.81.
-  - **AMP** (08:17): adj operating EPS $11.26 against $11.60, a miss (ex-unlocking $12.07).
-  - **HSY** (08:27): adj EPS $2.64 against $2.12.
-  - **QSR** (06:34): adj EPS $1.10 against $1.08.
-  - **CROX** (07:02): adj EPS $3.69 against $3.31.
-  - **DHI** (08:51 ET): fiscal Q4 FY2026 EPS $2.67 against $3.03, a miss on a GAAP basis.
-  - **WEC** (07:27): $1.18 against $0.98.
-  - **ICE** (07:30): "best third quarter in history", revenue $2.8B; the EPS figure was not extracted.
-  - 8-Ks with Item 2.02 also appeared for about 100 more pre-market names (for example PWR, EPD, LNG, CRH, LHX, XEL, ALNY, EME, CTSH, WTW). Their EPS was not read.
-  - **No 8-K found, so unresolved from primary:** the foreign filers (SHEL, TTE, BUD, ING, LYG, TAK, STM, TECK, ASX, HLN) report on 6-K, which I did not search. StockTitan lists a Shell Q3 release dated 10-29, but its figures were not read.
-- **After-close reporters whose releases are out by about 22:05Z (react 10-30).**
-  - **INTC** (16:08): Q3 non-GAAP EPS $0.52 against $0.28 on Nasdaq (TipRanks has $0.41), with revenue of $16.5B (+21%); Q4 guide $15.0-16.0B.
-  - **GILD** (16:03): non-GAAP EPS $2.55 against $2.17.
-  - **SNDK** (16:13, fiscal Q1 FY2027): non-GAAP EPS $49.51 against $46.19, on revenue of $11.0B.
-  - **SBUX** (16:07, fiscal Q4): non-GAAP EPS $0.80 against $0.73.
-  - **SYK** (16:11): adj EPS $3.52 against $3.56, a slight miss.
-  - **MDLZ** (16:09): adj EPS $0.78 against $0.72.
-  - **PINS** (16:07): non-GAAP EPS $0.46 against $0.13.
-  - **RDDT** (16:08): diluted EPS $1.40 against $1.31, on revenue of $895M (+53%).
-  - **DXCM** (16:03): GAAP EPS $0.72 against $0.66.
-  - **FSLR** (16:03): EPS $5.30 against $4.64, with guidance updated and a $500M buyback.
-  - **RIVN** (16:00): adjusted loss per share $(0.48) against $(0.84).
-  - **COIN** (16:09): Q3 diluted EPS $1.50 against a $(0.16) consensus.
-  - **RBLX** (16:10): the EPS figure was not extracted.
-  - 8-Ks with Item 2.02 were also filed after the close by about 60 more names, among them RSG, AJG, DLR, MSTR, MPWR, ILMN, TWLO and RMD. Their EPS was not read. Price reactions are unmeasured because the day's after-hours session was still running.
-  - AMZN reports after the close and is held, so it is not covered here.
-- **Pending (confirmed scheduled).** The BoJ decision and Tokyo CPI on 10-30. October payrolls and the RBA (11-03). The midterms on 11-03. The 10-30 pre-market earnings above.
-- **FDA.** CDER's Novel Drug Approvals 2026 page (curl; the old URL now 404s, the live path is `/drugs/novel-drug-approvals-fda/novel-drug-approvals-2026`) still has #47 Hibsago (bepirovirsen, 10-20) as its newest entry, and #46 is Hovilpri (10-09). The FDA press feed's newest item is dated 10-22. So no novel approval or announcement was found in the window. CRLs and non-novel approvals do not appear on those pages, so they are unmeasured, not absent.
+- **Macro (10-30).**
+  - **Q3 Employment Cost Index:** +0.8% q/q, in line.
+  - **September personal income and outlays:** core PCE +0.3% m/m and 3.12% y/y, real spending flat, incomes down the most since April, saving rate 3.8% (the lowest since October 2022) (TheStreet).
+  - **UMich final sentiment:** 48.0 (UNCONFIRMED; single social-media source).
+  - **Chicago PMI:** unmeasured.
+- **BoJ (10-30).** Held at 1.25%, as expected. It raised its inflation forecast and stressed readiness to keep hiking (Reuters).
+- **Fed.** After the 10-28 hold (10-2), Logan said at least two more 25bp hikes and Musalem said more tightening "soon"; Barkin favours a gradual path. December hike odds were about 72% at week-end, from 78% (TheStreet). ECB and BoE in the window: unmeasured.
+- **Week of 11-02.**
+  - 11-02: ISM Manufacturing, Treasury borrowing estimate.
+  - 11-03: US midterms, JOLTS, RBA.
+  - 11-04: ADP, ISM Services, Treasury quarterly refunding.
+  - 11-05: BoE (a hike is expected).
+  - 11-06: October payrolls (consensus +65k, unemployment 4.2%).
+  - Earnings: AAPL and PLTR 11-02, AMD and PFE 11-03, QCOM and **UBER (held) 11-04 08:00 ET**.
+- **Earnings enumeration (Nasdaq key-less calendar, curl).** 10-29 lists 323 rows, 209 at or above $2B; its after-close reporters reacted on 10-30. 10-30 lists 66 rows, 40 at or above $2B, including XOM, ABBV, CVX, AZN, BP, SNY, GD, REGN, CL, D, EXC and CCJ. The calendar's `time` field was `time-not-supplied` on every row, so release timing comes from EDGAR acceptance times (EVENT-IDENTITY GATE). Per-name outcomes for the written-up movers are in item 3. XOM, CVX and ABBV results were not extracted; their moves were under 4%.
+- **FDA.** fda.gov's 10-30 press announcement confirms the **accelerated approval of Voceryq (INO-3107)**, sponsor Inovio, for adult recurrent respiratory papillomatosis. REGN's 10-30 release cites an FDA approval for FOP (issuer source only). Agios mitapivat (sickle cell, aggregator PDUFA 11-01) is **unresolved** against FDA's own pages, and AGIO fell −17.9% on 10-30 with no identified event. Other PDUFA outcomes 10-29..11-01: unmeasured.
+
 
 ### 3. Large single-name moves — AI-SIGNIFICANCE SCREEN
 
-`research-screen` `b1e61b9c-b2e0-47b9-9489-ddf0babebd5d` (single-name-move). Discovery used the Nasdaq 4:00 PM ET closing print for 2,145 of 2,146 screener symbols at or above $2B (GJS, a stale trust preferred, is unmeasured). **884 moved at least 2% and 162 at least 5%** on Nasdaq figures. EDGAR was pulled for all 278 names moving 4.0% or more, and IBKR regular-session close arrays for 94 names. `surfaced_count` = 84 (82 floor clearers plus SIRI and MUSA as sub-floor context); agreement both 82 / ai_only 2 / rule_only 80.
+`research-screen` `e2dfa715-80cb-4d38-81fb-fe3310e21cfd` (single-name-move): **surfaced_count 54** (50 own-event floor clearers + 4 sub-floor context names), rail_tally 50, agreement both 50 / ai_only 4 / rule_only 278.
+- **Discovery.** The Nasdaq screener table still carried the 10-29 session on Sunday, so I pulled each ≥$2B symbol's Nasdaq quote/info closing print stamped Oct 30, 2026: 2137 of 2,151 (14 had no print). 905 moved ≥2% and 328 moved ≥5%.
+- **Attribution.** All 446 names moving ≥4% were mapped to EDGAR acceptance times and the Nasdaq earnings calendar in two disjoint sub-agent legs (A–L, M–Z), with no overlapping tickers. Most of the ≥5% movers share a common driver rather than an own event: the AI/semis/hardware selloff (about 95 names, e.g. AMD −10.9%, QCOM −11.1%, ARM −10.0%, DELL −10.8%), crypto after the Binance hack (about 20), gold/silver and metals miners (about 44), software (about 39), space/quantum/nuclear and life-science tools. Those are counted, not written up.
+- **Confirmation.** IBKR regular-session close arrays were pulled for 66 contracts. Every `metric_pct` below reproduces `(event_close/prior_close − 1) × 100`.
+- **Anchors.** A 10-29 after-close release anchors on 2026-10-29 with 10-30 as the reaction session; a 10-30 pre-open release anchors on 2026-10-30. **ENHA (−26.96%), AGIO (−17.94%) and GPN (+12.97%) have no identifiable event**, so their anchors are UNRESOLVED and they are recorded under `rejected_notable`. ENHA's series is split-adjusted for a 1-for-10 reverse split on 10-29. FTRE, ALGM, LAUR, GTX, IDCC, ESTA, ATI and IOVA are day-two moves on 10-29 pre-open events (IOVA −11.3% more after −35.4%).
+- **Close-chain check.** No hits. Only AXTI, SAN and MSTR have earlier items, all on different anchors. Coverage is thin, so this is not a clearance.
+- **No event found** (Nasdaq figures, not IBKR): TXG -14.03%, TWST -11.92%, PENG -11.67%, CSQR -11.10%, AAON -10.49%, ALMR -10.11%, GRAL -9.75%, SDGR -9.50%, BB -8.38%, GENB -8.31%, BHC -7.97%, FRVO -7.95%, CHRN -7.91%, CDLR +7.76%.
 
-Anchors: a release accepted after the 10-28 close anchors 2026-10-28 with reaction session 2026-10-29; a pre-open release anchors 2026-10-29. Times are EDGAR acceptance stamps (ET = UTC-4). Prior-window counts use the 9 sessions 10-16..10-28.
+Own-event floor clearers (IBKR closes, conviction, anchor, other ≥5% sessions in the 10-session window):
 
-| Name | Move (IBKR) | Closes | Event | Anchor | Conv. | Other >=5% sessions |
-|---|---|---|---|---|---|---|
-| IOVA | -35.4490% | 14.81 -> 9.56 | clinical trial update (press release + 8-K 8.01) | 2026-10-29 (pre-open/intraday 10-29) | 75 | 2 |
-| GKOS | +33.6493% | 181.43 -> 242.48 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 75 | 0 |
-| ADT (not B-eligible) | +33.1984% | 7.41 -> 9.87 | definitive agreement to be acquired by Thrive Holdings, 8-K 8.01 | 2026-10-29 (pre-open/intraday 10-29) | 75 | 1 |
-| BHC | +28.7572% | 6.92 -> 8.91 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 75 | 1 |
-| PRCH | +28.1595% | 16.3 -> 20.89 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 75 | 1 |
-| NOW | -26.9500% | 150.13 -> 109.67 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 75 | 0 |
-| CROX | +25.5410% | 119.69 -> 150.26 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 75 | 0 |
-| ALNY | -25.1291% | 232.4 -> 174.0 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 75 | 0 |
-| SFM | -22.5806% | 62.0 -> 48.0 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 75 | 1 |
-| FTNT | -20.0942% | 174.08 -> 139.1 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 75 | 2 |
-| FTAI | +17.2729% | 167.14 -> 196.01 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 75 | 1 |
-| GEN | +15.8111% | 24.35 -> 28.2 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 75 | 0 |
-| CVNA | +15.6816% | 59.05 -> 68.31 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 75 | 0 |
-| BOOT | +15.1633% | 113.3 -> 130.48 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 75 | 0 |
-| INSM | +15.0650% | 96.98 -> 111.59 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 75 | 0 |
-| PRLB | -14.5969% | 90.91 -> 77.64 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 75 | 1 |
-| HLN | -14.3000% | 10.0 -> 8.57 | Q3 trading statement 6-K | 2026-10-29 (pre-open/intraday 10-29) | 75 | 0 |
-| FCN | +14.2821% | 158.59 -> 181.24 | earnings 10-Q | 2026-10-29 (pre-open/intraday 10-29) | 75 | 1 |
-| AUR | -13.4578% | 5.09 -> 4.405 | earnings 8-K 2.02 with concurrent 424B5 offering (20:31Z) | 2026-10-28 (after close 10-28, reaction 10-29) | 75 | 2 |
-| NCLH | +13.4496% | 16.06 -> 18.22 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 75 | 0 |
-| HII | +13.2314% | 279.26 -> 316.21 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 75 | 0 |
-| BLDR | +12.8490% | 55.88 -> 63.06 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 75 | 1 |
-| STGW | +12.6840% | 8.83 -> 9.95 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 75 | 0 |
-| GOOGL | -12.6412% | 324.89 -> 283.82 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 75 | 0 |
-| GOOG | -12.2930% | 321.89 -> 282.32 | earnings 8-K 2.02 (same issuer as GOOGL) | 2026-10-28 (after close 10-28, reaction 10-29) | 75 | 0 |
-| FLS | +11.8925% | 71.81 -> 80.35 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 60 | 1 |
-| TXT | +11.6701% | 78.32 -> 87.46 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 60 | 0 |
-| DRS | +11.6620% | 35.5 -> 39.64 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 60 | 0 |
-| FORM | -11.6490% | 110.31 -> 97.46 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 60 | 3 |
-| CHDN | +11.2386% | 81.95 -> 91.16 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 60 | 0 |
-| TRN | +10.7981% | 25.56 -> 28.32 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 60 | 0 |
-| FTRE | -10.5873% | 25.88 -> 23.14 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 60 | 2 |
-| RSI | -9.9802% | 15.13 -> 13.62 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 60 | 2 |
-| PLXS | -9.6181% | 239.34 -> 216.32 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 60 | 1 |
-| HONA | -9.5972% | 177.03 -> 160.04 | earnings 8-K 2.02 with 7.01/8.01 | 2026-10-28 (after close 10-28, reaction 10-29) | 60 | 1 |
-| TNET | -9.5299% | 70.41 -> 63.7 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 60 | 1 |
-| CAT | -9.2503% | 713.38 -> 647.39 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 60 | 0 |
-| MBLY | -9.2068% | 7.06 -> 6.41 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 60 | 1 |
-| GVA | +8.9729% | 111.67 -> 121.69 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 60 | 0 |
-| APG | +8.9018% | 41.34 -> 45.02 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 60 | 0 |
-| CMG | +8.8757% | 28.73 -> 31.28 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 60 | 1 |
-| SCI | -8.6967% | 82.33 -> 75.17 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 60 | 0 |
-| NEU | -8.0388% | 873.27 -> 803.07 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 60 | 0 |
-| BC | +8.0029% | 68.85 -> 74.36 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 60 | 0 |
-| EHC | +7.6992% | 122.09 -> 131.49 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 45 | 0 |
-| BAX | -7.6984% | 25.46 -> 23.5 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 45 | 0 |
-| OWL | +7.6525% | 9.67 -> 10.41 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 45 | 1 |
-| CSL | +7.5751% | 345.21 -> 371.36 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 45 | 0 |
-| TPG | +7.5129% | 44.59 -> 47.94 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 45 | 0 |
-| STNG | +7.1573% | 88.72 -> 95.07 | Q3 results + dividend increase 6-K | 2026-10-28 (after close 10-28, reaction 10-29) | 45 | 0 |
-| LNG | +7.1095% | 297.77 -> 318.94 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 45 | 0 |
-| GATX | +6.8692% | 168.87 -> 180.47 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 45 | 0 |
-| LHX | +6.8378% | 260.61 -> 278.43 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 45 | 0 |
-| LLY | +6.6289% | 1288.3 -> 1373.7 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 45 | 0 |
-| ALGM | -6.6158% | 35.37 -> 33.03 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 45 | 2 |
-| TENB | +6.2808% | 48.72 -> 51.78 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 45 | 3 |
-| FTI | -6.2325% | 71.4 -> 66.95 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 45 | 0 |
-| OLED | -6.0945% | 90.41 -> 84.9 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 45 | 0 |
-| EGO | -6.0360% | 34.46 -> 32.38 | Q3 results 6-K | 2026-10-28 (after close 10-28, reaction 10-29) | 30 | 2 |
-| KGC | -6.0052% | 22.98 -> 21.6 | Q3 results 6-K | 2026-10-28 (after close 10-28, reaction 10-29) | 30 | 0 |
-| VKTX | +5.9148% | 25.36 -> 26.86 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 45 | 3 |
-| ATI | +5.8681% | 165.3 -> 175.0 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 45 | 1 |
-| PHIN | +5.8599% | 57.68 -> 61.06 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 45 | 0 |
-| MBIN | +5.8416% | 49.13 -> 52.0 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 45 | 0 |
-| CTSH | -5.7866% | 66.36 -> 62.52 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 45 | 1 |
-| VMC | +5.7774% | 265.0 -> 280.31 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 45 | 0 |
-| MGM | +5.7206% | 27.27 -> 28.83 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 45 | 0 |
-| SAIA | +5.6836% | 324.62 -> 343.07 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 45 | 0 |
-| NMRK | -5.6385% | 12.06 -> 11.38 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 45 | 1 |
-| PBI | -5.6193% | 17.44 -> 16.46 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 45 | 0 |
-| WCC | +5.6132% | 347.22 -> 366.71 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 45 | 1 |
-| DASH | +5.6110% | 169.49 -> 179.0 | earnings + Instacart merger agreement, 8-K 2.02/1.01/7.01 | 2026-10-29 (pre-open/intraday 10-29) | 45 | 1 |
-| AGCO | +5.5599% | 102.16 -> 107.84 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 45 | 0 |
-| HWM | +5.5075% | 195.19 -> 205.94 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 45 | 1 |
-| KLAC | +5.4544% | 158.77 -> 167.43 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 45 | 1 |
-| JOE | +5.3868% | 68.13 -> 71.8 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 45 | 0 |
-| LKQ | +5.2938% | 17.19 -> 18.1 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 45 | 2 |
-| HTO | -5.2265% | 61.8 -> 58.57 | public offering prospectus supplement 424B5 | 2026-10-29 (pre-open/intraday 10-29) | 45 | 0 |
-| MO | +5.1514% | 72.99 -> 76.75 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 45 | 0 |
-| DXPE | +5.1285% | 167.69 -> 176.29 | $150M share repurchase plan, 8-K 8.01 | 2026-10-28 (after close 10-28, reaction 10-29) | 45 | 2 |
-| LTH | +5.1229% | 43.14 -> 45.35 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 45 | 0 |
-| EPR | +5.0982% | 55.51 -> 58.34 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 45 | 0 |
-| SIRI | +4.9414% | 27.32 -> 28.67 | earnings 8-K 2.02 | 2026-10-29 (pre-open/intraday 10-29) | 30 | 0 |
-| MUSA | +4.7974% | 515.28 -> 540.0 | earnings 8-K 2.02 | 2026-10-28 (after close 10-28, reaction 10-29) | 30 | 0 |
+- **RDDT** -29.22% (129.6 → 91.73; 75; anchor 2026-10-29). Q3 rev $895M +53% y/y, EPS $1.40 vs $1.31 cons (Nasdaq cal); Q4 rev guide $1.000-1.030B per web snippet (pre-print preview expected ~$1.05B, inference only); stock -29% on heavy volume.
+- **INTC** -28.58% (92.07 → 65.76; 75; anchor 2026-10-29; 2 other ≥5% session(s)). Q3 results 8-K after close 10-29; stock -30% on 10-30 on the print, drove AI/semis selloff.
+- **CDNA** +22.22% (71.52 → 87.41; 75; anchor 2026-10-29). Q3 results after close 10-29; shares +22%.
+- **CACC** -19.26% (575.78 → 464.89; 75; anchor 2026-10-29; 1 other ≥5% session(s)). Q3 results after close 10-29; shares -19%.
+- **ILMN** -18.64% (290.06 → 235.99; 75; anchor 2026-10-29; 1 other ≥5% session(s)). Q3 results after close 10-29; shares -18.6% (tools/guidance reaction).
+- **RBLX** -18.05% (52.46 → 42.99; 75; anchor 2026-10-29). Q3 report 8-K item 2.02/7.01; EPS -$0.32 vs -$0.41 cons (cal); stock -18% — web search could not confirm cause (only prior-quarter negative-bookings guide found).
+- **BFAM** -17.92% (66.98 → 54.98; 75; anchor 2026-10-29; 1 other ≥5% session(s)). Q3 results plus Item 5.02 officer change after close 10-29; shares -18%.
+- **TFII** -17.08% (112.54 → 93.32; 75; anchor 2026-10-29). 6-K Q3 results; Finsee snippet: Q4 adj EPS guide $1.30-1.40 vs Q3 $1.70-1.80 plan, first outlook miss in six quarters; EPS $1.67 vs $1.75 cons (cal, -4.6%).
+- **TWLO** -15.24% (241.9 → 205.03; 75; anchor 2026-10-29; 2 other ≥5% session(s)). Q3 rev $1.56B +20% (organic +16%), non-GAAP EPS $0.90 vs $0.74 cons (cal); stock -15% despite beat; one German AI-generated snippet cites FY growth guide raised to 20% - cause of drop unverified.
+- **FDXF** +14.91% (109.69 → 126.04; 60; anchor 2026-10-29). FedEx Freight FQ1 results after close 10-29; shares +15%.
+- **SKYW** -14.72% (96.54 → 82.33; 60; anchor 2026-10-29). Q3 EPS $3.08 vs $3.13 cons (cal), pre-tax $159M; results hurt by higher fuel cost in prorate business; stock -14.7%.
+- **MEOH** +14.04% (62.76 → 71.57; 60; anchor 2026-10-29). 6-K filings 10-29 17:05/17:12 ET (post-close) and 10-30; Q3 EPS $3.69 vs $3.17 cons (cal); stock +14%.
+- **SNDK** -13.47% (1330.05 → 1150.89; 60; anchor 2026-10-29; 5 other ≥5% session(s)). FQ1'27 rev $11.0B +23% q/q, non-GAAP EPS $49.51 (cal $48.92 vs $46.19 cons); FQ2 rev guide $12.2-12.6B, 8-for-1 split announced; stock -13.5% amid semis/memory selloff.
+- **REGN** +13.33% (818.77 → 927.89; 60; anchor 2026-10-30). Q3 rev $5.1B +36%, non-GAAP EPS $20.07 vs ~$13.76 cons (cal); expanded Sanofi collaboration with $1.0B upfront (up to $7B milestones); FDA approval of Pasatru for FOP; stock +13.3%.
+- **CVCO** +13.11% (547.25 → 619; 60; anchor 2026-10-29; 1 other ≥5% session(s)). FQ2 results after close 10-29; shares +13%.
+- **BTSG** +11.08% (60.22 → 66.89; 60; anchor 2026-10-30). Q3 results pre-open 10-30; shares +11%.
+- **GDDY** +10.72% (105.89 → 117.24; 60; anchor 2026-10-29; 1 other ≥5% session(s)). Q3 results after close 10-29; shares +10.7%.
+- **COIN** -10.62% (160.59 → 143.54; 60; anchor 2026-10-29; 1 other ≥5% session(s)). Q3 results after close 10-29 (EPS fcst -0.16); shares -10.6% alongside crypto weakness.
+- **SXT** -10.57% (131.53 → 117.63; 60; anchor 2026-10-30). Q3 rev $455.8M +10.6%, op income +25.5%, EPS $1.13 vs $1.03 cons (cal); stock -10.6% — cause not identified (possible guidance/margin).
+- **AXTI** -9.56% (60.88 → 55.06; 60; anchor 2026-10-29; 6 other ≥5% session(s)). Q3 results after close 10-29; shares -9.6% amid semis selloff.
+- **GTES** -9.22% (26.25 → 23.83; 60; anchor 2026-10-30; 1 other ≥5% session(s)). Q3 results pre-open 10-30; shares -9.2%.
+- **RMD** -9.05% (252.83 → 229.94; 60; anchor 2026-10-29). FQ1'27 rev +6% to $1.4B, non-GAAP EPS $2.91 vs $2.67 cons (cal); stock -9%.
+- **NWG** -9.00% (17 → 15.47; 60; anchor 2026-10-30). Q3 2026 results; EPS $0.52 vs $0.51 cons (cal); ADR -9.0%.
+- **NVT** -8.81% (138.15 → 125.98; 60; anchor 2026-10-30; 1 other ≥5% session(s)). Q3 EPS $1.52 vs $1.40 cons (cal); stock -8.8% despite beat, in AI-infrastructure selloff.
+- **CCJ** -7.88% (83.49 → 76.91; 45; anchor 2026-10-30). Cameco Q3 6-K pre-open 10-30; shares -7.9%.
+- **MSTR** -7.84% (141.62 → 130.51; 45; anchor 2026-10-29; 3 other ≥5% session(s)). Q3 EPS $44.75 (bitcoin gains $20.9B; cal cons $21.50); 848,517 BTC held; 8-K also items 3.03/5.03/5.07 (STRC changes); stock -7.8% with crypto weakness.
+- **MMSI** -7.66% (93.39 → 86.24; 45; anchor 2026-10-29). Q3 rev $416.2M +8.4%, non-GAAP EPS $1.12 vs ~$0.93 cons (cal), raised FY26 guidance; stock -7.7% nonetheless.
+- **HGV** +7.64% (35.71 → 38.44; 45; anchor 2026-10-30). $200M uncollared ASR with Deutsche Bank announced pre-open 10-30 (8-K 1.01); earnings were pre-open 10-29.
+- **TBBK** -7.46% (50.52 → 46.75; 45; anchor 2026-10-29). Q3 EPS $1.53 (cal $1.47 vs $1.48 cons); stock -7.5%.
+- **RKT** +7.38% (11.92 → 12.8; 45; anchor 2026-10-29; 2 other ≥5% session(s)). Q3 GAAP NI $709M, adj NI $419M, EPS $0.12 vs $0.11 cons (cal); highest margin in ~5 yrs; stock +7.4%.
+- **MHK** +7.25% (129.99 → 139.41; 45; anchor 2026-10-29; 1 other ≥5% session(s)). Q3 EPS $2.72 vs $2.56 cons (cal); stock +7.25%.
+- **PIPR** -7.14% (68.72 → 63.81; 45; anchor 2026-10-30). Q3 advisory rev +18% y/y, new buyback authorization; EPS $0.87 vs $0.93 cons (cal, -6.5%); stock -7.1%.
+- **AZN** +7.02% (174.4 → 186.65; 45; anchor 2026-10-30). AstraZeneca 9M/Q3 results 6-K pre-open 10-30; ADR +7.0%.
+- **MIAX** +6.97% (31.44 → 33.63; 45; anchor 2026-10-29). Q3 EPS $0.45 vs $0.36 cons (cal); stock +7.0%.
+- **PTCT** -6.97% (64.46 → 59.97; 45; anchor 2026-10-29). Q3 total rev $358M, raised FY26 rev guide to $1.29-1.32B, acquired ST-920 Fabry gene therapy; EPS $0.61 vs $0.17 cons (cal); stock -7.0% (reaction contrary to beat; cause unverified).
+- **CBOE** +6.77% (314.25 → 335.53; 45; anchor 2026-10-30). Q3 results pre-open 10-30; shares +6.8%.
+- **VLTO** +6.77% (104.06 → 111.1; 45; anchor 2026-10-29). Q3 sales $1,509M +7.5%, adj EPS $1.18 vs $1.10 cons (cal); stock +6.8%.
+- **RBC** -6.76% (495.74 → 462.21; 45; anchor 2026-10-30; 1 other ≥5% session(s)). FQ2'27 net sales $524.6M +15.2%, EPS $3.53 vs $3.39 cons (cal); stock -6.8%.
+- **BHVN** -6.49% (16.49 → 15.42; 45; anchor 2026-10-29; 6 other ≥5% session(s)). Q3 results after close 10-29; shares -6.5%.
+- **INVX** -6.40% (30 → 28.08; 45; anchor 2026-10-29; 2 other ≥5% session(s)). Q3 results + Reg FD after close 10-29; shares -6.4%.
+- **SYK** -6.38% (311.75 → 291.86; 45; anchor 2026-10-29). Q3 sales $6.5B +7.7% organic, adj EPS $3.52 vs $3.56 cons (cal, -1.1%); stock -6.4%.
+- **RIVN** +6.20% (11.45 → 12.16; 45; anchor 2026-10-29). Q3 rev $2.155B +38%, deliveries +46%, guidance raised across all metrics; EPS -$0.62 vs -$0.84 cons (cal); stock +6.2%.
+- **AN** +6.08% (169.34 → 179.64; 45; anchor 2026-10-30; 2 other ≥5% session(s)). Q3 results pre-open 10-30; shares +6.1%.
+- **COLM** +6.04% (63.69 → 67.54; 45; anchor 2026-10-29). Q3 results after close 10-29; shares +6.0%.
+- **BBIO** +5.97% (70.73 → 74.95; 45; anchor 2026-10-29). Q3 results after close 10-29; shares +6.0%.
+- **IMO** +5.52% (130.87 → 138.1; 45; anchor 2026-10-30). Imperial Oil Q3 results pre-open 10-30; shares +5.5%.
+- **FND** -5.46% (50.34 → 47.59; 45; anchor 2026-10-29; 2 other ≥5% session(s)). Q3 results + Item 5.02 after close 10-29; shares -5.5%.
+- **TGS** -5.40% (25.02 → 23.67; 45; anchor 2026-10-29). Q3 results; EPS $0.49 vs $0.67 cons (cal, -27%); ADS -5.4%.
+- **ATR** +5.02% (130.64 → 137.2; 45; anchor 2026-10-29). Q3 results after close 10-29 (17:08 ET); shares +5.0% (intraday high +8.9%).
+- **LYB** +5.00% (65.37 → 68.64; 45; anchor 2026-10-30). Q3 results pre-open 10-30; shares +5.0%.
 
-**Rejected as common drivers, non-issuer events or follow-through (recorded, not dropped):**
-- `CD_SW` **TEAM** -7.28%: Software read-through of ServiceNow -27% (no own release found in the window).
-- `CD_SW` **CRM** -4.61%: Software read-through of ServiceNow -27% (no own release found in the window).
-- `CD_SW` **DDOG** -4.51%: Software read-through of ServiceNow -27% (no own release found in the window).
-- `CD_SW` **DOCN** -4.90%: Software read-through of ServiceNow -27% (no own release found in the window).
-- `CD_SW` **FSLY** -5.14%: Software read-through of ServiceNow -27% (no own release found in the window).
-- `CD_AI_INFRA` **IREN** -8.98%: AI-infrastructure/neocloud/miner cluster moving together on Nasdaq figures; no own issuer event found.
-- `CD_AI_INFRA` **CIFR** -8.68%: AI-infrastructure/neocloud/miner cluster moving together on Nasdaq figures; no own issuer event found.
-- `CD_AI_INFRA` **NBIS** -5.68%: AI-infrastructure/neocloud/miner cluster moving together on Nasdaq figures; no own issuer event found.
-- `CD_AI_INFRA` **CRWV** -4.99%: AI-infrastructure/neocloud/miner cluster moving together on Nasdaq figures; no own issuer event found.
-- `CD_AI_INFRA` **WULF** -4.99%: AI-infrastructure/neocloud/miner cluster moving together on Nasdaq figures; no own issuer event found.
-- `CD_AI_INFRA` **RIOT** -4.91%: AI-infrastructure/neocloud/miner cluster moving together on Nasdaq figures; no own issuer event found.
-- `CD_AI_INFRA` **APLD** -4.81%: AI-infrastructure/neocloud/miner cluster moving together on Nasdaq figures; no own issuer event found.
-- `CD_SEMI` **MU** -4.98%: Memory/optical/semi names moving with the Marvell and Alphabet capex news flow; no own issuer event found.
-- `CD_SEMI` **CRDO** -4.84%: Memory/optical/semi names moving with the Marvell and Alphabet capex news flow; no own issuer event found.
-- `CD_SEMI` **FN** -5.15%: Memory/optical/semi names moving with the Marvell and Alphabet capex news flow; no own issuer event found.
-- `CD_SEMI` **MXL** -4.70%: Memory/optical/semi names moving with the Marvell and Alphabet capex news flow; no own issuer event found.
-- `CD_MAT` **MLM** +4.79%: Building-materials cluster following Vulcan (+5.8%) and Builders FirstSource (+12.8%) prints; no own release found.
-- `CD_MAT` **EXP** +4.66%: Building-materials cluster following Vulcan (+5.8%) and Builders FirstSource (+12.8%) prints; no own release found.
-- `CD_MAT` **OC** +4.88%: Building-materials cluster following Vulcan (+5.8%) and Builders FirstSource (+12.8%) prints; no own release found.
-- `CD_MAT` **LPX** +4.85%: Building-materials cluster following Vulcan (+5.8%) and Builders FirstSource (+12.8%) prints; no own release found.
-- `CD_MAT` **CNM** +4.90%: Building-materials cluster following Vulcan (+5.8%) and Builders FirstSource (+12.8%) prints; no own release found.
-- `CD_MAT` **WMS** +4.93%: Building-materials cluster following Vulcan (+5.8%) and Builders FirstSource (+12.8%) prints; no own release found.
-- `CD_MAT` **QXO** +4.88%: Building-materials cluster following Vulcan (+5.8%) and Builders FirstSource (+12.8%) prints; no own release found.
-- `CD_MAT` **ROAD** +8.71%: Building-materials cluster following Vulcan (+5.8%) and Builders FirstSource (+12.8%) prints; no own release found.
-- `CD_DEF` **KTOS** +5.88%: Defense cluster following HII +13.2%, TXT +11.7%, DRS +11.7% and LHX +6.8% prints; no own release found.
-- `CD_DEF` **AVAV** +7.09%: Defense cluster following HII +13.2%, TXT +11.7%, DRS +11.7% and LHX +6.8% prints; no own release found.
-- `CD_DEF` **LOAR** +5.81%: Defense cluster following HII +13.2%, TXT +11.7%, DRS +11.7% and LHX +6.8% prints; no own release found.
-- `CD_DEF` **VSEC** +6.10%: Defense cluster following HII +13.2%, TXT +11.7%, DRS +11.7% and LHX +6.8% prints; no own release found.
-- `CD_DEF` **HEI** +5.02%: Defense cluster following HII +13.2%, TXT +11.7%, DRS +11.7% and LHX +6.8% prints; no own release found.
-- `CD_DEF` **GD** +4.70%: Defense cluster following HII +13.2%, TXT +11.7%, DRS +11.7% and LHX +6.8% prints; no own release found.
-- `CD_GOLD` **SSRM** -4.75%: Gold miners down 2-4% as a group; no own release found.
-- `CD_REST` **CAVA** +9.14%: Restaurant read-through of Chipotle +8.9% (CAVA also analyst Buy reiterations ahead of its Nov 4 print).
-- `CD_REST` **TXRH** +4.70%: Restaurant read-through of Chipotle +8.9% (CAVA also analyst Buy reiterations ahead of its Nov 4 print).
-- `CD_REST` **SHAK** +4.93%: Restaurant read-through of Chipotle +8.9% (CAVA also analyst Buy reiterations ahead of its Nov 4 print).
-- `NI_REPORT` **MRVL** -13.24%: Bloomberg report (late 10-28) of advanced talks to buy Lumentum, not an issuer release; Lumentum +6% (Tavily/247WallSt).
-- `NI_REPORT` **PURR** +23.27%: Third-party news (Druckenmiller stake and ICE/Hyperliquid announcements); not an issuer release (Tavily/Motley Fool).
-- `S2` **MSGR** +15.92%: 8-K 1.01/5.02/5.03/8.01 accepted 2026-10-27 16:21 ET: today is a follow-through session, not the reaction session.
-- `S2` **SITE** +6.38%: Own release 2026-10-28 pre-open (reaction was 10-28, screened by the prior run); today is session 2.
-- `S2` **VFC** +6.36%: Own release 2026-10-28 pre-open (reaction was 10-28, screened by the prior run); today is session 2.
-- `S2` **JLL** +6.07%: Own release 2026-10-28 pre-open (reaction was 10-28, screened by the prior run); today is session 2.
-- `S2` **TEX** +5.96%: Own release 2026-10-28 pre-open (reaction was 10-28, screened by the prior run); today is session 2.
-- `S2` **MAS** +5.44%: Own release 2026-10-28 pre-open (reaction was 10-28, screened by the prior run); today is session 2.
-- `S2` **SW** +5.44%: Own release 2026-10-28 pre-open (reaction was 10-28, screened by the prior run); today is session 2.
-- `S2` **CHEF** -5.43%: Own release 2026-10-28 pre-open (reaction was 10-28, screened by the prior run); today is session 2.
-- `S2` **TER** -5.43%: Own release 2026-10-28 pre-open (reaction was 10-28, screened by the prior run); today is session 2.
-- `S2` **WING** +4.92%: Own release 2026-10-28 pre-open (reaction was 10-28, screened by the prior run); today is session 2.
-- `S2` **LII** +4.67%: Own release 2026-10-28 pre-open (reaction was 10-28, screened by the prior run); today is session 2.
-- `S2` **HAYW** +5.17%: Own release 2026-10-28 pre-open (reaction was 10-28, screened by the prior run); today is session 2.
-- `S2` **JMKE** +7.80%: Own release 2026-10-28 pre-open (reaction was 10-28, screened by the prior run); today is session 2.
-- `S2` **NXPI** +5.69%: Own release 2026-10-27 or earlier; today is a later follow-through session.
-- `S2` **CLS** -5.63%: Own release 2026-10-27 or earlier; today is a later follow-through session.
-- `S2` **GLXY** -5.03%: Own release 2026-10-27 or earlier; today is a later follow-through session.
-- `S2` **IBP** +6.13%: Own release 2026-10-27 or earlier; today is a later follow-through session.
-- `S2` **AWI** +5.94%: Own release 2026-10-27 or earlier; today is a later follow-through session.
-- `S2` **RUSHB** +4.70%: Own release 2026-10-27 or earlier; today is a later follow-through session.
-- `S2` **HRI** +4.58%: Own release 2026-10-27 or earlier; today is a later follow-through session.
-- `S2` **INIO** -4.52%: Own release 2026-10-27 or earlier; today is a later follow-through session.
-- `S2` **TNL** +4.61%: Own release 2026-10-27 or earlier; today is a later follow-through session.
-- `S2` **APAM** +4.64%: Own release 2026-10-27 or earlier; today is a later follow-through session.
-- `S2` **FBIN** +4.83%: Own release 2026-10-27 or earlier; today is a later follow-through session.
-- `A29` **BHVN** +6.25%: Own release (8-K) accepted after the 10-29 close: reaction session is 10-30, and today's move is not explained by it. SNDK and DXC also moved on the day without it.
-- `A29` **IR** +6.03%: Own release (8-K) accepted after the 10-29 close: reaction session is 10-30, and today's move is not explained by it. SNDK and DXC also moved on the day without it.
-- `A29` **FND** +5.89%: Own release (8-K) accepted after the 10-29 close: reaction session is 10-30, and today's move is not explained by it. SNDK and DXC also moved on the day without it.
-- `A29` **CACC** +5.67%: Own release (8-K) accepted after the 10-29 close: reaction session is 10-30, and today's move is not explained by it. SNDK and DXC also moved on the day without it.
-- `A29` **DXC** -5.47%: Own release (8-K) accepted after the 10-29 close: reaction session is 10-30, and today's move is not explained by it. SNDK and DXC also moved on the day without it.
-- `A29` **DVA** +5.38%: Own release (8-K) accepted after the 10-29 close: reaction session is 10-30, and today's move is not explained by it. SNDK and DXC also moved on the day without it.
-- `A29` **AXTI** -5.44%: Own release (8-K) accepted after the 10-29 close: reaction session is 10-30, and today's move is not explained by it. SNDK and DXC also moved on the day without it.
-- `A29` **AEHR** -5.16%: Own release (8-K) accepted after the 10-29 close: reaction session is 10-30, and today's move is not explained by it. SNDK and DXC also moved on the day without it.
-- `A29` **KSS** +5.01%: Own release (8-K) accepted after the 10-29 close: reaction session is 10-30, and today's move is not explained by it. SNDK and DXC also moved on the day without it.
-- `A29` **LION** +5.49%: Own release (8-K) accepted after the 10-29 close: reaction session is 10-30, and today's move is not explained by it. SNDK and DXC also moved on the day without it.
-- `A29` **PINS** -4.83%: Own release (8-K) accepted after the 10-29 close: reaction session is 10-30, and today's move is not explained by it. SNDK and DXC also moved on the day without it.
-- `A29` **TWLO** -4.70%: Own release (8-K) accepted after the 10-29 close: reaction session is 10-30, and today's move is not explained by it. SNDK and DXC also moved on the day without it.
-- `A29` **COLM** +4.58%: Own release (8-K) accepted after the 10-29 close: reaction session is 10-30, and today's move is not explained by it. SNDK and DXC also moved on the day without it.
-- `A29` **SNDK** -5.32%: Own release (8-K) accepted after the 10-29 close: reaction session is 10-30, and today's move is not explained by it. SNDK and DXC also moved on the day without it.
-- `A29` **NFEGP** -10.50%: Own release (8-K) accepted after the 10-29 close: reaction session is 10-30, and today's move is not explained by it. SNDK and DXC also moved on the day without it.
-- `DEAL` **PATK** +7.51%: 8-K 2.02 pre-open but the move is deal-driven: LCI merger and an unsolicited third-party proposal (425 filed 10-28 16:13 ET); deal-pinned, like LCII.
-- `ILLIQUID` **LBTYB** -5.91%: Thin class B: IBKR -7.00%, Nasdaq -5.91%, while Liberty Global A +0.79% and C +0.40%. 8-K 7.01 only.
-- `NO_EVENT` **KC** -5.56%: 6-K is a board-meeting date notice, not an explanatory event.
-- `NON_COMMON` **GOOGM** -8.97%: Depositary shares, preferred or warrant line: not common equity.
-- `NON_COMMON` **GOOGN** -8.77%: Depositary shares, preferred or warrant line: not common equity.
-- `NON_COMMON` **NFEGP** -10.50%: Depositary shares, preferred or warrant line: not common equity.
-- `NON_COMMON` **CORZW** -7.26%: Depositary shares, preferred or warrant line: not common equity.
-- `UNRES` **AGI** -8.97%: Q3 results 6-K accepted 2026-10-29 13:43 ET (press release dated Oct 29); release minute and session not resolvable from EDGAR, so anchor is UNRESOLVED and the name is not routed. Gold group also -2% to -4%.
-- `SUBFLOOR` **BG** -4.81%: Own issuer event found; IBKR-confirmed or Nasdaq move 4.6-4.75%, more than 25bp under the frozen 5% floor.
-- `SUBFLOOR` **BWA** -4.72%: Own issuer event found; IBKR-confirmed or Nasdaq move 4.6-4.75%, more than 25bp under the frozen 5% floor.
-- `SUBFLOOR` **CRH** +4.75%: Own issuer event found; IBKR-confirmed or Nasdaq move 4.6-4.75%, more than 25bp under the frozen 5% floor.
-- `SUBFLOOR` **PPC** +4.66%: Own issuer event found; IBKR-confirmed or Nasdaq move 4.6-4.75%, more than 25bp under the frozen 5% floor.
-- `SUBFLOOR` **PWR** +4.66%: Own issuer event found; IBKR-confirmed or Nasdaq move 4.6-4.75%, more than 25bp under the frozen 5% floor.
-- `SUBFLOOR` **FRHC** +4.63%: Own issuer event found; IBKR-confirmed or Nasdaq move 4.6-4.75%, more than 25bp under the frozen 5% floor.
-- `UNATTR` **UNATTRIBUTED**: >=4.5% on Nasdaq figures with no EDGAR or calendar event found: PGEN +9.21%, ASST -9.52%, CHRN -8.25%, FRVO +7.92%, JOYY +7.19%, KRMN +9.79%, SARO +7.23%, XP -6.46%, CRS +6.65%, CAR +6.31%, HSAI -6.22%, KNF +6.09%, BIRK +5.73%, RGC -5.64%, SN +5.53%, EMBJ +5.30%, TSCO +6.45%, TPR +5.91%, UAA +5.57%, SHOO +5.27%, BBWI +5.31%, W +5.36%, FIVE +4.70%, ULTA +4.69%, OLLI +7.17%. KRMN, CAVA and TSCO got one Tavily search each: no catalyst (TSCO printed 10-22).
-
-**Sub-floor notes.** SIRI +4.94% (6bp under) and MUSA +4.80% (20bp under) are in the table as context; BG, BWA, CRH, PPC, PWR and FRHC sit 25-37bp under and are in the rejected list as `SUBFLOOR`.
-
-**Notable detail.** NOW -26.95% (150.13 -> 109.67) leads the downside with a software sell-off behind it; ADT +33.2% is a definitive take-private and is deal-pinned (not B-routable); IOVA -35.45% (14.81 -> 9.56) is the largest decline, pre-open data release; GOOGL/GOOG -12.6%/-12.3% (held name) move on the 10-28 after-close print. MRVL -13.2% was a Bloomberg report, not an issuer release.
-
-**Close-chain check.** Ran one read-only query over events.decision_log research-screen rows since 2026-10-08 (354 passed items): ZERO other items carry the same name and qualifying_event_date as any of the 84 items here, so there are no chain hits; coverage is thin (no counterparts), so a clean pass is not a clearance.
-
-**Unmeasured / degraded.** GJS: STRATS trust preferred; last print 2026-10-27, stale (not common equity). 10 flat-print names: Nasdaq returned a blank net change (unchanged): BEPC, BLCO, BRKR, OXLCZ, PAYO, RNW, SLNHP, TWST, WLYB, YMM counted as 0.00%; BRKR and PAYO confirmed flat on IBKR. Market caps are Nasdaq-screener only; FMP profile-symbol was not called (names near the rail: PRCH $2.1B, TRN $2.0B, STGW $2.2B, ASST/PGEN unattributed). Release times for AC28 and PRE29 slots are EDGAR acceptance stamps (upper bound for the release minute); press-release minutes were not separately captured except IOVA (pre-open per GlobeNewswire coverage). IBKR close arrays were pulled only for event-bearing names; the >=5% non-event movers rest on Nasdaq figures.
-
-**Fan-out reconciliation.** The screen and developments legs overlap on 5 tickers (CROX, CAT, LLY, HWM, MO) and agree on all of them. The developments leg's 10-29 after-close reporters (INTC, GILD, SNDK, SBUX, SYK, MDLZ, PINS, RDDT, DXCM, FSLR, RIVN, COIN, RBLX) react on 10-30, so they are correctly absent from this screen.
+Sub-floor context (never B candidates): TECK -4.88% (63.72 → 60.61); EXEL +4.82% (66.2 → 69.39); SAN -4.77% (11.75 → 11.19); OMF -4.70% (59.34 → 56.55).
 
 ### 4. Sector-level moves — AI-SIGNIFICANCE SCREEN
 
-`research-screen` `014b69e9-3f69-49d2-a103-bc857a364381` (sector-move): **a rotation day, surfaced_count 4.** All 11 SPDRs were measured on their registry contract ids, and the 10-28 closes match the prior run on every SPDR and on 10 tape symbols.
-- **XLV +2.40%** (179.72 -> 184.04; conviction 75; legacy 2% pass). Health-care own-event cluster: LLY +6.63% on a Q3 beat (non-GAAP $7.48 vs $5.38, 8-K 07:03 ET), MRK and BMY beats, INSM +15.1%, against ALNY -25.1% and BAX -7.7% (EDGAR 8-Ks; IBKR closes).
-- **XLRE +2.21%** (42.13 -> 43.06; conviction 45; legacy 2% pass). Rate-sensitive bid: XLRE +2.21% with XLU +1.53% and TLT +0.62% after the 10-28 FOMC hold and in-line core PCE (+0.3% m/m) on 10-29; no single sourced catalyst.
-- **XLC -1.87%** (103.14 -> 101.21; conviction 60; legacy 2% fail). Alphabet's reaction to its 10-28 after-close Q3 print: GOOGL -12.64% / GOOG -12.29% (EPS miss on ~$8.2B non-operating other expense; 8-K Ex-99.1 accepted 16:01 ET 10-28), two of the largest XLC holdings (weight not measured this run).
-- **XLK -1.18%** (191 -> 188.74; conviction 45; legacy 2% fail). Software prints: NOW -26.95% and FTNT -20.09% on 10-28 after-close results, GEN +15.8%, with SMH -1.06%; KLAC +5.45% partly offsetting (EDGAR 8-Ks; IBKR closes).
-- Not surfaced: XLF +1.4431, XLY +0.7544, XLP +1.5431, XLE +0.3798, XLI +0.9734, XLB +1.2919, XLU +1.5298.
-- Nine of 11 SPDRs rose, the spread was 4.27pp, and breadth rose +5.56pp. The cap-weighted drag came from XLC and XLK.
+`research-screen` NOT WRITTEN — the digest-checked call was refused three times for a transcription mismatch and, per the bounded-retry rule, nothing was written by any other path (in-run issue `research_screen_write_refused`); the measurements below are this run's (sector-move): **a tech liquidation with a defensive bid, surfaced_count 3.** All 11 SPDRs were measured on their registry contract ids, and the 10-29 closes match the prior run's event_close on every SPDR and on 10 tape symbols.
+- **XLK −4.89%** (188.74 → 179.51; conviction 75; legacy 2% pass; 2.7x volume). The centre of the AI/semis liquidation: Intel's 10-29 after-close print (cash burn, and a PC-demand warning tied to the memory-chip shortage) landed after Alphabet's 10-29 drop and Amazon's ~$220B capex. SMH fell −6.98% on 3.1x volume.
+  - Goldman described asset managers as net sellers with ETFs about 31% of volume, and the S&P closed below its 100-day average for the first time since April (TheStreet).
+- **XLE +1.91%** (68.71 → 70.02; conviction 45; legacy fail). Brent rose +2.37% (FMP BZUSD 110.80 → 113.43) as Hormuz stayed shut, and XOM, CVX and IMO (+5.52%) reported before the open.
+- **XLP +1.41%** (88.18 → 89.42; conviction 45; legacy fail; 2.0x volume). A defensive rotation, with XLU +0.67%, XLV +0.45% and TLT +0.43% also up.
+- **Not surfaced:**
+  - XLI −1.60% and XLC −1.29% (index-like; XLC is follow-through after 10-29's −1.87%).
+  - XLF −0.76%, XLY −0.71%, XLB +0.40%, XLU +0.67%, XLV +0.45% and XLRE +0.26%.
+- Five of 11 SPDRs rose. RSP beat SPY by 0.98pp, and breadth fell −4.37pp.
 
 ### 5. Notable commentary
 
-
-- **Fed and rates.** The Fed's hold on 10-28 "tempered bets on rate hikes in 2027" and left the dollar wobbling (Reuters via Business Times, 10-29). Chair Warsh spoke on 10-28 (pre-window). I found no new speeches inside the window.
-- **ECB.** Lagarde declined to assess the French bond intervention at her press conference. Reuters sources say a December hike is likely, then a pause. The resignation overshadowed the decision (Reuters).
-- **Sell-side.** UBS published new Brent forecasts on 10-28 on Middle East supply risk (Investing.com headline; contents not read). MarketBeat carried a headline that Dan Ives says the AI-stock decline is "just getting started" (undated, so unverified for the window). No other specific sell-side note was found inside the window; that is unmeasured.
-- **Corporate commentary.** Carrier said commercial HVAC orders were up about 60% and data-centre orders up about 300%. Mastercard and Lilly raised their outlooks. Starbucks introduced FY2027 guidance.
+- **Flows (S5).** Goldman's desk and BofA described systematic, ETF and gamma-driven selling into month-end. VVIX was the highest since March and BofA put gamma less than 1% from negative. The Nasdaq Composite lost 5.3% in October, its worst month since March 2025 (TheStreet, Yahoo).
+- **Fed.** Logan wants at least two more hikes, Musalem expects more tightening "soon", and Barkin favours a gradual path. BofA, JPM and MS expect a December hike; BofA also sees March, with a terminal 4.25–4.50%.
+- **Corporate.** Intel warned on PC demand and cash burn. Amazon guided "meaningfully more" capex for 2027. Big Tech's reliance on debt (MSFT $25B bond) was cited (Reuters via Economic Times).
+- **Unmeasured:** other strategist notes.
 
 ## ANALYSIS — RISK TO EXISTING POSITIONS
 
 ### Mechanical exit-trigger sweep
 
-- Book re-read from positions.txt (12 Strategy D tranches, no `convergence_target`, no `time_exit_date`) and compared with IBKR `get_account_positions`. They agree on every name: AMZN 0.3464, DIS 0.7244, GEV 0.1244, GOOGL 0.2577, ISRG 0.1091, RTX 0.1601, TSM 0.155, UBER 0.5156. VOO 16.895 is the park. No name is in IBKR but missing from the book. **No exit is triggered.**
-- The IBKR positions snapshot carries stale `market_price` fields (for example AMZN 230.22). Marks use the IBKR ONE_DAY history closes. All bars are stamped 13:30Z (RTH).
-- Closes, 10-28 to 10-29: AMZN 254.60 to 243.79 (-4.25%), GOOGL 324.89 to 283.82 (-12.64%), GEV 878.03 to 887.85 (+1.12%), TSM 439.51 to 431.81 (-1.75%), ISRG 444.18 to 448.76 (+1.03%), RTX 195.84 to 199.40 (+1.82%), DIS 109.04 to 110.91 (+1.71%), UBER 65.27 to 65.74 (+0.72%).
-- D book: $541.72 to $530.09 (**-2.15%**). The 10-28 value matches yesterday's refreshed $541.72.
-- mark_vs_cost_pct: TSM 0.9229 / 9.9081, AMZN 1.0553 / -8.2437, ISRG 28.3967, RTX 12.7198, GOOGL -21.1279 / -13.4282, DIS -0.3674 / 6.8648, UBER -10.2002, GEV -8.4602.
-- No price-level criterion is in play, so no dividend netting is owed.
+- **Book check.** I re-read the 12 Strategy D tranches from `state.current_positions` (no `convergence_target`, no `time_exit_date`) and compared them with IBKR `get_account_positions`. They agree on every name: AMZN 0.3464, DIS 0.7244, GEV 0.1244, GOOGL 0.2577, ISRG 0.1091, RTX 0.1601, TSM 0.155, UBER 0.5156. VOO 16.895 is the park. No position is in IBKR but missing from the book, so no reconciliation-lag alert is owed. **No exit is triggered.**
+- **Closes, 10-29 to 10-30 (IBKR ONE_DAY, outside_rth=false):** AMZN 243.79 → 240.35 (−1.41%), GOOGL 283.82 → 279.84 (−1.40%), GEV 887.85 → 857.87 (−3.38%), TSM 431.81 → 406.13 (−5.95%), ISRG 448.76 → 432.01 (−3.73%), RTX 199.40 → 199.80 (+0.20%), DIS 110.91 → 110.94 (+0.03%), UBER 65.74 → 65.25 (−0.75%).
+- **D book:** $530.09 → $518.17 (**−2.25%**). The 10-29 value matches the prior run's.
+- **Dividend netting.** No price-level criterion is in play, so none is owed.
 
 ### Thesis-invalidation review
 
-EDGAR since 10-28 22:00Z: AMZN 8-K (2.02, 9.01) accepted 20:05Z on 10-29; GOOGL 10-Q (10-29 00:29Z) and a Form 144 (20:17Z); ISRG one Form 4 (10-28 22:01Z). None for GEV, UBER, TSM (no 6-K), RTX or DIS. Two web searches (UBER date; one wide search for TSM/ISRG/RTX/DIS/GEV) returned nothing dated in the window, so "none found" is not proof of none.
-- **AMZN** (-4.25% to 243.79, before the print). Q3 2026 (quarter ended 9/30) Ex-99.1 was published 10-29, accepted 16:05 ET (after the close), so the reaction session is 10-30.
-  - AWS sales $45.98B, **+39.3% YoY** (Q2 +37.0%, the fastest in nearly five years); run rate $184B.
-  - AWS operating income $17.77B, **margin 38.65%** (Q2 39.4%).
-  - Backlog is not in the release, and the 10-Q is not yet filed, so criterion 3 is not testable. Jassy projected AWS growth above 40% in 2027 and 2028.
-  - Group: sales $201.9B (+12%), operating income $28.1B, TTM FCF -$42.4B. The release lists new AWS agreements with OpenAI, Meta and NVIDIA, and no sign of a downward renegotiation.
-  - (1) UNBREACHED. (2) UNBREACHED. (3) not testable until the 10-Q. (4) UNBREACHED. (5) UNBREACHED.
-- **GOOGL** (-12.64% to 283.82 on the reaction session to the 10-28 after-close print of Cloud +103%, margin 36.2%, and an EPS miss from ~$8.2B other expense). The 10-Q (accepted 10-29 00:29Z) gives revenue backlog (RPO) of **$567.7B, of which Cloud $560.8B**. Repo notes recorded ~$514B at Q2, so it rose sequentially (the Q2 baseline is from a repo note, not re-verified).
-  - Structural remedy: the 10-Q says the September 2026 ad-tech remedies decision **denied the DOJ's structural divestiture** and ordered behavioral remedies only. The search remedies are behavioral and under appeal.
-  - (1) UNBREACHED. (2) UNBREACHED. (3) UNBREACHED. (4) UNBREACHED. (5) UNBREACHED.
-  - The drop is a price reaction to a non-operating EPS miss, not to an invalidation criterion.
-- **GEV** (+1.12% to 887.85): Q3 already reviewed on 10-28 (organic orders +96%). No new data. UNBREACHED; completion not met.
-- **TSM** (-1.75%), **ISRG** (+1.03%), **RTX** (+1.82%), **DIS** (+1.71%): no filing or news bearing on their criteria. Not testable this window.
-- **UBER** (+0.72%): no company-confirmed Q3 date. Third-party estimates are 11-02 to 11-04, unconfirmed. Not testable.
+The positions leg pulled EDGAR filings in the window plus 9 free web searches. "None found" is not proof of none.
+- **AMZN.** The 10-Q was filed 10-30. All five criteria are UNBREACHED:
+  - (1) AWS sales $45.98B, +39.3% YoY.
+  - (2) AWS operating margin 38.7%.
+  - (3) Performance obligations about **$578B, up from $496B** in Q2: no sequential decline. This is the test the 10-29 run could not make.
+  - (4) The OpenAI and Anthropic commitments are still cited as expanded.
+  - (5) AWS segment reporting is unchanged.
+  - The −5.7% two-session drop is a reaction to the EPS miss and capex, not an invalidation.
+- **GOOGL.** Criteria (1), (2), (3) and (5) are UNBREACHED: Cloud +102.6%, Cloud margin 36.2% (from 35.6%), Cloud backlog $560.8B (from about $513.9B).
+  - (4) structural remedy: no new remedy action in the window. The 10-29 read of the 10-Q (ad-tech structural divestiture denied) stands.
+  - The investment-loss EPS miss is not a criterion.
+- **GEV.** UNBREACHED. Q3 (10-28, pre-window) organic orders were +96% against the 15% line. Completion is not met: backlog is $197B against the $200B leg, and orders growth is above 25%.
+- **ISRG, TSM, RTX:** no filing or news bearing on their criteria; not testable this window. TSM's −5.95% is sector-wide.
+- **DIS:** FQ4 print on 11-17; not testable.
+- **UBER:** Q3 on 11-04 08:00 ET; not testable until then.
 
 ### Per-strategy kill-trigger sweep
 
-- **D** (`perf.kill_flags` as of 2026-10-28): unit 1.0555 against a peak of 1.1065 (−4.61%). `drawdown_kill`, `runaway_review`, `m2m_underperf_review`, `evidence_kill` and `interim_underperf_warning` are all FALSE.
-  - **Refreshed on IBKR 10-29 closes**, the D book fell −2.15% ($541.72 → $530.09), which puts the unit at ≈1.0328 and the drawdown at **≈−6.66%**, against the −50% kill.
-- **B:** no open position. The `analytics.b_pairwise_correlation` check is inert (n_positions 0).
-- No other strategy holds positions. **No termination and no runaway review.** There is no open `interim_underperf_warning` alert to heal.
+- **D** (`perf.kill_flags` as of 2026-10-29): unit 1.0328 against a peak of 1.1065 (−6.66%). `drawdown_kill`, `runaway_review`, `m2m_underperf_review`, `evidence_kill` and `interim_underperf_warning` are all FALSE.
+  - **Refreshed on IBKR 10-30 closes:** the book fell −2.25%, which puts the unit at ≈1.0096 and the drawdown at **≈−8.75%**, against the −50% kill.
+  - `excess_vs_sgov` was +1.37% at 10-29. No interim warning is open, so none is owed or healed.
+- **B:** no open position. `analytics.b_pairwise_correlation` is inert (n_positions 0).
+- No other strategy holds positions. **No termination and no runaway review.**
 
-**Watchlist candidacy:** the Strategy B new-entry index gains 80 names (below). No A or C watchlist name was materially moved by a Development.
+**Watchlist candidacy:** the Strategy B new-entry index gains the floor clearers below. No A or C watchlist name was materially moved by a Development.
 
 ## ANALYSIS — OPPORTUNITY CHECK
 
-- **B.** 80 own-event floor clearers are B-eligible, but B is `DO-NOT-ACTIVATE` (div-B-202609-1) and capital-disabled, so they go to the index only.
-  - A thesis session would need to weigh prior ≥5% sessions against criterion 4 (information vs sentiment) for FORM, TENB and VKTX (3 others each), and for IOVA, FTNT, AUR, FTRE, RSI, ALGM, EGO, LKQ and DXPE (2 each).
-  - ADT is a definitive take-private, so it is deal-pinned and not B-routable. GOOGL is also held in D, and the A/B and A/C same-name exclusions do not apply to a D holding.
-  - Near the $2B rail on screener caps alone: PRCH, TRN and STGW. Re-verify their caps before any thesis.
-- **C.** C stays HYBRID ACTIVATE (FOMC-only). The 10-28 FOMC is resolved, and the next FOMC is not within this scan. No new qualifying catalyst within 45 days was found.
+- **B.** The own-event floor clearers are B-eligible, but B is `DO-NOT-ACTIVATE` (div-B-202609-1) and capital-disabled, so they go to the index only.
+  - A thesis session would need to weigh prior ≥5% sessions against criterion 4 (information vs sentiment):
+    - AXTI and BHVN: 6 others each.
+    - SNDK: 5 others; it is also a memory name inside the common semis driver.
+    - MSTR: 3 others.
+    - INTC, TWLO, RKT, INVX, AN and FND: 2 others each.
+  - Several reactions ran against the print direction: TWLO −15% on a beat, NVT −8.8% on a beat, MMSI −7.7% after raising guidance, PTCT −7.0% after raising guidance. Those are open criterion-4 questions, not settled reads.
+- **C.** C stays HYBRID ACTIVATE (FOMC-only). The next FOMC (December) is not a catalyst in this scan; no new qualifying catalyst within 45 days was found.
 - **A** (`DO-NOT-ACTIVATE`, div-A-202610-1): not a candidate.
 - **E** (`DO-NOT-ACTIVATE`, div-E-202610-1). These intra-group divergences are recorded for M2, not routed:
-  - software: NOW −27.0% and FTNT −20.1% vs GEN +15.8% and TENB +6.3%;
-  - defense: HII +13.2%, DRS +11.7% and LHX +6.8%, all on their own prints;
-  - Alphabet share classes GOOGL −12.64% vs GOOG −12.29% (a structural pair, not a divergence).
+  - semis: INTC −28.6% on its print vs a group mostly down 5–11% (common driver);
+  - healthcare tools: ILMN −18.6% vs RMD −9.1% and SYK −6.4% on their own prints;
+  - pharma: REGN +13.3% and AZN +7.0% vs ABBV (under 4%).
 
 ## ANALYSIS — ADD-CANDIDATE CHECK (Strategies A, B, D only)
 
-`add-candidate-review` `1ec75295-8199-4b41-b823-0602259d37f4`. All 12 open D tranches were evaluated: 0 flagged, 0 declined at the hard gate. The three-disjunct, COALESCE-wrapped evaluability test passes for all 12. Each tranche is marked at its IBKR 10-29 close against its own cost per share.
+`add-candidate-review` `d293ba74-b55e-4bd6-b003-cd0992c48c16`. All 12 open D tranches were evaluated: 0 flagged, 0 declined at the hard gate. The three-disjunct, COALESCE-wrapped evaluability test passes for all 12. Each tranche is marked at its IBKR 10-30 close against its own cost per share.
 
 | Tranche | Mark vs cost | Trigger | Disposition |
 |---|---|---|---|
-| D:ISRG:2026-07-20 | +28.40% | none | declined |
-| D:RTX:2026-04-27 | +12.72% | none | declined |
-| D:TSM:2026-07-29 | +9.91% | none | declined |
-| D:DIS:2026-08-05 | +6.86% | none | declined |
-| D:AMZN:2026-07-09 | +1.06% | strengthened-conviction | declined: no funding path |
-| D:TSM:2026-07-21 | +0.92% | none | declined |
-| D:DIS:2026-05-07 | -0.37% | dip-with-intact-thesis | declined: no funding path |
-| D:AMZN:2026-07-30 | -8.24% | strengthened-conviction | declined: no funding path |
-| D:GEV:2026-08-03 | -8.46% | strengthened-conviction | declined: no funding path |
-| D:UBER:2026-07-09 | -10.20% | dip-with-intact-thesis | declined: no funding path |
-| D:GOOGL:2026-07-26 | -13.43% | dip-with-intact-thesis | declined: no funding path |
-| D:GOOGL:2026-07-09 | -21.13% | dip-with-intact-thesis | declined: no funding path |
+| D:ISRG:2026-07-20 | +23.60% | dip-with-intact-thesis | declined: no funding path |
+| D:RTX:2026-04-27 | +12.95% | none | declined |
+| D:DIS:2026-08-05 | +6.89% | none | declined |
+| D:TSM:2026-07-29 | +3.37% | dip-with-intact-thesis | declined: no funding path |
+| D:DIS:2026-05-07 | -0.34% | none | declined |
+| D:AMZN:2026-07-09 | -0.37% | strengthened-conviction | declined: no funding path |
+| D:TSM:2026-07-21 | -5.08% | dip-with-intact-thesis | declined: no funding path |
+| D:AMZN:2026-07-30 | -9.54% | strengthened-conviction | declined: no funding path |
+| D:UBER:2026-07-09 | -10.87% | none | declined |
+| D:GEV:2026-08-03 | -11.55% | dip-with-intact-thesis | declined: no funding path |
+| D:GOOGL:2026-07-26 | -14.64% | dip-with-intact-thesis | declined: no funding path |
+| D:GOOGL:2026-07-09 | -22.23% | dip-with-intact-thesis | declined: no funding path |
 
 ## ANALYSIS — REGIME CHECK
 
 **No inter-monthly router review.**
-- **Technical side.** SPY closed at 769.36 (−0.38%) and breadth at 63.81; the VIX close was not obtained here. D2a classifies these, and the measured refresh triggers are D2's to detect.
-- **Macro.** The GDP and PCE prints and the ECB hold (with Lagarde's resignation announced) are inputs M1a/M1R score on `growth_momentum`, `inflation_trend` and `policy_stance`. They are not geopolitical triggers.
+- **Technical side.** SPY closed at 755.72 (−1.77%), VIX at 19.42 (NORMAL band) and breadth at 59.44 (still above 50). D2a classifies these, and the measured refresh triggers (VIX into HIGH, SPY trend change, breadth ±10pp month-over-month, shock price leg) are D2's to detect. This scan only notes that the SPY close sits below the 10-29 SMA50 of 767.63.
 - **Geopolitical-trigger duty.**
-  - The IRGC said three tankers hit mines at Hormuz. The claim is unverified, the strait is already closed, and it falls inside the standing `acute` overlay. A further event inside `acute` needs no scenario-3 flag.
-  - The Houthi missiles aimed at Riyadh were intercepted. The AP report that the US warned allies of possible strikes after the 11-03 midterms is a prospective statement, not a dated event.
-  - **Mirror:** there is no ceasefire or settlement in force, no blockade lift and no sanctions settlement. Iran called the draft deal's ideas "unacceptable", and Vance's letter is a request for talks. Brent's −3.25% (115.32 → 111.57, provisional) is a price move with no resolution of the named channel behind it, so it is not a `Qualifying resolution event`.
-  - Israel's count is complete with no majority. That is domestic.
+  - Escalations (tanker mines, Khamenei's response order, the 11-03 moratorium expiry, the reported hit on a Qatari carrier) fall inside the standing `acute` overlay. A further event inside `acute` needs no scenario-3 flag.
+  - **Mirror (qualifying resolution event): none.** The 11-01 Araghchi 48-hour plan is a conditional proposal, not a ceasefire or settlement in force. The US has not accepted it, the blockade is still in force (144 ships redirected), and Iran says the strait stays shut until its conditions are met. No sanctions or tariff regime was removed; the Russian diesel waiver is not the named channel. The oil leg moved the wrong way for a resolution: Brent rose +2.37% into 10-30. This is narrative de-escalation with no measurable leg.
+  - Israel's hung count is domestic.
+- **Macro.** BoJ held, US ECI was in line and the saving rate is at a low. These are inputs M1a/M1R score, not geopolitical triggers.
 
 ## EQUITY-BREADTH OBSERVATION
 
-`events.regime_events` `TECHNICAL_INPUT` / `EQUITY_BREADTH_PCT` = **63.81 for 2026-10-29**. The value is source-dated by Barchart `$S5TH`: "Quote Overview for Thu, Oct 29th, 2026", 63.81 +5.56 (+9.55%) stamped **17:06 ET**, so it is settled. Previous Close is 58.25, equal to the stored 10-28 value. O/H/L 62.22/63.81/61.23 is a real bar, not a carry and not an exact repeat. It was fetched via tavily_extract at about 22:06Z.
-- **Single usable source.** EODData's settled table row carries the same bar, but Barchart and EODData are one feed in any case. EODData's quote-box widget was stale at 62.82 (15:55 ET) and was ignored.
-- **ChartRow lags one session.** At about 22:07Z its 200-day card read 288 of 497, labelled Oct 28 (`chartrow_unconfirmed=lag session 2026-10-28`). Its lagged reading checks the prior row: 294 → 288 is −1.21pp against `$S5TH`'s −0.99, so `chartrow_lagged_dod_gap=0.22` for 10-28, consistent. **Re-read at the end of the run:** ChartRow now states "as of market close, Oct 29, 2026" with 314 of 497 eligible (63.18%). That is 288 → 314, +5.23pp, against `$S5TH`'s +5.56pp, so `chartrow_dod_gap=0.33`. The 10-29 row is confirmed in direction, and its level is within 0.63pp. The stored row's rationale predates the re-read and cannot be edited (the idempotency rule), so the confirmation is recorded here and in the run note.
-- The direction is consistent with the tape: RSP +1.20%, IWM +0.97%, and 9 of 11 SPDRs up. No MacroMicro probe (Thursday).
+`events.regime_events` `TECHNICAL_INPUT` / `EQUITY_BREADTH_PCT` = **59.44 for 2026-10-30**.
+- **Source.** EODData's end-of-day table row "30 Oct 26 62.42 62.42 58.05 59.44" (`date_attribution=source_dated`), fetched by curl about 50 hours after the close. The prior row (63.81) matches the stored 10-29 value. It is a real bar, not a carry and not an exact repeat (−4.37pp).
+- **Widget stamp.** EODData's quote-box widget is stamped "30 Oct 26 15:55", which is before 16:00 ET, so the rationale carries `unsettled_at_fetch=15:55 ET (widget stamp only)`. The table row is the value recorded.
+- **Single usable source.** Barchart `$S5TH`, the declared primary, did not answer: Tavily extract failed and WebFetch returned an empty page. Barchart and EODData count as one source in any case.
+- **MacroMicro weekly Sunday re-probe:** failed ("Failed to fetch url"); the designation is unchanged.
+- **ChartRow cross-check.** "as of market close, Oct 30, 2026", 294 of 497 eligible, against 314 on 10-29. That is −4.02pp against `$S5TH`'s −4.37pp, so `chartrow_dod_gap=0.35`, the same direction and within 1.0pp. No disagreement exceeds 5pp.
+
+## ANALYSIS — FRONTIER-LLM CAPABILITY CHECK
+
+NO CAPTURE. Sunday's battery was long-context: one `hf_fs` paper search returned five relevance-ranked results, none in the window. The date-ordered `hf://papers/daily/latest` listing was empty on Sunday.
 
 ## RECOMMENDED ACTIONS
 
 **Exits triggered: none.** No open position carries a mechanical trigger, and no Development met any thesis-invalidation criterion.
 
-**New entry candidates: none routed.** Strategy B is `DO-NOT-ACTIVATE` and capital-disabled, so the 80 eligible own-event floor clearers are indexed below instead. Not indexed: ADT (deal-pinned), GOOG (same issuer as GOOGL), and SIRI and MUSA (sub-floor context).
+**New entry candidates: none routed.** Strategy B is `DO-NOT-ACTIVATE` and capital-disabled, so the eligible own-event floor clearers are indexed below instead.
+Not indexed: ENHA, AGIO and GPN (anchor UNRESOLVED); the day-two moves FTRE, ALGM, LAUR, GTX, IDCC, ESTA, ATI and IOVA (their 10-29 anchors were screened on 10-29); and TECK, SAN, OMF and EXEL (sub-floor context).
 
 **Add candidates: none.**
 
 **Router reviews: none.**
 
-Watchlist updates go to the Strategy B new-entry index. Each window runs 10 trading days from the anchor, and D2 computes the close date on the inclusive convention. Source `research-screen` `b1e61b9c-b2e0-47b9-9489-ddf0babebd5d`.
+Watchlist updates go to the Strategy B new-entry index. Each window runs 10 trading days from the anchor, and D2 computes the close date on the inclusive convention. Source `research-screen` `e2dfa715-80cb-4d38-81fb-fe3310e21cfd`.
 
-- ADD **IOVA** (Strategy B, `qualifying_event_date` 2026-10-29) — -35.4490% (14.81 -> 9.56); clinical trial update (press release + 8-K 8.01), pre-open/intraday 10-29; pre-open 2026-10-29 (GlobeNewswire press release, minute not captured; 8-K 8.01 EDGAR acceptance 2026-10-29 17:00 ET; stock gapped from 14.81 to open 10.73); index only; 2 other >=5% session(s) in window.
-- ADD **GKOS** (Strategy B, `qualifying_event_date` 2026-10-28) — +33.6493% (181.43 -> 242.48); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:10 ET (EDGAR acceptance 2026-10-28T20:10:16Z; after close 10-28); index only.
-- ADD **BHC** (Strategy B, `qualifying_event_date` 2026-10-28) — +28.7572% (6.92 -> 8.91); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:07 ET (EDGAR acceptance 2026-10-28T20:07:31Z; after close 10-28); index only; 1 other >=5% session(s) in window.
-- ADD **PRCH** (Strategy B, `qualifying_event_date` 2026-10-28) — +28.1595% (16.3 -> 20.89); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:09 ET (EDGAR acceptance 2026-10-28T20:09:47Z; after close 10-28); index only; 1 other >=5% session(s) in window.
-- ADD **NOW** (Strategy B, `qualifying_event_date` 2026-10-28) — -26.9500% (150.13 -> 109.67); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:14 ET (EDGAR acceptance 2026-10-28T20:14:14Z; after close 10-28); index only.
-- ADD **CROX** (Strategy B, `qualifying_event_date` 2026-10-29) — +25.5410% (119.69 -> 150.26); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:02 ET (EDGAR acceptance 2026-10-29T11:02:04Z; pre-open 10-29); index only.
-- ADD **ALNY** (Strategy B, `qualifying_event_date` 2026-10-29) — -25.1291% (232.4 -> 174.0); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 08:16 ET (EDGAR acceptance 2026-10-29T12:16:25Z; pre-open 10-29); index only.
-- ADD **SFM** (Strategy B, `qualifying_event_date` 2026-10-28) — -22.5806% (62.0 -> 48.0); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:04 ET (EDGAR acceptance 2026-10-28T20:04:02Z; after close 10-28); index only; 1 other >=5% session(s) in window.
-- ADD **FTNT** (Strategy B, `qualifying_event_date` 2026-10-28) — -20.0942% (174.08 -> 139.1); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:09 ET (EDGAR acceptance 2026-10-28T20:09:06Z; after close 10-28); index only; 2 other >=5% session(s) in window.
-- ADD **FTAI** (Strategy B, `qualifying_event_date` 2026-10-29) — +17.2729% (167.14 -> 196.01); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:17 ET (EDGAR acceptance 2026-10-29T10:17:08Z; pre-open 10-29); index only; 1 other >=5% session(s) in window.
-- ADD **GEN** (Strategy B, `qualifying_event_date` 2026-10-28) — +15.8111% (24.35 -> 28.2); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:06 ET (EDGAR acceptance 2026-10-28T20:06:05Z; after close 10-28); index only.
-- ADD **CVNA** (Strategy B, `qualifying_event_date` 2026-10-28) — +15.6816% (59.05 -> 68.31); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:05 ET (EDGAR acceptance 2026-10-28T20:05:55Z; after close 10-28); index only.
-- ADD **BOOT** (Strategy B, `qualifying_event_date` 2026-10-28) — +15.1633% (113.3 -> 130.48); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:04 ET (EDGAR acceptance 2026-10-28T20:04:35Z; after close 10-28); index only.
-- ADD **INSM** (Strategy B, `qualifying_event_date` 2026-10-29) — +15.0650% (96.98 -> 111.59); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:01 ET (EDGAR acceptance 2026-10-29T11:01:15Z; pre-open 10-29); index only.
-- ADD **PRLB** (Strategy B, `qualifying_event_date` 2026-10-29) — -14.5969% (90.91 -> 77.64); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:06 ET (EDGAR acceptance 2026-10-29T10:06:27Z; pre-open 10-29); index only; 1 other >=5% session(s) in window.
-- ADD **HLN** (Strategy B, `qualifying_event_date` 2026-10-29) — -14.3000% (10.0 -> 8.57); Q3 trading statement 6-K, pre-open/intraday 10-29; 2026-10-29 06:46 ET (EDGAR acceptance 2026-10-29T10:46:33Z; pre-open 10-29); index only.
-- ADD **FCN** (Strategy B, `qualifying_event_date` 2026-10-29) — +14.2821% (158.59 -> 181.24); earnings 10-Q, pre-open/intraday 10-29; 2026-10-29 07:30 ET (EDGAR acceptance 2026-10-29T11:30:29Z; pre-open 10-29); index only; 1 other >=5% session(s) in window.
-- ADD **AUR** (Strategy B, `qualifying_event_date` 2026-10-28) — -13.4578% (5.09 -> 4.405); earnings 8-K 2.02 with concurrent 424B5 offering (20:31Z), after close 10-28, reaction 10-29; 2026-10-28 16:20 ET (EDGAR acceptance 2026-10-28T20:20:18Z; after close 10-28); index only; 2 other >=5% session(s) in window.
-- ADD **NCLH** (Strategy B, `qualifying_event_date` 2026-10-29) — +13.4496% (16.06 -> 18.22); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:00 ET (EDGAR acceptance 2026-10-29T11:00:29Z; pre-open 10-29); index only.
-- ADD **HII** (Strategy B, `qualifying_event_date` 2026-10-29) — +13.2314% (279.26 -> 316.21); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:08 ET (EDGAR acceptance 2026-10-29T11:08:09Z; pre-open 10-29); index only.
-- ADD **BLDR** (Strategy B, `qualifying_event_date` 2026-10-29) — +12.8490% (55.88 -> 63.06); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:00 ET (EDGAR acceptance 2026-10-29T10:00:37Z; pre-open 10-29); index only; 1 other >=5% session(s) in window.
-- ADD **STGW** (Strategy B, `qualifying_event_date` 2026-10-29) — +12.6840% (8.83 -> 9.95); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:16 ET (EDGAR acceptance 2026-10-29T11:16:55Z; pre-open 10-29); index only.
-- ADD **GOOGL** (Strategy B, `qualifying_event_date` 2026-10-28) — -12.6412% (324.89 -> 283.82); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:01 ET (EDGAR acceptance 2026-10-28T20:01:33Z; after close 10-28); index only.
-- ADD **FLS** (Strategy B, `qualifying_event_date` 2026-10-28) — +11.8925% (71.81 -> 80.35); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:18 ET (EDGAR acceptance 2026-10-28T20:18:59Z; after close 10-28); index only; 1 other >=5% session(s) in window.
-- ADD **TXT** (Strategy B, `qualifying_event_date` 2026-10-29) — +11.6701% (78.32 -> 87.46); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:39 ET (EDGAR acceptance 2026-10-29T10:39:17Z; pre-open 10-29); index only.
-- ADD **DRS** (Strategy B, `qualifying_event_date` 2026-10-29) — +11.6620% (35.5 -> 39.64); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:29 ET (EDGAR acceptance 2026-10-29T11:29:55Z; pre-open 10-29); index only.
-- ADD **FORM** (Strategy B, `qualifying_event_date` 2026-10-28) — -11.6490% (110.31 -> 97.46); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:02 ET (EDGAR acceptance 2026-10-28T20:02:57Z; after close 10-28); index only; 3 other >=5% session(s) in window.
-- ADD **CHDN** (Strategy B, `qualifying_event_date` 2026-10-28) — +11.2386% (81.95 -> 91.16); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:14 ET (EDGAR acceptance 2026-10-28T20:14:39Z; after close 10-28); index only.
-- ADD **TRN** (Strategy B, `qualifying_event_date` 2026-10-29) — +10.7981% (25.56 -> 28.32); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 09:43 ET (EDGAR acceptance 2026-10-29T13:43:47Z; pre-open/intraday 10-29 (EDGAR acceptance after the open; release minute not separately captured)); index only.
-- ADD **FTRE** (Strategy B, `qualifying_event_date` 2026-10-29) — -10.5873% (25.88 -> 23.14); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:38 ET (EDGAR acceptance 2026-10-29T10:38:00Z; pre-open 10-29); index only; 2 other >=5% session(s) in window.
-- ADD **RSI** (Strategy B, `qualifying_event_date` 2026-10-28) — -9.9802% (15.13 -> 13.62); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:36 ET (EDGAR acceptance 2026-10-28T20:36:31Z; after close 10-28); index only; 2 other >=5% session(s) in window.
-- ADD **PLXS** (Strategy B, `qualifying_event_date` 2026-10-28) — -9.6181% (239.34 -> 216.32); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:17 ET (EDGAR acceptance 2026-10-28T20:17:28Z; after close 10-28); index only; 1 other >=5% session(s) in window.
-- ADD **HONA** (Strategy B, `qualifying_event_date` 2026-10-28) — -9.5972% (177.03 -> 160.04); earnings 8-K 2.02 with 7.01/8.01, after close 10-28, reaction 10-29; 2026-10-28 16:07 ET (EDGAR acceptance 2026-10-28T20:07:35Z; after close 10-28); index only; 1 other >=5% session(s) in window.
-- ADD **TNET** (Strategy B, `qualifying_event_date` 2026-10-29) — -9.5299% (70.41 -> 63.7); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:19 ET (EDGAR acceptance 2026-10-29T11:19:15Z; pre-open 10-29); index only; 1 other >=5% session(s) in window.
-- ADD **CAT** (Strategy B, `qualifying_event_date` 2026-10-29) — -9.2503% (713.38 -> 647.39); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:33 ET (EDGAR acceptance 2026-10-29T10:33:40Z; pre-open 10-29); index only.
-- ADD **MBLY** (Strategy B, `qualifying_event_date` 2026-10-29) — -9.2068% (7.06 -> 6.41); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:49 ET (EDGAR acceptance 2026-10-29T10:49:04Z; pre-open 10-29); index only; 1 other >=5% session(s) in window.
-- ADD **GVA** (Strategy B, `qualifying_event_date` 2026-10-29) — +8.9729% (111.67 -> 121.69); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:45 ET (EDGAR acceptance 2026-10-29T10:45:09Z; pre-open 10-29); index only.
-- ADD **APG** (Strategy B, `qualifying_event_date` 2026-10-29) — +8.9018% (41.34 -> 45.02); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 08:17 ET (EDGAR acceptance 2026-10-29T12:17:15Z; pre-open 10-29); index only.
-- ADD **CMG** (Strategy B, `qualifying_event_date` 2026-10-28) — +8.8757% (28.73 -> 31.28); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:10 ET (EDGAR acceptance 2026-10-28T20:10:53Z; after close 10-28); index only; 1 other >=5% session(s) in window.
-- ADD **SCI** (Strategy B, `qualifying_event_date` 2026-10-28) — -8.6967% (82.33 -> 75.17); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:39 ET (EDGAR acceptance 2026-10-28T20:39:40Z; after close 10-28); index only.
-- ADD **NEU** (Strategy B, `qualifying_event_date` 2026-10-28) — -8.0388% (873.27 -> 803.07); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 17:12 ET (EDGAR acceptance 2026-10-28T21:12:25Z; after close 10-28); index only.
-- ADD **BC** (Strategy B, `qualifying_event_date` 2026-10-29) — +8.0029% (68.85 -> 74.36); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:18 ET (EDGAR acceptance 2026-10-29T10:18:09Z; pre-open 10-29); index only.
-- ADD **EHC** (Strategy B, `qualifying_event_date` 2026-10-28) — +7.6992% (122.09 -> 131.49); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:26 ET (EDGAR acceptance 2026-10-28T20:26:00Z; after close 10-28); index only.
-- ADD **BAX** (Strategy B, `qualifying_event_date` 2026-10-29) — -7.6984% (25.46 -> 23.5); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:18 ET (EDGAR acceptance 2026-10-29T11:18:09Z; pre-open 10-29); index only.
-- ADD **OWL** (Strategy B, `qualifying_event_date` 2026-10-29) — +7.6525% (9.67 -> 10.41); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:10 ET (EDGAR acceptance 2026-10-29T11:10:15Z; pre-open 10-29); index only; 1 other >=5% session(s) in window.
-- ADD **CSL** (Strategy B, `qualifying_event_date` 2026-10-28) — +7.5751% (345.21 -> 371.36); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:07 ET (EDGAR acceptance 2026-10-28T20:07:26Z; after close 10-28); index only.
-- ADD **TPG** (Strategy B, `qualifying_event_date` 2026-10-29) — +7.5129% (44.59 -> 47.94); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:00 ET (EDGAR acceptance 2026-10-29T11:00:47Z; pre-open 10-29); index only.
-- ADD **STNG** (Strategy B, `qualifying_event_date` 2026-10-28) — +7.1573% (88.72 -> 95.07); Q3 results + dividend increase 6-K, after close 10-28, reaction 10-29; 2026-10-28 16:20 ET (EDGAR acceptance 2026-10-28T20:20:19Z; after close 10-28); index only.
-- ADD **LNG** (Strategy B, `qualifying_event_date` 2026-10-29) — +7.1095% (297.77 -> 318.94); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:31 ET (EDGAR acceptance 2026-10-29T11:31:19Z; pre-open 10-29); index only.
-- ADD **GATX** (Strategy B, `qualifying_event_date` 2026-10-29) — +6.8692% (168.87 -> 180.47); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 08:30 ET (EDGAR acceptance 2026-10-29T12:30:32Z; pre-open 10-29); index only.
-- ADD **LHX** (Strategy B, `qualifying_event_date` 2026-10-29) — +6.8378% (260.61 -> 278.43); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:04 ET (EDGAR acceptance 2026-10-29T10:04:22Z; pre-open 10-29); index only.
-- ADD **LLY** (Strategy B, `qualifying_event_date` 2026-10-29) — +6.6289% (1288.3 -> 1373.7); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:03 ET (EDGAR acceptance 2026-10-29T11:03:30Z; pre-open 10-29); index only.
-- ADD **ALGM** (Strategy B, `qualifying_event_date` 2026-10-29) — -6.6158% (35.37 -> 33.03); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:09 ET (EDGAR acceptance 2026-10-29T11:09:44Z; pre-open 10-29); index only; 2 other >=5% session(s) in window.
-- ADD **TENB** (Strategy B, `qualifying_event_date` 2026-10-28) — +6.2808% (48.72 -> 51.78); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:07 ET (EDGAR acceptance 2026-10-28T20:07:04Z; after close 10-28); index only; 3 other >=5% session(s) in window.
-- ADD **FTI** (Strategy B, `qualifying_event_date` 2026-10-29) — -6.2325% (71.4 -> 66.95); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:48 ET (EDGAR acceptance 2026-10-29T10:48:18Z; pre-open 10-29); index only.
-- ADD **OLED** (Strategy B, `qualifying_event_date` 2026-10-28) — -6.0945% (90.41 -> 84.9); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:08 ET (EDGAR acceptance 2026-10-28T20:08:14Z; after close 10-28); index only.
-- ADD **EGO** (Strategy B, `qualifying_event_date` 2026-10-28) — -6.0360% (34.46 -> 32.38); Q3 results 6-K, after close 10-28, reaction 10-29; 2026-10-28 17:09 ET (EDGAR acceptance 2026-10-28T21:09:03Z; after close 10-28); index only; 2 other >=5% session(s) in window.
-- ADD **KGC** (Strategy B, `qualifying_event_date` 2026-10-28) — -6.0052% (22.98 -> 21.6); Q3 results 6-K, after close 10-28, reaction 10-29; 2026-10-28 17:00 ET (EDGAR acceptance 2026-10-28T21:00:05Z; after close 10-28); index only.
-- ADD **VKTX** (Strategy B, `qualifying_event_date` 2026-10-28) — +5.9148% (25.36 -> 26.86); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:10 ET (EDGAR acceptance 2026-10-28T20:10:09Z; after close 10-28); index only; 3 other >=5% session(s) in window.
-- ADD **ATI** (Strategy B, `qualifying_event_date` 2026-10-29) — +5.8681% (165.3 -> 175.0); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:34 ET (EDGAR acceptance 2026-10-29T11:34:00Z; pre-open 10-29); index only; 1 other >=5% session(s) in window.
-- ADD **PHIN** (Strategy B, `qualifying_event_date` 2026-10-29) — +5.8599% (57.68 -> 61.06); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:32 ET (EDGAR acceptance 2026-10-29T11:32:23Z; pre-open 10-29); index only.
-- ADD **MBIN** (Strategy B, `qualifying_event_date` 2026-10-28) — +5.8416% (49.13 -> 52.0); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:05 ET (EDGAR acceptance 2026-10-28T20:05:26Z; after close 10-28); index only.
-- ADD **CTSH** (Strategy B, `qualifying_event_date` 2026-10-29) — -5.7866% (66.36 -> 62.52); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:39 ET (EDGAR acceptance 2026-10-29T10:39:40Z; pre-open 10-29); index only; 1 other >=5% session(s) in window.
-- ADD **VMC** (Strategy B, `qualifying_event_date` 2026-10-29) — +5.7774% (265.0 -> 280.31); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:55 ET (EDGAR acceptance 2026-10-29T10:55:38Z; pre-open 10-29); index only.
-- ADD **MGM** (Strategy B, `qualifying_event_date` 2026-10-28) — +5.7206% (27.27 -> 28.83); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:15 ET (EDGAR acceptance 2026-10-28T20:15:44Z; after close 10-28); index only.
-- ADD **SAIA** (Strategy B, `qualifying_event_date` 2026-10-29) — +5.6836% (324.62 -> 343.07); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:45 ET (EDGAR acceptance 2026-10-29T11:45:16Z; pre-open 10-29); index only.
-- ADD **NMRK** (Strategy B, `qualifying_event_date` 2026-10-29) — -5.6385% (12.06 -> 11.38); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 09:00 ET (EDGAR acceptance 2026-10-29T13:00:51Z; pre-open 10-29); index only; 1 other >=5% session(s) in window.
-- ADD **PBI** (Strategy B, `qualifying_event_date` 2026-10-28) — -5.6193% (17.44 -> 16.46); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:09 ET (EDGAR acceptance 2026-10-28T20:09:04Z; after close 10-28); index only.
-- ADD **WCC** (Strategy B, `qualifying_event_date` 2026-10-29) — +5.6132% (347.22 -> 366.71); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:02 ET (EDGAR acceptance 2026-10-29T10:02:36Z; pre-open 10-29); index only; 1 other >=5% session(s) in window.
-- ADD **DASH** (Strategy B, `qualifying_event_date` 2026-10-29) — +5.6110% (169.49 -> 179.0); earnings + Instacart merger agreement, 8-K 2.02/1.01/7.01, pre-open/intraday 10-29; 2026-10-29 07:21 ET (EDGAR acceptance 2026-10-29T11:21:00Z; pre-open 10-29); index only; 1 other >=5% session(s) in window.
-- ADD **AGCO** (Strategy B, `qualifying_event_date` 2026-10-29) — +5.5599% (102.16 -> 107.84); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 08:44 ET (EDGAR acceptance 2026-10-29T12:44:57Z; pre-open 10-29); index only.
-- ADD **HWM** (Strategy B, `qualifying_event_date` 2026-10-29) — +5.5075% (195.19 -> 205.94); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:05 ET (EDGAR acceptance 2026-10-29T11:05:34Z; pre-open 10-29); index only; 1 other >=5% session(s) in window.
-- ADD **KLAC** (Strategy B, `qualifying_event_date` 2026-10-28) — +5.4544% (158.77 -> 167.43); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:07 ET (EDGAR acceptance 2026-10-28T20:07:50Z; after close 10-28); index only; 1 other >=5% session(s) in window.
-- ADD **JOE** (Strategy B, `qualifying_event_date` 2026-10-28) — +5.3868% (68.13 -> 71.8); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:10 ET (EDGAR acceptance 2026-10-28T20:10:16Z; after close 10-28); index only.
-- ADD **LKQ** (Strategy B, `qualifying_event_date` 2026-10-29) — +5.2938% (17.19 -> 18.1); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:30 ET (EDGAR acceptance 2026-10-29T11:30:20Z; pre-open 10-29); index only; 2 other >=5% session(s) in window.
-- ADD **HTO** (Strategy B, `qualifying_event_date` 2026-10-29) — -5.2265% (61.8 -> 58.57); public offering prospectus supplement 424B5, pre-open/intraday 10-29; 2026-10-29 08:08 ET (EDGAR acceptance 2026-10-29T12:08:58Z; pre-open 10-29); index only.
-- ADD **MO** (Strategy B, `qualifying_event_date` 2026-10-29) — +5.1514% (72.99 -> 76.75); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:04 ET (EDGAR acceptance 2026-10-29T11:04:43Z; pre-open 10-29); index only.
-- ADD **DXPE** (Strategy B, `qualifying_event_date` 2026-10-28) — +5.1285% (167.69 -> 176.29); $150M share repurchase plan, 8-K 8.01, after close 10-28, reaction 10-29; 2026-10-28 17:44 ET (EDGAR acceptance 2026-10-28T21:44:45Z; after close 10-28); index only; 2 other >=5% session(s) in window.
-- ADD **LTH** (Strategy B, `qualifying_event_date` 2026-10-29) — +5.1229% (43.14 -> 45.35); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:05 ET (EDGAR acceptance 2026-10-29T11:05:45Z; pre-open 10-29); index only.
-- ADD **EPR** (Strategy B, `qualifying_event_date` 2026-10-28) — +5.0982% (55.51 -> 58.34); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:15 ET (EDGAR acceptance 2026-10-28T20:15:34Z; after close 10-28); index only.
+- ADD **RDDT** (Strategy B, `qualifying_event_date` 2026-10-29) — -29.2207% (129.6 -> 91.73); earnings; after-close 10-29 (EDGAR 8-K acc 0001713445-26-000114, accepted 2026-10-29T20:08:57 UTC); index only
+- ADD **INTC** (Strategy B, `qualifying_event_date` 2026-10-29) — -28.5761% (92.07 -> 65.76); earnings; after-close 10-29 16:08 ET (8-K acc 0000050863-26-000188); index only; 2 other >=5% session(s) in window
+- ADD **CDNA** (Strategy B, `qualifying_event_date` 2026-10-29) — +22.2176% (71.52 -> 87.41); earnings; after-close 10-29 16:02 ET (8-K acc 0001217234-26-000059); index only
+- ADD **CACC** (Strategy B, `qualifying_event_date` 2026-10-29) — -19.2591% (575.78 -> 464.89); earnings; after-close 10-29 16:02 ET (8-K acc 0000885550-26-000200); index only; 1 other >=5% session(s) in window
+- ADD **ILMN** (Strategy B, `qualifying_event_date` 2026-10-29) — -18.6410% (290.06 -> 235.99); earnings; after-close 10-29 16:07 ET (8-K acc 0001110803-26-000202); index only; 1 other >=5% session(s) in window
+- ADD **RBLX** (Strategy B, `qualifying_event_date` 2026-10-29) — -18.0518% (52.46 -> 42.99); earnings; after-close 10-29 (EDGAR 8-K acc 0001628280-26-068235, accepted 2026-10-29T20:10:59 UTC); index only
+- ADD **BFAM** (Strategy B, `qualifying_event_date` 2026-10-29) — -17.9158% (66.98 -> 54.98); earnings; after-close 10-29 16:13 ET (8-K acc 0001437578-26-000022); index only; 1 other >=5% session(s) in window
+- ADD **TFII** (Strategy B, `qualifying_event_date` 2026-10-29) — -17.0784% (112.54 -> 93.32); earnings/guidance; after-close 10-29 (EDGAR 6-K acc 0001193125-26-437899, accepted 2026-10-29T20:39:23 UTC); index only
+- ADD **TWLO** (Strategy B, `qualifying_event_date` 2026-10-29) — -15.2418% (241.9 -> 205.03); earnings; after-close 10-29 (EDGAR 8-K acc 0001447669-26-000106, accepted 2026-10-29T20:07:30 UTC); index only; 2 other >=5% session(s) in window
+- ADD **FDXF** (Strategy B, `qualifying_event_date` 2026-10-29) — +14.9056% (109.69 -> 126.04); earnings; after-close 10-29 16:08 ET (8-K acc 0001628280-26-068228); index only
+- ADD **SKYW** (Strategy B, `qualifying_event_date` 2026-10-29) — -14.7193% (96.54 -> 82.33); earnings; after-close 10-29 (EDGAR 8-K acc 0001104659-26-120182, accepted 2026-10-29T20:01:17 UTC); index only
+- ADD **MEOH** (Strategy B, `qualifying_event_date` 2026-10-29) — +14.0376% (62.76 -> 71.57); earnings; after-close 10-29 (EDGAR 6-K acc 0001628280-26-068300, accepted 2026-10-29T21:05:15 UTC); index only
+- ADD **SNDK** (Strategy B, `qualifying_event_date` 2026-10-29) — -13.4702% (1330.05 -> 1150.89); earnings/other; after-close 10-29 (EDGAR 8-K acc 0001628280-26-068243, accepted 2026-10-29T20:13:53 UTC); index only; 5 other >=5% session(s) in window
+- ADD **REGN** (Strategy B, `qualifying_event_date` 2026-10-30) — +13.3273% (818.77 -> 927.89); earnings/M&A; pre-open 10-30 06:50 ET (8-K acc 0000872589-26-000032) (EDGAR 8-K acc 0000872589-26-000032, accepted 2026-10-30T10:50:20 UTC); index only
+- ADD **CVCO** (Strategy B, `qualifying_event_date` 2026-10-29) — +13.1110% (547.25 -> 619); earnings; after-close 10-29 16:57 ET (8-K acc 0001628280-26-068294); index only; 1 other >=5% session(s) in window
+- ADD **BTSG** (Strategy B, `qualifying_event_date` 2026-10-30) — +11.0761% (60.22 -> 66.89); earnings; pre-open 10-30 06:05 ET (8-K acc 0001865782-26-000011); index only
+- ADD **GDDY** (Strategy B, `qualifying_event_date` 2026-10-29) — +10.7187% (105.89 -> 117.24); earnings; after-close 10-29 16:11 ET (8-K acc 0001609711-26-000117); index only; 1 other >=5% session(s) in window
+- ADD **COIN** (Strategy B, `qualifying_event_date` 2026-10-29) — -10.6171% (160.59 -> 143.54); earnings; after-close 10-29 16:09 ET (8-K acc 0001679788-26-000121); index only; 1 other >=5% session(s) in window
+- ADD **SXT** (Strategy B, `qualifying_event_date` 2026-10-30) — -10.5679% (131.53 -> 117.63); earnings; pre-open 10-30 07:10 ET (EDGAR 8-K acc 0001140361-26-041223, accepted 2026-10-30T11:10:09 UTC); index only
+- ADD **AXTI** (Strategy B, `qualifying_event_date` 2026-10-29) — -9.5598% (60.88 -> 55.06); earnings; after-close 10-29 16:16 ET (8-K acc 0001437749-26-033941); index only; 6 other >=5% session(s) in window
+- ADD **GTES** (Strategy B, `qualifying_event_date` 2026-10-30) — -9.2190% (26.25 -> 23.83); earnings; pre-open 10-30 07:32 ET (8-K acc 0001628280-26-068435); index only; 1 other >=5% session(s) in window
+- ADD **RMD** (Strategy B, `qualifying_event_date` 2026-10-29) — -9.0535% (252.83 -> 229.94); earnings; after-close 10-29 (EDGAR 8-K acc 0001193125-26-437783, accepted 2026-10-29T20:05:45 UTC); index only
+- ADD **NWG** (Strategy B, `qualifying_event_date` 2026-10-30) — -9.0000% (17 -> 15.47); earnings; pre-open 10-30 (6-Ks 07:50-14:24 ET) (EDGAR 6-K acc 0001654954-26-009258, accepted 2026-10-30T11:50:06 UTC); index only
+- ADD **NVT** (Strategy B, `qualifying_event_date` 2026-10-30) — -8.8093% (138.15 -> 125.98); earnings; pre-open 10-30 06:47 ET (EDGAR 8-K acc 0001628280-26-068391, accepted 2026-10-30T10:47:30 UTC); index only; 1 other >=5% session(s) in window
+- ADD **CCJ** (Strategy B, `qualifying_event_date` 2026-10-30) — -7.8812% (83.49 -> 76.91); earnings; pre-open 10-30 06:57 ET (6-K acc 0001193125-26-439858); index only
+- ADD **MSTR** (Strategy B, `qualifying_event_date` 2026-10-29) — -7.8449% (141.62 -> 130.51); earnings; after-close 10-29 (EDGAR 8-K acc 0001050446-26-000047, accepted 2026-10-29T20:03:24 UTC); index only; 3 other >=5% session(s) in window
+- ADD **MMSI** (Strategy B, `qualifying_event_date` 2026-10-29) — -7.6561% (93.39 -> 86.24); earnings/guidance; after-close 10-29 (EDGAR 8-K acc 0000856982-26-000051, accepted 2026-10-29T20:07:29 UTC); index only
+- ADD **HGV** (Strategy B, `qualifying_event_date` 2026-10-30) — +7.6449% (35.71 -> 38.44); other; pre-open 10-30 08:33 ET (8-K acc 0001140361-26-041230); index only
+- ADD **TBBK** (Strategy B, `qualifying_event_date` 2026-10-29) — -7.4624% (50.52 -> 46.75); earnings; after-close 10-29 (EDGAR 8-K acc 0001628280-26-068227, accepted 2026-10-29T20:08:03 UTC); index only
+- ADD **RKT** (Strategy B, `qualifying_event_date` 2026-10-29) — +7.3826% (11.92 -> 12.8); earnings; after-close 10-29 17:19 ET (EDGAR 8-K acc 0001805284-26-000121, accepted 2026-10-29T21:19:26 UTC); index only; 2 other >=5% session(s) in window
+- ADD **MHK** (Strategy B, `qualifying_event_date` 2026-10-29) — +7.2467% (129.99 -> 139.41); earnings; after-close 10-29 (EDGAR 8-K acc 0000851968-26-000038, accepted 2026-10-29T20:19:28 UTC); index only; 1 other >=5% session(s) in window
+- ADD **PIPR** (Strategy B, `qualifying_event_date` 2026-10-30) — -7.1449% (68.72 -> 63.81); earnings; pre-open 10-30 08:06 ET (EDGAR 8-K acc 0001230245-26-000038, accepted 2026-10-30T12:06:16 UTC); index only
+- ADD **AZN** (Strategy B, `qualifying_event_date` 2026-10-30) — +7.0241% (174.4 -> 186.65); earnings; pre-open 10-30 07:36 ET (6-K acc 0001654954-26-009256); index only
+- ADD **MIAX** (Strategy B, `qualifying_event_date` 2026-10-29) — +6.9656% (31.44 -> 33.63); earnings; after-close 10-29 (EDGAR 8-K acc 0001438472-26-000044, accepted 2026-10-29T20:15:36 UTC); index only
+- ADD **PTCT** (Strategy B, `qualifying_event_date` 2026-10-29) — -6.9656% (64.46 -> 59.97); earnings/guidance; after-close 10-29 (EDGAR 8-K acc 0001104659-26-120200, accepted 2026-10-29T20:10:20 UTC); index only
+- ADD **CBOE** (Strategy B, `qualifying_event_date` 2026-10-30) — +6.7717% (314.25 -> 335.53); earnings; pre-open 10-30 07:30 ET (8-K acc 0001628280-26-068432); index only
+- ADD **VLTO** (Strategy B, `qualifying_event_date` 2026-10-29) — +6.7653% (104.06 -> 111.1); earnings; after-close 10-29 (EDGAR 8-K acc 0001967680-26-000047, accepted 2026-10-29T20:31:44 UTC); index only
+- ADD **RBC** (Strategy B, `qualifying_event_date` 2026-10-30) — -6.7636% (495.74 -> 462.21); earnings; pre-open 10-30 09:08 ET (EDGAR 8-K acc 0001213900-26-114098, accepted 2026-10-30T13:08:59 UTC); index only; 1 other >=5% session(s) in window
+- ADD **BHVN** (Strategy B, `qualifying_event_date` 2026-10-29) — -6.4888% (16.49 -> 15.42); earnings; after-close 10-29 16:05 ET (8-K acc 0001935979-26-000093); index only; 6 other >=5% session(s) in window
+- ADD **INVX** (Strategy B, `qualifying_event_date` 2026-10-29) — -6.4000% (30 -> 28.08); earnings; after-close 10-29 16:20 ET (8-K acc 0001193125-26-437829); index only; 2 other >=5% session(s) in window
+- ADD **SYK** (Strategy B, `qualifying_event_date` 2026-10-29) — -6.3801% (311.75 -> 291.86); earnings; after-close 10-29 (EDGAR 8-K acc 0000310764-26-000059, accepted 2026-10-29T20:11:16 UTC); index only
+- ADD **RIVN** (Strategy B, `qualifying_event_date` 2026-10-29) — +6.2009% (11.45 -> 12.16); earnings/guidance; after-close 10-29 16:00 ET (EDGAR 8-K acc 0001874178-26-000065, accepted 2026-10-29T20:00:35 UTC); index only
+- ADD **AN** (Strategy B, `qualifying_event_date` 2026-10-30) — +6.0824% (169.34 -> 179.64); earnings; pre-open 10-30 07:11 ET (8-K acc 0001628280-26-068426); index only; 2 other >=5% session(s) in window
+- ADD **COLM** (Strategy B, `qualifying_event_date` 2026-10-29) — +6.0449% (63.69 -> 67.54); earnings; after-close 10-29 16:05 ET (8-K acc 0001050797-26-000148); index only
+- ADD **BBIO** (Strategy B, `qualifying_event_date` 2026-10-29) — +5.9664% (70.73 -> 74.95); earnings; after-close 10-29 16:03 ET (8-K acc 0001743881-26-000033); index only
+- ADD **IMO** (Strategy B, `qualifying_event_date` 2026-10-30) — +5.5246% (130.87 -> 138.1); earnings; pre-open 10-30 08:02 ET (8-K acc 0000049938-26-000049); index only
+- ADD **FND** (Strategy B, `qualifying_event_date` 2026-10-29) — -5.4629% (50.34 -> 47.59); earnings; after-close 10-29 16:13 ET (8-K acc 0001628280-26-068242); index only; 2 other >=5% session(s) in window
+- ADD **TGS** (Strategy B, `qualifying_event_date` 2026-10-29) — -5.3957% (25.02 -> 23.67); earnings; after-close 10-29 17:13 ET (6-K) (EDGAR 6-K acc 0000931427-26-000014, accepted 2026-10-29T21:13:24 UTC); index only
+- ADD **ATR** (Strategy B, `qualifying_event_date` 2026-10-29) — +5.0214% (130.64 -> 137.2); earnings; after-close 10-29 17:08 ET (8-K acc 0000896622-26-000187); index only
+- ADD **LYB** (Strategy B, `qualifying_event_date` 2026-10-30) — +5.0023% (65.37 -> 68.64); earnings; pre-open 10-30 06:31 ET (8-K acc 0001489393-26-000067); index only
 
 ```yaml d1_actions
 - action: watchlist
-  ticker: IOVA
+  ticker: RDDT
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -35.4490% (14.81 -> 9.56); clinical trial update (press release + 8-K 8.01), pre-open/intraday 10-29; pre-open 2026-10-29 (GlobeNewswire press release, minute not captured; 8-K 8.01 EDGAR acceptance 2026-10-29 17:00 ET; stock gapped from 14.81 to open 10.73); index only; 2 other >=5% session(s) in window
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -29.2207% (129.6 -> 91.73); earnings; after-close 10-29 (EDGAR 8-K acc 0001713445-26-000114, accepted 2026-10-29T20:08:57 UTC); index only
 - action: watchlist
-  ticker: GKOS
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +33.6493% (181.43 -> 242.48); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:10 ET (EDGAR acceptance 2026-10-28T20:10:16Z; after close 10-28); index only
-- action: watchlist
-  ticker: BHC
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +28.7572% (6.92 -> 8.91); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:07 ET (EDGAR acceptance 2026-10-28T20:07:31Z; after close 10-28); index only; 1 other >=5% session(s) in window
-- action: watchlist
-  ticker: PRCH
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +28.1595% (16.3 -> 20.89); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:09 ET (EDGAR acceptance 2026-10-28T20:09:47Z; after close 10-28); index only; 1 other >=5% session(s) in window
-- action: watchlist
-  ticker: NOW
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -26.9500% (150.13 -> 109.67); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:14 ET (EDGAR acceptance 2026-10-28T20:14:14Z; after close 10-28); index only
-- action: watchlist
-  ticker: CROX
+  ticker: INTC
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +25.5410% (119.69 -> 150.26); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:02 ET (EDGAR acceptance 2026-10-29T11:02:04Z; pre-open 10-29); index only
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -28.5761% (92.07 -> 65.76); earnings; after-close 10-29 16:08 ET (8-K acc 0000050863-26-000188); index only; 2 other >=5% session(s) in window
 - action: watchlist
-  ticker: ALNY
+  ticker: CDNA
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -25.1291% (232.4 -> 174.0); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 08:16 ET (EDGAR acceptance 2026-10-29T12:16:25Z; pre-open 10-29); index only
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — +22.2176% (71.52 -> 87.41); earnings; after-close 10-29 16:02 ET (8-K acc 0001217234-26-000059); index only
 - action: watchlist
-  ticker: SFM
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -22.5806% (62.0 -> 48.0); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:04 ET (EDGAR acceptance 2026-10-28T20:04:02Z; after close 10-28); index only; 1 other >=5% session(s) in window
-- action: watchlist
-  ticker: FTNT
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -20.0942% (174.08 -> 139.1); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:09 ET (EDGAR acceptance 2026-10-28T20:09:06Z; after close 10-28); index only; 2 other >=5% session(s) in window
-- action: watchlist
-  ticker: FTAI
+  ticker: CACC
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +17.2729% (167.14 -> 196.01); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:17 ET (EDGAR acceptance 2026-10-29T10:17:08Z; pre-open 10-29); index only; 1 other >=5% session(s) in window
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -19.2591% (575.78 -> 464.89); earnings; after-close 10-29 16:02 ET (8-K acc 0000885550-26-000200); index only; 1 other >=5% session(s) in window
 - action: watchlist
-  ticker: GEN
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +15.8111% (24.35 -> 28.2); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:06 ET (EDGAR acceptance 2026-10-28T20:06:05Z; after close 10-28); index only
-- action: watchlist
-  ticker: CVNA
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +15.6816% (59.05 -> 68.31); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:05 ET (EDGAR acceptance 2026-10-28T20:05:55Z; after close 10-28); index only
-- action: watchlist
-  ticker: BOOT
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +15.1633% (113.3 -> 130.48); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:04 ET (EDGAR acceptance 2026-10-28T20:04:35Z; after close 10-28); index only
-- action: watchlist
-  ticker: INSM
+  ticker: ILMN
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +15.0650% (96.98 -> 111.59); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:01 ET (EDGAR acceptance 2026-10-29T11:01:15Z; pre-open 10-29); index only
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -18.6410% (290.06 -> 235.99); earnings; after-close 10-29 16:07 ET (8-K acc 0001110803-26-000202); index only; 1 other >=5% session(s) in window
 - action: watchlist
-  ticker: PRLB
+  ticker: RBLX
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -14.5969% (90.91 -> 77.64); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:06 ET (EDGAR acceptance 2026-10-29T10:06:27Z; pre-open 10-29); index only; 1 other >=5% session(s) in window
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -18.0518% (52.46 -> 42.99); earnings; after-close 10-29 (EDGAR 8-K acc 0001628280-26-068235, accepted 2026-10-29T20:10:59 UTC); index only
 - action: watchlist
-  ticker: HLN
+  ticker: BFAM
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -14.3000% (10.0 -> 8.57); Q3 trading statement 6-K, pre-open/intraday 10-29; 2026-10-29 06:46 ET (EDGAR acceptance 2026-10-29T10:46:33Z; pre-open 10-29); index only
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -17.9158% (66.98 -> 54.98); earnings; after-close 10-29 16:13 ET (8-K acc 0001437578-26-000022); index only; 1 other >=5% session(s) in window
 - action: watchlist
-  ticker: FCN
+  ticker: TFII
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +14.2821% (158.59 -> 181.24); earnings 10-Q, pre-open/intraday 10-29; 2026-10-29 07:30 ET (EDGAR acceptance 2026-10-29T11:30:29Z; pre-open 10-29); index only; 1 other >=5% session(s) in window
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -17.0784% (112.54 -> 93.32); earnings/guidance; after-close 10-29 (EDGAR 6-K acc 0001193125-26-437899, accepted 2026-10-29T20:39:23 UTC); index only
 - action: watchlist
-  ticker: AUR
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -13.4578% (5.09 -> 4.405); earnings 8-K 2.02 with concurrent 424B5 offering (20:31Z), after close 10-28, reaction 10-29; 2026-10-28 16:20 ET (EDGAR acceptance 2026-10-28T20:20:18Z; after close 10-28); index only; 2 other >=5% session(s) in window
-- action: watchlist
-  ticker: NCLH
+  ticker: TWLO
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +13.4496% (16.06 -> 18.22); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:00 ET (EDGAR acceptance 2026-10-29T11:00:29Z; pre-open 10-29); index only
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -15.2418% (241.9 -> 205.03); earnings; after-close 10-29 (EDGAR 8-K acc 0001447669-26-000106, accepted 2026-10-29T20:07:30 UTC); index only; 2 other >=5% session(s) in window
 - action: watchlist
-  ticker: HII
+  ticker: FDXF
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +13.2314% (279.26 -> 316.21); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:08 ET (EDGAR acceptance 2026-10-29T11:08:09Z; pre-open 10-29); index only
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — +14.9056% (109.69 -> 126.04); earnings; after-close 10-29 16:08 ET (8-K acc 0001628280-26-068228); index only
 - action: watchlist
-  ticker: BLDR
+  ticker: SKYW
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +12.8490% (55.88 -> 63.06); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:00 ET (EDGAR acceptance 2026-10-29T10:00:37Z; pre-open 10-29); index only; 1 other >=5% session(s) in window
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -14.7193% (96.54 -> 82.33); earnings; after-close 10-29 (EDGAR 8-K acc 0001104659-26-120182, accepted 2026-10-29T20:01:17 UTC); index only
 - action: watchlist
-  ticker: STGW
+  ticker: MEOH
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +12.6840% (8.83 -> 9.95); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:16 ET (EDGAR acceptance 2026-10-29T11:16:55Z; pre-open 10-29); index only
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — +14.0376% (62.76 -> 71.57); earnings; after-close 10-29 (EDGAR 6-K acc 0001628280-26-068300, accepted 2026-10-29T21:05:15 UTC); index only
 - action: watchlist
-  ticker: GOOGL
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -12.6412% (324.89 -> 283.82); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:01 ET (EDGAR acceptance 2026-10-28T20:01:33Z; after close 10-28); index only
-- action: watchlist
-  ticker: FLS
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +11.8925% (71.81 -> 80.35); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:18 ET (EDGAR acceptance 2026-10-28T20:18:59Z; after close 10-28); index only; 1 other >=5% session(s) in window
-- action: watchlist
-  ticker: TXT
+  ticker: SNDK
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +11.6701% (78.32 -> 87.46); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:39 ET (EDGAR acceptance 2026-10-29T10:39:17Z; pre-open 10-29); index only
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -13.4702% (1330.05 -> 1150.89); earnings/other; after-close 10-29 (EDGAR 8-K acc 0001628280-26-068243, accepted 2026-10-29T20:13:53 UTC); index only; 5 other >=5% session(s) in window
 - action: watchlist
-  ticker: DRS
+  ticker: REGN
+  strategy: B
+  qualifying_event_date: 2026-10-30
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — +13.3273% (818.77 -> 927.89); earnings/M&A; pre-open 10-30 06:50 ET (8-K acc 0000872589-26-000032) (EDGAR 8-K acc 0000872589-26-000032, accepted 2026-10-30T10:50:20 UTC); index only
+- action: watchlist
+  ticker: CVCO
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +11.6620% (35.5 -> 39.64); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:29 ET (EDGAR acceptance 2026-10-29T11:29:55Z; pre-open 10-29); index only
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — +13.1110% (547.25 -> 619); earnings; after-close 10-29 16:57 ET (8-K acc 0001628280-26-068294); index only; 1 other >=5% session(s) in window
 - action: watchlist
-  ticker: FORM
+  ticker: BTSG
   strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -11.6490% (110.31 -> 97.46); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:02 ET (EDGAR acceptance 2026-10-28T20:02:57Z; after close 10-28); index only; 3 other >=5% session(s) in window
+  qualifying_event_date: 2026-10-30
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — +11.0761% (60.22 -> 66.89); earnings; pre-open 10-30 06:05 ET (8-K acc 0001865782-26-000011); index only
 - action: watchlist
-  ticker: CHDN
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +11.2386% (81.95 -> 91.16); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:14 ET (EDGAR acceptance 2026-10-28T20:14:39Z; after close 10-28); index only
-- action: watchlist
-  ticker: TRN
+  ticker: GDDY
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +10.7981% (25.56 -> 28.32); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 09:43 ET (EDGAR acceptance 2026-10-29T13:43:47Z; pre-open/intraday 10-29 (EDGAR acceptance after the open; release minute not separately captured)); index only
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — +10.7187% (105.89 -> 117.24); earnings; after-close 10-29 16:11 ET (8-K acc 0001609711-26-000117); index only; 1 other >=5% session(s) in window
 - action: watchlist
-  ticker: FTRE
+  ticker: COIN
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -10.5873% (25.88 -> 23.14); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:38 ET (EDGAR acceptance 2026-10-29T10:38:00Z; pre-open 10-29); index only; 2 other >=5% session(s) in window
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -10.6171% (160.59 -> 143.54); earnings; after-close 10-29 16:09 ET (8-K acc 0001679788-26-000121); index only; 1 other >=5% session(s) in window
 - action: watchlist
-  ticker: RSI
+  ticker: SXT
   strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -9.9802% (15.13 -> 13.62); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:36 ET (EDGAR acceptance 2026-10-28T20:36:31Z; after close 10-28); index only; 2 other >=5% session(s) in window
+  qualifying_event_date: 2026-10-30
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -10.5679% (131.53 -> 117.63); earnings; pre-open 10-30 07:10 ET (EDGAR 8-K acc 0001140361-26-041223, accepted 2026-10-30T11:10:09 UTC); index only
 - action: watchlist
-  ticker: PLXS
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -9.6181% (239.34 -> 216.32); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:17 ET (EDGAR acceptance 2026-10-28T20:17:28Z; after close 10-28); index only; 1 other >=5% session(s) in window
-- action: watchlist
-  ticker: HONA
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -9.5972% (177.03 -> 160.04); earnings 8-K 2.02 with 7.01/8.01, after close 10-28, reaction 10-29; 2026-10-28 16:07 ET (EDGAR acceptance 2026-10-28T20:07:35Z; after close 10-28); index only; 1 other >=5% session(s) in window
-- action: watchlist
-  ticker: TNET
+  ticker: AXTI
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -9.5299% (70.41 -> 63.7); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:19 ET (EDGAR acceptance 2026-10-29T11:19:15Z; pre-open 10-29); index only; 1 other >=5% session(s) in window
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -9.5598% (60.88 -> 55.06); earnings; after-close 10-29 16:16 ET (8-K acc 0001437749-26-033941); index only; 6 other >=5% session(s) in window
 - action: watchlist
-  ticker: CAT
+  ticker: GTES
+  strategy: B
+  qualifying_event_date: 2026-10-30
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -9.2190% (26.25 -> 23.83); earnings; pre-open 10-30 07:32 ET (8-K acc 0001628280-26-068435); index only; 1 other >=5% session(s) in window
+- action: watchlist
+  ticker: RMD
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -9.2503% (713.38 -> 647.39); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:33 ET (EDGAR acceptance 2026-10-29T10:33:40Z; pre-open 10-29); index only
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -9.0535% (252.83 -> 229.94); earnings; after-close 10-29 (EDGAR 8-K acc 0001193125-26-437783, accepted 2026-10-29T20:05:45 UTC); index only
 - action: watchlist
-  ticker: MBLY
+  ticker: NWG
+  strategy: B
+  qualifying_event_date: 2026-10-30
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -9.0000% (17 -> 15.47); earnings; pre-open 10-30 (6-Ks 07:50-14:24 ET) (EDGAR 6-K acc 0001654954-26-009258, accepted 2026-10-30T11:50:06 UTC); index only
+- action: watchlist
+  ticker: NVT
+  strategy: B
+  qualifying_event_date: 2026-10-30
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -8.8093% (138.15 -> 125.98); earnings; pre-open 10-30 06:47 ET (EDGAR 8-K acc 0001628280-26-068391, accepted 2026-10-30T10:47:30 UTC); index only; 1 other >=5% session(s) in window
+- action: watchlist
+  ticker: CCJ
+  strategy: B
+  qualifying_event_date: 2026-10-30
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -7.8812% (83.49 -> 76.91); earnings; pre-open 10-30 06:57 ET (6-K acc 0001193125-26-439858); index only
+- action: watchlist
+  ticker: MSTR
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -9.2068% (7.06 -> 6.41); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:49 ET (EDGAR acceptance 2026-10-29T10:49:04Z; pre-open 10-29); index only; 1 other >=5% session(s) in window
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -7.8449% (141.62 -> 130.51); earnings; after-close 10-29 (EDGAR 8-K acc 0001050446-26-000047, accepted 2026-10-29T20:03:24 UTC); index only; 3 other >=5% session(s) in window
 - action: watchlist
-  ticker: GVA
+  ticker: MMSI
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +8.9729% (111.67 -> 121.69); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:45 ET (EDGAR acceptance 2026-10-29T10:45:09Z; pre-open 10-29); index only
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -7.6561% (93.39 -> 86.24); earnings/guidance; after-close 10-29 (EDGAR 8-K acc 0000856982-26-000051, accepted 2026-10-29T20:07:29 UTC); index only
 - action: watchlist
-  ticker: APG
+  ticker: HGV
+  strategy: B
+  qualifying_event_date: 2026-10-30
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — +7.6449% (35.71 -> 38.44); other; pre-open 10-30 08:33 ET (8-K acc 0001140361-26-041230); index only
+- action: watchlist
+  ticker: TBBK
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +8.9018% (41.34 -> 45.02); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 08:17 ET (EDGAR acceptance 2026-10-29T12:17:15Z; pre-open 10-29); index only
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -7.4624% (50.52 -> 46.75); earnings; after-close 10-29 (EDGAR 8-K acc 0001628280-26-068227, accepted 2026-10-29T20:08:03 UTC); index only
 - action: watchlist
-  ticker: CMG
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +8.8757% (28.73 -> 31.28); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:10 ET (EDGAR acceptance 2026-10-28T20:10:53Z; after close 10-28); index only; 1 other >=5% session(s) in window
-- action: watchlist
-  ticker: SCI
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -8.6967% (82.33 -> 75.17); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:39 ET (EDGAR acceptance 2026-10-28T20:39:40Z; after close 10-28); index only
-- action: watchlist
-  ticker: NEU
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -8.0388% (873.27 -> 803.07); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 17:12 ET (EDGAR acceptance 2026-10-28T21:12:25Z; after close 10-28); index only
-- action: watchlist
-  ticker: BC
+  ticker: RKT
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +8.0029% (68.85 -> 74.36); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:18 ET (EDGAR acceptance 2026-10-29T10:18:09Z; pre-open 10-29); index only
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — +7.3826% (11.92 -> 12.8); earnings; after-close 10-29 17:19 ET (EDGAR 8-K acc 0001805284-26-000121, accepted 2026-10-29T21:19:26 UTC); index only; 2 other >=5% session(s) in window
 - action: watchlist
-  ticker: EHC
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +7.6992% (122.09 -> 131.49); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:26 ET (EDGAR acceptance 2026-10-28T20:26:00Z; after close 10-28); index only
-- action: watchlist
-  ticker: BAX
+  ticker: MHK
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -7.6984% (25.46 -> 23.5); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:18 ET (EDGAR acceptance 2026-10-29T11:18:09Z; pre-open 10-29); index only
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — +7.2467% (129.99 -> 139.41); earnings; after-close 10-29 (EDGAR 8-K acc 0000851968-26-000038, accepted 2026-10-29T20:19:28 UTC); index only; 1 other >=5% session(s) in window
 - action: watchlist
-  ticker: OWL
+  ticker: PIPR
+  strategy: B
+  qualifying_event_date: 2026-10-30
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -7.1449% (68.72 -> 63.81); earnings; pre-open 10-30 08:06 ET (EDGAR 8-K acc 0001230245-26-000038, accepted 2026-10-30T12:06:16 UTC); index only
+- action: watchlist
+  ticker: AZN
+  strategy: B
+  qualifying_event_date: 2026-10-30
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — +7.0241% (174.4 -> 186.65); earnings; pre-open 10-30 07:36 ET (6-K acc 0001654954-26-009256); index only
+- action: watchlist
+  ticker: MIAX
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +7.6525% (9.67 -> 10.41); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:10 ET (EDGAR acceptance 2026-10-29T11:10:15Z; pre-open 10-29); index only; 1 other >=5% session(s) in window
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — +6.9656% (31.44 -> 33.63); earnings; after-close 10-29 (EDGAR 8-K acc 0001438472-26-000044, accepted 2026-10-29T20:15:36 UTC); index only
 - action: watchlist
-  ticker: CSL
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +7.5751% (345.21 -> 371.36); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:07 ET (EDGAR acceptance 2026-10-28T20:07:26Z; after close 10-28); index only
-- action: watchlist
-  ticker: TPG
+  ticker: PTCT
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +7.5129% (44.59 -> 47.94); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:00 ET (EDGAR acceptance 2026-10-29T11:00:47Z; pre-open 10-29); index only
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -6.9656% (64.46 -> 59.97); earnings/guidance; after-close 10-29 (EDGAR 8-K acc 0001104659-26-120200, accepted 2026-10-29T20:10:20 UTC); index only
 - action: watchlist
-  ticker: STNG
+  ticker: CBOE
   strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +7.1573% (88.72 -> 95.07); Q3 results + dividend increase 6-K, after close 10-28, reaction 10-29; 2026-10-28 16:20 ET (EDGAR acceptance 2026-10-28T20:20:19Z; after close 10-28); index only
+  qualifying_event_date: 2026-10-30
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — +6.7717% (314.25 -> 335.53); earnings; pre-open 10-30 07:30 ET (8-K acc 0001628280-26-068432); index only
 - action: watchlist
-  ticker: LNG
-  strategy: B
-  qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +7.1095% (297.77 -> 318.94); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:31 ET (EDGAR acceptance 2026-10-29T11:31:19Z; pre-open 10-29); index only
-- action: watchlist
-  ticker: GATX
+  ticker: VLTO
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +6.8692% (168.87 -> 180.47); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 08:30 ET (EDGAR acceptance 2026-10-29T12:30:32Z; pre-open 10-29); index only
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — +6.7653% (104.06 -> 111.1); earnings; after-close 10-29 (EDGAR 8-K acc 0001967680-26-000047, accepted 2026-10-29T20:31:44 UTC); index only
 - action: watchlist
-  ticker: LHX
+  ticker: RBC
+  strategy: B
+  qualifying_event_date: 2026-10-30
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -6.7636% (495.74 -> 462.21); earnings; pre-open 10-30 09:08 ET (EDGAR 8-K acc 0001213900-26-114098, accepted 2026-10-30T13:08:59 UTC); index only; 1 other >=5% session(s) in window
+- action: watchlist
+  ticker: BHVN
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +6.8378% (260.61 -> 278.43); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:04 ET (EDGAR acceptance 2026-10-29T10:04:22Z; pre-open 10-29); index only
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -6.4888% (16.49 -> 15.42); earnings; after-close 10-29 16:05 ET (8-K acc 0001935979-26-000093); index only; 6 other >=5% session(s) in window
 - action: watchlist
-  ticker: LLY
+  ticker: INVX
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +6.6289% (1288.3 -> 1373.7); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:03 ET (EDGAR acceptance 2026-10-29T11:03:30Z; pre-open 10-29); index only
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -6.4000% (30 -> 28.08); earnings; after-close 10-29 16:20 ET (8-K acc 0001193125-26-437829); index only; 2 other >=5% session(s) in window
 - action: watchlist
-  ticker: ALGM
+  ticker: SYK
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -6.6158% (35.37 -> 33.03); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:09 ET (EDGAR acceptance 2026-10-29T11:09:44Z; pre-open 10-29); index only; 2 other >=5% session(s) in window
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -6.3801% (311.75 -> 291.86); earnings; after-close 10-29 (EDGAR 8-K acc 0000310764-26-000059, accepted 2026-10-29T20:11:16 UTC); index only
 - action: watchlist
-  ticker: TENB
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +6.2808% (48.72 -> 51.78); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:07 ET (EDGAR acceptance 2026-10-28T20:07:04Z; after close 10-28); index only; 3 other >=5% session(s) in window
-- action: watchlist
-  ticker: FTI
+  ticker: RIVN
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -6.2325% (71.4 -> 66.95); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:48 ET (EDGAR acceptance 2026-10-29T10:48:18Z; pre-open 10-29); index only
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — +6.2009% (11.45 -> 12.16); earnings/guidance; after-close 10-29 16:00 ET (EDGAR 8-K acc 0001874178-26-000065, accepted 2026-10-29T20:00:35 UTC); index only
 - action: watchlist
-  ticker: OLED
+  ticker: AN
   strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -6.0945% (90.41 -> 84.9); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:08 ET (EDGAR acceptance 2026-10-28T20:08:14Z; after close 10-28); index only
+  qualifying_event_date: 2026-10-30
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — +6.0824% (169.34 -> 179.64); earnings; pre-open 10-30 07:11 ET (8-K acc 0001628280-26-068426); index only; 2 other >=5% session(s) in window
 - action: watchlist
-  ticker: EGO
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -6.0360% (34.46 -> 32.38); Q3 results 6-K, after close 10-28, reaction 10-29; 2026-10-28 17:09 ET (EDGAR acceptance 2026-10-28T21:09:03Z; after close 10-28); index only; 2 other >=5% session(s) in window
-- action: watchlist
-  ticker: KGC
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -6.0052% (22.98 -> 21.6); Q3 results 6-K, after close 10-28, reaction 10-29; 2026-10-28 17:00 ET (EDGAR acceptance 2026-10-28T21:00:05Z; after close 10-28); index only
-- action: watchlist
-  ticker: VKTX
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +5.9148% (25.36 -> 26.86); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:10 ET (EDGAR acceptance 2026-10-28T20:10:09Z; after close 10-28); index only; 3 other >=5% session(s) in window
-- action: watchlist
-  ticker: ATI
+  ticker: COLM
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +5.8681% (165.3 -> 175.0); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:34 ET (EDGAR acceptance 2026-10-29T11:34:00Z; pre-open 10-29); index only; 1 other >=5% session(s) in window
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — +6.0449% (63.69 -> 67.54); earnings; after-close 10-29 16:05 ET (8-K acc 0001050797-26-000148); index only
 - action: watchlist
-  ticker: PHIN
+  ticker: BBIO
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +5.8599% (57.68 -> 61.06); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:32 ET (EDGAR acceptance 2026-10-29T11:32:23Z; pre-open 10-29); index only
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — +5.9664% (70.73 -> 74.95); earnings; after-close 10-29 16:03 ET (8-K acc 0001743881-26-000033); index only
 - action: watchlist
-  ticker: MBIN
+  ticker: IMO
   strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +5.8416% (49.13 -> 52.0); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:05 ET (EDGAR acceptance 2026-10-28T20:05:26Z; after close 10-28); index only
+  qualifying_event_date: 2026-10-30
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — +5.5246% (130.87 -> 138.1); earnings; pre-open 10-30 08:02 ET (8-K acc 0000049938-26-000049); index only
 - action: watchlist
-  ticker: CTSH
-  strategy: B
-  qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -5.7866% (66.36 -> 62.52); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:39 ET (EDGAR acceptance 2026-10-29T10:39:40Z; pre-open 10-29); index only; 1 other >=5% session(s) in window
-- action: watchlist
-  ticker: VMC
+  ticker: FND
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +5.7774% (265.0 -> 280.31); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:55 ET (EDGAR acceptance 2026-10-29T10:55:38Z; pre-open 10-29); index only
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -5.4629% (50.34 -> 47.59); earnings; after-close 10-29 16:13 ET (8-K acc 0001628280-26-068242); index only; 2 other >=5% session(s) in window
 - action: watchlist
-  ticker: MGM
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +5.7206% (27.27 -> 28.83); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:15 ET (EDGAR acceptance 2026-10-28T20:15:44Z; after close 10-28); index only
-- action: watchlist
-  ticker: SAIA
+  ticker: TGS
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +5.6836% (324.62 -> 343.07); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:45 ET (EDGAR acceptance 2026-10-29T11:45:16Z; pre-open 10-29); index only
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — -5.3957% (25.02 -> 23.67); earnings; after-close 10-29 17:13 ET (6-K) (EDGAR 6-K acc 0000931427-26-000014, accepted 2026-10-29T21:13:24 UTC); index only
 - action: watchlist
-  ticker: NMRK
+  ticker: ATR
   strategy: B
   qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -5.6385% (12.06 -> 11.38); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 09:00 ET (EDGAR acceptance 2026-10-29T13:00:51Z; pre-open 10-29); index only; 1 other >=5% session(s) in window
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — +5.0214% (130.64 -> 137.2); earnings; after-close 10-29 17:08 ET (8-K acc 0000896622-26-000187); index only
 - action: watchlist
-  ticker: PBI
+  ticker: LYB
   strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -5.6193% (17.44 -> 16.46); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:09 ET (EDGAR acceptance 2026-10-28T20:09:04Z; after close 10-28); index only
-- action: watchlist
-  ticker: WCC
-  strategy: B
-  qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +5.6132% (347.22 -> 366.71); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 06:02 ET (EDGAR acceptance 2026-10-29T10:02:36Z; pre-open 10-29); index only; 1 other >=5% session(s) in window
-- action: watchlist
-  ticker: DASH
-  strategy: B
-  qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +5.6110% (169.49 -> 179.0); earnings + Instacart merger agreement, 8-K 2.02/1.01/7.01, pre-open/intraday 10-29; 2026-10-29 07:21 ET (EDGAR acceptance 2026-10-29T11:21:00Z; pre-open 10-29); index only; 1 other >=5% session(s) in window
-- action: watchlist
-  ticker: AGCO
-  strategy: B
-  qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +5.5599% (102.16 -> 107.84); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 08:44 ET (EDGAR acceptance 2026-10-29T12:44:57Z; pre-open 10-29); index only
-- action: watchlist
-  ticker: HWM
-  strategy: B
-  qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +5.5075% (195.19 -> 205.94); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:05 ET (EDGAR acceptance 2026-10-29T11:05:34Z; pre-open 10-29); index only; 1 other >=5% session(s) in window
-- action: watchlist
-  ticker: KLAC
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +5.4544% (158.77 -> 167.43); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:07 ET (EDGAR acceptance 2026-10-28T20:07:50Z; after close 10-28); index only; 1 other >=5% session(s) in window
-- action: watchlist
-  ticker: JOE
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +5.3868% (68.13 -> 71.8); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:10 ET (EDGAR acceptance 2026-10-28T20:10:16Z; after close 10-28); index only
-- action: watchlist
-  ticker: LKQ
-  strategy: B
-  qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +5.2938% (17.19 -> 18.1); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:30 ET (EDGAR acceptance 2026-10-29T11:30:20Z; pre-open 10-29); index only; 2 other >=5% session(s) in window
-- action: watchlist
-  ticker: HTO
-  strategy: B
-  qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — -5.2265% (61.8 -> 58.57); public offering prospectus supplement 424B5, pre-open/intraday 10-29; 2026-10-29 08:08 ET (EDGAR acceptance 2026-10-29T12:08:58Z; pre-open 10-29); index only
-- action: watchlist
-  ticker: MO
-  strategy: B
-  qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +5.1514% (72.99 -> 76.75); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:04 ET (EDGAR acceptance 2026-10-29T11:04:43Z; pre-open 10-29); index only
-- action: watchlist
-  ticker: DXPE
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +5.1285% (167.69 -> 176.29); $150M share repurchase plan, 8-K 8.01, after close 10-28, reaction 10-29; 2026-10-28 17:44 ET (EDGAR acceptance 2026-10-28T21:44:45Z; after close 10-28); index only; 2 other >=5% session(s) in window
-- action: watchlist
-  ticker: LTH
-  strategy: B
-  qualifying_event_date: 2026-10-29
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +5.1229% (43.14 -> 45.35); earnings 8-K 2.02, pre-open/intraday 10-29; 2026-10-29 07:05 ET (EDGAR acceptance 2026-10-29T11:05:45Z; pre-open 10-29); index only
-- action: watchlist
-  ticker: EPR
-  strategy: B
-  qualifying_event_date: 2026-10-28
-  source_research_screen_id: b1e61b9c-b2e0-47b9-9489-ddf0babebd5d
-  detail: ADD to B new-entry index — +5.0982% (55.51 -> 58.34); earnings 8-K 2.02, after close 10-28, reaction 10-29; 2026-10-28 16:15 ET (EDGAR acceptance 2026-10-28T20:15:34Z; after close 10-28); index only
+  qualifying_event_date: 2026-10-30
+  source_research_screen_id: e2dfa715-80cb-4d38-81fb-fe3310e21cfd
+  detail: ADD to B new-entry index — +5.0023% (65.37 -> 68.64); earnings; pre-open 10-30 06:31 ET (8-K acc 0001489393-26-000067); index only
 ```
