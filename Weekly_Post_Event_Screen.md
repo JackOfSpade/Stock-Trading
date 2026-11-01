@@ -1,16 +1,16 @@
-2026-W43
+2026-W44
 
 # Weekly Post-Event Screen — Strategy B (W2)
 
-**Run date:** 2026-10-25 (Sunday) · **Routine:** W2, deep research · **Marker:** 2026-W43
-**Intake watermark:** 2026-10-18T08:22:58Z (this routine's own prior completion, `ops.run_log` `c56847de`) · **Catch-up window:** 7.0 days, the weekly norm, so no `CATCHUP` token is owed.
-**Durable record:** `events.decision_log` `1a5a33bb-9c2a-4dd5-a5cd-4bb0bc220ebd` (`entry_type='post-event-enrichment'`, strategy B) · zero `events.queue_events` items · zero new `ops.alerts` rows.
+**Run date:** 2026-11-01 (Sunday) · **Routine:** W2, deep research · **Marker:** 2026-W44
+**Intake watermark:** 2026-10-25T08:25:07Z (this routine's own prior completion, `ops.run_log` `5012065e`) · **Catch-up window:** 6.99 days, the weekly norm, so no `CATCHUP` token is owed.
+**Durable record:** `events.decision_log` `d82bab65-bd17-488a-a1d1-274171d62a46` (`entry_type='post-event-enrichment'`, strategy B) · zero `events.queue_events` items · one `ops.alerts` info row filed (`dfb0f575`, see FINDINGS).
 
-**SCREEN MODE: INDEX (B router DO-NOT-ACTIVATE as of 2026-10-06).** This is the ninth consecutive index-mode cycle.
+**SCREEN MODE: INDEX (B router DO-NOT-ACTIVATE as of 2026-10-06).** This is the tenth consecutive index-mode cycle.
 
-**What decides this cycle: for the first time, the scheduled router write falls inside live windows.** The intake is peak Q3 earnings season: 60 routable identities, nearly double W42's 34. Their windows close 2026-10-28 to 2026-11-04. **54 of the 60 windows, and 13 of the ranked 15, are still open on 2026-11-02**, the day M1a, M1b and M4 run. In all eight earlier index-mode cycles, every window closed before the next scheduled write. That makes this cycle's `Router-gated, not rank-gated.` marker more than bookkeeping. If the 11-02 write activates B, these rows are the ones a drain could reach.
+**What decides this cycle: every ranked window, and every one of the 183 eligible windows, is open on the 2026-11-02 scheduled router write.** The intake is the second peak week of Q3 earnings season: 183 routable identities, three times W43's 60. Their windows close 2026-11-04 to 2026-11-11. The earliest close (11-04) still leaves three sessions after M1a, M1b and M4 run on 11-02. So if that write activates B, a drain could reach the whole cohort, not just a slice of it, as it could in W43.
 
-**Reachable is not likely.** B's DO-NOT-ACTIVATE comes from the `shock_overlay = acute` override, not from the raw M1b call. On the latest stored Brent close (113.17, 2026-10-22), the price leg reads ELEVATED, 14.22 above the view's 98.95 midpoint (`state.shock_price_leg_status`). W2 makes no forecast. Whether the 11-02 scoring lands acute is M1a's blind call, and this file does not pre-empt it.
+**Reachable is still not likely, but the price leg moved.** B's DO-NOT-ACTIVATE comes from the `shock_overlay = acute` override. M1R re-scored blind on 10-28 (run `02ae1886`) and no axis moved; the overlay stayed acute. On the latest stored Brent close (111.57, 2026-10-29) `state.shock_price_leg_status` reads **NOT ELEVATED**, by the plateau-band clause, not by a retrace: the close sits ~10.8 above the view's 100.725 midpoint. That read fires the refresh-only `shock_price_leg_exit` trigger. W2 makes no forecast. Whether 11-02 scores the overlay acute is M1a's blind call, and this file does not pre-empt it.
 
 ---
 
@@ -20,52 +20,43 @@ W2 performs **zero market-wide discovery**. It pulled no broad bars, enumerated 
 
 The run made **zero metered external calls**: no Anthropic `web_search`/`web_fetch`, no Tavily, no FMP, no HF and no IBKR. Index mode skips per-candidate enrichment. Three Sonnet data-assembly sub-agents were confined to BigQuery reads and repo reads.
 
-**Two coverage edges are deliberately left open:**
-- **The 2026-10-23 (Friday) session is uncovered.** D1's latest screen covers 10-22. D1's Sunday scan tonight owns 10-23, and PART 1 forbids W2 from covering that gap.
-- **The 10-22 after-close names are also not yet screened.** D1 `5022f59e` lists them as `after_close_pending`: WDC, NEM, BE, FIX, VRSN, OMC, DECK, KNSL, RNG, MXL, APPF, SSNC, RHI, LULU, BRO and others, all reacting 10-23.
-- **The 10-16 session that W42 left uncovered is in this intake** (D1 `b03ff6a6`, written 10-18 22:30Z, after W42's watermark).
+**One coverage edge is deliberately left open:**
+- **The 2026-10-30 (Friday) session is uncovered**, along with the 10-29 after-close reporters that react on 10-30. D1's latest screen covers 10-29. D1's Sunday scan tonight owns 10-30, and PART 1 forbids W2 from covering that gap.
+- **W43's open edges are closed.** The 10-23 session and the 10-22 after-close names are in this intake (D1 `290d4251`, written 10-25 22:34Z, after W43's watermark).
 
 **Router gate, read FIRST per the 2026-08-24 limb.** `state.current_regime`, scope `STRATEGY_ACTIVATION`, key `B`, reads **`DO-NOT-ACTIVATE`**:
 - as_of 2026-10-06;
 - `divergence_id` `div-B-202609-1`, theater check MIXED;
 - source `events.adversarial_reviews:7db26d06`, event `e503c2d3`.
 
-This row is unchanged since W41. No router review or divergence review touching B has opened since. **B's capital:** `state.strategy_capital_enablement` for B reads `capital_disabled = TRUE`.
+This row is unchanged since W41. `events.regime_events` holds no B activation row after 10-06, and no B row has ever read ACTIVATE. No router review or divergence review touching B has opened since the watermark. D2's router reviews `db286caf` (10-26), `e6a37e4b` (10-28) and `c13f9996` (10-29, REFRESH-ONLY) wrote no activation. **B's capital:** `state.strategy_capital_enablement` for B reads `capital_disabled = TRUE`.
 
-**Flip paths that could reach this cohort before its windows close (2026-10-28 to 2026-11-04):**
-- **Scheduled path: now reachable, for the first time.** M1a, M1b and M4 fire 2026-11-02 (`ops/cadence.yaml`, first trading day; 11-01 is a Sunday). Windows still open on 11-02:
-  - 15 identities close on 11-02 itself;
-  - 17 close on 11-03;
-  - 22 close on 11-04.
-
-  An activation written that morning leaves one to three sessions of window.
-- **Out-of-cycle path: re-wired by Rev 52 (owner directive, 2026-10-22).** The three-leg re-risking limb W42 tracked is **retired**, so "two of three legs" no longer describes anything. Now any ONE measured trigger, in either direction, has two effects:
-  - D2a's REFRESH REQUEST queues a `PENDING_REGIME_REFRESH` item;
-  - M1R drains that item by re-scoring blind.
-
-  The trigger that bears on B's override is `shock_price_leg_exit`: the price leg reads NOT ELEVATED while the overlay is `acute`. It is refresh-only, with no router review and no activation write of its own.
-  - **State since the watermark:** zero `PENDING_REGIME_REFRESH` rows. M1R ran 10-18, 10-19 and 10-22, all on its gate branch with no scoring. There are no `FUNDAMENTAL_AXIS` rows after as_of 2026-10-01.
-  - **The price leg's recent record is not one-way.** In the ten stored sessions 10-09 to 10-22, the view read NOT ELEVATED on 10-13, 10-14, 10-15, 10-16 and 10-21. Every one of those came through the **plateau re-base clause** (ten closes inside ±5% of their median), not through a retrace below the midpoint. The 10-22 close of 113.17 broke the band. So the exit trigger is reached by Brent going *quiet*, not only by Brent falling. That is an observation on the view's own outputs, not a forecast.
-- **Legacy view still live.** `state.rerisking_limb_status` is still defined and reads leg A TRUE, leg B FALSE and leg C TRUE (SPY NEUTRAL since 10-21, VIX NORMAL, breadth HEALTHY). Rev 52 retired its use, and W2 does not report it as a path.
+**Flip paths that could reach this cohort before its windows close (2026-11-04 to 2026-11-11):**
+- **Scheduled path: reaches the whole cohort.** M1a, M1b and M4 fire 2026-11-02 (`ops/cadence.yaml`, first trading day; 11-01 is a Sunday). Every one of the 183 windows is open that day, with 3 to 8 sessions left.
+- **Out-of-cycle path (Rev 52).** A measured trigger queues a `PENDING_REGIME_REFRESH` item through D2a, and M1R drains it by re-scoring blind.
+  - **Since the watermark:** one item, `regime-refresh-20261027`, queued 10-27 and drained 10-28 by M1R's re-score branch. It wrote six `FUNDAMENTAL_AXIS` rows as_of 10-28: growth stable, inflation stable, policy hawkish, risk neutral, **shock_overlay acute**. No axis moved.
+  - **The 10-29 NOT-ELEVATED read** fired `shock_price_leg_exit`. D2's router review `c13f9996` treated it as refresh-only. No refresh row for it is visible yet, because D2a has not run since 10-29 (10-30 and 10-31 are outside `daily_sun_thu`).
+  - **The price leg's last ten stored sessions (10-16 to 10-29)** read NOT ELEVATED three times (10-16, 10-21, 10-29), each through the plateau-band clause. A new peak printed 10-23 (116.72) and lifted the view's midpoint from 98.95 to 100.725. As W43 noted, the exit trigger is reached by Brent going *quiet*, not only by Brent falling. That is an observation on the view's own outputs, not a forecast.
 
 ---
 
 ## WINDOW ARITHMETIC
 
-There is one convention: INCLUSIVE, adopted when W5 resolved `e3263203` on 2026-09-28. The qualifying event date is trading session 1, and the window closes on the 10th trading session inclusive. This is the convention D2's index rows carry, and all 60 window-close dates below match D2's rows exactly.
+There is one convention: INCLUSIVE, adopted when W5 resolved `e3263203` on 2026-09-28. The qualifying event date is trading session 1, and the window closes on the 10th trading session inclusive. All 183 window-close dates below match D2's index rows exactly.
 
-Trading days were verified against `state.market_calendar`. There are no holidays or early closes between 10-14 and 11-20.
+Trading days were verified against `state.market_calendar`. There are no holidays or early closes between 10-22 and 11-11.
 
-| Qualifying event date | Window closes | Sessions remaining from 2026-10-26, inclusive | Open on the 2026-11-02 scheduled write? | Routable identities |
-|---|---|---|---|---|
-| 2026-10-15 | 2026-10-28 | 3 | No | 1 (MSTR) |
-| 2026-10-19 | 2026-10-30 | 5 | No | 5 |
-| 2026-10-20 | 2026-11-02 | 6 | **Yes — its last session** | 15 |
-| 2026-10-21 | 2026-11-03 | 7 | **Yes** | 17 |
-| 2026-10-22 | 2026-11-04 | 8 | **Yes** | 22 |
+| Qualifying event date | Window closes | Sessions remaining from 2026-11-02, inclusive | Routable identities |
+|---|---|---|---|
+| 2026-10-22 | 2026-11-04 | 3 | 11 |
+| 2026-10-23 | 2026-11-05 | 4 | 10 |
+| 2026-10-26 | 2026-11-06 | 5 | 18 |
+| 2026-10-27 | 2026-11-09 | 6 | 35 |
+| 2026-10-28 | 2026-11-10 | 7 | 64 |
+| 2026-10-29 | 2026-11-11 | 8 | 45 |
 
 How the move is measured:
-- For an after-close release, the move is measured on the NEXT session, the reaction session. The tables mark it in **bold** where it differs from the qualifying date.
+- For an after-close release, the move is measured on the NEXT session, the reaction session. The ranked table marks it in **bold** where it differs from the qualifying date.
 - For an intraday or pre-open release, the move is measured on THAT session.
 
 ---
@@ -74,384 +65,423 @@ How the move is measured:
 
 ## Intake source
 
-Five `single-name-move` rows have landed since the watermark, carrying 135 `passed[]` items in total. 80 clear B's spec floor; the other 55 are `below_spec_floor = true` write-ups.
+Six `single-name-move` rows have landed since the watermark. One is superseded, so five are of record. They carry **217** distinct `passed[]` items: 191 clear B's spec floor and 26 are `below_spec_floor = true` write-ups. All 217 carry both recorded closes.
 
-| Decision id | Session screened | `passed[]` items (floor-clearers / below-floor) | Two prices recorded? | Note |
-|---|---|---|---|---|
-| `b03ff6a6-4230-4d05-9c49-eff2c9378b9f` | 2026-10-16 (Fri) | 1 (1 / 0) | 1 of 1 | MSTR, after-close 10-15, measured on 10-16. D1's close-chain check: 6 hits, all on rejected or carried-forward items (below). |
-| `c7045f5f-9300-44cd-8227-b0771dc4ad29` | 2026-10-19 (Mon) | 7 (5 / 2) | 7 of 7 | D1's close-chain check: 0 hits. |
-| `ec09d8fc-29d6-42fc-92a8-ce292d0501d5` | 2026-10-20 (Tue) | 15 (12 / 3) | 15 of 15 | Its items carry no release-timing field; timing comes from the item `reason` text. D1's close-chain check: 2 hits (IRON, CLF), both on the session after their measure. |
-| `70635acf-db7a-49d4-a63b-a2f429bc3f20` | 2026-10-21 (Wed) | 30 (13 / 17) | 30 of 30 | D1's close-chain check: 3 hits (HAS, MSCI, VICR), all on the session after their measure. |
-| `5022f59e-c56e-4864-9dfc-08f805bb5a62` | 2026-10-22 (Thu) | 82 (49 / 33) | 82 of 82 | A **catch-up run**, written 10-23 09:32Z after the 10-22 evening slot was missed (critical `missed_run` `204b983b`). It carries no `close_chain_check` field. |
+| Decision id | Session screened | `passed[]` items (routed / floor-clearing not routed / below floor) | Note |
+|---|---|---|---|
+| `290d4251-8c5b-4fba-86f5-dc034c7e4057` | 2026-10-23 (Fri), written by D1's Sunday scan 10-25 | 40 (20 / 0 / 20) | Covers W43's open 10-23 edge and the 10-22 after-close names. D1's close-chain check: 1 hit (FPS, not in this row's passed list). |
+| `7d029722-e7f6-476e-9907-423b12af4cd7` | 2026-10-26 (Mon) | 10 (6 / 3 / 1) | D1's close-chain check: the CART 10-26 pair chains from its 10-23 item (see below). |
+| `3b0ca8cf-58a6-4193-90d0-355368d80aad` | 2026-10-27 (Tue) | 37 (33 / 2 / 2) | D1's close-chain check: 0 hits. |
+| `c8a50e56-d48d-47e4-9b60-7d8fcd7dd4df` | 2026-10-28 (Wed) | 46 (44 / 1 / 1) | **Row of record**, an append-only correction of `72e9607d`. D1's close-chain check: 1 hit (GLXY). |
+| `b1e61b9c-b2e0-47b9-9489-ddf0babebd5d` | 2026-10-29 (Thu) | 84 (81 / 1 / 2) | Items carry no event-type field; timing comes from `reason` (mostly "Own 8-K 2.02"). D1's close-chain check: 0 hits. |
 
-- **Not intake:** five `sector-move` rows in the window (`c0188030`, `dbd82e7e`, `af249738`, `eb301f2f`, `aa0b6953`).
-- **No B-relevant D1 candidate or action records since the watermark.** D1's only other records are five Strategy D `add-candidate-review` rows. There is no `strategy = 'B'` decision row of any type since the watermark.
-- **No supersession and no correction.** No row written since the watermark carries `superseded_by`, and no D1 or D2 correction touches a single-name figure. `bigquery/144`'s convention is therefore moot this cycle.
-- **No `anchor_session_move_pct` key exists on any intake item.** Where an anchor-session figure matters, it lives only in the item's free-text `reason`. This is a field-shape note, not a defect: neither the W2 section nor §19 mandates that key.
+- **Supersession, applied by the `bigquery/122`/`144` convention.** `c8a50e56` carries `superseded_by = 72e9607d`; the correction row names the obsolete target. The two rows' `passed[]`, `rejected_notable`, `close_chain_check` and `body_md` are byte-identical. They differ only in `correction_note`, one `fanout_reconciliation` date (NOV's screen leg, 10-27 → 10-28) and one added `rejected_legend` code. **No W2 figure changes.** Every 10-28 item cites `c8a50e56`.
+- **Not intake:** five `sector-move` rows in the window (`67d505a8`, `cb06c3e0`, `56a602d2`, `1363808c`, `014b69e9`).
+- **No B-relevant D1 candidate or action records since the watermark.** There is no `strategy = 'B'` decision row of any type.
+- **GOOG is folded into GOOGL.** D1 routed both share classes on the same 10-28 after-close Alphabet print (−12.29% and −12.64%). D1's Daily.md and D2's index treat them as one issuer and one event ("GOOG is indexed under GOOGL"). W2 counts one identity, so there are **183** rankable identities, not 184.
 
 ## Four-part identity dedupe — CLEAN, matched on the FIELDS, never on the key string
 
-- **Queue rows:** `events.queue_events` holds **zero** `thesis-construction` + strategy B rows since 2026-09-01, open or terminal. The last of its 84 all-time B rows is dated 2026-08-03.
-- **Rescreen items:** no `rescreen-*` item touches an intake ticker for B. `rescreen-META-D-20261105` is Strategy D, and `rescreen-COST-B-20261004` is not an intake ticker.
-- **Other strategies' items on intake tickers are not B identities and exclude nothing:** `thesis-EFX-TRU-E-20260903` (E), `thesis-SPOT-D-20261006` and `thesis-GE-D-20261006` (D, both NO-GO router-gated), and `A:AMZN:2026-07-12` (A watchlist).
-- **Repeat tickers are distinct events.** MRNA, ARQT, T and SPOT all re-appear on new qualifying dates. Deduping by ticker alone would have wrongly dropped them.
+- **Queue rows:** `events.queue_events` holds **zero** `thesis-construction` + strategy B rows since 2026-08-03, open or terminal. The intake names that have any earlier B queue row (ORCL, LII, VRT, PNR, VZ, MGM) carry them on older, distinct event dates. Those payloads store no `qualifying_event_date`, so the date was read from the key suffix as the best field evidence available; no collision results either way.
+- **Decision rows:** no B thesis or B decision row exists for any intake identity. HWM and LLY carry Strategy D NO-GOs (2026-10-07). Those are D records, context only under the shared "NO-GO records are context, not barriers" rule, and they do not exclude a B identity.
+- **Open Strategy A positions:** none. `state.current_positions` holds Strategy D only (AMZN, GOOGL, GEV, DIS, ISRG, RTX, UBER, TSM). GOOGL is held in D. The B same-name exclusion is against A, so it does not apply.
+- **Expired windows:** none. The earliest close is 11-04.
 
-## RECORDED-FIGURE ARITHMETIC CHECK — 135 of 135 items, zero mismatches
+**Identities EXCLUDED before enrichment: 0.**
 
-Every item carries both `prior_close` and `event_close`. Each `metric_pct` equals `(event_close/prior_close − 1) × 100` to the recorded 4-dp precision. The largest residual is 5×10⁻⁵ pp, which is half a unit at 4 dp: rounding. **No `rescreen-*` item is owed.**
+## RECORDED-FIGURE ARITHMETIC CHECK — 217 of 217 items, zero mismatches
 
-## CROSS-ROW CLOSE-CHAIN CHECK — 0 hits
+For every item, `metric_pct` equals `(event_close / prior_close − 1) × 100` to the recorded 4-decimal precision; the maximum difference is 0.0000. No `rescreen-` item is owed.
 
-- **Corpus:** every `single-name-move` row in the durable record, all-time, including superseded rows: 81 rows, 954 `passed[]` items, 336 of them carrying both closes. This item-level corpus is narrower than W42's 1,562, which also counted `rejected_notable` entries. Those carry no closes, so they cannot chain.
-- **Test:** for each intake item with a dated `qualifying_event_date`, look for another item with the same name and the same date whose `event_close` equals this item's `prior_close`, or whose `prior_close` equals its `event_close`. **No pair chains.**
-- **Looser test, same name and any date: one pair, not a defect.** TSLA's 70635acf item (10-20, 373.71 → 386.47) chains into its 5022f59e item (10-21, 386.47 → 374.58). These are consecutive sessions on two distinct anchors, and both items are below the floor.
-- **D1's own self-reported hits do not touch the intake's anchors:**
-  - **MSTR:** a legitimate after-close forward chain.
-  - **MAN, RKLB, HPE, DELL, CRWV** (`b03ff6a6`): W42 identities carried forward and not re-written as passed.
-  - **IRON, CLF, HAS, MSCI, VICR:** the next session's item chained to a pre-open anchor that was already measured on its own session.
-- **A clean pass is not a clearance.** The test reaches only items that share a name and date with another item; it measured 32% coverage on 2026-09-27.
+## CROSS-ROW CLOSE-CHAIN CHECK — 1 same-anchor hit, 0 defects
 
-## MEASUREMENT OF RECORD — D2's index rows, not W2's pull
+The search covered every `single-name-move` row since 2026-10-12 (superseded `72e9607d` excluded), both `passed` and `rejected_notable`, on the same name, testing `other.event_close == this.prior_close` or `other.prior_close == this.event_close`.
 
-`Watchlist.md`'s Strategy B new-entry index has a D2 row (lines 606–665) for **all 60 routable identities**, and every window-close date matches.
+- **Passed against passed, same name and same `qualifying_event_date`: 0 hits.**
+- **CART (qed 2026-10-23): the one same-anchor hit.** The ranked-eligible item measures 51.68 → 56.44 (+9.2105%) on 10-23, the anchor session of an intraday 10-23 media report. Its 56.44 is the `prior_close` of a 10-26 leg (56.44 → 60.88) that `7d029722` rejected as a continuation. The chain runs FORWARD from the anchor to a rejected leg. The item W2 carries is the anchor-session figure, so this is the reverse of the IONQ `6e179f3c` defect pattern, not an instance of it.
+- **Widened to any date, informational only:** GLXY (pre-open 10-27 anchor; the 10-28 leg was rejected, matching D1's own hit), TENB and ADT (different anchors, neither routed) and CRS (below floor, context only).
 
-- **Re-measured on IBKR RTH closes: 1 of 60.** MSTR, 151.29 → 136.83 = −9.5578%, "D1's figure confirmed exact". For META, D2 read the 697.52 / 648.85 bars and found they match D1's pair.
-- **Not re-measured: 59 of 60.** Each row says "Figures are D1's … not re-measured on IBKR in this pass." **All of the ranked 15 are arithmetic-checked only.** This is the weakest broker coverage of any cycle: W42 was 18 of 34. The cause is volume, not a rule gap. D2's re-measurement of record belongs to thesis construction (D2 STEP 1 QUALIFYING-MOVE RE-MEASUREMENT), which index mode never reaches.
-- **No D2 figure differs from D1**, so the D2-REMEASURED FIGURE PRECEDENCE rule changes no rank. No D1 `superseded` correction applies either.
+**This is a record read, not a re-measurement, and a clean pass is not a clearance.** Coverage depends on rejected items carrying closes, and most `rejected_notable` items do not.
+
+## MEASUREMENT OF RECORD — D1's figures, because D2 re-measured none of them
+
+The D2-REMEASURED FIGURE PRECEDENCE rule was applied and **changes nothing this cycle.** All 183 identities have a D2 index row in `Watchlist.md`'s "Strategy B new-entry candidates". Every index row added 10-22 to 10-29 states that its figures are D1's and were **not re-measured on IBKR in this pass**. D1 and D2 agree on figure, `qualifying_event_date` and window close for every identity. No D1 `superseded` correction touches a single-name figure. The rank key is the D1 figure, which is arithmetic-consistent but has not been independently broker-verified at the index-row stage. Broker re-measurement belongs to D2 at Strategy-B thesis construction (D2 STEP 1), which index mode never reaches.
 
 ## Items preserved from D1
 
-### Rankable — clears BOTH D1's §19 significance judgment AND B's frozen ≥5% spec floor — 60 identities, 15 ranked at the cap
+### Rankable — clears BOTH D1's §19 significance judgment AND B's frozen ≥5% spec floor — 183 identities, 15 ranked at the cap
 
-Ranking is by **absolute event-day close-to-close move, descending, and nothing else**. Every figure is D1's; D2 reproduced it where it re-measured (MSTR only). Field (e) is set strictly by rank.
+Ranks 1–5 carry tier `top-5`, and ranks 6–15 carry `rest`. There is no tie at the cap: rank 15 RHI is 21.7357, and rank 16 FFIV is −20.4262.
 
-| # | Tier | Ticker | Qualifying event | Move | Measured session | Window closes | Sessions left | D1 origin | Event (one line) |
+| Rank | Tier (e) | Ticker (a) | `qualifying_event_date` (f) | Move % (c) | Measured on | Window close (d) | Sessions left from 11-02 | Originating D1 id (g) | Event (one line, factual) |
 |---|---|---|---|---|---|---|---|---|---|
-| 1 | top-5 | BRZE | 2026-10-20 | +51.6977% | 10-20 | 2026-11-02 | 6 | `ec09d8fc` | Salesforce definitive all-cash acquisition at $47.50/sh (~58% premium); **deal-pinned target**. |
-| 2 | top-5 | IRON | 2026-10-19 | +38.8635% | 10-19 | 2026-10-30 | 5 | `c7045f5f` | Phase 3 APOLLO topline success (bitopertin), pre-open; $350M follow-on priced the same day. |
-| 3 | top-5 | TTMI | 2026-10-22 | −27.6652% | 10-22 | 2026-11-04 | 8 | `5022f59e` | Q3 beat plus a proposed acquisition in the release, pre-open; fell with the 10-22 AI-hardware rout; 6 other ≥5% sessions in the window. |
-| 4 | top-5 | KALU | 2026-10-21 | −25.3069% | **10-22** | 2026-11-03 | 7 | `5022f59e` | Q3 EPS miss ($1.89 vs ~$2.37), after-close 10-21. |
-| 5 | top-5 | FPS | 2026-10-22 | −21.5365% | 10-22 | 2026-11-04 | 8 | `5022f59e` | CFO resignation, pre-market; confounded by the AI-power selloff; 3 other ≥5% sessions. |
-| 6 | rest | MRNA | 2026-10-22 | −17.5664% | 10-22 | 2026-11-04 | 8 | `5022f59e` | Partial Phase 3 melanoma data leak, intraday (minute unresolved); 4 other ≥5% sessions. |
-| 7 | rest | OII | 2026-10-21 | −16.9426% | **10-22** | 2026-11-03 | 7 | `5022f59e` | Q3 EPS miss ($0.50 vs ~$0.59), after-close 10-21; oilfield-services read-through with LBRT. |
-| 8 | rest | CLF | 2026-10-19 | +16.3366% | 10-19 | 2026-10-30 | 5 | `c7045f5f` | Q3 results and 2027 EBITDA outlook, pre-open. |
-| 9 | rest | MSM | 2026-10-22 | −15.3516% | 10-22 | 2026-11-04 | 8 | `5022f59e` | FQ4 record sales but margin and GAAP EPS down, soft FQ1 guide, pre-open. |
-| 10 | rest | GGG | 2026-10-21 | −15.316% | **10-22** | 2026-11-03 | 7 | `5022f59e` | Q3 adj EPS slight miss, Q4 revenue guide $610-640M, after-close 10-21. |
-| 11 | rest | FCFS | 2026-10-22 | −14.7497% | 10-22 | 2026-11-04 | 8 | `5022f59e` | Q3 EPS beat ($2.68 vs ~$2.63); driver of the fall not established. |
-| 12 | rest | LION | 2026-10-20 | +14.4068% | 10-20 | 2026-11-02 | 6 | `ec09d8fc` | Bloomberg report of a revived ~$3.5B Legendary takeover offer (anonymous, unconfirmed). |
-| 13 | rest | POOL | 2026-10-22 | +14.3644% | 10-22 | 2026-11-04 | 8 | `5022f59e` | Q3 EPS $3.40 vs ~$3.36, pre-open. |
-| 14 | rest | ASST | 2026-10-21 | +13.6364% | 10-21 | 2026-11-03 | 7 | `70635acf` | First cash dividends on its 15% SATS perpetual preferred, ~pre-open; crypto-up day; 4 other ≥5% sessions. |
-| 15 | rest | BMI | 2026-10-22 | +13.484% | 10-22 | 2026-11-04 | 8 | `5022f59e` | Q3 EPS in line, revenue $230M vs ~$240M, pre-open; driver not established. |
+| 1 | `top-5` | SGRY | 2026-10-26 | +47.6190 | 10-26 | 2026-11-06 | 5 | `7d029722` | All-cash $23.50 take-private (Bain affiliates roll over), pre-open 8-K 1.01; closed ~1% under the offer. Deal-pinned (see S2). |
+| 2 | `top-5` | IOVA | 2026-10-29 | -35.4490 | 10-29 | 2026-11-11 | 8 | `b1e61b9c` | Clinical trial update (Phase 2 lung data in line), pre-open PR; prior_qualifying_sessions 2. |
+| 3 | `top-5` | GKOS | 2026-10-28 | +33.6493 | **10-29** | 2026-11-10 | 7 | `b1e61b9c` | Own 8-K 2.02 earnings, AC 10-28 16:10 ET. |
+| 4 | `top-5` | AXGN | 2026-10-28 | +31.4736 | 10-28 | 2026-11-10 | 7 | `c8a50e56` | Q3 earnings 8-K 2.02, pre-open 07:04 ET; $2.2B cap. |
+| 5 | `top-5` | BHC | 2026-10-28 | +28.7572 | **10-29** | 2026-11-10 | 7 | `b1e61b9c` | Own 8-K 2.02 earnings, AC 10-28 16:07 ET; $2.59B cap. |
+| 6 | `rest` | GMAB | 2026-10-28 | +28.2516 | 10-28 | 2026-11-10 | 7 | `c8a50e56` | Clinical trial 6-K, 09:43 ET 10-28 (distinct from GMAB 10-23 identity). |
+| 7 | `rest` | PRCH | 2026-10-28 | +28.1595 | **10-29** | 2026-11-10 | 7 | `b1e61b9c` | Own 8-K 2.02 earnings, AC 10-28 16:09 ET; $2.15B cap. |
+| 8 | `rest` | NOW | 2026-10-28 | -26.9500 | **10-29** | 2026-11-10 | 7 | `b1e61b9c` | Own 8-K 2.02 earnings, AC 10-28 16:14 ET. |
+| 9 | `rest` | CROX | 2026-10-29 | +25.5410 | 10-29 | 2026-11-11 | 8 | `b1e61b9c` | Own 8-K 2.02 earnings, pre-open 07:02 ET. |
+| 10 | `rest` | ALNY | 2026-10-29 | -25.1291 | 10-29 | 2026-11-11 | 8 | `b1e61b9c` | Own 8-K 2.02 earnings, pre-open 08:16 ET. |
+| 11 | `rest` | HRI | 2026-10-27 | +22.7562 | 10-27 | 2026-11-09 | 6 | `3b0ca8cf` | Q3 earnings 8-K 2.02, pre-open 06:31 ET. |
+| 12 | `rest` | SFM | 2026-10-28 | -22.5806 | **10-29** | 2026-11-10 | 7 | `b1e61b9c` | Own 8-K 2.02 earnings, AC 10-28 16:04 ET. |
+| 13 | `rest` | LKQ | 2026-10-23 | -22.4744 | 10-23 | 2026-11-05 | 4 | `290d4251` | Prelim Q3 + CEO change + FY26 guidance withdrawn, pre-open 08:06 ET. |
+| 14 | `rest` | KNSA | 2026-10-27 | +22.2253 | 10-27 | 2026-11-09 | 6 | `3b0ca8cf` | Q3 earnings 8-K 2.02, pre-open 07:32 ET. |
+| 15 | `rest` | RHI | 2026-10-22 | +21.7357 | **10-23** | 2026-11-04 | 3 | `290d4251` | Q3 earnings, AC 10-22; reaction session 10-23. |
 
-### BELOW THE CAP — 45 eligible identities (`below-cap`, not ranked)
+### BELOW THE CAP — 168 eligible identities (`below-cap`, not ranked)
 
-| Ticker | Qualifying event | Move | Measured session | Window closes | Sessions left | D1 origin | Event (one line) |
+The `#` column is position by absolute move, given for reference only. These are not ranks.
+
+| # | Tier | Ticker | `qualifying_event_date` | Move % | Window close | Sessions left from 11-02 | D1 id |
 |---|---|---|---|---|---|---|---|
-| MANE | 2026-10-19 | +12.369% | 10-19 | 2026-10-30 | 5 | `c7045f5f` | Phase 3 Study 304 topline success, pre-open; five other ≥5% sessions in the window. |
-| KSS | 2026-10-22 | +11.8231% | 10-22 | 2026-11-04 | 8 | `5022f59e` | Gordon Haskett upgrade on a broad retail bid; analyst action only. |
-| LRCX | 2026-10-21 | −11.7557% | **10-22** | 2026-11-03 | 7 | `5022f59e` | FQ1 beat but guide midpoint below consensus, after-close 10-21; set off the semi-equipment rout. |
-| EFX | 2026-10-20 | +11.3325% | 10-20 | 2026-11-02 | 6 | `ec09d8fc` | Q3 beat but FY revenue guide cut (mortgage); follows a 10-15 +7.25% session. |
-| HAS | 2026-10-20 | +11.1991% | 10-20 | 2026-11-02 | 6 | `ec09d8fc` | Q3 beat (adj EPS $2.90 vs $1.86), outlook raised, buyback doubled. |
-| SPOT | 2026-10-22 | +11.1014% | 10-22 | 2026-11-04 | 8 | `5022f59e` | Q3 KPIs met or exceeded guidance, pre-open. |
-| ALLE | 2026-10-22 | +11.0189% | 10-22 | 2026-11-04 | 8 | `5022f59e` | Q3 EPS $2.60 vs ~$2.50, pre-open. |
-| ARQT | 2026-10-19 | +10.6523% | 10-19 | 2026-10-30 | 5 | `c7045f5f` | Guggenheim PT raise ($44); aggregator-only sourcing; a distinct event from its 10-15 W42 item. |
-| R | 2026-10-22 | +10.4948% | 10-22 | 2026-11-04 | 8 | `5022f59e` | Q3 EPS $4.33 vs ~$4.15, pre-open. |
-| LAD | 2026-10-21 | −10.1492% | 10-21 | 2026-11-03 | 7 | `70635acf` | Q3, pre-open; driver not established; dealer group down. |
-| ROP | 2026-10-22 | +9.7268% | 10-22 | 2026-11-04 | 8 | `5022f59e` | Q3 EPS $5.89 vs ~$5.79, FY guide raised, pre-open. |
-| MSTR | 2026-10-15 | −9.5578% | **10-16** | 2026-10-28 | 3 | `b03ff6a6` | MSCI finalized non-operating-company exclusion rules, after-close 10-15; measured on the 10-16 reaction session. |
-| SMCI | 2026-10-20 | +9.5473% | **10-21** | 2026-11-02 | 6 | `70635acf` | Preliminary FQ1 revenue raised to $18.5-19.5B, after-close 10-20. |
-| HXL | 2026-10-21 | −9.5392% | **10-22** | 2026-11-03 | 7 | `5022f59e` | Q3 revenue slight miss, guide unchanged, after-close 10-21; Carpenter read-through. |
-| BX | 2026-10-22 | +8.3782% | 10-22 | 2026-11-04 | 8 | `5022f59e` | Q3 EPS $1.32 vs ~$1.26, pre-open. |
-| FLY | 2026-10-21 | +8.2771% | 10-21 | 2026-11-03 | 7 | `70635acf` | Elytra PDR for NASA MoonFall; rose with space names on SpaceX day; own-event share doubtful. |
-| MHO | 2026-10-21 | −8.0767% | 10-21 | 2026-11-03 | 7 | `70635acf` | Q3, pre-open; driver not established; homebuilder weakness. |
-| LBRT | 2026-10-21 | −7.849% | **10-22** | 2026-11-03 | 7 | `5022f59e` | Q3 in line, after-close 10-21; oilfield services weak with OII. |
-| SPCX | 2026-10-20 | +7.7948% | **10-21** | 2026-11-02 | 6 | `70635acf` | Q3 revenue $14.58B (+161% y/y), after-close 10-20; SpaceX-Tesla merger-committee remarks. |
-| WFRD | 2026-10-20 | +7.7514% | **10-21** | 2026-11-02 | 6 | `70635acf` | Q3, after-close 10-20; Irish-domiciled, US-primary-listed, so Rev 49-eligible. |
-| NDAQ | 2026-10-22 | +7.4698% | 10-22 | 2026-11-04 | 8 | `5022f59e` | Q3 EPS $1.04 vs ~$1.02, pre-open. |
-| CURB | 2026-10-22 | +7.2464% | 10-22 | 2026-11-04 | 8 | `5022f59e` | Q3, pre-open; outran XLRE by ~6pp. |
-| ZGN | 2026-10-22 | +7.1981% | 10-22 | 2026-11-04 | 8 | `5022f59e` | Q3 revenue release, pre-open. |
-| COCO | 2026-10-22 | −7.0866% | 10-22 | 2026-11-04 | 8 | `5022f59e` | Q3 beat (EPS $0.58 vs ~$0.47) yet fell; driver not established. |
-| VICR | 2026-10-20 | +7.0589% | 10-20 | 2026-11-02 | 6 | `ec09d8fc` | Q3 revenue +78.5% y/y, small EPS miss; five other ≥5% sessions in the window. |
-| PAC | 2026-10-20 | +7.0511% | 10-20 | 2026-11-02 | 6 | `ec09d8fc` | 3Q26 revenue +21.8% y/y; ADS at $11.3B cap, above the Rev 49 $10B ADR line. |
-| META | 2026-10-21 | −6.9776% | **10-22** | 2026-11-03 | 7 | `5022f59e` | Q3 beat (EPS $7.40 vs ~$6.54), higher expense outlook and ~$825B commitments, after-close 10-21. |
-| BBT | 2026-10-21 | +6.9643% | **10-22** | 2026-11-03 | 7 | `5022f59e` | Q3 EPS $0.77 vs ~$0.78, buyback to $125M, after-close 10-21. |
-| LMT | 2026-10-22 | +6.9627% | 10-22 | 2026-11-04 | 8 | `5022f59e` | Q3 EPS $7.97 vs ~$7.52, pre-open. |
-| FR | 2026-10-21 | −6.9192% | **10-22** | 2026-11-03 | 7 | `5022f59e` | Q3 with a guide raise yet fell ~8pp below XLRE, after-close 10-21. |
-| GM | 2026-10-20 | −6.8399% | 10-20 | 2026-11-02 | 6 | `ec09d8fc` | Q3 beat with a $20B buyback but GMI EBIT-adj −88% y/y. |
-| CSX | 2026-10-21 | +6.7562% | **10-22** | 2026-11-03 | 7 | `5022f59e` | Q3 EPS $0.57 vs ~$0.53, after-close 10-21. |
-| T | 2026-10-21 | −6.4475% | 10-21 | 2026-11-03 | 7 | `70635acf` | Q3 beat and raised EPS outlook, fell on promo-cost concern, 06:30 ET; a distinct event from its W42 10-08 item. |
-| TSCO | 2026-10-22 | +6.2404% | 10-22 | 2026-11-04 | 8 | `5022f59e` | Q3 EPS $0.43 vs ~$0.41, pre-open. |
-| VLY | 2026-10-22 | +6.0676% | 10-22 | 2026-11-04 | 8 | `5022f59e` | Q3 EPS $0.36 vs ~$0.33 with two acquisitions, pre-open. |
-| DAR | 2026-10-22 | −5.8386% | 10-22 | 2026-11-04 | 8 | `5022f59e` | Q3 8-K 06:51 ET; results not read by D1; driver not established. |
-| MMM | 2026-10-20 | +5.7774% | 10-20 | 2026-11-02 | 6 | `ec09d8fc` | Q3 beat, FY guide raised. |
-| BFH | 2026-10-22 | −5.689% | 10-22 | 2026-11-04 | 8 | `5022f59e` | Q3 EPS beat ($3.84 vs ~$3.34) yet fell. |
-| LUV | 2026-10-21 | +5.3912% | **10-22** | 2026-11-03 | 7 | `5022f59e` | Q3 EPS $0.66 vs ~$0.57, after-close 10-21; near the floor on an airline-up day. |
-| ROIV | 2026-10-21 | +5.3837% | 10-21 | 2026-11-03 | 7 | `70635acf` | Brepocitinib Phase 3 uveitis met endpoints, 07:05 ET. |
-| DDOG | 2026-10-19 | +5.362% | 10-19 | 2026-10-30 | 5 | `c7045f5f` | Bernstein upgrade, pre-open; retraced a −7.19% Friday. |
-| NFLX | 2026-10-20 | −5.3137% | **10-21** | 2026-11-02 | 6 | `70635acf` | Q3 EPS beat but Q4 guide below consensus and ad forecast cut, after-close 10-20. |
-| GPC | 2026-10-20 | −5.116% | 10-20 | 2026-11-02 | 6 | `ec09d8fc` | Q3 slight miss, FY range top cut. |
-| MSCI | 2026-10-20 | +5.0045% | 10-20 | 2026-11-02 | 6 | `ec09d8fc` | Q3 EPS $5.11 vs $4.98; sits on the 5% floor. |
-| UCB | 2026-10-20 | +5.003% | 10-20 | 2026-11-02 | 6 | `ec09d8fc` | Q3 operating EPS distorted by the Navitas sale gain; 5.0030%, on the floor. |
+| 16 | `below-cap` | FFIV | 2026-10-27 | -20.4262 | 2026-11-09 | 6 | `c8a50e56` |
+| 17 | `below-cap` | FTNT | 2026-10-28 | -20.0942 | 2026-11-10 | 7 | `b1e61b9c` |
+| 18 | `below-cap` | LSTR | 2026-10-27 | -17.7628 | 2026-11-09 | 6 | `c8a50e56` |
+| 19 | `below-cap` | RRC | 2026-10-26 | +17.6626 | 2026-11-06 | 5 | `7d029722` |
+| 20 | `below-cap` | FTAI | 2026-10-29 | +17.2729 | 2026-11-11 | 8 | `b1e61b9c` |
+| 21 | `below-cap` | ICLR | 2026-10-27 | +17.0401 | 2026-11-09 | 6 | `c8a50e56` |
+| 22 | `below-cap` | CTOS | 2026-10-26 | +16.6482 | 2026-11-06 | 5 | `3b0ca8cf` |
+| 23 | `below-cap` | VRT | 2026-10-28 | +16.4845 | 2026-11-10 | 7 | `c8a50e56` |
+| 24 | `below-cap` | TNGX | 2026-10-23 | -16.4339 | 2026-11-05 | 4 | `290d4251` |
+| 25 | `below-cap` | ENPH | 2026-10-27 | -16.0282 | 2026-11-09 | 6 | `c8a50e56` |
+| 26 | `below-cap` | GEN | 2026-10-28 | +15.8111 | 2026-11-10 | 7 | `b1e61b9c` |
+| 27 | `below-cap` | BLCO | 2026-10-28 | +15.7775 | 2026-11-10 | 7 | `c8a50e56` |
+| 28 | `below-cap` | CVNA | 2026-10-28 | +15.6816 | 2026-11-10 | 7 | `b1e61b9c` |
+| 29 | `below-cap` | LPLA | 2026-10-27 | -15.2318 | 2026-11-09 | 6 | `c8a50e56` |
+| 30 | `below-cap` | BOOT | 2026-10-28 | +15.1633 | 2026-11-10 | 7 | `b1e61b9c` |
+| 31 | `below-cap` | INSM | 2026-10-29 | +15.0650 | 2026-11-11 | 8 | `b1e61b9c` |
+| 32 | `below-cap` | SLS | 2026-10-28 | -14.7083 | 2026-11-10 | 7 | `c8a50e56` |
+| 33 | `below-cap` | PRLB | 2026-10-29 | -14.5969 | 2026-11-11 | 8 | `b1e61b9c` |
+| 34 | `below-cap` | HLN | 2026-10-29 | -14.3000 | 2026-11-11 | 8 | `b1e61b9c` |
+| 35 | `below-cap` | FCN | 2026-10-29 | +14.2821 | 2026-11-11 | 8 | `b1e61b9c` |
+| 36 | `below-cap` | XYL | 2026-10-27 | -14.2092 | 2026-11-09 | 6 | `3b0ca8cf` |
+| 37 | `below-cap` | CSGP | 2026-10-27 | -13.9644 | 2026-11-09 | 6 | `c8a50e56` |
+| 38 | `below-cap` | HWKN | 2026-10-26 | +13.5927 | 2026-11-06 | 5 | `3b0ca8cf` |
+| 39 | `below-cap` | HAYW | 2026-10-28 | +13.5073 | 2026-11-10 | 7 | `c8a50e56` |
+| 40 | `below-cap` | AUR | 2026-10-28 | -13.4578 | 2026-11-10 | 7 | `b1e61b9c` |
+| 41 | `below-cap` | NCLH | 2026-10-29 | +13.4496 | 2026-11-11 | 8 | `b1e61b9c` |
+| 42 | `below-cap` | SOFI | 2026-10-27 | +13.4163 | 2026-11-09 | 6 | `3b0ca8cf` |
+| 43 | `below-cap` | HII | 2026-10-29 | +13.2314 | 2026-11-11 | 8 | `b1e61b9c` |
+| 44 | `below-cap` | STLA | 2026-10-28 | +13.0435 | 2026-11-10 | 7 | `c8a50e56` |
+| 45 | `below-cap` | DBD | 2026-10-28 | -12.9124 | 2026-11-10 | 7 | `c8a50e56` |
+| 46 | `below-cap` | BLDR | 2026-10-29 | +12.8490 | 2026-11-11 | 8 | `b1e61b9c` |
+| 47 | `below-cap` | PNR | 2026-10-27 | +12.8033 | 2026-11-09 | 6 | `3b0ca8cf` |
+| 48 | `below-cap` | ABG | 2026-10-27 | +12.7370 | 2026-11-09 | 6 | `3b0ca8cf` |
+| 49 | `below-cap` | ORKA | 2026-10-26 | +12.7012 | 2026-11-06 | 5 | `7d029722` |
+| 50 | `below-cap` | STGW | 2026-10-29 | +12.6840 | 2026-11-11 | 8 | `b1e61b9c` |
+| 51 | `below-cap` | GOOGL | 2026-10-28 | -12.6412 | 2026-11-10 | 7 | `b1e61b9c` |
+| 52 | `below-cap` | EVR | 2026-10-28 | +12.5144 | 2026-11-10 | 7 | `c8a50e56` |
+| 53 | `below-cap` | OSW | 2026-10-28 | +12.5050 | 2026-11-10 | 7 | `c8a50e56` |
+| 54 | `below-cap` | EAT | 2026-10-28 | +12.2102 | 2026-11-10 | 7 | `c8a50e56` |
+| 55 | `below-cap` | WING | 2026-10-28 | +12.1843 | 2026-11-10 | 7 | `c8a50e56` |
+| 56 | `below-cap` | CLS | 2026-10-26 | +12.1184 | 2026-11-06 | 5 | `3b0ca8cf` |
+| 57 | `below-cap` | LOGI | 2026-10-27 | -12.1177 | 2026-11-09 | 6 | `c8a50e56` |
+| 58 | `below-cap` | FLS | 2026-10-28 | +11.8925 | 2026-11-10 | 7 | `b1e61b9c` |
+| 59 | `below-cap` | TXT | 2026-10-29 | +11.6701 | 2026-11-11 | 8 | `b1e61b9c` |
+| 60 | `below-cap` | DRS | 2026-10-29 | +11.6620 | 2026-11-11 | 8 | `b1e61b9c` |
+| 61 | `below-cap` | FORM | 2026-10-28 | -11.6490 | 2026-11-10 | 7 | `b1e61b9c` |
+| 62 | `below-cap` | FLEX | 2026-10-28 | +11.6137 | 2026-11-10 | 7 | `c8a50e56` |
+| 63 | `below-cap` | ZWS | 2026-10-27 | -11.4954 | 2026-11-09 | 6 | `c8a50e56` |
+| 64 | `below-cap` | CHDN | 2026-10-28 | +11.2386 | 2026-11-10 | 7 | `b1e61b9c` |
+| 65 | `below-cap` | BE | 2026-10-22 | -11.2366 | 2026-11-04 | 3 | `290d4251` |
+| 66 | `below-cap` | JLL | 2026-10-28 | +11.1393 | 2026-11-10 | 7 | `c8a50e56` |
+| 67 | `below-cap` | CHRW | 2026-10-28 | -11.1359 | 2026-11-10 | 7 | `c8a50e56` |
+| 68 | `below-cap` | SLM | 2026-10-22 | -10.7996 | 2026-11-04 | 3 | `290d4251` |
+| 69 | `below-cap` | TRN | 2026-10-29 | +10.7981 | 2026-11-11 | 8 | `b1e61b9c` |
+| 70 | `below-cap` | ORCL | 2026-10-28 | +10.7332 | 2026-11-10 | 7 | `c8a50e56` |
+| 71 | `below-cap` | BA | 2026-10-27 | -10.6898 | 2026-11-09 | 6 | `3b0ca8cf` |
+| 72 | `below-cap` | PPTA | 2026-10-26 | +10.6627 | 2026-11-06 | 5 | `3b0ca8cf` |
+| 73 | `below-cap` | LII | 2026-10-28 | -10.5927 | 2026-11-10 | 7 | `c8a50e56` |
+| 74 | `below-cap` | FTRE | 2026-10-29 | -10.5873 | 2026-11-11 | 8 | `b1e61b9c` |
+| 75 | `below-cap` | AXTI | 2026-10-28 | +10.5616 | 2026-11-10 | 7 | `c8a50e56` |
+| 76 | `below-cap` | RSI | 2026-10-28 | -9.9802 | 2026-11-10 | 7 | `b1e61b9c` |
+| 77 | `below-cap` | PLXS | 2026-10-28 | -9.6181 | 2026-11-10 | 7 | `b1e61b9c` |
+| 78 | `below-cap` | HONA | 2026-10-28 | -9.5972 | 2026-11-10 | 7 | `b1e61b9c` |
+| 79 | `below-cap` | GLXY | 2026-10-27 | +9.5663 | 2026-11-09 | 6 | `3b0ca8cf` |
+| 80 | `below-cap` | TNET | 2026-10-29 | -9.5299 | 2026-11-11 | 8 | `b1e61b9c` |
+| 81 | `below-cap` | GMAB | 2026-10-23 | +9.4750 | 2026-11-05 | 4 | `290d4251` |
+| 82 | `below-cap` | FLG | 2026-10-23 | -9.2657 | 2026-11-05 | 4 | `290d4251` |
+| 83 | `below-cap` | FIX | 2026-10-22 | -9.2632 | 2026-11-04 | 3 | `290d4251` |
+| 84 | `below-cap` | CAT | 2026-10-29 | -9.2503 | 2026-11-11 | 8 | `b1e61b9c` |
+| 85 | `below-cap` | CART | 2026-10-23 | +9.2105 | 2026-11-05 | 4 | `290d4251` |
+| 86 | `below-cap` | MBLY | 2026-10-29 | -9.2068 | 2026-11-11 | 8 | `b1e61b9c` |
+| 87 | `below-cap` | LECO | 2026-10-27 | +9.1707 | 2026-11-09 | 6 | `3b0ca8cf` |
+| 88 | `below-cap` | ASST | 2026-10-26 | -9.1474 | 2026-11-06 | 5 | `7d029722` |
+| 89 | `below-cap` | CCI | 2026-10-22 | +9.0575 | 2026-11-04 | 3 | `290d4251` |
+| 90 | `below-cap` | GVA | 2026-10-29 | +8.9729 | 2026-11-11 | 8 | `b1e61b9c` |
+| 91 | `below-cap` | APG | 2026-10-29 | +8.9018 | 2026-11-11 | 8 | `b1e61b9c` |
+| 92 | `below-cap` | CMG | 2026-10-28 | +8.8757 | 2026-11-10 | 7 | `b1e61b9c` |
+| 93 | `below-cap` | LH | 2026-10-28 | +8.7810 | 2026-11-10 | 7 | `c8a50e56` |
+| 94 | `below-cap` | SCI | 2026-10-28 | -8.6967 | 2026-11-10 | 7 | `b1e61b9c` |
+| 95 | `below-cap` | MIR | 2026-10-27 | +8.6957 | 2026-11-09 | 6 | `c8a50e56` |
+| 96 | `below-cap` | ENSG | 2026-10-27 | +8.6195 | 2026-11-09 | 6 | `c8a50e56` |
+| 97 | `below-cap` | UCTT | 2026-10-27 | +8.5470 | 2026-11-09 | 6 | `c8a50e56` |
+| 98 | `below-cap` | AMKR | 2026-10-26 | +8.5031 | 2026-11-06 | 5 | `3b0ca8cf` |
+| 99 | `below-cap` | AIT | 2026-10-27 | -8.3467 | 2026-11-09 | 6 | `3b0ca8cf` |
+| 100 | `below-cap` | RUSHA | 2026-10-27 | -8.3113 | 2026-11-09 | 6 | `c8a50e56` |
+| 101 | `below-cap` | RITM | 2026-10-23 | +8.1797 | 2026-11-05 | 4 | `290d4251` |
+| 102 | `below-cap` | FCNCA | 2026-10-23 | +8.1520 | 2026-11-05 | 4 | `290d4251` |
+| 103 | `below-cap` | GWRE | 2026-10-27 | -8.0507 | 2026-11-09 | 6 | `3b0ca8cf` |
+| 104 | `below-cap` | NEU | 2026-10-28 | -8.0388 | 2026-11-10 | 7 | `b1e61b9c` |
+| 105 | `below-cap` | BC | 2026-10-29 | +8.0029 | 2026-11-11 | 8 | `b1e61b9c` |
+| 106 | `below-cap` | ITRI | 2026-10-27 | +7.7739 | 2026-11-09 | 6 | `3b0ca8cf` |
+| 107 | `below-cap` | EEFT | 2026-10-27 | -7.7248 | 2026-11-09 | 6 | `3b0ca8cf` |
+| 108 | `below-cap` | EHC | 2026-10-28 | +7.6992 | 2026-11-10 | 7 | `b1e61b9c` |
+| 109 | `below-cap` | BAX | 2026-10-29 | -7.6984 | 2026-11-11 | 8 | `b1e61b9c` |
+| 110 | `below-cap` | OWL | 2026-10-29 | +7.6525 | 2026-11-11 | 8 | `b1e61b9c` |
+| 111 | `below-cap` | CSL | 2026-10-28 | +7.5751 | 2026-11-10 | 7 | `b1e61b9c` |
+| 112 | `below-cap` | TPG | 2026-10-29 | +7.5129 | 2026-11-11 | 8 | `b1e61b9c` |
+| 113 | `below-cap` | TEX | 2026-10-28 | +7.4275 | 2026-11-10 | 7 | `c8a50e56` |
+| 114 | `below-cap` | CUBI | 2026-10-22 | +7.3797 | 2026-11-04 | 3 | `290d4251` |
+| 115 | `below-cap` | BKR | 2026-10-27 | -7.3559 | 2026-11-09 | 6 | `c8a50e56` |
+| 116 | `below-cap` | SSNC | 2026-10-22 | -7.3487 | 2026-11-04 | 3 | `290d4251` |
+| 117 | `below-cap` | ODFL | 2026-10-28 | -7.3304 | 2026-11-10 | 7 | `c8a50e56` |
+| 118 | `below-cap` | STNG | 2026-10-28 | +7.1573 | 2026-11-10 | 7 | `b1e61b9c` |
+| 119 | `below-cap` | LNG | 2026-10-29 | +7.1095 | 2026-11-11 | 8 | `b1e61b9c` |
+| 120 | `below-cap` | GATX | 2026-10-29 | +6.8692 | 2026-11-11 | 8 | `b1e61b9c` |
+| 121 | `below-cap` | LHX | 2026-10-29 | +6.8378 | 2026-11-11 | 8 | `b1e61b9c` |
+| 122 | `below-cap` | REXR | 2026-10-22 | +6.6979 | 2026-11-04 | 3 | `290d4251` |
+| 123 | `below-cap` | KNSL | 2026-10-22 | -6.6941 | 2026-11-04 | 3 | `290d4251` |
+| 124 | `below-cap` | LLY | 2026-10-29 | +6.6289 | 2026-11-11 | 8 | `b1e61b9c` |
+| 125 | `below-cap` | ENVA | 2026-10-22 | -6.6241 | 2026-11-04 | 3 | `290d4251` |
+| 126 | `below-cap` | GEHC | 2026-10-28 | +6.6235 | 2026-11-10 | 7 | `c8a50e56` |
+| 127 | `below-cap` | ALGM | 2026-10-29 | -6.6158 | 2026-11-11 | 8 | `b1e61b9c` |
+| 128 | `below-cap` | INFY | 2026-10-23 | -6.5809 | 2026-11-05 | 4 | `290d4251` |
+| 129 | `below-cap` | CDNS | 2026-10-26 | +6.4904 | 2026-11-06 | 5 | `3b0ca8cf` |
+| 130 | `below-cap` | DAN | 2026-10-28 | -6.3235 | 2026-11-10 | 7 | `c8a50e56` |
+| 131 | `below-cap` | TENB | 2026-10-28 | +6.2808 | 2026-11-10 | 7 | `b1e61b9c` |
+| 132 | `below-cap` | SAN | 2026-10-28 | -6.2550 | 2026-11-10 | 7 | `c8a50e56` |
+| 133 | `below-cap` | FTI | 2026-10-29 | -6.2325 | 2026-11-11 | 8 | `b1e61b9c` |
+| 134 | `below-cap` | NOV | 2026-10-27 | -6.2287 | 2026-11-09 | 6 | `c8a50e56` |
+| 135 | `below-cap` | BSBR | 2026-10-28 | -6.1983 | 2026-11-10 | 7 | `c8a50e56` |
+| 136 | `below-cap` | AGYS | 2026-10-26 | -6.1887 | 2026-11-06 | 5 | `3b0ca8cf` |
+| 137 | `below-cap` | OLED | 2026-10-28 | -6.0945 | 2026-11-10 | 7 | `b1e61b9c` |
+| 138 | `below-cap` | INTA | 2026-10-27 | -6.0768 | 2026-11-09 | 6 | `c8a50e56` |
+| 139 | `below-cap` | EGO | 2026-10-28 | -6.0360 | 2026-11-10 | 7 | `b1e61b9c` |
+| 140 | `below-cap` | KGC | 2026-10-28 | -6.0052 | 2026-11-10 | 7 | `b1e61b9c` |
+| 141 | `below-cap` | TEM | 2026-10-23 | +5.9552 | 2026-11-05 | 4 | `290d4251` |
+| 142 | `below-cap` | VKTX | 2026-10-28 | +5.9148 | 2026-11-10 | 7 | `b1e61b9c` |
+| 143 | `below-cap` | ATI | 2026-10-29 | +5.8681 | 2026-11-11 | 8 | `b1e61b9c` |
+| 144 | `below-cap` | PHIN | 2026-10-29 | +5.8599 | 2026-11-11 | 8 | `b1e61b9c` |
+| 145 | `below-cap` | ARE | 2026-10-26 | -5.8525 | 2026-11-06 | 5 | `3b0ca8cf` |
+| 146 | `below-cap` | MBIN | 2026-10-28 | +5.8416 | 2026-11-10 | 7 | `b1e61b9c` |
+| 147 | `below-cap` | BSX | 2026-10-28 | -5.8367 | 2026-11-10 | 7 | `c8a50e56` |
+| 148 | `below-cap` | WULF | 2026-10-23 | +5.8304 | 2026-11-05 | 4 | `7d029722` |
+| 149 | `below-cap` | GRMN | 2026-10-28 | -5.8167 | 2026-11-10 | 7 | `c8a50e56` |
+| 150 | `below-cap` | ESLT | 2026-10-26 | +5.7960 | 2026-11-06 | 5 | `7d029722` |
+| 151 | `below-cap` | CTSH | 2026-10-29 | -5.7866 | 2026-11-11 | 8 | `b1e61b9c` |
+| 152 | `below-cap` | VMC | 2026-10-29 | +5.7774 | 2026-11-11 | 8 | `b1e61b9c` |
+| 153 | `below-cap` | WELL | 2026-10-26 | -5.7728 | 2026-11-06 | 5 | `3b0ca8cf` |
+| 154 | `below-cap` | AWI | 2026-10-27 | -5.7396 | 2026-11-09 | 6 | `3b0ca8cf` |
+| 155 | `below-cap` | MGM | 2026-10-28 | +5.7206 | 2026-11-10 | 7 | `b1e61b9c` |
+| 156 | `below-cap` | HSBC | 2026-10-27 | -5.7011 | 2026-11-09 | 6 | `3b0ca8cf` |
+| 157 | `below-cap` | SAIA | 2026-10-29 | +5.6836 | 2026-11-11 | 8 | `b1e61b9c` |
+| 158 | `below-cap` | JCI | 2026-10-27 | +5.6814 | 2026-11-09 | 6 | `3b0ca8cf` |
+| 159 | `below-cap` | NMRK | 2026-10-29 | -5.6385 | 2026-11-11 | 8 | `b1e61b9c` |
+| 160 | `below-cap` | PBI | 2026-10-28 | -5.6193 | 2026-11-10 | 7 | `b1e61b9c` |
+| 161 | `below-cap` | WCC | 2026-10-29 | +5.6132 | 2026-11-11 | 8 | `b1e61b9c` |
+| 162 | `below-cap` | DASH | 2026-10-29 | +5.6110 | 2026-11-11 | 8 | `b1e61b9c` |
+| 163 | `below-cap` | AGCO | 2026-10-29 | +5.5599 | 2026-11-11 | 8 | `b1e61b9c` |
+| 164 | `below-cap` | GM | 2026-10-27 | +5.5432 | 2026-11-09 | 6 | `3b0ca8cf` |
+| 165 | `below-cap` | HWM | 2026-10-29 | +5.5075 | 2026-11-11 | 8 | `b1e61b9c` |
+| 166 | `below-cap` | HUBB | 2026-10-27 | -5.4680 | 2026-11-09 | 6 | `3b0ca8cf` |
+| 167 | `below-cap` | RCL | 2026-10-27 | +5.4597 | 2026-11-09 | 6 | `3b0ca8cf` |
+| 168 | `below-cap` | KLAC | 2026-10-28 | +5.4544 | 2026-11-10 | 7 | `b1e61b9c` |
+| 169 | `below-cap` | NE | 2026-10-26 | -5.4173 | 2026-11-06 | 5 | `3b0ca8cf` |
+| 170 | `below-cap` | JOE | 2026-10-28 | +5.3868 | 2026-11-10 | 7 | `b1e61b9c` |
+| 171 | `below-cap` | ETSY | 2026-10-28 | +5.3502 | 2026-11-10 | 7 | `c8a50e56` |
+| 172 | `below-cap` | SSD | 2026-10-26 | +5.3135 | 2026-11-06 | 5 | `3b0ca8cf` |
+| 173 | `below-cap` | SIGI | 2026-10-22 | +5.3085 | 2026-11-04 | 3 | `290d4251` |
+| 174 | `below-cap` | LKQ | 2026-10-29 | +5.2938 | 2026-11-11 | 8 | `b1e61b9c` |
+| 175 | `below-cap` | PII | 2026-10-26 | +5.2765 | 2026-11-06 | 5 | `3b0ca8cf` |
+| 176 | `below-cap` | TRU | 2026-10-27 | -5.2751 | 2026-11-09 | 6 | `3b0ca8cf` |
+| 177 | `below-cap` | HTO | 2026-10-29 | -5.2265 | 2026-11-11 | 8 | `b1e61b9c` |
+| 178 | `below-cap` | NUE | 2026-10-26 | +5.2225 | 2026-11-06 | 5 | `3b0ca8cf` |
+| 179 | `below-cap` | SW | 2026-10-28 | -5.1951 | 2026-11-10 | 7 | `c8a50e56` |
+| 180 | `below-cap` | MO | 2026-10-29 | +5.1514 | 2026-11-11 | 8 | `b1e61b9c` |
+| 181 | `below-cap` | DXPE | 2026-10-28 | +5.1285 | 2026-11-10 | 7 | `b1e61b9c` |
+| 182 | `below-cap` | LTH | 2026-10-29 | +5.1229 | 2026-11-11 | 8 | `b1e61b9c` |
+| 183 | `below-cap` | EPR | 2026-10-28 | +5.0982 | 2026-11-10 | 7 | `b1e61b9c` |
 
-**The cap decides nothing W2 owns this cycle.** Ranked and below-cap identities share one fate unless the router flips. W4 decides under §C whether to carry the 45 below-cap names into the overflow block. With 54 of 60 windows open on 11-02, that choice matters more than it has before.
+**The cap decides nothing W2 owns this cycle.** Ranked and below-cap identities share one fate unless the router flips. W4 decides under §C whether to carry the 168 below-cap names into the overflow block. Every window is open on the 11-02 write.
 
-### Not rankable — 20 floor-clearing items D1 did not route
+### Not rankable — 7 floor-clearing items D1 did not route
 
-W2 concurs with each disposition and does not overrule D1.
+| Ticker | `qualifying_event_date` | Move % | D1 row | D1's stated reason |
+|---|---|---|---|---|
+| ADT | 2026-10-29 | +33.1984 | `b1e61b9c` | Own take-private agreement 8-K; "deal-pinned take-private, not B-routable" (see S2 and FINDINGS) |
+| INOD | 2026-10-27 | −25.3213 | `3b0ca8cf` | Unconfirmed layoff reports; release minute UNRESOLVED |
+| FICO | UNRESOLVED | −13.1533 | `7d029722` | Anchor UNRESOLVED (announcement minute not established) |
+| EDU | 2026-10-28 | −12.5366 | `c8a50e56` | ADS of a foreign-domiciled issuer at ~$9.0B, below Rev 49's $10B threshold |
+| UNF | 2026-10-27 | −10.4563 | `3b0ca8cf` | Merger spread blew out on reported FTC intent; minute UNRESOLVED |
+| TENB | 2026-10-26 | +8.1184 | `7d029722` | Analyst price-target raise only, not an issuer event |
+| TSLA | 2026-10-26 | +5.2120 | `7d029722` | Single-broker upgrade |
 
-- **Anchor UNRESOLVED: 7.** AMX (+6.0699%), RCUS (−19.5789%), CRS (−20.6160%), CSQR (−11.8343%), RTO (+8.7452%), SCCO (−7.3105%) and SLG (+5.3770%). **W2 does not date them**, because assigning an anchor would be the second dating screen PART 1 forbids. That is 7 of 80 floor-clearers, against 1 of 36 in W42. Five of the seven come from the 10-22 catch-up row.
-- **Instrument-ineligible under Rev 49: 4.**
-  - AERO (−6.3562%), TLX (−10.1254%) and VCRE (+11.2069%) are foreign ADSs under the $10B ADR line.
-  - FSV (+7.7824%) is TSX/Nasdaq dual-listed, with US-primary status unverified.
-- **D1 `declined_common_driver`: 8.** NOK (optical/AI networking), WCN (waste peers), ESI (AI electronics), CATY (regional banks), PHM (homebuilders on the yield drop), PG (staples), ROL and EPRT (REIT rate rally). These are D1's significance judgment that the move was the sector's, not the name's. W2 does not re-judge it.
-- **Context only: 1.** WDFC (+9.1504%) has no index row.
+### Context only — below the floor — 26 items
 
-### Context only — below the floor
+These 26 items have `below_spec_floor = true` and `legacy_rule_pass = false`:
+- 20 in `290d4251`: RNG, GNTX, DECK, NEM, GBCI, AXP, KRC, KN, ALV, SAM, COLB, APPF, FHB, WDC, MXL, AMR, CRS, HTH, RCI, BCPC.
+- VZ in `7d029722`.
+- BRO and CTAS in `3b0ca8cf`.
+- ROG in `c8a50e56`.
+- SIRI and MUSA in `b1e61b9c`.
 
-There are 55 `below_spec_floor = true` items, among them AMZN (+4.98%) and ISRG (−2.2557%), both Strategy D holdings, plus 493 `rejected_notable` names. W2 does not re-judge them.
+SIRI and MUSA also carry `b_eligible = true`. That is harmless, because the floor governs.
 
 ### Identities EXCLUDED before enrichment — 0
 
-None were excluded on dedupe, expired window or criterion 5.
+## Rev 49 instrument eligibility — applied by D1 on every row
 
-## Rev 49 instrument eligibility — applied correctly by D1 on every row
-
-- **Eligible, and indexed:**
-  - PAC: an ADS with a $11.3B cap, above the $10B line.
-  - WFRD: Irish-domiciled but US-primary-listed.
-- **Not routed:** AERO, TLX, VCRE and FSV, as above.
-- **Nothing in the intake uses the pre-Rev 49 "foreign-incorporated, held" language.**
+Rev 49 (2026-10-13) makes US-primary-listed common shares eligible regardless of where the issuer is incorporated. ADRs/ADSs of foreign-domiciled issuers need ≥$10B market cap. Every instrument needs ≥$2B market cap and ≥$10M 30-day ADV.
+- D1 declined EDU on the ADS threshold.
+- Every foreign-domiciled issuer D1 routed is D1's eligibility call, and W2 does not re-judge it.
 
 ## Criterion 5 binds nothing this cycle
 
-`state.current_positions` holds 12 lots in 8 tickers, all Strategy D: AMZN, DIS, GEV, GOOGL, ISRG, RTX, TSM and UBER. There are **zero A positions and zero B positions**, and no routable intake ticker is held.
+No Strategy A position is open, so B criterion 5 excludes no name.
 
 ---
 
-## POST-EVENT TRAJECTORY — re-sourced from D2's `CLOSED-WINDOW COHORT NOTE` series; first publication under the 2026-10-19 rule
-
-**This section replaces W42's "named GAP".** Alert `3218eb3c` (`b_cohort_trajectory_unreachable_under_no_pull_boundary`) and its stall escalation `76cbd8f6` were RESOLVED on 2026-10-19 by an interactive owner session (main `c311b68`), one day after W42 ran. Under that fix:
-- the series is a **record read, never a re-pull**;
-- W2 pulled no bars to build it, and the no-price-bar boundary is untouched.
-
-This is the first run under the rule, so it takes **every annotation already on file**: thirteen D2 notes from 2026-08-20 through 2026-10-23 (`Watchlist.md` lines 674–718), deduped on ticker + `qualifying_event_date` (no duplicates were found).
+## POST-EVENT TRAJECTORY — re-sourced from D2's `CLOSED-WINDOW COHORT NOTE` series
 
 **Definition.**
-- `d` is D2's post-window drift: window-close close against the event-session close the row measured its move on.
-- Basis `closes`: `gap_intact_pct = (window-close close − pre-event close) ÷ (event-session close − pre-event close) × 100`, used wherever all three closes are printed.
-- Basis `m_d`: `((1+m)(1+d) − 1) ÷ m × 100`, with `m` and `d` as fractions. It is used where a close is missing: CVS, DVA and SEZL print no pre-event close; DKS, BBWI and RDDT print no window-close close.
-- **Reading the number:** 100 means the whole event-session gap is intact at window close; above 100, the move extended; 0 to 100, a partial retrace; below 0, the price round-tripped through the pre-event level.
-- **Cross-check:** on all 100 `closes` rows, the two bases agree within 0.13 pp, which is rounding.
+- **Source of record:** D2's `CLOSED-WINDOW COHORT NOTE` series in `Watchlist.md`'s "Strategy B new-entry candidates" section. This cycle reads the five notes dated 10-25, 10-26, 10-27, 10-28 and 10-29, all on or after W2's previous completed run date. No D2 note is dated after 10-29.
+- **Dedupe:** on ticker + `qualifying_event_date`, against the 107 annotations W43 published. That leaves **43 new rows, with 0 overlaps and 0 internal duplicates.**
+- **`gap_intact_pct`** follows the 2026-W38 definition: (window-close close − pre-event close) ÷ (event-session close − pre-event close) × 100.
+- **Basis:** every row prints all three closes, so every row is **`basis: closes`**. The `m_d` value is shown as a cross-check only; it agrees within 0.12 points.
+- **Measured:** all 43, so none is UNMEASURED.
 
 **This is a FIXED-HORIZON series.** It has one observation per identity, taken at that identity's own window close. **It is not a continuation of, and must not be spliced onto, the retired 2026-W29..W38 COMMON-DATE cross-section.** The within-name panel that ended 2026-09-18 is cited by reference (2026-W39 findings) and is not re-published.
 
 ### Aggregate, offered only beside the per-ticker rows that follow
 
-- **106 measured, 1 UNMEASURED** (BE, a zero-length window).
-- **The median reaction held.** The median `gap_intact_pct` is 98.68, with an interquartile range of 56.27 to 141.82.
-  - 51 rows extended (above 100);
-  - 41 partly retraced (0 to 100);
-  - 14 round-tripped (below 0).
-  - By the sign of `d` against `m`: 51 continued and 55 reversed.
-- **Shared catalysts barely move the result.** Collapsing D2's stated shared-catalyst groups (a mean within each group) leaves **93 independent observations**, with a median of 99.97: 46 extended, 37 retraced, 10 round-tripped.
-- **No direction asymmetry.** Up-moves have a median of 99.05 (n = 51) and down-moves 98.31 (n = 55).
-- **Vintage drift, which is suggestive and not a finding.** Median by qualifying month: August 86.30 (n = 32), September 102.50 (n = 61), October 106.55 (n = 13). October is small and covers only 10-01 to 10-05.
-- **What it says about B, and what it does not.** On this record, the median B-eligible reaction neither faded nor extended over its own ten sessions. That is consistent with the spec's default ("market reaction is correct"). It is not evidence for a convergence edge in either direction. The dispersion is wide: only 21 of 106 rows land within ±10 of 100. So any edge would have to come from per-candidate selection, not from the cohort. This is a research record and no decision reads it.
+- **n = 43**, all measured.
+- **Median `gap_intact_pct` = 83.78** (mean 77.22; quartiles 24.69 / 83.78 / 128.99).
+- **16 of 43 (37.2%)** are at or above 100: the gap held or extended.
+- **9 of 43 (20.9%)** are below 0: the price round-tripped through the pre-event close.
+- **18 of 43 (41.9%)** partially retraced (0 to 100).
+- **Drift sign against the event move:** 16 continued, 27 reversed.
+- **Collapsing D2's shared-catalyst groups** (SpaceX/Grain spectrum deal, 7 rows to 1; Barclays storage downgrade, 3 rows to 1) leaves **35 independent observations, median 85.59.**
+- **Comparison:** W43's 106 measured rows had a median of 98.68, so this October-event vintage reads lower. That is suggestive only, because n is small. Where |m| is small the ratio is extreme (MRVL −216.75, AMAT +330.25), which is why the per-ticker row is the unit.
 
-### Per-ticker series (all 107 annotations, in D2 note order)
+### Per-ticker series (43 new annotations, in D2 note order)
 
-| # | Ticker | Qualifying event | Window close | m (event session) | d (post-window drift) | gap_intact_pct | Basis | D2 grouping | D2 note |
-|---|---|---|---|---|---|---|---|---|---|
-| 1 | CVS | 2026-08-05 | 2026-08-19 | −5.08% | −5.52% | 203.14 | m_d | independent | 2026-08-20 |
-| 2 | DVA | 2026-08-05 | 2026-08-19 | −17.24% | −6.05% | 129.04 | m_d | independent | 2026-08-20 |
-| 3 | SEZL | 2026-08-07 | 2026-08-20 | −33.89% | −0.51% | 100.99 | m_d | independent | 2026-08-20 |
-| 4 | BLLN | 2026-08-06 | 2026-08-19 | −38.89% | +0.02% | 99.97 | closes | independent | 2026-08-20 |
-| 5 | ONON | 2026-08-11 | 2026-08-25 | −20.29% | −6.73% | 126.43 | closes | independent | 2026-08-25 |
-| 6 | TME | 2026-08-11 | 2026-08-25 | −11.92% | +0.23% | 98.31 | closes | independent | 2026-08-25 |
-| 7 | ACM | 2026-08-12 | 2026-08-25 | −8.96% | +2.85% | 71.05 | closes | independent | 2026-08-25 |
-| 8 | MU | 2026-08-24 | 2026-09-08 | −5.8286% | +9.87% | -59.41 | closes | shared: SINGLE-CATALYST COHORT (memory/storage, 2026-08-24) | 2026-09-09 |
-| 9 | SNDK | 2026-08-24 | 2026-09-08 | −6.4508% | +16.4% | -137.83 | closes | shared: SINGLE-CATALYST COHORT (memory/storage, 2026-08-24) | 2026-09-09 |
-| 10 | STX | 2026-08-24 | 2026-09-08 | −6.5118% | +13.81% | -98.25 | closes | shared: SINGLE-CATALYST COHORT (memory/storage, 2026-08-24) | 2026-09-09 |
-| 11 | WDC | 2026-08-24 | 2026-09-08 | −5.2368% | +9.63% | -74.23 | closes | shared: SINGLE-CATALYST COHORT (memory/storage, 2026-08-24) | 2026-09-09 |
-| 12 | DKS | 2026-08-25 | 2026-09-09 | −30.6809% | +7.28% | 83.55 | m_d | independent | 2026-09-09 |
-| 13 | BBWI | 2026-08-25 | 2026-09-09 | −8.2942% | +0.74% | 91.82 | m_d | independent | 2026-09-09 |
-| 14 | RDDT | 2026-08-25 | 2026-09-09 | +6.3851% | −9.86% | -64.28 | m_d | independent | 2026-09-09 |
-| 15 | GWRE | 2026-09-04 | 2026-09-18 | −19.9349% | −11.1624% | 144.83 | closes | independent | 2026-09-20 |
-| 16 | FICO | 2026-09-04 | 2026-09-18 | −16.6829% | +1.8686% | 90.67 | closes | independent | 2026-09-20 |
-| 17 | LULU | 2026-09-04 | 2026-09-18 | −17.3771% | −2.5345% | 112.05 | closes | independent | 2026-09-20 |
-| 18 | FN | 2026-08-17 | 2026-08-31 | −19.38% | −14.4346% | 160.06 | closes | independent | 2026-10-12 |
-| 19 | KLAR | 2026-08-18 | 2026-09-01 | −22.81% | −5.3785% | 118.20 | closes | independent | 2026-10-12 |
-| 20 | BIDU | 2026-08-18 | 2026-09-01 | −12.73% | +4.3909% | 69.89 | closes | independent | 2026-10-12 |
-| 21 | AMLX | 2026-08-18 | 2026-09-01 | +63.83% | −3.7026% | 90.50 | closes | independent | 2026-10-12 |
-| 22 | EL | 2026-08-19 | 2026-09-02 | +16.3% | +3.2038% | 122.85 | closes | independent | 2026-10-12 |
-| 23 | MRNA | 2026-08-19 | 2026-09-02 | +176.97% | −13.5165% | 78.85 | closes | independent | 2026-10-12 |
-| 24 | WOLF | 2026-08-19 | 2026-09-02 | −9.42% | +1.1385% | 89.05 | closes | independent | 2026-10-12 |
-| 25 | MRVL | 2026-08-19 | 2026-09-02 | +9.85% | −12.9768% | -44.76 | closes | independent | 2026-10-12 |
-| 26 | NDSN | 2026-08-19 | 2026-09-02 | +8.0% | −5.3989% | 27.08 | closes | independent | 2026-10-12 |
-| 27 | WMT | 2026-08-20 | 2026-09-03 | −9.15% | +4.4106% | 56.21 | closes | independent | 2026-10-12 |
-| 28 | AAP | 2026-08-20 | 2026-09-03 | −24.55% | +0.7785% | 97.61 | closes | independent | 2026-10-13 |
-| 29 | DE | 2026-08-20 | 2026-09-03 | +6.94% | +11.8321% | 282.26 | closes | independent | 2026-10-13 |
-| 30 | BTDR | 2026-08-20 | 2026-09-03 | +8.31% | +14.1898% | 285.00 | closes | independent | 2026-10-13 |
-| 31 | BJ | 2026-08-21 | 2026-09-04 | +5.61% | −3.3499% | 36.91 | closes | independent | 2026-10-13 |
-| 32 | TSLA | 2026-08-21 | 2026-09-04 | +5.14% | −2.4197% | 50.48 | closes | independent | 2026-10-13 |
-| 33 | QBTS | 2026-08-21 | 2026-09-04 | +8.46% | −18.6856% | -139.62 | closes | independent | 2026-10-13 |
-| 34 | DNN | 2026-08-21 | 2026-09-04 | +11.46% | −2.2857% | 77.78 | closes | independent | 2026-10-13 |
-| 35 | AAOI | 2026-08-21 | 2026-09-04 | −13.77% | −1.9511% | 112.22 | closes | independent | 2026-10-13 |
-| 36 | BE | 2026-09-04 | 2026-09-18 | −5.3889% | UNMEASURED (zero-length window) | UNMEASURED | — | independent (S&P 500 index-add flow) | 2026-10-13 |
-| 37 | TTAN | 2026-09-09 | 2026-09-22 | −29.98% | +7.7731% | 81.85 | closes | independent | 2026-10-13 |
-| 38 | CASY | 2026-09-09 | 2026-09-22 | −14.24% | −7.0267% | 142.31 | closes | independent | 2026-10-14 |
-| 39 | BRZE | 2026-09-09 | 2026-09-22 | −21.71% | +7.5432% | 72.80 | closes | independent | 2026-10-14 |
-| 40 | TBBK | 2026-09-09 | 2026-09-22 | −22.33% | +1.1193% | 96.11 | closes | independent | 2026-10-14 |
-| 41 | SIG | 2026-09-09 | 2026-09-22 | +23.96% | −2.0101% | 89.60 | closes | independent | 2026-10-14 |
-| 42 | ASO | 2026-09-09 | 2026-09-22 | +14.4% | −3.2258% | 74.38 | closes | independent | 2026-10-14 |
-| 43 | CMCSA | 2026-09-09 | 2026-09-22 | −6.61% | −8.8247% | 224.71 | closes | independent | 2026-10-14 |
-| 44 | META | 2026-09-09 | 2026-09-22 | +6.55% | +12.6834% | 306.19 | closes | independent | 2026-10-14 |
-| 45 | COO | 2026-09-09 | 2026-09-22 | −14.67% | +2.0676% | 87.97 | closes | independent | 2026-10-14 |
-| 46 | AEO | 2026-09-09 | 2026-09-22 | −13.97% | +9.5664% | 41.10 | closes | independent | 2026-10-14 |
-| 47 | NAVN | 2026-09-09 | 2026-09-22 | −21.75% | +3.4551% | 87.57 | closes | independent | 2026-10-14 |
-| 48 | RDDT | 2026-09-10 | 2026-09-24 | +6.08% | −1.6866% | 70.56 | closes | independent | 2026-10-15 |
-| 49 | HPE | 2026-09-10 | 2026-09-24 | +12.44% | +2.3031% | 120.82 | closes | shared: Oracle FQ1 print/capex (HPE+DELL = one catalyst) | 2026-10-15 |
-| 50 | DELL | 2026-09-10 | 2026-09-24 | +11.98% | −5.5122% | 48.46 | closes | shared: Oracle FQ1 print/capex (HPE+DELL = one catalyst) | 2026-10-15 |
-| 51 | JBHT | 2026-09-15 | 2026-09-29 | −13.3% | −3.147% | 120.51 | closes | independent | 2026-10-15 |
-| 52 | XENE | 2026-09-17 | 2026-09-30 | −30.69% | −6.4403% | 114.55 | closes | independent | 2026-10-15 |
-| 53 | NUE | 2026-09-17 | 2026-09-30 | −6.32% | −5.8902% | 187.29 | closes | independent | 2026-10-15 |
-| 54 | MSTR | 2026-09-17 | 2026-09-30 | +16.39% | −0.5392% | 96.17 | closes | shared: SEC "Innovation Exemption" release 2026-09-17 (MSTR+COIN) | 2026-10-15 |
-| 55 | COIN | 2026-09-17 | 2026-09-30 | +11.66% | −4.036% | 61.34 | closes | shared: SEC "Innovation Exemption" release 2026-09-17 (MSTR+COIN) | 2026-10-15 |
-| 56 | GNRC | 2026-09-17 | 2026-10-01 | +18.34% | +0.3281% | 102.12 | closes | independent | 2026-10-15 |
-| 57 | VICR | 2026-09-17 | 2026-10-01 | +17.66% | +42.6083% | 383.87 | closes | independent | 2026-10-15 |
-| 58 | SDGR | 2026-09-17 | 2026-10-01 | +26.37% | +0.7275% | 103.49 | closes | independent | 2026-10-18 |
-| 59 | MRNA | 2026-09-17 | 2026-10-01 | +8.55% | +19.5293% | 347.95 | closes | independent | 2026-10-18 |
-| 60 | SMR | 2026-09-17 | 2026-10-01 | +8.92% | −13.8274% | -68.92 | closes | independent | 2026-10-18 |
-| 61 | INTC | 2026-09-17 | 2026-10-01 | +7.67% | +10.2941% | 244.52 | closes | independent | 2026-10-18 |
-| 62 | GRAL | 2026-09-21 | 2026-10-02 | +33.68% | +32.685% | 229.74 | closes | independent | 2026-10-18 |
-| 63 | WBD | 2026-09-21 | 2026-10-02 | +10.79% | +0.4545% | 104.67 | closes | independent | 2026-10-18 |
-| 64 | NVO | 2026-09-21 | 2026-10-02 | −7.96% | −6.2312% | 172.09 | closes | independent | 2026-10-18 |
-| 65 | SHOP | 2026-09-21 | 2026-10-02 | +7.33% | +9.7665% | 242.99 | closes | independent | 2026-10-18 |
-| 66 | FSLY | 2026-09-21 | 2026-10-02 | +14.92% | −5.8716% | 54.78 | closes | independent | 2026-10-18 |
-| 67 | VKTX | 2026-09-22 | 2026-10-05 | +35.67% | −28.3231% | -7.73 | closes | independent | 2026-10-18 |
-| 68 | BFLY | 2026-09-22 | 2026-10-05 | +21.99% | −5.5388% | 69.27 | closes | independent | 2026-10-19 |
-| 69 | CLDX | 2026-09-22 | 2026-10-05 | −11.56% | −2.7454% | 121.00 | closes | independent | 2026-10-19 |
-| 70 | SNDK | 2026-09-22 | 2026-10-05 | +6.82% | −9.6914% | -51.89 | closes | independent | 2026-10-19 |
-| 71 | RCL | 2026-09-22 | 2026-10-05 | −6.14% | +17.0889% | -161.33 | closes | independent | 2026-10-19 |
-| 72 | MGM | 2026-09-23 | 2026-10-06 | −10.99% | −9.35% | 175.72 | closes | shared: one linked storyline (MGM/People Inc. bid) | 2026-10-19 |
-| 73 | SECZ | 2026-09-24 | 2026-10-07 | +15.11% | −31.0345% | -136.41 | closes | independent | 2026-10-19 |
-| 74 | ZS | 2026-09-24 | 2026-10-07 | −10.06% | +10.619% | 5.05 | closes | independent | 2026-10-19 |
-| 75 | PPLI | 2026-09-24 | 2026-10-07 | +11.33% | +1.475% | 114.50 | closes | shared: one linked storyline (MGM/People Inc. bid) | 2026-10-19 |
-| 76 | VIAV | 2026-09-25 | 2026-10-08 | +9.27% | +8.3825% | 198.84 | closes | independent | 2026-10-19 |
-| 77 | TWLO | 2026-09-25 | 2026-10-08 | −7.96% | −0.0109% | 100.13 | closes | independent | 2026-10-19 |
-| 78 | DELL | 2026-09-25 | 2026-10-08 | +5.01% | +2.0715% | 143.39 | closes | independent | 2026-10-20 |
-| 79 | KOD | 2026-09-28 | 2026-10-09 | +177.96% | +11.0654% | 117.28 | closes | independent | 2026-10-20 |
-| 80 | MDB | 2026-09-28 | 2026-10-09 | −18.46% | +15.3131% | 32.35 | closes | independent | 2026-10-20 |
-| 81 | GFI | 2026-09-28 | 2026-10-09 | −12.88% | +4.6617% | 68.46 | closes | shared: 2026-09-28 gold/silver liquidation (GFI+HL) | 2026-10-20 |
-| 82 | CRDO | 2026-09-28 | 2026-10-09 | −8.67% | +12.3942% | -30.49 | closes | shared: 2026-09-28 AI-hardware repricing / OpenAI training pause (CRDO+INTC) | 2026-10-20 |
-| 83 | BA | 2026-09-28 | 2026-10-09 | −6.91% | +3.2431% | 56.29 | closes | independent | 2026-10-20 |
-| 84 | HL | 2026-09-28 | 2026-10-09 | −6.49% | +0.3527% | 94.92 | closes | shared: 2026-09-28 gold/silver liquidation (GFI+HL) | 2026-10-20 |
-| 85 | INTC | 2026-09-28 | 2026-10-09 | −5.67% | −9.7647% | 262.55 | closes | shared: 2026-09-28 AI-hardware repricing / OpenAI training pause (CRDO+INTC) | 2026-10-20 |
-| 86 | FICO | 2026-09-28 | 2026-10-09 | −26.52% | +8.0454% | 77.71 | closes | independent | 2026-10-20 |
-| 87 | SMMT | 2026-09-28 | 2026-10-09 | +5.88% | +7.3215% | 231.87 | closes | independent | 2026-10-20 |
-| 88 | AIR | 2026-09-28 | 2026-10-09 | −7.25% | −5.9204% | 175.78 | closes | independent | 2026-10-21 |
-| 89 | CCL | 2026-09-29 | 2026-10-12 | +13.41% | +5.456% | 146.13 | closes | shared: CCL 2026-09-29 pre-open fiscal-Q3 read-through (CCL+RCL) | 2026-10-21 |
-| 90 | RCL | 2026-09-29 | 2026-10-12 | +7.45% | +7.6725% | 210.62 | closes | shared: CCL 2026-09-29 pre-open fiscal-Q3 read-through (CCL+RCL) | 2026-10-21 |
-| 91 | LQDA | 2026-09-30 | 2026-10-13 | −57.19% | −11.4012% | 108.53 | closes | shared: 2026-09-30 Delaware '327 patent ruling (LQDA+UTHR) | 2026-10-21 |
-| 92 | UTHR | 2026-09-30 | 2026-10-13 | +12.55% | +0.2787% | 102.50 | closes | shared: 2026-09-30 Delaware '327 patent ruling (LQDA+UTHR) | 2026-10-21 |
-| 93 | JBL | 2026-09-30 | 2026-10-13 | −10.03% | +10.8067% | 3.06 | closes | independent | 2026-10-21 |
-| 94 | SNPS | 2026-09-30 | 2026-10-13 | +12.78% | +0.8093% | 107.14 | closes | independent | 2026-10-21 |
-| 95 | ACN | 2026-10-01 | 2026-10-14 | +15.78% | +1.2529% | 109.19 | closes | independent | 2026-10-21 |
-| 96 | SYNA | 2026-10-01 | 2026-10-14 | +14.08% | −3.0884% | 74.98 | closes | shared: 2026-10-01 after-close onsemi/SYNA $123 cash deal (SYNA+ON) | 2026-10-21 |
-| 97 | ON | 2026-10-01 | 2026-10-14 | +6.01% | −13.5823% | -139.71 | closes | shared: 2026-10-01 after-close onsemi/SYNA $123 cash deal (SYNA+ON) | 2026-10-21 |
-| 98 | STX | 2026-10-01 | 2026-10-14 | −10.21% | −15.9543% | 240.25 | closes | shared: Nikkei/Toshiba HDD report 2026-10-01 (STX+WDC) | 2026-10-23 |
-| 99 | WDC | 2026-10-01 | 2026-10-14 | −10.22% | −12.3263% | 208.29 | closes | shared: Nikkei/Toshiba HDD report 2026-10-01 (STX+WDC) | 2026-10-23 |
-| 100 | PTC | 2026-10-05 | 2026-10-16 | +33.49% | +0.3745% | 101.49 | closes | independent | 2026-10-23 |
-| 101 | PCVX | 2026-10-05 | 2026-10-16 | +30.7% | −13.8174% | 41.18 | closes | independent | 2026-10-23 |
-| 102 | RXO | 2026-10-05 | 2026-10-16 | +22.54% | −0.1745% | 99.05 | closes | shared: CHRW acquisition of RXO 2026-10-05 (RXO+CHRW) | 2026-10-23 |
-| 103 | CHRW | 2026-10-05 | 2026-10-16 | −10.85% | −0.7965% | 106.55 | closes | shared: CHRW acquisition of RXO 2026-10-05 (RXO+CHRW) | 2026-10-23 |
-| 104 | SPHR | 2026-10-05 | 2026-10-16 | −13.61% | −6.5614% | 141.66 | closes | independent | 2026-10-23 |
-| 105 | INSM | 2026-10-05 | 2026-10-16 | −6.56% | −7.2811% | 203.70 | closes | independent | 2026-10-23 |
-| 106 | HOG | 2026-10-05 | 2026-10-16 | +6.68% | +2.1764% | 134.76 | closes | independent | 2026-10-23 |
-| 107 | DKNG | 2026-10-05 | 2026-10-16 | +5.43% | −3.5714% | 30.69 | closes | independent | 2026-10-23 |
+| # | Ticker | Qualifying event (reaction session) | Window close | Pre-event close | Event-session close | Window-close close | m (event session) | d (post-window drift) | gap_intact_pct | Basis | m_d cross-check | D2 grouping | D2 note |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | MELI | 2026-10-04 (react 10-05) | 2026-10-16 | 1696.56 | 1860.61 | 1834.0 | +9.67% | -1.4302% | 83.78 | closes | 83.78 | independent | 2026-10-25 |
+| 2 | CEG | 2026-10-06 | 2026-10-19 | 267.62 | 300.4 | 263.19 | +12.25% | -12.3868% | -13.51 | closes | -13.50 | independent | 2026-10-25 |
+| 3 | MRVL | 2026-10-06 | 2026-10-19 | 271.25 | 287.01 | 237.09 | +5.81% | -17.3931% | -216.75 | closes | -216.76 | independent | 2026-10-25 |
+| 4 | OPCH | 2026-10-06 | 2026-10-19 | 23.37 | 31.0 | 31.21 | +32.65% | +0.6774% | 102.75 | closes | 102.75 | independent (cash-pinned take-private) | 2026-10-25 |
+| 5 | PENG | 2026-10-06 (react 10-07) | 2026-10-19 | 64.21 | 72.61 | 56.54 | +13.08% | -22.1319% | -91.31 | closes | -91.34 | independent | 2026-10-25 |
+| 6 | HESM | 2026-10-07 | 2026-10-20 | 38.69 | 33.03 | 30.67 | -14.63% | -7.1450% | 141.70 | closes | 141.69 | independent | 2026-10-25 |
+| 7 | HAE | 2026-10-08 | 2026-10-21 | 101.71 | 119.47 | 117.11 | +17.46% | -1.9754% | 86.71 | closes | 86.71 | independent | 2026-10-25 |
+| 8 | CMG | 2026-10-08 | 2026-10-21 | 30.77 | 32.68 | 28.12 | +6.21% | -13.9535% | -138.74 | closes | -138.65 | independent | 2026-10-25 |
+| 9 | TMUS | 2026-10-08 (react 10-09) | 2026-10-21 | 171.31 | 148.58 | 153.75 | -13.27% | +3.4796% | 77.25 | closes | 77.26 | shared: SpaceX/Grain 800 MHz spectrum deal after-close 2026-10-08 (VZ+CCI+AMT+SBAC+ASTS+TMUS+T) | 2026-10-25 |
+| 10 | T | 2026-10-08 (react 10-09) | 2026-10-21 | 24.87 | 22.18 | 21.91 | -10.82% | -1.2173% | 110.04 | closes | 110.03 | shared: SpaceX/Grain 800 MHz spectrum deal after-close 2026-10-08 (VZ+CCI+AMT+SBAC+ASTS+TMUS+T) | 2026-10-25 |
+| 11 | VZ | 2026-10-08 (react 10-09) | 2026-10-21 | 46.35 | 41.65 | 43.56 | -10.14% | +4.5858% | 59.36 | closes | 59.36 | shared: SpaceX/Grain 800 MHz spectrum deal after-close 2026-10-08 (VZ+CCI+AMT+SBAC+ASTS+TMUS+T) | 2026-10-26 |
+| 12 | CCI | 2026-10-08 (react 10-09) | 2026-10-21 | 68.89 | 79.64 | 78.65 | +15.60% | -1.2431% | 90.79 | closes | 90.79 | shared: SpaceX/Grain 800 MHz spectrum deal after-close 2026-10-08 (VZ+CCI+AMT+SBAC+ASTS+TMUS+T) | 2026-10-26 |
+| 13 | AMT | 2026-10-08 (react 10-09) | 2026-10-21 | 166.73 | 182.24 | 177.64 | +9.30% | -2.5241% | 70.34 | closes | 70.34 | shared: SpaceX/Grain 800 MHz spectrum deal after-close 2026-10-08 (VZ+CCI+AMT+SBAC+ASTS+TMUS+T) | 2026-10-26 |
+| 14 | SBAC | 2026-10-08 (react 10-09) | 2026-10-21 | 170.01 | 182.49 | 173.41 | +7.34% | -4.9756% | 27.24 | closes | 27.24 | shared: SpaceX/Grain 800 MHz spectrum deal after-close 2026-10-08 (VZ+CCI+AMT+SBAC+ASTS+TMUS+T) | 2026-10-26 |
+| 15 | ASTS | 2026-10-08 (react 10-09) | 2026-10-21 | 56.93 | 50.965 | 40.9 | -10.48% | -19.7488% | 268.73 | closes | 268.69 | shared: SpaceX/Grain 800 MHz spectrum deal after-close 2026-10-08 (VZ+CCI+AMT+SBAC+ASTS+TMUS+T) | 2026-10-26 |
+| 16 | HUM | 2026-10-08 (react 10-09) | 2026-10-21 | 387.12 | 431.87 | 425.42 | +11.56% | -1.4935% | 85.59 | closes | 85.59 | independent | 2026-10-26 |
+| 17 | MRNA | 2026-10-09 | 2026-10-22 | 197.0 | 225.0 | 202.63 | +14.21% | -9.9422% | 20.11 | closes | 20.09 | independent | 2026-10-26 |
+| 18 | FSLY | 2026-10-09 | 2026-10-22 | 25.29 | 29.3 | 22.45 | +15.86% | -23.3788% | -70.82 | closes | -70.79 | independent | 2026-10-26 |
+| 19 | CCC | 2026-10-09 (react 10-12) | 2026-10-22 | 7.02 | 7.59 | 7.64 | +8.12% | +0.6588% | 108.77 | closes | 108.77 | independent (deal-pinned) | 2026-10-26 |
+| 20 | IONQ | 2026-10-12 | 2026-10-23 | 39.89 | 36.27 | 31.27 | -9.07% | -13.7855% | 238.12 | closes | 238.20 | independent | 2026-10-26 |
+| 21 | MANH | 2026-10-12 | 2026-10-23 | 204.89 | 217.89 | 238.19 | +6.34% | +9.3166% | 256.15 | closes | 256.27 | independent | 2026-10-27 |
+| 22 | JNJ | 2026-10-13 | 2026-10-26 | 263.73 | 248.61 | 266.3 | -5.73% | +7.1156% | -17.00 | closes | -17.07 | independent | 2026-10-27 |
+| 23 | C | 2026-10-13 | 2026-10-26 | 131.92 | 124.53 | 121.04 | -5.60% | -2.8025% | 147.23 | closes | 147.24 | independent | 2026-10-27 |
+| 24 | AMAT | 2026-10-13 | 2026-10-26 | 497.53 | 464.24 | 387.59 | -6.69% | -16.5109% | 330.25 | closes | 330.29 | independent | 2026-10-27 |
+| 25 | CIFR | 2026-10-13 | 2026-10-26 | 13.0 | 11.34 | 7.71 | -12.77% | -32.0106% | 318.67 | closes | 318.66 | independent | 2026-10-27 |
+| 26 | FRMI | 2026-10-13 | 2026-10-26 | 3.25 | 3.72 | 2.54 | +14.46% | -31.7204% | -151.06 | closes | -151.09 | independent | 2026-10-27 |
+| 27 | LQDA | 2026-10-13 (react 10-14) | 2026-10-26 | 26.81 | 33.94 | 43.74 | +26.59% | +28.8745% | 237.45 | closes | 237.47 | independent | 2026-10-27 |
+| 28 | BSP | 2026-10-14 | 2026-10-27 | 37.86 | 53.46 | 46.97 | +41.20% | -12.1399% | 58.40 | closes | 58.39 | independent | 2026-10-27 |
+| 29 | DELL | 2026-10-14 | 2026-10-27 | 572.47 | 507.93 | 501.96 | -11.27% | -1.1754% | 109.25 | closes | 109.25 | shared: pre-open 2026-10-14 Barclays downgrade note (NTAP+DELL+HPE) | 2026-10-27 |
+| 30 | HPE | 2026-10-14 | 2026-10-27 | 68.81 | 63.11 | 60.84 | -8.28% | -3.5969% | 139.82 | closes | 139.84 | shared: pre-open 2026-10-14 Barclays downgrade note (NTAP+DELL+HPE) | 2026-10-27 |
+| 31 | NTAP | 2026-10-14 | 2026-10-27 | 239.01 | 222.2 | 227.58 | -7.03% | +2.4212% | 68.00 | closes | 67.98 | shared: pre-open 2026-10-14 Barclays downgrade note (NTAP+DELL+HPE) | 2026-10-28 |
+| 32 | IONQ | 2026-10-14 | 2026-10-27 | 34.73 | 31.42 | 32.95 | -9.53% | +4.8695% | 53.78 | closes | 53.77 | independent | 2026-10-28 |
+| 33 | MMED | 2026-10-14 | 2026-10-27 | 18.4 | 16.81 | 18.93 | -8.64% | +12.6115% | -33.33 | closes | -33.35 | independent | 2026-10-28 |
+| 34 | RKLB | 2026-10-14 (react 10-15) | 2026-10-27 | 59.18 | 55.25 | 58.31 | -6.64% | +5.5385% | 22.14 | closes | 22.13 | independent | 2026-10-28 |
+| 35 | MAN | 2026-10-15 | 2026-10-28 | 51.96 | 43.74 | 45.75 | -15.82% | +4.5953% | 75.55 | closes | 75.55 | independent | 2026-10-28 |
+| 36 | PAG | 2026-10-15 | 2026-10-28 | 194.79 | 212.0 | 211.95 | +8.84% | -0.0236% | 99.71 | closes | 99.71 | independent (deal-pinned $212) | 2026-10-28 |
+| 37 | INTU | 2026-10-15 | 2026-10-28 | 310.44 | 330.17 | 328.19 | +6.36% | -0.5997% | 89.96 | closes | 89.97 | independent | 2026-10-28 |
+| 38 | CROX | 2026-10-15 | 2026-10-28 | 117.54 | 124.77 | 119.69 | +6.15% | -4.0715% | 29.74 | closes | 29.73 | independent | 2026-10-28 |
+| 39 | QNT | 2026-10-15 | 2026-10-28 | 33.03 | 36.68 | 38.33 | +11.05% | +4.4984% | 145.21 | closes | 145.21 | independent | 2026-10-28 |
+| 40 | ARQT | 2026-10-15 | 2026-10-28 | 26.41 | 29.1 | 31.45 | +10.19% | +8.0756% | 187.36 | closes | 187.33 | independent | 2026-10-28 |
+| 41 | CRWV | 2026-10-15 | 2026-10-28 | 65.78 | 69.69 | 63.93 | +5.94% | -8.2652% | -47.31 | closes | -47.41 | independent | 2026-10-29 |
+| 42 | NOW | 2026-10-15 | 2026-10-28 | 139.98 | 148.57 | 150.13 | +6.14% | +1.0502% | 118.16 | closes | 118.15 | independent | 2026-10-29 |
+| 43 | MSTR | 2026-10-15 (react 10-16) | 2026-10-28 | 151.29 | 136.83 | 145.16 | -9.56% | +6.0878% | 42.39 | closes | 42.41 | independent | 2026-10-29 |
+
+All 43 stated `m` and `d` values were reproduced from the three printed closes by script. D2's stated per-note medians and continuation/reversal splits also reproduce. Two cosmetic items were found: NOW's 10-29 figure is printed as "−26.9%", where the exact value is −26.95%, and ASTS's event close is printed to three decimals. Neither changes a published value.
 
 ### Not yet in the series — PENDING D2 ANNOTATION, and the named GAPs
 
-- **PENDING D2 ANNOTATION.** This is copied from D2's most recent note (2026-10-23, line 718); W2 does not re-derive it. "Remaining backlog: **19** unannotated closed rows carried to the next run's `<note>`, next oldest close date **2026-10-16 (MELI)**; plus IONQ and MANH (closing 2026-10-23)." The 19 are:
-  - MELI;
-  - PENG, CEG, MRVL and OPCH (closing 10-19);
-  - HESM (10-20);
-  - HAE, CMG, TMUS, T, VZ, CCI, AMT, SBAC, ASTS and HUM (10-21);
-  - MRNA, FSLY and CCC (10-22).
-
-  These are pending, not gaps, and not zeros. D2's carried backlog has fallen at every note (63 → 57 → 52 → 42 → 41 → 35 → 26 → 26 → 19 across the 10-12 to 10-23 notes). It annotates ten rows per run, so the W42 cohort should start entering the series within one to two D2 runs.
-- **Named GAPs: W2 intake identities with no index row at all.** Nothing will ever annotate them:
-  - W42: EFXT (Rev 49-ineligible) and CRWV 2026-10-14 (undated);
-  - W41: BULL, SPOT 2026-10-07 and ARGX (held on the instrument rail), and ECHO (undated).
-- **This cycle adds seven more future GAPs** (the UNRESOLVED-anchor items above), plus the four Rev 49-ineligible items.
+- **PENDING D2 ANNOTATION, copied from D2's most recent note (10-29), not re-derived:** a backlog of **0**, with the next-oldest close date **2026-10-30**. Those five windows (IRON, CLF, MANE, DDOG, ARQT, all qed 10-19 from W43) closed on the 10-30 session, after that note was written. They are PENDING as of this run, not gaps and not zeros. D2's Sunday run tonight is the next opportunity.
+- **W43's other 54 identities** close 11-02 (15), 11-03 (17) and 11-04 (22), so they are not yet closed.
+- **Named GAPs (intake identity with no index row at all): none new.** All 60 W43 identities and all 183 W44 identities have an index row. GOOG has no row of its own by design (folded into GOOGL). Earlier GAPs are unchanged: EFXT, CRWV 10-14, BULL, SPOT 10-07, ARGX and ECHO.
 
 ### Repeat names — intake tickers already in the fixed-horizon series
 
-| Ticker | Earlier closed window(s) in the series (qualifying date: m, gap_intact) | This intake |
-|---|---|---|
-| MRNA | 08-19: +176.97%, 78.85 · 09-17: +8.55%, 347.95 (W42's 10-09 item is pending) | rank 6, 10-22, −17.5664%. Its fifth published B appearance, every one a distinct event. |
-| VICR | 09-17: +17.66%, **383.87** (the series' largest extension) | below-cap, 10-20, +7.0589%, with five other ≥5% sessions in the window |
-| BRZE | 09-09: −21.71%, 72.80 | rank 1, 10-20, +51.6977%, now a pinned cash-deal target |
-| META | 09-09: +6.55%, 306.19 | below-cap, 10-21, −6.9776% |
-| MSTR | 09-17: +16.39%, 96.17 | below-cap, 10-15, −9.5578% |
+Two ranked names repeat a W42 identity on a new, distinct event:
+- **NOW:** this cycle's qed is 10-28 (−26.95%). Its 10-15 identity (+6.14%) closed with `gap_intact_pct` 118.16; the 10-15 window-close close (150.13) is exactly this event's prior close.
+- **CROX:** this cycle's qed is 10-29 (+25.54%). Its 10-15 identity (+6.15%) closed at 29.74.
 
-Three further intake names repeat earlier W2 cohorts on new events: ARQT (W42 rank 15), T (W42 rank 13) and SPOT (W41, held on the instrument rail). **No ticker has ever been ranked twice on the same event.**
+Two names appear twice inside this intake on distinct events:
+- **LKQ:** 10-23 (−22.47%, rank 13) and 10-29 (+5.29%, below-cap).
+- **GMAB:** 10-23 (+9.48%) and 10-28 (+28.25%, rank 6).
 
 ### What W2 adds from its own durable record: the GRADING OUTCOME series, itemized per ticker
 
-**W42 cohort (34 identities), graded against the router state (DO-NOT-ACTIVATE throughout, no drain):**
+The router was DO-NOT-ACTIVATE throughout, `events.queue_events` holds zero B `thesis-construction` rows (the last is 2026-08-03), and no drain occurred:
 
-| Ticker(s) | Window closes | Outcome |
+| Cohort | Identities | Status on 2026-11-01 |
 |---|---|---|
-| CCI, TMUS, T, VZ, AMT, SBAC, ASTS, HUM | 2026-10-21 | **Expired ungraded.** |
-| FSLY, MRNA, CCC | 2026-10-22 | Expired ungraded. |
-| IONQ (10-12), MANH | 2026-10-23 | Expired ungraded. |
-| LQDA, FRMI, CIFR, AMAT, JNJ, C | 2026-10-26 | **Will expire ungraded** unless the out-of-cycle chain completes inside a single session; that is not plausible. |
-| BSP, DELL, IONQ (10-14), MMED, HPE, NTAP, RKLB | 2026-10-27 | Will expire ungraded. Reaching them needs a trigger in tonight's D2a, an M1R re-score at 13:00 UTC on 10-26, and a D2 review writing ACTIVATE that evening. Improbable. |
-| MAN, QNT, ARQT (10-15), PAG, INTU, CROX, NOW, CRWV (10-15) | 2026-10-28 | Same as above, with one more session of slack. |
-
-**W41 cohort (20 identities):** all windows are now closed. The last were HAE and CMG on 10-21, and every one expired ungraded. **W40 (22):** all expired ungraded.
+| W43 | 60 | 6 closed and **expired ungraded** (MSTR 10-28; IRON, CLF, MANE, DDOG and ARQT 10-30). 54 still open until 11-02 to 11-04. |
+| W42 | 34 | **All expired ungraded.** The last eight closed 10-28. |
+| W41 | 20 | All expired ungraded (unchanged). |
+| W40 | 22 | All expired ungraded (unchanged). |
 
 **Lineage tally:**
-- Nine consecutive index-mode cycles.
-- **No published B identity has ever been evaluated against B's entry criteria.** There are zero B thesis-construction queue rows since 2026-08-03, and no B thesis or NO-GO decision on any W40–W42 identity.
-- **W43 is the first cohort the scheduled router write can reach.** That is a change in reachability, not a grade of B.
+- **82 identities have expired ungraded** (W40 to W42 = 76, plus 6 of W43).
+- **54 W43 identities and 183 W44 identities are open.**
+- **No published B identity has ever been evaluated against B's entry criteria.**
+- **The 11-02 write is the first scheduled write that can reach two consecutive cohorts at once:** W43's 54 open identities and W44's 183.
 
 ---
 
 ## COHORT-WIDE STRUCTURAL FINDINGS ON THE INTAKE — free, record-read only
 
-**S1 — earnings season dominates, and analyst actions left the ranked list.**
-- 47 of the 60 identities are earnings or guidance events, and 9 of the ranked 15 are.
-- The other ranked six are:
-  - clinical: IRON, MRNA;
-  - M&A: BRZE (definitive), LION (an unconfirmed report);
-  - executive change: FPS;
-  - capital return: ASST.
-- **Analyst-action-only events take 0 of the ranked 15**, against 4 of 15 in W42. Three sit below the cap: KSS, ARQT and DDOG. W42's analyst-action share was a property of a light-earnings week, not of the rule.
-- **Direction in the ranked 15 is 7 up / 8 down.** The coin-flip pattern holds for the ninth time.
+**S1 — earnings season at full volume, skewed upward.**
+- 183 routable identities, against 60 in W43, 34 in W42 and 20 in W41.
+- **Direction:** 108 up, 75 down. Within the ranked 15, 10 are up and 5 are down.
+- **The 10-29 row alone carries 81 routed items.** Its items are almost all "Own 8-K 2.02" earnings releases, and none carries an event-type field.
+- **Non-earnings anchors in the ranked 15:**
+  - SGRY's take-private;
+  - IOVA's clinical update;
+  - GMAB's clinical 6-K;
+  - LKQ's preliminary results with a CEO change and withdrawn guidance.
 
-**S2 — a deal-pinned target is back at rank 1.** BRZE's +51.70% is Salesforce's all-cash $47.50 offer, and its 45.57 close sits 4.2% under that price. W41 recorded deal-pinned names at 4 of its top seven; W42 had 0 of 15. Absolute-move ranking promotes takeover premia whenever a cohort contains one, and a pinned target's post-event path is merger-spread arithmetic, not B's information-versus-sentiment mechanism. LION's takeover *report* is unconfirmed, so it is not pinned. TTMI is the acquirer in its own release, not a target. This remains one more observation, not filed: the taxonomy question stays with SL/W5, as in W41.
+**S2 — a deal-pinned target is at rank 1 for the second cycle running, and D1 routed the same class inconsistently.** SGRY's +47.62% is an all-cash $23.50 take-private, and the stock closed ~1% under the offer. Like W43's BRZE, its post-event path is merger-spread arithmetic, not B's information-versus-sentiment mechanism.
+- **This week, D1 split the class:**
+  - D1 declined ADT (+33.20%, own take-private 8-K, 10-29) as "deal-pinned take-private, not B-routable".
+  - Three days earlier it routed SGRY, and the RRC (+17.66%, all-stock merger target) item beside it.
+- **Grep of the plan, Operating_Protocols.md, `strategy/04_strategy_b.md` and `B_Sub_Pattern_Taxonomy.md`:** none of them states a deal-pinned routability rule, so the exclusion is applied without a written basis.
+- **Why it matters:** SGRY's routing puts it in W4 §C's top tier.
+- **W2's handling:** W2 does not re-judge D1, so SGRY keeps rank 1 and ADT stays unranked. Unlike W41 and W43, this finding is now filed (FINDINGS) because the inconsistency sits inside one week of one routine's output, not across a taxonomy question.
 
-**S3 — shared drivers inside the routable set.** Each ranked name has its own anchor, so the ranked 15 hold **15 distinct qualifying events**. But D1 flags common-driver confounding on several:
-- **The 10-22 AI-hardware and semis rout:** TTMI (rank 3) and FPS (rank 5, "confounded by the AI-power selloff"). LRCX's after-close guide (below-cap) is the session's trigger. D1 declined NOK and ESI on the same driver.
-- **Oilfield services:** OII (rank 7) and LBRT (below-cap) fell together. WFRD rose on its own print.
-- **The SpaceX Q3 print:** SPCX and FLY (both below-cap); TSLA was below the floor.
-- **Homebuilders:** MHO (below-cap); D1 declined PHM.
+**S3 — shared drivers inside the routable set.** Each ranked name has its own anchor, so the ranked 15 hold **15 distinct qualifying events**. D1 rejected the cohort moves as common drivers: memory, neocloud, Brazil banks, the AI cohort and refiners. Some routed names still share a sector print day. Examples are the 10-28 after-close software prints (NOW −26.95%, FTNT −20.09%) and the 10-29 pre-open aerospace and defense prints (HII, DRS, TXT, LHX). Each is its own issuer's own 8-K, so W2 records the clustering and does not re-judge it.
 
-B's concurrent-position correlation constraint (Section 6 / KL #12) would bind on OII and LBRT, and possibly on TTMI and FPS, if they were ever routable together.
-
-**S4 — anchor and measurement quality, worse than W42 on two counts.**
-- **Undated tail: 7 of 80 floor-clearers are UNRESOLVED**, against 1 of 36. Five come from the catch-up row `5022f59e`.
-- **Reaction-session measurement:** 16 of the 60 are after-close releases measured on the next session, 3 of them ranked (KALU, OII, GGG).
-- **Broker verification: 1 of 60** (MSTR), against 18 of 34 in W42 (see MEASUREMENT OF RECORD).
-- **Multi-session names, a criterion 2 question for D2:** other ≥5% sessions inside the window are recorded for TTMI (6), MANE (5), VICR (5), ASST (4), MRNA (4), FPS (3) and FLY (3). D1 calls MANE and VICR "not a clean single-event reaction".
+**S4 — anchor and measurement quality.**
+- **Better than W43 on checks:** 217 of 217 items carry both closes, the arithmetic is clean, and there are no same-anchor close-chain defects.
+- **Weaker on verification:** no index row was broker re-measured. 6 of the ranked 15 (GKOS, BHC, PRCH, NOW, SFM and RHI) are after-close releases measured on the next session, as the bold cells in the ranked table show.
 
 **S5 — instrument-rail and floor-edge items for D2 at thesis construction, none W2's to settle.**
-- **On the floor:** UCB at 5.0030% and MSCI at 5.0045% sit within 0.005 pp of the floor. Broker re-measurement could move either below 5%, so they are rankable only on D1's figure.
-- **Near the floor:** ROIV 5.3837%, LUV 5.3912% and DDOG 5.3620%.
-- **Small caps:** KALU ($2.52B), ASST ($3.36B) and FLY ($2.73B; D1 found no second source for the cap) sit less than 70% above the $2B floor.
-- **BRZE:** pinned, as in S2.
+- **BHC** sits near the $2B cap floor (D1 states $2.59B), and so do **AXGN** ($2.2B) and **PRCH** ($2.15B).
+- **SGRY's** cap is stated post-move (~$3.0B; ~$2.06B on the 10-23 close).
+- **Near the 5% floor:** the smallest below-cap items (EPR +5.10%, LTH +5.12%, DXPE +5.13%) sit within 0.15 points of it.
 
 ---
 
@@ -459,7 +489,7 @@ B's concurrent-position correlation constraint (Section 6 / KL #12) would bind o
 
 **SCREEN MODE: INDEX (B router DO-NOT-ACTIVATE as of 2026-10-06).**
 
-The ranked list is the 15-item table in PART 1. It carries the tier field (e) on every row, set strictly by rank (1–5 `top-5`, 6–15 `rest`), plus `qualifying_event_date`, event-day move, window close, sessions left, originating D1 id and a one-line event. The 45 eligible identities below the cap follow it, marked `below-cap`.
+The ranked list is the 15-item table in PART 1. It carries the tier field (e) on every row, set strictly by rank (1–5 `top-5`, 6–15 `rest`), plus `qualifying_event_date` (f), event-day move, window close (d), sessions left, originating D1 id (g) and a one-line event (b). The 168 eligible identities below the cap follow it, marked `below-cap`.
 
 Index mode skips the four per-candidate research steps: mispricing direction and magnitude, retrieved comparables, information-versus-sentiment, and convergence indicators. For W4's deterministic handoff, fields (a) and (c) read **"not assessed — INDEX MODE"** for every candidate. Fields (b), (d), (e), (f) and (g) are in the tables.
 
@@ -467,38 +497,42 @@ The cohort work is not skipped. The fixed-horizon trajectory series, the structu
 
 ## ROUTING
 
-Route the 15 ranked names to `Watchlist.md`'s **"Strategy B watch overflow"** section, marked **`Router-gated, not rank-gated.`**, exactly as W4 §C directs. **W4 §C's top tier is the five `top-5` rows: BRZE, IRON, TTMI, KALU and FPS.**
+Route the 15 ranked names to `Watchlist.md`'s **"Strategy B watch overflow"** section, marked **`Router-gated, not rank-gated.`**, exactly as W4 §C directs. **W4 §C's top tier is the five `top-5` rows: SGRY, IOVA, GKOS, AXGN and BHC.**
 
-- The 45 below-cap names are at W4's discretion.
+- The 168 below-cap names are at W4's discretion.
 - **Zero `PENDING_ANALYSIS` thesis-construction enqueues are owed while B is DO-NOT-ACTIVATE.**
-- **For W4: 13 of the ranked 15 have windows still open on 2026-11-02.** The exceptions are IRON and CLF, which close 10-30. So the overflow rows' status cell should say that the scheduled 11-02 write *can* reach them, not the "closes before the next scheduled router write" wording that was correct for every block through W42.
+- **For W4: all 15 ranked windows, and all 183 eligible windows, are open on 2026-11-02.** RHI (closes 11-04) has the fewest sessions left after that write: three.
 
 ---
 
-## FINDINGS — zero alerts filed, zero queue items, nothing resolved by W2
+## FINDINGS — one info alert filed, zero queue items, nothing resolved by W2
 
-**`ops.alerts`:** none filed.
-- **The catch-up row's missing `close_chain_check` field is not a defect W2 can act on.** W2's own close-chain test, run over the same items, found 0 hits. The spec puts that check on W2 and on D2, not on a D1 field.
-- **The retired limb view still being live is Rev 52's stated design.** The view stays defined under a retirement marker (`bigquery/224` names `bigquery/263`). It is not a defect.
+**`ops.alerts`:** one row filed.
+- **`dfb0f575-09b8-47d8-8d95-5cc142865ec8`** (`info`, source W2, `d1_deal_pinned_routing_rule_unwritten_inconsistent`) is a W5 SPEC-DEFECT NOTICE INTAKE item.
+  - **OWNER:** D1's single-name-move B-routing, together with `strategy/04_strategy_b.md`. The nearest owning routine is D1.
+  - **Defect:** S2. D1 declined ADT as deal-pinned but routed SGRY and RRC, and no written rule exists either way.
+  - **What W2 did not do:** it did not re-rank, did not exclude SGRY and did not add ADT.
+  - **Before filing:** a check found no open alert on this surface.
 
 **`events.queue_events`:** none. Both free checks were clean, and no thesis-construction enqueue is owed under index mode.
 
 **Carried, not re-filed (open):**
-- `143c2aaf` (`shock_baseline_window_divergent_between_m1a_and_limb_view`, W2's own, W5). **Its band has moved.** A new Brent peak (113.17, 10-22) raised the view's midpoint to 98.95 on its 84.73 baseline. M1a's last-scored midpoint is still 97.975, on the 87.20 baseline and the 108.75 peak. So the view's midpoint now sits *above* M1a's: the disagreement band is 97.975 to 98.95, inverted from 96.74 to 97.975.
-  - The band is not live this cycle: the stored close is ~14 above both midpoints.
-  - The finding is unchanged: one rule, two midpoints.
-  - M1a will recompute its own on 11-02.
-- `0a40c378` (M1R, blinding side channel via git commit subjects): this run's commit subject carries no regime, router or price substance.
+- **`143c2aaf`** (`shock_baseline_window_divergent_between_m1a_and_limb_view`, W2's own, owned by W5). The band has moved again:
+  - **The view:** a baseline of 84.73 and the new 116.72 peak (10-23) put its midpoint at 100.725.
+  - **M1R's 10-28 scoring:** a baseline of 87.20 and a midpoint of 101.96.
+  - **The disagreement band** is therefore 100.725 to 101.96, inverted again from W43's 97.975 to 98.95.
+  - **Not live this cycle:** the stored 10-29 close of 111.57 is ~10 above both midpoints.
+  - **Unchanged:** the finding itself, one rule with two midpoints.
+- **`0a40c378`** (M1R, a blinding side channel via git commit subjects): this run's commit subject carries no regime, router or price substance.
 
-**Resolved since W42 by their owners (re-read live this run):**
-- `3218eb3c` and `76cbd8f6`, by an interactive owner session on 10-19 (applied above: the trajectory series is published for the first time).
-- `3897ecc6` and `06c3b0db`, by W5 on 10-18.
+**Resolved since W43 by their owners:** none. No `ops-note` or `routine-outcome` row since the watermark adjudicates a W2 referral.
 
 ---
 
 ## HONEST LIMITS OF THIS RUN
 
-- **None of the ranked 15 is broker-verified.** They are arithmetic-checked only, and two sit on the 5% floor.
-- **The fixed-horizon series is D2's measurement, published by record read.** W2 re-verified no close against a bar. The spot checks matched D2's printed text (VKTX, PCVX and the 10-19 re-measurements). The six `m_d`-basis rows rest on D2's stated move and drift.
-- **The flip-path read rests on a view's as-of 10-22 inputs.** The 10-23 Brent close is not yet stored. W2 pulled no price, makes no forecast, and does not pre-empt M1a's blind scoring on 11-02.
-- **10-23 is uncovered**, and so are the 10-22 after-close reporters. Both are D1's tonight. Next week's intake will be heavy again.
+- **None of the 183 is broker-verified.** They are arithmetic-checked only. D2's index rows copy D1's figures this cycle, so the precedence rule had nothing to apply.
+- **The fixed-horizon series is D2's measurement, published by record read.** W2 re-verified no close against a bar. The spot checks matched D2's printed text (MELI, CEG and ASTS), and every row reproduces from its three printed closes.
+- **The flip-path read rests on a view's as-of 10-29 inputs.** The 10-30 Brent close is not yet stored. W2 pulled no price, makes no forecast, and does not pre-empt M1a's blind scoring on 11-02.
+- **10-30 is uncovered**, and so are the 10-29 after-close reporters. Both are D1's tonight.
+- **GOOG/GOOGL are folded into one identity.** This follows D1's and D2's stated treatment. If a later rule treats share classes as separate identities, GOOG (−12.293%, qed 10-28, `b1e61b9c`) would join the below-cap list.
