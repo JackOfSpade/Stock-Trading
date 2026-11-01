@@ -1,24 +1,44 @@
-2026-10
+2026-11
 
-# Monthly D Position Deep-Dive — October 2026 cycle (review window 2026-09-01 → 2026-10-01)
+# Monthly D Position Deep-Dive — November 2026 cycle (review window 2026-10-01 → 2026-11-01)
 
 **IMMEDIATE-ACTION flag: NONE.** No D position shows material thesis invalidation. Across **8 names and 12 tranches** there are **34 at-entry criteria** (AMZN 5, GOOGL 5, DIS 5, RTX 6, UBER 4, ISRG 4, TSM 3, GEV 2). **Zero are breached.**
 
-**All eight recommendations are HOLD.** There are no exits, no completions and no "further research" deferrals. **No quarterly print fell inside this window for any of the eight names.** The Q3 round starts on 2026-10-15 with TSM and finishes around mid-November with DIS. Most quarterly criteria are therefore **NOT ENGAGED** this cycle (no new data), and carry their last measured reading. That is a property of the calendar, not a gap in coverage. The event-driven criteria were searched for this month.
+**All eight recommendations are HOLD.** There are no exits, no completions and no "further research" deferrals.
+
+This was the dense test window that last month's file predicted. Six of the eight names printed Q3 inside the window:
+
+| Name | Q3 report date |
+|---|---|
+| TSM | 10-15 |
+| ISRG | 10-20 |
+| RTX | 10-20 |
+| GEV | 10-28 |
+| GOOGL | 10-28 |
+| AMZN | 10-29 |
+
+Every quarterly criterion on those six now carries a fresh measurement, and every one reads further from its trigger than it did at entry. The two names that have not printed carry their last readings: UBER (Q3 expected ~11-03, unconfirmed) and DIS (FQ4 expected ~11-17, secondary).
 
 The month's substantive outputs:
 
-1. **The breach-status backfill is done (F-17).** Seven legacy tranches still read `breach_status = 'NOT_ASSESSED_BY_THIS_BACKFILL'`. All seven now carry an affirmative assessment of **UNBREACHED**, written append-only to `events.position_events`. The criteria text is byte-identical. D1's add-candidate HARD GATE can now evaluate all 12 tranches, including ISRG, RTX and UBER, which it has had to decline since 2026-09-06.
-2. **The only unscheduled structural risk in the book came off (GOOGL c4).** On 2026-09-02 the E.D. Va. ad-tech remedies decision **rejected divestiture of AdX and DFP** and imposed behavioral remedies only.
-3. **A rates shock is new context (F-16), not a trigger.** The Fed hiked on 2026-09-16. The 10Y went from **4.75% to 5.29%** and the 2Y from 4.34% to 4.88%, so the curve's level shifted up about 54bp with its slope unchanged. SPY trend slipped to NEUTRAL and breadth fell to WEAK (40.55%). None of this is an invalidation criterion for any name. It does matter as **router context**: last month's D divergence review rested partly on "the long-rate transmission channel did not move." It has now moved.
+1. **The prints confirmed every Subtype B trend metric.**
+   - GEV organic orders +96%.
+   - GOOGL Cloud +103% at a 36.2% margin, with Cloud RPO $560.8B (+9.1% sequential).
+   - AMZN AWS +39.3% at a 38.7% margin.
+   - TSM USD revenue +41.2% at a 66.4% GM.
+   - ISRG da Vinci procedures +14%, placements +28%.
+   - RTX backlog $340B, with the FCF guide raised to $9.0–9.2B.
+2. **The book still fell.** Deployed unit value went from 1.070 to 1.033 and drawdown from −2.5% to −6.7%. Three print-reaction drops drove most of the fall: GOOGL −12.6% on 10-29 on an EPS miss despite the Cloud beat, GEV −10.6% on 10-22, and TSM −5.9% on 10-30. Strategy D's rules are explicit that "short-term adverse price moves" and "quarterly results that don't bear on the multi-year thesis" are **not exit-triggering**. This file records the divergence between fundamentals and price; it does not act on it (F-19).
+3. **GEV's first completion leg is within reach, but completion is not.** Backlog is $197B against the ≥$200B leg (i), and management expects it to cross $200B in Q4. Completion requires **both** legs. Leg (ii), trailing-4Q organic orders growth ≤25%, is moving the wrong way for completion: +71%, then +88%, then +96%. **No completion call is owed to M4** (F-1).
+4. **The GOOGL episode that prompted Strategy.md Rev 55 is recorded against the measured segment data** (F-18). Search & other revenue grew **+12.0%** YoY in Q3, from the primary release. The Rev 55 rule is forward-only and changes nothing for the open GOOGL tranches.
 
 ---
 
 ## Span covered
 
-`state.routine_catchup_window` gives M3 `window_start_ts` = 2026-09-01 15:28 UTC (M3's own last completion) and `window_days = 29.98`. That is cadence-normal: no monthly cycle was missed, no catch-up sub-sections are owed, and no `CATCHUP[...]` token is due. The research window is **2026-09-01 → 2026-10-01**.
+`state.routine_catchup_window` gives M3 `window_start_ts` = 2026-10-01 14:28 UTC (M3's own last completion) and `window_days = 30.99`. That is cadence-normal: no monthly cycle was missed, no catch-up sub-sections are owed, and no `CATCHUP[...]` token is due. The research window is **2026-10-01 → 2026-11-01**.
 
-**Same-day double-run guard: clear.** `ops.run_log` had 0 `completed` and no in-flight M3 row for 2026-10-01 before work began.
+**Same-day double-run guard: clear.** `ops.run_log` had no M3 row of any status for 2026-11-01 before work began.
 
 **Scope is roster-derived.** In `strategy/roster.yaml`, A, B, C and E are `reactive` and **D alone is `long_horizon`**. Scope is exactly D, unchanged.
 
@@ -28,374 +48,512 @@ The month's substantive outputs:
 
 **The book is unchanged: 8 names, 12 tranches, no opens or closes in the window.** `state.current_positions` holds 12 rows, all Strategy D.
 
-| Name | Tranches | Shares | Cost basis | Mark (09-30) | Market value | Unrealized | % of D NAV | Recommendation |
-|---|---|---|---|---|---|---|---|---|
-| **GEV** | 1 (08-03) | 0.1244 | $120.656 | $950.49 | $118.241 | −$2.415 (−2.00%) | 21.52% | HOLD |
-| **GOOGL** | 2 (07-09, 07-26) | 0.2577 | $87.823 | $344.08 | $88.670 | +$0.847 (+0.96%) | 16.14% | HOLD |
-| **AMZN** | 2 (07-09, 07-30) | 0.3464 | $88.237 | $249.15 | $86.306 | −$1.931 (−2.19%) | 15.71% | HOLD |
-| **DIS** | 2 (05-07, 08-05) | 0.7244 | $77.308 | $104.90 | $75.990 | −$1.318 (−1.70%) | 13.83% | HOLD |
-| **TSM** | 2 (07-21, 07-29) | 0.1550 | $64.013 | $456.19 | $70.710 | +$6.697 (+10.46%) | 12.87% | HOLD |
-| **ISRG** | 1 (07-20) | 0.1091 | $38.132 | $406.63 | $44.363 | +$6.232 (+16.34%) | 8.08% | HOLD |
-| **UBER** | 1 (07-09) | 0.5156 | $37.746 | $68.51 | $35.324 | −$2.422 (−6.42%) | 6.43% | HOLD |
-| **RTX** | 1 (04-27) | 0.1601 | $28.321 | $185.65 | $29.723 | +$1.401 (+4.95%) | 5.41% | HOLD |
-| **Total** | **12** | — | **$542.237** | — | **$549.327** | **+$7.090 (+1.31%)** | **100.0%** | — |
+| Name | Tranches | Shares | Cost basis | Mark (10-29) | Market value | Unrealized | % of D book | Month Δ mark | Recommendation |
+|---|---|---|---|---|---|---|---|---|---|
+| **GEV** | 1 (08-03) | 0.1244 | $120.656 | $887.85 | $110.449 | −$10.208 (−8.46%) | 20.84% | −6.6% | HOLD |
+| **AMZN** | 2 (07-09, 07-30) | 0.3464 | $88.237 | $243.79 | $84.449 | −$3.788 (−4.29%) | 15.93% | −2.2% | HOLD |
+| **DIS** | 2 (05-07, 08-05) | 0.7244 | $77.308 | $110.91 | $80.343 | +$3.035 (+3.93%) | 15.16% | +5.7% | HOLD |
+| **GOOGL** | 2 (07-09, 07-26) | 0.2577 | $87.823 | $283.82 | $73.140 | −$14.683 (−16.72%) | 13.80% | −17.5% | HOLD |
+| **TSM** | 2 (07-21, 07-29) | 0.1550 | $64.013 | $431.81 | $66.931 | +$2.917 (+4.56%) | 12.63% | −5.3% | HOLD |
+| **ISRG** | 1 (07-20) | 0.1091 | $38.132 | $448.76 | $48.960 | +$10.828 (+28.40%) | 9.24% | +10.4% | HOLD |
+| **UBER** | 1 (07-09) | 0.5156 | $37.746 | $65.74 | $33.896 | −$3.850 (−10.20%) | 6.39% | −4.0% | HOLD |
+| **RTX** | 1 (04-27) | 0.1601 | $28.321 | $199.40 | $31.924 | +$3.602 (+12.72%) | 6.02% | +7.4% | HOLD |
+| **Total** | **12** | — | **$542.237** | — | **$530.091** | **−$12.146 (−2.24%)** | **100.0%** | — | — |
 
-*Marks are the 2026-09-30 closes in `events.daily_marks` (source `connector`, i.e. the IBKR connector, ingested by D2a). Cost basis is the ledger figure from `state.current_positions` (shares × fill + commission). Market value totals $549.327. That reconciles to the cent with `analytics.strategy_nav.deployed_mv` of $549.32 and gives `nav` $549.33 (deposits $524.78 + realized $16.58 + unrealized $7.09 + dividends $0.88), with `available_funds` $0.00. D is still capital-disabled and swept to zero idle cash, so "% of D NAV" is effectively "% of the deployed book" (F-12).*
+**Mark source.** Marks are the 2026-10-29 closes in `events.daily_marks` (source `connector`, i.e. the IBKR connector). That is the latest ingested session: D2a runs Sun–Thu, so Friday 10-30 lands in tonight's run. Market value reconciles to the cent with `analytics.strategy_nav.deployed_mv` of **$530.09**. NAV is **$530.15**: deposits $524.78 + realized $16.58 + unrealized −$12.15 + dividends $0.94, with `available_funds` $0.06. D is still capital-disabled, so "% of D book" is effectively "% of D NAV" (F-12).
 
-**Per-tranche detail** (cost per share is cost basis ÷ shares, commission-inclusive):
+**Friday 10-30 closes (informational).** The 10-30 IBKR closes were read during the correlation pull and are not yet in the warehouse. They would put the book at **$518.17**:
+
+| GEV | TSM | ISRG | AMZN | GOOGL | UBER | RTX | DIS |
+|---|---|---|---|---|---|---|---|
+| 857.87 (−3.4%) | 406.13 (−5.9%) | 432.01 (−3.7%) | 240.35 | 279.84 | 65.25 | 199.80 | 110.94 |
+
+None of these changes any disposition.
+
+**Per-tranche detail** (cost per share is cost basis ÷ shares, commission-inclusive; days to LTCG counted from 2026-11-01):
 
 | Tranche | Cost/sh | Unrealized | LTCG date | Days to LTCG |
 |---|---|---|---|---|
-| D:RTX:2026-04-27 | $176.90 | +4.95% | 2027-04-27 | 208 |
-| D:DIS:2026-05-07 | $111.32 | −5.77% | 2027-05-08 | 219 |
-| D:AMZN:2026-07-09 | $241.24 | +3.28% | 2027-07-09 | 281 |
-| D:GOOGL:2026-07-09 | $359.85 | −4.38% | 2027-07-09 | 281 |
-| D:UBER:2026-07-09 | $73.21 | −6.42% | 2027-07-09 | 281 |
-| D:ISRG:2026-07-20 | $349.51 | +16.34% | 2027-07-20 | 292 |
-| D:TSM:2026-07-21 | $427.86 | +6.62% | 2027-07-21 | 293 |
-| D:GOOGL:2026-07-26 | $327.84 | +4.95% | 2027-07-27 | 299 |
-| D:TSM:2026-07-29 | $392.88 | +16.11% | 2027-07-30 | 302 |
-| D:AMZN:2026-07-30 | $265.69 | −6.23% | 2027-07-31 | 303 |
-| D:GEV:2026-08-03 | $969.91 | −2.00% | 2027-08-04 | 307 |
-| D:DIS:2026-08-05 | $103.79 | +1.07% | 2027-08-06 | 309 |
+| D:RTX:2026-04-27 | $176.90 | +12.72% | 2027-04-27 | 177 |
+| D:DIS:2026-05-07 | $111.32 | −0.37% | 2027-05-08 | 188 |
+| D:AMZN:2026-07-09 | $241.24 | +1.06% | 2027-07-09 | 250 |
+| D:GOOGL:2026-07-09 | $359.85 | −21.13% | 2027-07-09 | 250 |
+| D:UBER:2026-07-09 | $73.21 | −10.20% | 2027-07-09 | 250 |
+| D:ISRG:2026-07-20 | $349.51 | +28.40% | 2027-07-20 | 261 |
+| D:TSM:2026-07-21 | $427.86 | +0.92% | 2027-07-21 | 262 |
+| D:GOOGL:2026-07-26 | $327.84 | −13.43% | 2027-07-27 | 268 |
+| D:TSM:2026-07-29 | $392.88 | +9.91% | 2027-07-30 | 271 |
+| D:AMZN:2026-07-30 | $265.69 | −8.24% | 2027-07-31 | 272 |
+| D:GEV:2026-08-03 | $969.91 | −8.46% | 2027-08-04 | 276 |
+| D:DIS:2026-08-05 | $103.79 | +6.86% | 2027-08-06 | 278 |
 
-**D engine state (informational; not exit-triggering).** Values are from `perf.strategy_daily` / `perf.kill_flags` as of 2026-09-30:
+These per-tranche unrealized figures match D1's 2026-10-29 add-candidate record (`1ec75295`) to the hundredth on all 12.
 
-- `deployed_unit_value` **1.070179**, up from 1.061062 a month ago.
-- `peak_unit_value` 1.098110 and `current_drawdown` **−2.54%**, an improvement on −3.37%.
-- `excess_vs_sgov` **+5.38%**, up from +4.80%.
-- `deployed_days` 109, `closed_trades` 1, `gate_n` 29.
-- **All kill flags are FALSE:** `drawdown_kill`, `runaway_review`, `m2m_underperf_review`, `gate_reached` and `interim_underperf_warning`.
-- **New this cycle: `beta_min_n_met` flipped to TRUE.** The engine now treats its beta/alpha estimate as usable: `beta_hat` **0.942**, `alpha_annualized` **+21.8%**.
+**D engine state (informational; not exit-triggering).** Values are from `perf.kill_flags` / `perf.strategy_daily` as of 2026-10-29:
 
-That alpha figure needs two caveats before anyone reads anything into it. (a) It comes from ~109 deployed days on a book whose largest single contributor was one post-earnings gap (AMZN +15.3% on 2026-07-31). (b) The 24-month edge-decay test fires only when the alpha point estimate is ≤ −3pp **and** the 95% upper CI bound is ≤ 0pp. `perf.kill_flags` exposes no CI field, so the CI leg was **not measured** here. The estimate is far on the favourable side of the decay test, which is all this cycle can say.
+| Field | 2026-10-29 | A month ago |
+|---|---|---|
+| `deployed_unit_value` | **1.032827** | 1.070179 (09-30); peak in window 1.074978 (10-14) |
+| `peak_unit_value` | 1.106464 | — |
+| `current_drawdown` | **−6.66%** | −2.54% |
+| `excess_vs_sgov` | **+1.37%** | +5.38% |
+| `beta_hat` | **1.330** | 0.942 |
+| `alpha_annualized` | **−17.5%** | +21.8% |
+
+`deployed_days` is 130, `closed_trades` 1 and `gate_n` 29. **All kill flags are FALSE**: `drawdown_kill`, `runaway_review`, `m2m_underperf_review`, `gate_reached`, `interim_underperf_warning` and `evidence_kill`. `beta_min_n_met` is TRUE.
+
+The alpha estimate swung **39 percentage points in one month**. That is the caveat last month's file attached to the +21.8% reading, now realized in the other direction (F-19).
 
 **Regime and router state (informational; does NOT alter disposition).**
 
-- **Binding activation state is DO-NOT-ACTIVATE.** It was re-held on 2026-09-03 by `div-D-202608-1` (`events.regime_events` `2ac50b53`). That review was *not* a clean ratification: it adopted two attacker Tier 1 findings, and it held state partly because "the long-rate transmission channel did not move (10Y flat at 4.75)". **That premise no longer holds (F-16).** D remains `capital_disabled`. C (HYBRID, FOMC-only) is now the only capital-enabled strategy after E went DNA on 2026-09-03.
-- **Technical signals (D2a 2026-09-30, mechanical):**
-  - SPY_TREND is **NEUTRAL**: close 762.63 sits 0.11 below the 50d SMA of 762.74. It flipped from UP on 09-30 after earlier NEUTRAL readings on 09-15/16.
-  - SUSTAINED_INVERSION is **NOT-SUSTAINED** (10Y 5.29 vs 2Y 4.88, +0.41).
-  - VIX_REGIME is **NORMAL** (16.34).
-  - EQUITY_BREADTH is **WEAK** (40.55%, down from 66.2% on 08-31).
-  - D's technical rule (SPY UP or NEUTRAL, and inversion NOT-SUSTAINED) still reads ACTIVATE, but only just.
-- **This changes no disposition below.** Strategy D's rule is explicit: "router deactivation does not force exits on existing D positions." Every recommendation here is criterion-driven.
+- **Binding activation state is DO-NOT-ACTIVATE.** It was re-held on 2026-10-06 by `div-D-202609-1` (`a6ae4e22`): "DNA now override-manufactured but the override still binds on current data". The `shock_overlay` axis has read **acute** on every M1a/M1R scoring in the window, through the 2026-11-01 scoring. D remains `capital_disabled`, and C is the only capital-enabled strategy.
+- **Fundamental axes (2026-11-01 scoring):** stable growth, **reaccelerating** inflation (it was stable on 10-01 and 10-28), hawkish policy, neutral risk, acute shock.
+- **Technical signals (D2a, 2026-10-29, mechanical):**
+  - SPY_TREND is **UP** (769.36).
+  - EQUITY_BREADTH is **HEALTHY** (63.81%, up from 40.55% on 09-30).
+  - VIX_REGIME is **NORMAL** (17.20).
+  - SUSTAINED_INVERSION is **NOT-SUSTAINED** (10Y 4.98 vs 2Y 4.61, +0.37).
+  - D's technical rule reads ACTIVATE. The override, not the technical half, binds.
+- **This changes no disposition below.** Strategy D's rule: "router deactivation does not force exits on existing D positions." Every recommendation here is criterion-driven.
 
 ---
 
 ## Cross-cutting findings
 
-Numbering continues the prior series. F-16 and F-17 are new. F-12, F-9, F-7, F-13, F-14, F-5 and F-1 are updated. F-15 closes.
+Numbering continues the prior series. F-18 and F-19 are new. F-1, F-5, F-7, F-9, F-12, F-13/F-14, F-16 and F-17 are updated.
 
-### F-17 (NEW). The breach-status backfill is complete, and D1's add gate can now see every tranche
+### F-18 (NEW). GOOGL: the Rev 55 episode, recorded against the measured segment data
 
-**What was owed.** Since 2026-09-27 this routine owns a duty, assigned by W5 when it adjudicated D1's `add_gate_uncovered_breach_status` (alert `3daf511e`, commit `2edc774`). The duty: write a fresh breach assessment for every open D tranche whose `invalidation_status.$.breach_status` reads `NOT_ASSESSED_BY_THIS_BACKFILL`. That marker came from the 2026-07-30 `bigquery/117` mirror, which transcribed criteria verbatim and deliberately assessed nothing. Seven tranches still carried it: `D:AMZN:2026-07-09`, `D:DIS:2026-05-07`, `D:GOOGL:2026-07-09`, `D:ISRG:2026-07-20`, `D:RTX:2026-04-27`, `D:TSM:2026-07-21` and `D:UBER:2026-07-09`. Three of them (ISRG, RTX, UBER) have no later sibling tranche carrying a fresh assessment. D1 had therefore declined all three at the HARD GATE on every sweep since 2026-09-06, on missing breach status alone.
+**What happened.** GOOGL fell **−12.6%** on 2026-10-29 (283.82 vs 324.89, IBKR) after its Q3 print, and a further −1.4% on 10-30. On 10-30 the owner, in an interactive session, adopted **Strategy.md Rev 55** (`eb85a625`). Under that rule, a D thesis constructed on or after 2026-10-30 must also carry a quantitative, falsifiable invalidation test on the issuer's dominant segment whenever that segment is not the thesis segment. The trigger was that both GOOGL tranches carry Cloud-only criteria, so "criteria unbreached" was a true statement while Search, the main line, was the news.
 
-**What was written.** Seven append-only `ADJUST` rows were inserted into `events.position_events`, one per tranche (`numDmlAffectedRows = 7`). Each row:
+**What this cycle measured** (Alphabet Q3 8-K Ex. 99.1 and 10-Q, primary):
 
-- echoes every column of the current row forward unchanged: shares, cost basis, LTCG date, conviction, model, `source_thesis_ref`;
-- leaves the `invalidation_1..N` criteria keys **byte-identical**, never re-derived or re-stamped, because criteria are immutable for a position's life;
-- changes only `breach_status` → `UNBREACHED`;
-- adds `breach_assessed_on` (2026-10-01), `breach_assessed_by` (M3 plus session) and a per-criterion `breach_assessment` string. Each criterion in that string carries its last measured reading and source, matching the tables below.
+| Line | Q3'26 | Q3'25 | YoY |
+|---|---|---|---|
+| Google Search & other revenue | $63,350M | $56,567M | **+12.0%** |
+| Consolidated revenue | $127.6B | — | +25% |
+| Consolidated operating income | $40,576M | $31,228M | +30% |
+| GAAP diluted EPS | **$2.12** | $2.87 | — |
 
-Read-back confirms the change in `state.current_positions`: **0 of 12 tranches** still read `NOT_ASSESSED_BY_THIS_BACKFILL`, and `invalidation_1` text matches on all seven.
+- **The miss was at the EPS line.** Consensus was about $3.00 (secondary). The gap between rising operating income and falling EPS sits below the operating line, and this run did not identify its cause.
+- **Capex** was $51.4B in the quarter against $24.0B a year earlier (primary). Free cash flow was reportedly −$9.1B (secondary).
+- **The disclosure about AI summaries.** The sub-agent did **not** find language in the earnings release saying AI summaries / AI Overviews are hurting ad revenue. The release instead says Search query growth is at a five-year high. The language the owner directive cites may come from the call or the 10-Q MD&A, neither of which was read in full. This is recorded as **not located in the release**, which is different from **not said**. This file makes no correction to the owner directive's premise.
 
-**What this does and does not do.**
+**What this means for the open GOOGL tranches: nothing mechanical.**
 
-- **It does not loosen the gate.** The gate is fail-closed, and that remains correct. It now has an affirmative assessment to read.
-- **It is not a standing pass.** The assessment is dated. Next month's cycle re-assesses against the Q3 prints.
-- **D1 will still not stage anything for these names.** It flags add *candidates*, which D2 thesis-constructs. While D is DO-NOT-ACTIVATE and capital-disabled, no add can be funded, as D1's own 2026-09-01 sweep recorded ("declined on fundability, not merit").
+- Rev 55 is explicitly forward-only, and both tranches' criteria are immutable.
+- On the reported segment data, Alphabet's dominant line **grew** +12% in the quarter the stock fell. The price reaction is the EPS/capex story.
+- An M3 must not invent a Search criterion for an open position. The prospective-only rule forbids inventing or softening criteria, and that cuts both ways.
 
-The practical effect is that D1's `invalidation_criteria_evaluable` field now reads TRUE for all 12 tranches, so its add-sweep record is no longer structurally blind to three names.
+The thesis segment is stronger than at entry: Cloud +103% and Cloud RPO +9.1% sequential.
 
-### F-16 (NEW). A rates shock moved the one channel D's divergence review said had not moved
+**Routing:** none. This is a record of the measured data behind an owner decision already taken. No queue item and no alert.
 
-**Measured** (`events.regime_events`, D2a's pinned FMP treasury-rates read):
+### F-19 (NEW). Fundamentals and price diverged hard this month; the engine's alpha estimate is not yet information
 
-| Date | 10Y | 2Y-10Y spread |
-|---|---|---|
-| 08-31 | 4.75 | +0.41 |
-| 09-08 | 4.80 | +0.41 |
-| 09-15 | 5.00 | +0.33 |
-| 09-22 | 4.96 | +0.25 |
-| 09-29 | 5.26 | +0.37 |
-| 09-30 | **5.29** | +0.41 |
+**The six Q3 prints all moved away from their invalidation thresholds** (per-position tables below). Over the same window:
 
-The 2026-09-30 close at 5.29% is independently corroborated by a secondary source (CNBC 2026-09-30, and a market brief reporting a cross above 5.30% intraday). The **Fed hiked at its 2026-09-16 meeting** (D1 park-allocation entry `d5709d26`). Across the window, equity breadth fell from 66.2% to 40.55% and SPY trend wobbled between UP and NEUTRAL.
+- deployed unit value fell 1.070 → 1.033 (−3.5%);
+- drawdown widened to −6.66%;
+- `excess_vs_sgov` compressed from +5.38% to +1.37%;
+- `alpha_annualized` flipped from +21.8% to −17.5%, with `beta_hat` at 1.33.
 
-**Why it is written down here.** `div-D-202608-1` (2026-09-03) held D at DO-NOT-ACTIVATE and listed as one of its reasons that "the long-rate transmission channel did not move (10Y flat at 4.75)". The channel has now moved about 54bp, and in the direction that **supports** the DNA call: a higher discount rate is the textbook headwind for multi-year equity theses. This finding does not argue for or against activation. That is M1b's call and the divergence review's, made this month on M1a's fresh scoring. It records that one stated premise of the last review is stale, so the next review does not inherit it.
+**The fall came almost entirely from print-reaction gaps:**
 
-**Not exit-triggering, for any position.** No D thesis carries a rate-level criterion. Strategy D's "Not exit-triggering" list explicitly covers "macro environment shifts that don't invalidate the specific structural drivers." The book's deployed TWR in fact **rose** in the window (unit value 1.061 → 1.070) despite the move.
+| Name | Date | Move | Context |
+|---|---|---|---|
+| GOOGL | 10-29 | −12.6% | Q3 EPS miss and capex, despite the Cloud beat |
+| GEV | 10-22 | −10.6% | Pre-print, cause not identified this run (see the GEV section) |
+| TSM | 10-30 | −5.9% | Unexplained this run |
+| GEV | 10-30 | −3.4% | 887.85 → 857.87 (IBKR) |
 
-**Routing:** M4 and M1b should carry this as context. No queue item or alert is owed. M1a/M1b read the rates series directly.
+The correlation sub-agent's summary listed this GEV move as −6.3%. Its own closes (887.85 → 857.87) give −3.4%, and the closes are what this file uses.
 
-### F-12 (updated). Sector-cap denominator artifact: adjudicated, caveat landed, artifact unchanged
+**Disposition is unaffected and must stay so.** These moves sit exactly on Strategy D's "Not exit-triggering" list, under short-term adverse price moves and results that don't bear on the multi-year thesis.
 
-The prior cycle's `sector_cap_denominator_artifact` (alert `b1e69e7c`) was **resolved by W5 as FIX** (commit `4c8d06d`). W5 re-verified that Entry criterion 5 is entry-scoped and that D's exit rules carry no sector-cap trigger. It also caught the one live consumer this file had missed: **Q2 PART 2's concentration check**, which treats a sector-cap breach as blocking. Q2 now carries a caveat to read `state.strategy_capital_enablement` / `state.regime_capital_debt` before treating such a breach as real. Q2 runs about 2026-10-02, while D is still capital-disabled, so that caveat is live on schedule.
+**The alpha caveat.** On 130 deployed days and one closed trade, `alpha_annualized` is a ±40pp-per-month quantity. The 24-month edge-decay test needs the point estimate ≤ −3pp **and** a 95% upper CI bound ≤ 0pp. `perf.kill_flags` exposes no CI field (the `bigquery/193` path computes it), and no flag fired. Last month this file warned against reading anything into +21.8%. The same warning applies to −17.5%.
 
-**Today's reading, on market value / cost against D NAV of $549.33:**
+**Routing:** M4 / M5 context only. No kill trigger fired, no queue item is owed, and `drawdown_kill` is FALSE.
 
-- **Industrials** (GEV, UBER, RTX): **33.37% / 33.99%**
-- **Communication Services** (GOOGL, DIS): **29.97% / 30.06%**
-- Consumer Discretionary (AMZN): 15.71%
-- Information Technology (TSM): 12.87%
-- Health Care (ISRG): 8.08%
+### F-17 (updated). Breach-status backfill: zero backlog, duty discharged for this cycle
 
-Communication Services now sits right on the line: just under 30% at market and just over at cost. The difference is DIS's −1.7% move, not any book change. **The adjudication is unchanged:** no exit is triggered or available, nothing is blocked (D is DNA and capital-disabled), and the reading reverses mechanically when the sweep debt is restored on re-activation. Nothing is owed.
+`state.current_positions` shows **0 of 12** tranches with `breach_status = 'NOT_ASSESSED_BY_THIS_BACKFILL'`. The seven written on 2026-10-01 read `UNBREACHED`. GEV, TSM:07-29, AMZN:07-30, GOOGL:07-26 and DIS:08-05 carry their own entry-time assessments. **No `events.position_events` write is owed this cycle, and none was made.** The duty covers only `NOT_ASSESSED_BY_THIS_BACKFILL` rows. Re-stamping the 10-01 assessments would add churn without changing the gate's input: every criterion still reads unbreached on this cycle's Q3 measurements, below.
 
-### F-9 (carried, updated). The AI-capex cluster is 66% of the book and still invisible to every control
+D1's add-candidate HARD GATE has cleared all 12 tranches on every sweep since 2026-10-01 (`6a138b25` through `1ec75295`). Every flagged dip or strengthened-conviction trigger has been declined for lack of a funding path, not on merit.
 
-AMZN + GOOGL + TSM (compute) plus GEV (power) hold **$363.93 of $549.33 market value, or 66.2%**, up from 64.5%. The four names sit in four different GICS sectors, so the sector cap cannot see them. No invalidation criterion in any of the four names AI-capex intensity, FCF, ROIC or cross-position correlation. TSM's c3 is a single-name structural test.
+### F-16 (updated). The 10Y shock partly reversed
 
-This cycle adds one data point **against** the cohort risk materialising: TSM's August revenue was **+53.3% YoY**, the strongest month of the year (6-K, 2026-09-10). It adds one data point that **sharpens** its financing side: Amazon raised **£4.25B of sterling notes** in September (8-K 2026-09-14), continuing debt-funded capex. Neither changes the posture. The concentration is recorded for future thesis construction and is not actionable against open positions. See F-7 for the correlation read.
+The 10Y has come back down from last month's high. Readings below are from D2a's daily SUSTAINED_INVERSION rationale, using the FMP treasury-rates pinned read:
+
+| Date | 10Y | 2Y | Spread |
+|---|---|---|---|
+| 09-30 | **5.29** | 4.88 | +0.41 |
+| 10-15 | 5.10 | 4.77 | +0.33 |
+| 10-22 | 4.96 | 4.65 | +0.31 |
+| 10-29 | **4.98** | 4.61 | +0.37 |
+
+That is about −31bp, giving back roughly 60% of September's +54bp. Last month's point stands in weakened form: `div-D-202608-1`'s "10Y flat at 4.75" premise was stale, and the 10-06 review (`div-D-202609-1`) was taken on post-shock data. The level is still about 23bp above that premise.
+
+**Not exit-triggering for any position.** No D thesis carries a rate criterion.
+
+**Source note.** The structured `TREASURY_10Y` row in `events.regime_events` ends on 2026-10-14. That is by design: its only reader, the park allocator's rates axis, was retired on 2026-10-15 (commit `a0c54648`, `bigquery/256`). The rationale text is now the source, so this is not a defect.
+
+### F-12 (updated). Sector-cap reading: Industrials and Communication Services both drifted down
+
+Readings on market value / cost against D's book of $530.09:
+
+| Sector | Names | Market value | Cost |
+|---|---|---|---|
+| Industrials | GEV, UBER, RTX | **33.25%** | **34.44%** |
+| Communication Services | GOOGL, DIS | **28.95%** | **30.45%** |
+| Consumer Discretionary | AMZN | 15.93% | — |
+| Information Technology | TSM | 12.63% | — |
+| Health Care | ISRG | 9.24% | — |
+
+Communication Services fell back under 30% at market on GOOGL's drop. **The adjudication is unchanged** (W5 FIX, commit `4c8d06d`):
+
+- Entry criterion 5 is entry-scoped, so no exit is triggered or available.
+- Nothing is blocked, because D is DNA and capital-disabled.
+- Q2 carries the denominator caveat.
+
+Nothing is owed.
+
+### F-9 (updated). The AI-capex cluster, now measured by `analytics.factor_cluster_exposure`
+
+This cycle reads the new `bigquery/272` view (Rev 55 companion, `eb85a625`), cluster `AI_CAPEX`, as of 2026-11-01. The D row and the ALL row are identical, because only D holds positions.
+
+| Field | Value |
+|---|---|
+| `cluster_tickers` | AMZN, GEV, GOOGL, TSM |
+| `cluster_market_value` | **$334.97** (cost $360.73) |
+| `book_market_value` | $530.09 |
+| `cluster_share_of_book_pct` | **63.19%** |
+| `account_nav` | $12,382.02 |
+| `cluster_share_of_account_pct` | **2.71%** |
+| `latest_mark_date` | 2026-10-29 |
+| `names_missing_mark` | 0 |
+
+My independent recompute from the tranche table above gives $334.97 and 63.19%, which reconciles to the cent.
+
+**Scope of the reading:**
+
+- **VOO park look-through is excluded**, per the view's own definition. Any account-wide AI-capex share that includes VOO's index weight would be an approximate estimate and is not attempted here.
+- This is **record-only**: no threshold, no alert, no block.
+
+**Why the share fell from 66.2% last month.** It is price, not book change: GOOGL −17.5%, GEV −6.6% and TSM −5.3%, against ISRG +10.4%, RTX +7.4% and DIS +5.7%.
+
+**This month's evidence on the cohort risk points two ways:**
+
+- Demand side: every AI-capex name printed accelerating demand, and TSM guided Q4 at about +58% YoY.
+- Financing side, which sharpened further:
+  - AMZN TTM free cash flow is **−$42.4B**, and long-term debt went from $68.8B to **$180.9B** in nine months (10-Q, primary).
+  - GOOGL quarterly capex doubled to $51.4B.
+  - TSM's CFO said 2026–28 capex will be "significantly higher than the past three years".
+
+No criterion in any of the four names tests FCF, leverage or capex intensity. That is unchanged, and it is recorded for future thesis construction only.
 
 ### F-7 (updated). Correlation recompute
 
-This is the monthly post-entry recompute that Entry criterion 5 (rev 28) requires. **Source:** IBKR `get_price_history`, one call per contract ID (never batched, the documented mitigation for the series-swap defect), `ONE_YEAR` / `ONE_DAY`, regular trading hours only. All 8 returned 251 bars with identical date sets. The in-progress 2026-10-01 bar was dropped. **Common window: 2025-10-02 → 2026-09-30, 250 closes, n = 249 returns on all 28 pairs.**
+This is the monthly post-entry recompute required by Entry criterion 5 (rev 28).
 
-Every series' 2026-09-30 close matched the `events.daily_marks` connector close exactly, so no series swap occurred. `events.daily_marks` itself could not serve as the source because it holds only ~41–114 sessions per name.
-
-Pearson correlation of daily simple returns:
+**Source.** IBKR `get_price_history`, one call per contract ID (never batched), `ONE_YEAR` / `ONE_DAY`, regular trading hours only. All 8 returned **251 bars with identical date sets**, 2025-10-31 → 2026-10-30, so **n = 250 returns** on all 28 pairs. Dates come from the returned timestamps, converted to America/New_York; this closes last month's synthetic-calendar caveat. **Every series' 2026-10-29 close matched `events.daily_marks` exactly**, so no series swap occurred.
 
 ```
          AMZN     DIS     GEV   GOOGL    ISRG     RTX     TSM    UBER
-  AMZN  1.000   0.192   0.196   0.537   0.251   0.071   0.298   0.280
-   DIS  0.192   1.000  -0.076   0.221   0.296   0.105   0.075   0.302
-   GEV  0.196  -0.076   1.000   0.185   0.068   0.164   0.614  -0.029
- GOOGL  0.537   0.221   0.185   1.000   0.296   0.078   0.318   0.276
-  ISRG  0.251   0.296   0.068   0.296   1.000   0.197   0.116   0.239
-   RTX  0.071   0.105   0.164   0.078   0.197   1.000   0.029   0.084
-   TSM  0.298   0.075   0.614   0.318   0.116   0.029   1.000   0.201
-  UBER  0.280   0.302  -0.029   0.276   0.239   0.084   0.201   1.000
+  AMZN  1.000   0.159   0.197   0.597   0.261  -0.002   0.319   0.264
+   DIS  0.159   1.000  -0.108   0.177   0.336   0.077   0.038   0.305
+   GEV  0.197  -0.108   1.000   0.174   0.030   0.146   0.620  -0.055
+ GOOGL  0.597   0.177   0.174   1.000   0.271   0.028   0.301   0.228
+  ISRG  0.261   0.336   0.030   0.271   1.000   0.144   0.112   0.258
+   RTX -0.002   0.077   0.146   0.028   0.144   1.000  -0.018   0.074
+   TSM  0.319   0.038   0.620   0.301   0.112  -0.018   1.000   0.147
+  UBER  0.264   0.305  -0.055   0.228   0.258   0.074   0.147   1.000
 ```
 
-- **Above the 0.6 entry-time bucket threshold: GEV–TSM at 0.614.** It was 0.587 two cycles ago and 0.599 last cycle, and has now crossed the line on a third consecutive rise. **Under rev 35 bucket membership is informational only**, neither capped nor entry-blocking, so no consequence follows. D is also DNA, so there is no entry it could gate anyway.
+- **Above 0.6: GEV–TSM at 0.620**, essentially unchanged from 0.614. Under Rev 35, bucket membership is informational only.
 - **Above the 0.7 post-entry emergent threshold: none.**
-- Second-highest is **AMZN–GOOGL at 0.537**, up from 0.504. The two top pairs are both cross-sector AI-capex pairs, which is F-9 seen through the correlation lens. The mean pairwise correlation is ~0.19.
+- **AMZN–GOOGL rose to 0.597**, from 0.537 last month and 0.504 the month before. It now sits just under the 0.6 line, again a cross-sector AI-capex pair (F-9). Both names printed on consecutive days (10-28 and 10-29), and both moved down on 10-29, which by itself lifts the coefficient.
+- **Mean pairwise correlation is 0.181**, against ~0.19 last month. RTX is uncorrelated with everything (all |r| ≤ 0.146).
 
 **Caveats, stated.**
 
-- At n = 249 the 95% CI half-width on r is about ±0.06–0.07. So "0.614 > 0.6" is a crossing in point estimate, not a statistically distinguishable change from last month's 0.599. The informative fact is the **direction**: three consecutive rises.
-- The window still contains outsized earnings gaps: AMZN +15.3% (07-31), GEV +15.6% (2025-12-10) and +13.7% (04-22), and ISRG −14.1% (07-17) and +13.9% (2025-10-22).
-- Daily Pearson says nothing about tail co-movement.
-- **Process caveat:** the sub-agent transcribed the closes from tool output into a script by hand, and rebuilt the date index from an NYSE calendar rather than from the returned timestamps. The calendar gave 251 sessions, matching all 8 series. Every series' final close matched an independent source exactly, which bounds but does not eliminate transcription risk on interior values.
+- At n = 250 the 95% CI half-width on r is about ±0.06–0.07, so neither the 0.620 nor the 0.597 is distinguishable from last month's value.
+- The final two sessions of the window carry several outsized moves: GOOGL −12.6%, GEV −6.3%, TSM −5.9% and ISRG −3.7%. The end-of-window coefficients are sensitive to those days.
+- **Process caveat:** the closes were re-entered from tool output into files, which is transcription. The controls applied:
+  - every file length-checked to 251;
+  - all eight 10-29 closes matched the warehouse;
+  - the 10-30 closes were checked against the returned arrays.
 
-### F-13 / F-14 (carried). Criteria that fire on lumpy inputs, and criteria drifting toward untestability
+  Interior values are not machine-verified. The date index for seven of the eight series reuses AMZN's identical timestamp list, a visual match.
+- pandas and numpy were unavailable, so the computation used pure-Python Pearson. Whether the prices are dividend-adjusted is unknown.
 
-No new realized data point this cycle; both stand as written last month.
+### F-13 / F-14 (updated). Criteria testability: one new watch item, one deferral, one labelling note
 
-- **F-13** (D's two realized observations both show bare thresholds firing on lumpy quarterly series): calibration input for future thesis construction only.
-- **F-14** has two items:
-  - **UBER c2:** Uber states Adjusted EBITDA "is no longer a key measure". c4's metric-immutability covers Gross Bookings only, so an Adjusted EBITDA phase-out would leave c2 unmeasurable with no auto-invalidation. This was confirmed this month: no Uber filing in the window changed any disclosure. **First live test: the Q3 print, ~2026-10-29 / 11-03.**
-  - **DIS c4:** the Consumer-Products-into-Entertainment reclassification takes effect with fiscal 2027 reporting. First test is the ~Feb 2027 Q1 FY27 report; the earliest possible auto-invalidation is ~May 2027.
+- **UBER c2 (F-14), deferred again.** The first live test of whether Uber still discloses Adjusted EBITDA as a % of Gross Bookings was expected at the Q3 print. **Uber had not reported by 2026-11-01:** EDGAR shows no Item 2.02 8-K after 2026-09-15. Secondary sources give 11-02 or 11-03. Next cycle owns this test.
+- **DIS c4 (F-14), unchanged.** The first test is the ~Feb 2027 Q1 FY27 report.
+- **ISRG c3 (NEW watch, not a breach).** On the Q3 call, management said pricing actions will lower I&A revenue per procedure by about **3–5%** on a mix-constant basis once fully implemented: extended-use instruments, volume-based pricing, and a China price cut effective Q4. Source is a secondary transcript. c3 reads "recurring-rev decouples down from procedures". Q3 shows I&A **+18% against procedures +14–15%**, so there is no decoupling. A deliberate per-procedure price reduction is the mechanism by which a downward decoupling could appear **by design** in 2027 without any adoption failure.
+  - This is an F-13-class observation, a bare criterion that fires on a known input. It is recorded so next cycles read c3 with that context.
+  - Criteria are immutable, and nothing changes.
+  - c3 as written has no consecutive-quarter count. Any future reading of "decouple" must be made literally, per the PROSPECTIVE ONLY rule.
+- **AMZN c3 labelling (NEW note).** The Q3 10-Q states "commitments not yet recognized … approximately $578 billion as of September 30, 2026". The sub-agent could not confirm from the summarized text whether that sentence is AWS-specific or company-wide. Last cycle's $496B Q2 figure is the same disclosure line and was primary-confirmed, so the series is like-for-like, and it **rose** about $82B (+16.5%) sequentially. That reads UNBREACHED on either labelling. Next cycle should quote the 10-Q note's exact scope wording once, so the criterion's metric is pinned in this file.
 
-  A reminder carried from last cycle: the "current form" of SVOD operating income is the 8-K Ex-99.1 supplemental table, **not** the 10-Q segment footnote.
+### F-1 (updated). Completion-criteria gap: GEV is the first name to approach a completion leg
 
-### F-15 — CLOSED, and adopted in practice this cycle
+GEV is still the only position with a testable completion criterion. At Q3:
 
-`fmp_tier_fallback_not_default` (alert `9b39f1da`) was **resolved by W5 as FIX** on 2026-09-14. The shared extraction-discipline section now says to go to SEC EDGAR or issuer IR **first** for filing, transcript and news content. **This cycle made zero FMP calls**: every research pass went straight to `data.sec.gov` / EDGAR / issuer IR and free web search, and none spent a metered call rediscovering a denial. The prior cycle's repeated waste did not recur.
+- **Leg (i), backlog ≥ $200B: $197B**, up $20B sequentially. Management expects it to exceed $200B in Q4 (secondary). Leg (i) will very likely be **met at the Q4 print, ~late January 2027**.
+- **Leg (ii), trailing-4Q organic orders growth ≤ 25% for at least one quarter: not met, and moving away.** Organic orders were +71%, +88% and **+96%** in Q1–Q3'26. The disclosed quarterly series cannot produce a trailing-4Q figure without the Q4'25 organic number, which was not retrieved. With three of the four quarters at +71% to +96%, the trailing figure is far above 25%.
+
+**Completion requires BOTH legs, so GEV is not near completion.** The thesis is completing on the size of the book while the growth rate is still accelerating. That is exactly the case the two-leg design was written for: backlog size alone is not "fulfillment" while orders are still compounding.
+
+**For M4: no completion call, now or at the Q4 print, unless leg (ii) also turns.** The other seven names still have no completion mechanism. That is unchanged and recorded, not actionable.
 
 ### F-5 (updated). Source reliability this cycle
 
-Stated, in the same spirit as prior cycles:
+1. **Earnings figures come from primary filings** (8-K Ex. 99.1, 10-Q and 6-K on `sec.gov`), retrieved through `WebFetch`. The fetch tool returns a model-summarized rendering of the document, not verbatim text, so every primary figure is "primary source via a summarizer". Numbers that matter were cross-checked against D1's independent same-day reads where those exist:
+   - GEV +96%;
+   - GOOGL Cloud +103% / 36.2% and the $567.7B RPO;
+   - AMZN AWS +39.3% / 38.65%.
 
-1. **This month's evidence is thinner than last month's, by design and by calendar.** With no quarterly print in the window, research was a filings-and-events sweep. It used 40 free web/EDGAR calls across four sub-agents plus one corroboration search, and zero Tavily or FMP. Every "no 8-K / no filing in window" statement rests on the **primary** EDGAR submissions feed for that issuer. Event facts are mostly **secondary** (trade press, issuer press-release headlines), and are labelled per position below.
-2. **The GOOGL ad-tech ruling is from two trade-press summaries** (AdExchanger, PPC Land). The 106-page opinion itself was not read. The direction of the ruling is not in doubt across both sources, but the precise remedy list should be read from the opinion or final judgment before any future thesis relies on it.
-3. **Two internal date discrepancies, unreconciled and immaterial:**
-   - GEV's CFO-succession 8-K is dated 2026-08-27 on the EDGAR submissions feed, against 08-25 in the prior file.
-   - Uber's Delivery Hero tender: the prior file has an 08-27 offer document, while secondary sources say "launched 2026-09-18".
-
-   Neither touches a criterion.
-4. **Sub-agent call timestamps are approximate.** Sub-agents do not report per-call clock times. The `ops.web_calls` rows for this run therefore carry `call_ts` values spread across each sub-agent's measured run window, which is accurate to about a minute but not per call.
-
-### F-1 (carried). Completion-criteria gap for legacy positions: unchanged
-
-Only **GEV** carries a testable completion criterion. The other seven can exit on failure but not on success, and criteria are immutable. RTX remains the live illustration: its first GTF Advantage-powered aircraft was delivered on 2026-09-24, another milestone reached early, with still no completion mechanism. Recorded, not actionable.
+   All agreed.
+2. **Prior-quarter comparatives** come from this file's own prior cycles or from secondary sources, labelled per position: RTX Q2 $289B, TSM sub-7nm 77%, AMZN Q2 $496B.
+3. **Stock-reaction claims from web search were unreliable this cycle.**
+   - A secondary snippet claiming ISRG fell 10.5% after hours to about $392 is **contradicted by the IBKR series**: ISRG has no October daily move larger than −3.7%, and it closed $448.76 on 10-29. The snippet is treated as stale or misdated.
+   - Only the IBKR-measured moves are cited in this file.
+4. **Not read:** the GOOGL call transcript and full 10-Q MD&A (F-18); the RTX 10-Q (any powder-metal accrual update); the GOOGL ad-tech final judgment; the Disney IR earnings-date page.
 
 ---
 
 ## Per-position deep-dives
 
-Each section covers the six required items: (1) thesis status, (2) driver check, (3) fundamental developments, (4) invalidation check, (5) sector and theme, and (6) tax. Status vocabulary for criteria: **UNBREACHED** means the last measurement does not meet the trigger. **NOT ENGAGED** means no new data point arrived in the window. A criterion can be both: not engaged this month, unbreached on its last reading.
+Each section covers the six required items: (1) thesis status, (2) driver check, (3) fundamental developments, (4) invalidation check, (5) sector and theme, and (6) tax.
+
+Status vocabulary for criteria:
+
+- **UNBREACHED**: the last measurement does not meet the trigger.
+- **NOT ENGAGED**: no new data point arrived in the window.
+- **"0 of 2"**: zero of the two consecutive quarters a criterion requires are in breach territory.
 
 ### GEV — GE Vernova · 1 tranche · HOLD
 
-**Thesis (Subtype B):** total-company organic orders growth continues; the gas turbine / grid super-cycle driven by AI-datacenter and electrification power demand. **Status: intact.**
+**Thesis (Subtype B):** total-company organic orders growth continues; the gas-turbine and grid super-cycle is driven by AI-datacenter and electrification power demand. **Status: intact and strengthening.**
 
-**Developments in window:**
+**Developments in window** (Q3 8-K Ex. 99.1 and 10-Q filed 2026-10-28, primary; these are the only two GEV filings in the window):
 
-- **EDGAR shows no GEV filing at all** between 2026-09-01 and 2026-10-01. The newest is the 2026-08-27 CFO-succession 8-K. Source: `data.sec.gov` submissions, primary.
-- **2026-09-16, Morgan Stanley Laguna conference** (secondary, search snippet; transcript not read). CEO Strazik said GEV is accelerating gas power capacity additions by ~50% this year. He reiterated **≥125 GW of gas turbine orders plus slot reservations by YE2026** (116 GW at Q2).
-- **2026-09-23:** rotor life-extension services deal on five 9F units in Egypt. Immaterial.
-- **Theme:** coverage of multi-year turbine wait times driven by AI power demand continued (Washington Times, 2026-09-30, secondary).
+- **Orders $29.3B, +96% organically.** Power was $21.8B (+178%), Electrification $5.4B (−9% organic, against large synchronous-condenser orders in Q3'25) and Wind $2.1B (+16%). Power services orders were +12%.
+- **Backlog $197B**, up $20B sequentially.
+- **Gas turbine backlog plus slot reservations: 116 → 122 GW** (64 GW backlog + 58 GW slots). The YE2026 target is now **"at least 130 GW"**, up from ≥125 GW.
+- **FY26 guidance raised:**
 
-| # | Criterion | New data? | Status | Evidence |
-|---|---|---|---|---|
-| Inv | Organic orders growth YoY < 15% for 2 consecutive Q | No | **UNBREACHED** (not engaged) | Last +88% (Q2'26), +71% (Q1'26); 0 of 2 |
-| Imm | Organic-orders disclosure lapses in comparable form 2 consecutive Q | No | **UNBREACHED** | No filing in window |
-| Comp (i) | Backlog ≥ $200B | No | **NOT MET** | $176.3B at Q2'26. A Q3 step similar to Q2's +$13.0B would reach about $189B. *That is an inference, not a measurement.* |
-| Comp (ii) | Trailing-4Q organic orders growth ≤ 25% for ≥ 1 Q | No | **NOT MET** | Trend is accelerating, away from the trigger |
+  | Line | New guide | Prior guide |
+  |---|---|---|
+  | Revenue | $46.5–47.5B | $45.5–46.5B |
+  | Adjusted EBITDA margin | 13.5–14.5% | 12–14% |
+  | FCF | **$16–17B** | $11.5–12.5B |
+- **Portfolio:**
+  - agreed to acquire Trench Group (~$9.0B; close expected late 2027);
+  - bought the remaining 50% of Prolec GE (+$4.0B pre-tax remeasurement gain);
+  - sold Proficy;
+  - Vineyard Wind litigation resolved.
 
-**Drivers:** progressing (slot reservations, capacity expansion), with no evidence of stalling. **Sector:** AI power scarcity remains the dominant narrative; the rates move (F-16) is a valuation headwind, not a driver change. **Next test: Q3 print 2026-10-28.** **Tax:** LTCG 2027-08-04 (307 days). Completion is not near, so there is no LTCG coordination question.
-
-**Recommendation: HOLD.** No criterion is engaged and neither completion leg is met. The mark is −2.0% against cost, which is short-term price action and explicitly not exit-triggering.
-
-### GOOGL — Alphabet · 2 tranches · HOLD
-
-**Thesis (Subtype B):** Google Cloud revenue growth, margin and backlog continue to compound; structural-remedy risk is bounded. **Status: intact, and the main tail risk receded.**
-
-**Developments in window:**
-
-- **2026-09-02, ad-tech remedies decision (E.D. Va., Judge Brinkema).** The court **rejected** the DOJ's AdX divestiture, the open-sourcing of DFP's final auction logic, and a contingent DFP divestiture. It ordered **behavioral remedies only**: Prebid integration, equal-terms AdX bidding into rival ad servers, bid-data sharing, a bar on AdWords bidding directly into DFP, and a six-year technical monitor applied globally. The court called structural remedies "neither realistic nor needed". The opinion was unsealed on 09-16, and the proposed joint final judgment is due 2026-10-02. Sources: AdExchanger and PPC Land, secondary; the opinion itself was not read.
-- **Search case:** the D.C. Circuit appeal and DOJ cross-appeal (which seeks stronger remedies) are pending, and no argument date was found. Judge Mehta's remedies remain behavioral.
-- **EDGAR shows only Forms 4 and 144 in the window,** with no 8-K and no 10-Q (primary).
+  A buyback increase to $20B was reported by a secondary source only and was not confirmed in the primary document.
+- **Stock:** −10.6% on 10-22, **before** the print. This run did not identify a cause, and the research found no GEV filing or company event that day. The stock fell a further 10-30. The month's move was −6.6%.
 
 | # | Criterion | New data? | Status | Evidence |
 |---|---|---|---|---|
-| 1 | Cloud rev YoY < 20% for 2 consecutive Q | No | **UNBREACHED** (not engaged) | +63% Q1'26, +81.8% Q2'26; 0 of 2 |
-| 2 | Cloud op margin contracts 2 consecutive Q | No | **UNBREACHED** (not engaged) | 32.9% → 35.6%, expanding; 0 of 2 |
-| 3 | Cloud RPO/backlog declines sequentially 2 consecutive Q | No | **UNBREACHED** (not engaged) | $513.9B Cloud RPO, rising; 0 of 2 |
-| 4 | Adverse structural remedy | **Yes** | **UNBREACHED, with risk materially reduced** | Ad-tech court rejected divestiture (09-02); search remedies also behavioral. The residual path is the DOJ cross-appeal (no ruling, no date). |
-| 5 | Cloud revenue reported comparably | No | **UNBREACHED** | No filing in window |
+| Inv | Organic orders growth YoY < 15% for 2 consecutive Q | **Yes** | **UNBREACHED** | +71% → +88% → **+96%** (Q3'26); 0 of 2 |
+| Imm | Organic-orders disclosure lapses in comparable form for 2 consecutive Q | **Yes** | **UNBREACHED** | Q3 still discloses total-company organic orders growth in the same form |
+| Comp (i) | Backlog ≥ $200B | **Yes** | **NOT MET** (close) | $197B; > $200B expected in Q4 (secondary) |
+| Comp (ii) | Trailing-4Q organic orders growth ≤ 25% for ≥ 1 Q | **Yes** | **NOT MET** (far) | Accelerating; see F-1 |
 
-**Drivers:** no new measured data on Cloud, TPU or Gemini, so they are carried as progressing. **Sector:** regulatory overhang reduced; AI-capex-versus-monetisation scrutiny persists (F-9). **Next tests:** 2026-10-02 (ad-tech final-judgment proposal) and the Q3 print ~2026-10-27/28. **Tax:** LTCG 2027-07-09 and 2027-07-27.
+**Drivers:** progressing on every axis (orders, slots, capacity, margin). **Sector:** the AI-power scarcity narrative is intact. The October drawdown is price, not driver. **Next test:** Q4 print ~late January 2027. **Tax:** LTCG 2027-08-04 (276 days). Completion is not near (F-1), so there is no LTCG coordination question.
 
-**Recommendation: HOLD.**
+**Recommendation: HOLD.** The −8.5% mark is short-term price action and is explicitly not exit-triggering.
 
 ### AMZN — Amazon · 2 tranches · HOLD
 
-**Thesis (Subtype B):** AWS growth, margin and backlog compound, anchored by large AI-lab compute commitments. **Status: intact.**
+**Thesis (Subtype B):** AWS growth, margin and backlog compound, anchored by large AI-lab compute commitments. **Status: intact and strengthening.**
 
-**Developments in window** (EDGAR submissions feed, primary):
+**Developments in window** (Q3 8-K Ex. 99.1 filed 10-29 and 10-Q filed 10-30, primary):
 
-- 2026-09-09: 8-K Item 5.02, Kevin Mandia elected to the board. Governance only.
-- 2026-09-09 to 09-24: a **£4.25B sterling notes offering** (2029/2032/2038/2045 maturities): underwriting 09-09, 8-K 09-14, listing 09-24. Use of proceeds was not read.
-- Routine Forms 3/4.
-- No 10-Q or earnings filing in the window.
-- **Anthropic / OpenAI commitments:** no source found describing any reduction. Commentary (Motley Fool 09-06, secondary) restates Anthropic's >$100B AWS commitment. A 09-30 piece (The Register, secondary; body not read) concerns marketplace *distribution*, not compute commitments.
+- **AWS net sales $45,984M, +39.3% YoY**, the "fastest growth in nearly five years". AWS operating income was $17,773M, a **38.7%** margin (Q2 39.4%; Q3'25 34.6%).
+- **Commitments not yet recognized: ~$578B** (Q2 ~$496B); see F-14 for the labelling note. The release names new AWS agreements with Meta, NVIDIA, OpenAI and Oracle, without values.
+- **Anthropic / OpenAI (10-Q):** every disclosed movement is an **expansion**, with no reduction or churn.
+  - Anthropic expanded its commitment by more than $100B over 10 years in Q2'26.
+  - OpenAI's $38B commitment was expanded by $100B over 8 years in Q1'26.
+  - Amazon funded $21.3B of its OpenAI preferred commitment in Q3.
+- **Financing** (F-9): TTM free cash flow −$42.4B; long-term debt $180.9B (from $68.8B at year-end 2025); a $17.5B term loan drawn in September. The 2026 capex outlook of ~$220B is unchanged.
+- **Q4 guide:** net sales $240–247B, operating income $28.5–33.5B.
+- **EU DMA:** the AWS gatekeeper designation was **not** finalized in October. A report says it is planned for November (secondary).
 
 | # | Criterion | New data? | Status | Evidence |
 |---|---|---|---|---|
-| 1 | AWS YoY < 18% for 2 consecutive Q | No | **UNBREACHED** (not engaged) | +37.0% Q2'26; 0 of 2 |
-| 2 | AWS op margin < ~30% for 2 consecutive Q | No | **UNBREACHED** (not engaged) | 39.4%; 0 of 2 |
-| 3 | AWS backlog declines sequentially 2 consecutive Q | No | **UNBREACHED** (not engaged) | $496B, primary-confirmed from the Q2 10-Q last cycle (that carry-forward is closed); 0 of 2 |
-| 4 | Anthropic/OpenAI commitments renegotiated down or churned | Continuous | **UNBREACHED** | No evidence of reduction (secondary-only search) |
-| 5 | AWS segment reporting restructures ≥ 2 Q | No | **UNBREACHED** | No filing |
+| 1 | AWS YoY < 18% for 2 consecutive Q | **Yes** | **UNBREACHED** | +37.0% → **+39.3%**; 0 of 2 |
+| 2 | AWS op margin < ~30% for 2 consecutive Q | **Yes** | **UNBREACHED** | 39.4% → **38.7%**; 0 of 2 |
+| 3 | AWS backlog declines sequentially for 2 consecutive Q | **Yes** | **UNBREACHED** | ~$496B → **~$578B**; 0 of 2 (F-14 labelling note) |
+| 4 | Anthropic/OpenAI commitments renegotiated down or churned | **Yes** | **UNBREACHED** | 10-Q shows expansions only |
+| 5 | AWS segment reporting restructures for ≥ 2 Q | **Yes** | **UNBREACHED** | North America / International / AWS unchanged |
 
-**Drivers:** carried as progressing; no new measured data. **Sector:** debt-funded AI capex continues (F-9). **Next test:** Q3 print ~2026-10-29. Carried from last cycle and not re-verified: an EU DMA gatekeeper decision on AWS is expected around late October. **Tax:** LTCG 2027-07-09 and 2027-07-31.
+**Drivers:** progressing. Jassy projects AWS growth above 40% in 2027–28 (release). **Sector:** debt-funded capex escalation (F-9). **Next tests:** EU DMA designation (~November); Q4 print ~early February 2027. **Tax:** LTCG 2027-07-09 and 2027-07-31.
 
 **Recommendation: HOLD.**
 
 ### DIS — Walt Disney · 2 tranches · HOLD
 
-**Thesis (Subtype B):** streaming profitability expansion, an EPS-growth framework and buyback execution. **Status: intact. A quiet month with no new fundamental information.**
+**Thesis (Subtype B):** streaming profitability expansion, the EPS-growth framework and buyback execution. **Status: intact. A second quiet month; FQ4 has not printed.**
 
 **Developments in window:**
 
-- **EDGAR shows only two Forms 4** (09-03, 09-25), with no 8-K and no 10-Q (primary).
-- **FCC / ABC licences:** Disney's suit against the FCC's early-renewal order for 8 ABC stations has a court hearing set for **2026-10-06** (D.D.C.; scheduling order dated 08-20, secondary). The FCC has moved to dismiss.
-- No FCC *final order* restricting station ownership was found. FCC press pages were not checked directly, so this is "not found", not "verified absent".
-- No in-window buyback, guidance, segment-reporting or CEO-succession news was found. The absence of any 8-K is consistent with none being material.
+- **EDGAR shows only Forms 4 in the window**: 12 filings, on 10-02, 10-09 and 10-19. There is no 8-K, 10-K or 10-Q (primary).
+- **FQ4/FY26 results are reported for Tuesday 2026-11-17, before the open.** This is secondary and not confirmed on Disney IR.
+- **FCC / ABC licences** (ABC v. FCC, D.D.C. 1:26-cv-02902): Judge AliKhan heard the preliminary-injunction argument on **2026-10-06** and did not rule. Supplemental filings were due 10-14. **No ruling on the PI or on the FCC's motion to dismiss was found** as of 11-01 (secondary). No FCC final order restricting station ownership was found.
+- **Pricing:** Disney+, Hulu and ESPN prices rose by $0.50–3 per month. New subscribers pay from 09-23; existing bills from 10-21 (secondary).
+- No guidance, buyback, segment-reporting or CEO-succession news was found. The searches were not exhaustive.
 
 | # | Criterion | New data? | Status | Evidence |
 |---|---|---|---|---|
 | 1 | SVOD op margin < 8% for 2 consecutive Q | No | **UNBREACHED** (not engaged) | ~12.9% FQ3 FY26; 0 of 2 |
 | 2 | FY26 adj EPS growth guide cut to ≤ 6% | No | **UNBREACHED** (not engaged) | ~12% reiterated at FQ3; no 8-K since |
-| 3 | Buyback below run-rate, or a suspension 8-K | No | **UNBREACHED**: un-breachable for FY26 | 9-month $7,245M vs the ≤$5B Q3 floor; target ≥$9B; no 8-K of any kind in window |
-| 4 | Metric-immutability (SVOD in current 8-K Ex-99.1 form) | No | **UNBREACHED** | Zero non-conforming quarters; first test ~Feb 2027 |
-| 5 | ESCALATION: FCC final order **AND** a Disney material-adverse 8-K | Partial (litigation scheduling only) | **NOT ENGAGED** | Neither leg present |
+| 3 | Buyback below run-rate, or a suspension 8-K | No | **UNBREACHED** (un-breachable for FY26) | 9-month $7,245M vs the ≤$5B Q3 floor; no 8-K |
+| 4 | Metric-immutability (SVOD in its current 8-K Ex-99.1 form) | No | **UNBREACHED** | First test ~Feb 2027 |
+| 5 | ESCALATION: FCC final order **AND** a Disney material-adverse 8-K | Litigation only | **NOT ENGAGED** | Neither leg present |
 
-**Drivers:** carried as progressing (SVOD margin 8.4% → 10.6% → ~12.9%). **Sector:** no in-window verification on parks or linear TV; no claim made. **Next tests:** 2026-10-06 FCC hearing, and the FQ4 FY26 print ~2026-11-12 (estimate, unconfirmed). **Tax:** LTCG 2027-05-08 (parent, 219 days) and 2027-08-06.
+**Drivers:** carried as progressing; the price increases are mildly supportive of SVOD margin. **Next tests:** FQ4 FY26 print **~2026-11-17**, which tests c1, c2 and c3 for the full year; the D.D.C. PI ruling. **Tax:** LTCG 2027-05-08 (parent, 188 days) and 2027-08-06.
 
-**Recommendation: HOLD.** c5 needs **both** legs, and neither exists. The 10-06 hearing alone cannot engage it.
+**Recommendation: HOLD.**
 
-### TSM — Taiwan Semiconductor · 2 tranches · HOLD
+### GOOGL — Alphabet · 2 tranches · HOLD
 
-**Thesis:** AI-accelerator-driven leading-edge foundry demand, gross margin, node leadership (N2/A16) and CoWoS. **Status: intact and strengthening on the in-window proxy.**
+**Thesis (Subtype B):** Google Cloud revenue growth, margin and backlog keep compounding, and structural-remedy risk stays bounded. **Status: intact. The thesis segment is markedly stronger; the stock fell on the parent's EPS (F-18).**
 
-**Developments in window:**
+**Developments in window** (Q3 8-K Ex. 99.1 and 10-Q, 2026-10-28, primary):
 
-- **2026-09-10, August revenue NT$514.81B: +10.1% MoM and +53.3% YoY.** Year-to-date NT$3,386.87B, +39.3% YoY. Source: 6-K, `sec.gov` primary, matching the TSMC IR monthly-revenue page. This accelerates from July's +44.7%.
-- **2026-09-02, Section 232 semiconductor tariff "Phase Two" confirmed** by the Commerce Secretary, with **no rates, product list or timeline**. The reported framework ties duty-free import quotas to US capacity (2.5× during construction, 1.5× once operational), which favours TSMC's Arizona build. Source: TechTimes, secondary. This is a watch item, not a criterion.
-- No in-window hyperscaler or Nvidia order cut and no CoWoS utilization drop was found. The search was light: one query.
+- **Google Cloud revenue $30,709M, +102.6% YoY** (Q2 +81.8%). Cloud operating income was $11,121M, a **36.2%** margin, up from 35.6% in Q2 and 23.7% a year ago.
+- **RPO:** Alphabet total **$567.7B**, of which **Google Cloud is $560.8B**, against $513.9B in Q2 (+$46.9B, +9.1%). The $567.7B figure D1 quoted is the Alphabet total; the criterion's Cloud figure is $560.8B. Just over 55% of RPO is to be recognized within 24 months. $16.8B comes from an agreement with an unconsolidated equity-method joint venture (Crux AI).
+- **Segments unchanged:** Google Services, Google Cloud, Other Bets.
+- **Ad-tech remedies (E.D. Va.):** behavioral only. The DOJ's structural remedies were rejected on 09-02. Whether the final judgment was entered in October was **not found** (secondary; no docket access). Google says it will appeal liability.
+- **Search case (D.C. Cir.):** "Oral Argument Not Yet Scheduled". No ruling.
+- **Price:** −12.6% on 10-29 and −1.4% on 10-30. The month's move was −17.5% (F-18, F-19).
 
 | # | Criterion | New data? | Status | Evidence |
 |---|---|---|---|---|
-| 1 | GM < 55% OR USD rev YoY < 15%, 2 consecutive Q | Proxy only | **UNBREACHED** (not engaged) | Q2'26 GM 67.7%, USD rev +33.7%. NT$ monthly +53.3% is a proxy, **not** the specified USD-quarterly metric |
-| 2 | N2/A16 ramp pushed out OR sub-7nm share declines 2 consecutive Q | No | **UNBREACHED** | No pushout in window; sub-7nm 77% and rising at last print |
-| 3 | Structural AI-capex reset | Continuous | **UNBREACHED**: evidence points the other way | Monthly revenue accelerating; no order-cut evidence found |
+| 1 | Cloud rev YoY < 20% for 2 consecutive Q | **Yes** | **UNBREACHED** | +81.8% → **+102.6%**; 0 of 2 |
+| 2 | Cloud op margin contracts for 2 consecutive Q | **Yes** | **UNBREACHED** | 35.6% → **36.2%** (expanded); 0 of 2 |
+| 3 | Cloud RPO/backlog declines sequentially for 2 consecutive Q | **Yes** | **UNBREACHED** | $513.9B → **$560.8B**; 0 of 2 |
+| 4 | Adverse structural remedy | Searched | **UNBREACHED** | No structural remedy in any jurisdiction found; ad-tech remedies behavioral |
+| 5 | Cloud revenue reported comparably for ≥ 2 Q | **Yes** | **UNBREACHED** | Segment unchanged |
 
-**Drivers:** AI demand progressing; N2 ramp under way (Q3 GM guide 65–67% cites ramp costs; secondary, pre-window). **Sector:** tariff detail pending; Taiwan geopolitics was not searched this cycle. **Next tests:** September revenue ~2026-10-10, and the **Q3 print 2026-10-15**, the first full criterion test of the round. **Tax:** LTCG 2027-07-21 and 2027-07-30.
+**Drivers:** Cloud and TPU demand are accelerating. TPU systems sales were cited as a Cloud contributor (secondary). **Sector:** AI-capex monetization scrutiny is now acute in the price (F-9, F-19). The parent's dominant line, Search, grew +12% (F-18). **Next tests:** ad-tech final-judgment entry and appeal; Q4 print ~early February 2027. **Tax:** LTCG 2027-07-09 and 2027-07-27.
+
+**Recommendation: HOLD.** Both tranches are below cost (−21.1% and −13.4%). That is price action against an intact, strengthening criterion set, and it is not exit-triggering. Rev 55 does not apply retroactively.
+
+### TSM — Taiwan Semiconductor · 2 tranches · HOLD
+
+**Thesis:** AI-accelerator-driven leading-edge foundry demand, gross margin, node leadership (N2/A16) and CoWoS. **Status: intact and strengthening.**
+
+**Developments in window** (6-Ks filed 10-08 and 10-15, primary, unless noted):
+
+- **Q3'26 revenue was US$46.72B, +41.2% YoY** (+16.2% QoQ). **GM 66.4%**, down 1.3pt from 67.7% on N2 ramp dilution (secondary transcript).
+- **Wafer revenue by node:** N2 8%, N3 33%, N5 28%, N7 10%. **Advanced (7nm and below) was 79%**, against Q2's 77%.
+- **Q4 guide:** revenue US$52.3–54.3B, about +58% YoY at the midpoint (secondary arithmetic); GM 65–67%. FY26 USD growth about 44%, and FY26 capex US$60–64B, reiterated (secondary).
+- **Demand commentary** (secondary transcript): demand is "still far above our capability today to supply"; CoWoS is "still the number one choice", with a back-end shortage.
+- **N2:** "ramping successfully in multiple phases"; N2-family capacity is to more than double by 2027.
+- **A16:** not mentioned on the call. A14 risk production is in 2027. Arizona fab 2 volume production is now expected in Q3 2027, "slightly ahead" of schedule.
+- **Monthly revenue:** September was NT$511.86B, +54.6% YoY. October is due ~11-10.
+- **Unchecked or unremarkable:** the 6-K of 10-22 was not read. No in-window Section 232 action was found. One Taiwan-geopolitics search found no verified October incident.
+- **Price:** −5.9% on 10-30 (unexplained this run); the month's move was −5.3%.
+
+| # | Criterion | New data? | Status | Evidence |
+|---|---|---|---|---|
+| 1 | GM < 55% OR USD rev YoY < 15% for 2 consecutive Q | **Yes** | **UNBREACHED** | GM 66.4%; USD rev **+41.2%**; 0 of 2 |
+| 2 | N2/A16 ramp pushed out OR sub-7nm share declines for 2 consecutive Q | **Yes** | **UNBREACHED** | No pushout (N2 at 8% of revenue, ramping); sub-7nm 77% → **79%** |
+| 3 | Structural AI-capex reset | Continuous | **UNBREACHED**; evidence points the other way | Demand exceeds supply; Q4 guide +58% YoY |
+
+**Drivers:** progressing. A16 status was **not found** this cycle, so the "A16" half of c2's pushout leg is evidenced only by the absence of any reported slip. Next cycle should confirm A16 explicitly. **Sector:** demand is not the issue; capital intensity is rising (F-9). **Next tests:** October revenue ~11-10; Q4 print ~mid-January 2027. **Tax:** LTCG 2027-07-21 and 2027-07-30.
 
 **Recommendation: HOLD.**
 
 ### ISRG — Intuitive Surgical · 1 tranche · HOLD
 
-**Thesis:** da Vinci procedure growth, system placements and a recurring-revenue attach, against competitive entry. **Status: intact.**
+**Thesis:** da Vinci procedure growth, system placements and recurring-revenue attach, against competitive entry. **Status: intact.**
 
-**Developments in window:**
+**Developments in window** (Q3 8-K Ex. 99.1 filed 10-20 and 10-Q filed 10-21, primary):
 
-- **EDGAR shows only Forms 4 and 144** (primary).
-- **2026-09-08:** an Annals of Surgery Open meta-analysis covering >14M procedures (da Vinci versus laparoscopy: lower conversion to open surgery, shorter stays). Secondary.
-- EU label expansions (da Vinci SP transvaginal gynecology; da Vinci 5 adult cardiac). Secondary, exact dates not verified.
-- **Competitors:** no disclosure of displacing da Vinci at a named large IDN. Only known early Hugo/Versius installations surfaced, and an early installer is not a displacement disclosure.
+- **da Vinci procedures about +14% YoY** (about +15% including Ion; Ion +31%). By region: US +10%, OUS +20% (secondary).
+- **Placements 546 vs 427 (+28%)**, of which 315 were da Vinci 5.
+- **I&A $1.80B, +18%.** Total revenue $3.05B (+22%).
+- **FY26 procedure guide** narrowed to about 14–15%, "closer to the midpoint".
+- **$450M antitrust settlement** (In re: da Vinci Surgical Robot Antitrust Litigation) with agreed injunctive relief, subject to court approval. It was booked as a Q3 SG&A charge, about $0.99/share.
+- **Pricing actions** will cut I&A per procedure by about 3–5% (F-14 watch).
+- **No competitor disclosure of a named-IDN displacement** was found in the filing or the call. A separate news search was not run.
+- **Price:** +10.4% over the month. The circulating "−10.5% after hours" claim is refuted by the IBKR series (F-5).
 
 | # | Criterion | New data? | Status | Evidence |
 |---|---|---|---|---|
-| 1 | Procedure growth < 10% YoY for 2 consecutive Q | No | **UNBREACHED** (not engaged) | +16% Q1'26, +15% Q2'26; 0 of 2 |
-| 2 | Placements decline YoY for 2 consecutive Q | No | **UNBREACHED** (not engaged) | 431 vs 367; 468 vs 395; 0 of 2 |
-| 3 | Recurring revenue decouples down from procedures | No | **UNBREACHED** | I&A +18% vs procedures +15% |
-| 4 | Competitor displaces da Vinci at named large IDNs | Searched | **UNBREACHED** | No qualifying disclosure (not exhaustive: one competitor search plus last cycle's baseline) |
+| 1 | Procedure growth < 10% YoY for 2 consecutive Q | **Yes** | **UNBREACHED** | +16% → +15% → **+14%** (da Vinci); 0 of 2. The trend is gently decelerating, still 4pt clear |
+| 2 | Placements decline YoY for 2 consecutive Q | **Yes** | **UNBREACHED** | **546 vs 427 (+28%)**; 0 of 2 |
+| 3 | Recurring revenue decouples down from procedures | **Yes** | **UNBREACHED** | I&A +18% vs procedures +14%; pricing-driven watch (F-14) |
+| 4 | Competitor displaces da Vinci at named large IDNs | Partial | **UNBREACHED** | None in the filing or call; no separate competitor search |
 
-**Drivers:** adoption carried as progressing; label expansion and clinical evidence are mildly positive. **Next test:** Q3 print ~2026-10-20 (expected date, secondary). **Tax:** LTCG 2027-07-20 (292 days).
+**Drivers:** progressing (dV5 placements, Ion). **Watch:** US da Vinci growth of +10% is the single closest reading to any threshold in the book. Note that c1's threshold applies to the **worldwide** procedure figure, at +14%. **Next test:** Q4 print ~late January 2027. **Tax:** LTCG 2027-07-20 (261 days).
 
-**Recommendation: HOLD.** The +16.3% mark is not a completion signal; ISRG has no completion criterion (F-1).
+**Recommendation: HOLD.** The +28.4% unrealized gain is not a completion signal, because ISRG has no completion criterion (F-1).
 
 ### UBER — Uber Technologies · 1 tranche · HOLD
 
-**Thesis (Subtype B):** Gross Bookings growth, margin expansion and Uber One flywheel compounding. **Status: intact. Every September event was thesis-neutral to mildly positive; AV competition intensified.**
+**Thesis (Subtype B):** Gross Bookings growth, margin expansion and Uber One flywheel compounding. **Status: intact. No new data: Q3 had not printed by 11-01.**
 
 **Developments in window:**
 
-- **2026-09-15:** 8-K (Items 8.01 and 9.01) plus Form 8-A registering **five senior note series** (2029–2046) on the NYSE. Source: `sec.gov`, primary. The purpose is likely Delivery Hero financing, but that is *an inference, not verified*.
-- **2026-09-02:** Delivery Hero's board recommended Uber's €41.50/sh (~$14.8B) tender offer. Overlap businesses in 14 markets are to be sold to SSW Partners for $1.6B. Source: TechCrunch, secondary.
-- **2026-09-02:** layoffs of ~10% of staff (~3,000–3,300), aimed at management layers. Secondary; no 8-K was filed.
-- **AV competition:** Waymo launched Denver, San Diego and Tampa (14 US cities, 4,000+ vehicles). Tesla Cybercab opened to public riders in Austin. Reports say Uber may commit ~$10B to AV procurement and stakes (secondary, snippet only).
-- No Item 2.02 filing and no Gross Bookings or Adjusted EBITDA disclosure change in the window.
+- **EDGAR shows only Forms 4 and a CERT** from 09-15 through 10-20 (primary). **Q3 is not yet reported.** The date is unconfirmed: secondary sources say 11-02 or 11-03, and investor.uber.com returned template content only.
+- The Q3 guide carried from Q2 is GB $58.25–60.25B (secondary).
+- **Delivery Hero:** the €41.50 offer's acceptance period ends **2026-11-05**. The minimum acceptance is 50% + 1 share, with Prosus irrevocably committed for ~16.7%. Settlement is expected in H2 2027, subject to regulatory approval (secondary). The running acceptance level was not found.
+- No October AV news was found. The Lucid/Nuro robotaxi is planned for late 2026 (secondary, pre-window).
+- **Price:** −4.0% over the month.
 
 | # | Criterion | New data? | Status | Evidence |
 |---|---|---|---|---|
-| 1 | GB cc YoY < ~15% for 2 consecutive Q | No | **UNBREACHED** (not engaged) | +21% Q1'26, +22% Q2'26; Q3 guide 18–22% cc |
-| 2 | Adj-EBITDA % of GB contracts YoY for 2 consecutive Q | No | **UNBREACHED** (not engaged) | +26bp, +40bp YoY. **Testability risk at Q3** (F-14) |
-| 3 | Uber One membership stalls or declines sequentially | No | **UNBREACHED** | "Another all-time high" (Q2'26 CEO remarks). The raw count is not disclosed, so obtain it at Q3 if published |
-| 4 | GB disclosure structurally changes | No | **UNBREACHED** | No change in window |
+| 1 | GB cc YoY < ~15% for 2 consecutive Q | No | **UNBREACHED** (not engaged) | +21%, +22%; 0 of 2 |
+| 2 | Adj-EBITDA % of GB contracts YoY for 2 consecutive Q | No | **UNBREACHED** (not engaged) | +26bp, +40bp. **Testability test deferred to the Q3 print** (F-14) |
+| 3 | Uber One membership stalls or declines sequentially | No | **UNBREACHED** | "Another all-time high" at Q2 |
+| 4 | GB disclosure structurally changes | No | **UNBREACHED** | No filing |
 
-**Drivers:** flywheel carried as progressing. Layoffs are a margin tailwind. Delivery Hero adds scale and leverage. **Sector:** AV disruption risk rising, and it sits outside the four criteria as written. **Next tests:** Q3 print ~2026-10-29 / 11-03 (sources conflict); Delivery Hero acceptance period ends ~2026-11-05 (carried, not re-verified). **Tax:** LTCG 2027-07-09.
+**Next tests:** Q3 print ~11-02/03 (c1–c4 plus the c2 testability test); Delivery Hero acceptance close 11-05. **Tax:** LTCG 2027-07-09.
 
-**Recommendation: HOLD.** The −6.4% mark is price action only.
+**Recommendation: HOLD.** The −10.2% mark is price action only.
 
 ### RTX — RTX Corporation · 1 tranche · HOLD
 
-**Thesis:** commercial aerospace aftermarket and GTF fleet recovery plus a defense backlog. **Status: intact. The one new milestone is positive.**
+**Thesis:** commercial aerospace aftermarket and GTF fleet recovery, plus the defense backlog. **Status: intact and strengthening.**
 
-**Developments in window:**
+**Developments in window** (Q3 8-K Ex. 99 and 10-Q, 2026-10-20, primary; the only 8-K in the window):
 
-- **2026-09-15:** 8-K Item 5.02. Shane Eddy steps down as Pratt & Whitney president effective 2027-01-01 and is succeeded by Jill Albertelli (President, Military Engines). Filing confirmed on EDGAR (primary); detail is from a snippet.
-- **2026-09-24: first GTF Advantage-powered A321XLR delivered to United.** P&W says the whole PW1100G-JM line moves to Advantage spec by 2028. Source: RTX newsroom, primary headline.
-- **2026-09-02: FY27 continuing resolution (P.L. 119-103) signed.** It funds government at FY26 levels through 2026-12-11, with no new starts and no rate increases above FY26. Source: CRS, primary via summary.
-- **2026-09-29:** RTX confirmed Q3 results for **2026-10-20** (primary).
-- No Airbus damages ruling or settlement; no new quality event.
+- **Backlog $340B** ($176B commercial, $164B defense), up from $289B in Q2 (+17.6%). Q3 included Tomahawk and AMRAAM multi-year undefinitized awards (secondary).
+- **FY26 guidance raised:**
+
+  | Line | New guide | Prior guide | Basis |
+  |---|---|---|---|
+  | FCF | **$9.0–9.2B** | $8.50–8.75B | primary |
+  | Adjusted sales | $97.0–97.5B | — | secondary |
+  | Adjusted EPS | $7.65–7.75 | — | secondary |
+
+  Q3 FCF was $2.1B, −47% YoY (secondary).
+- **Charges:** a $363M P&W charge for a customer bankruptcy, well under $1B and not a fleet-quality event. Powder metal appears only in risk-factor language. The 10-Q itself was **not read**.
+- **GTF Advantage:** first delivery 2026-09-24; no slip reported.
+- **Airbus damages:** no ruling or settlement found.
+- **FY27 appropriations:** the CR (P.L. 119-103) runs to **2026-12-11** at FY26 levels. No full-year FY27 defense bill has been enacted. A lapse would begin 12-12.
+- **Price:** +7.4% over the month.
 
 | # | Criterion | New data? | Status | Evidence |
 |---|---|---|---|---|
-| 1 | Airbus damages ruling > $2B | Searched | **UNBREACHED** | No ruling or settlement; claim unquantified |
-| 2 | New powder-metal-style quality event > $1B charge | Searched | **UNBREACHED** | Only in-window 8-K is a leadership change |
-| 3 | GTF Advantage EIS slips beyond Q1'27 | **Yes** | **UNBREACHED**: affirmatively on schedule | First Advantage delivery 2026-09-24 |
-| 4 | Backlog declines 2 consecutive Q | No | **UNBREACHED** (not engaged) | $289B Q2'26, +6% sequential |
-| 5 | FY26 FCF guide < $7.5B | No | **UNBREACHED** (not engaged) | Guide $8.50–8.75B, no revision |
-| 6 | FY27 defense procurement cut ≥ 10% YoY | **Yes** | **UNBREACHED** | The CR holds FY26 levels to 12-11. That is no cut, though it is not yet an enacted FY27 level |
+| 1 | Airbus damages ruling > $2B | Searched | **UNBREACHED** | None found |
+| 2 | New powder-metal-style quality event > $1B charge | **Yes** | **UNBREACHED** | Only a $363M customer-bankruptcy charge (not a quality event); 10-Q unread |
+| 3 | GTF Advantage EIS slips beyond Q1'27 | Yes | **UNBREACHED** | Entered service 2026-09-24 |
+| 4 | Backlog declines for 2 consecutive Q | **Yes** | **UNBREACHED** | $271B → $289B → **$340B**; 0 of 2 (Q1/Q2 comparatives secondary or prior-cycle) |
+| 5 | FY26 FCF guide < $7.5B | **Yes** | **UNBREACHED** | Raised to **$9.0–9.2B** |
+| 6 | FY27 defense procurement cut ≥ 10% YoY | Yes | **UNBREACHED** | CR at FY26 levels to 12-11; nothing enacted below |
 
-**Drivers:** GTF fleet-durability fix progressing; defense demand intact. The CR's no-rate-increase clause is mild near-term friction, not a cut. **Watch:** CR expiry on 2026-12-11. A lapse or full-year bill is the next c6 data point. **Tax:** LTCG 2027-04-27 (208 days), the nearest in the book. **Separate trigger:** the falsifiable-milestone reassessment at Q1'27 earnings.
+**Watch:** CR expiry on **2026-12-11**. A lapse, a further CR or a full-year bill is the next c6 data point. **Tax:** LTCG 2027-04-27 (177 days), the nearest in the book. **Separate trigger:** the falsifiable-milestone reassessment at Q1'27 earnings.
 
 **Recommendation: HOLD.**
 
@@ -403,7 +561,9 @@ Each section covers the six required items: (1) thesis status, (2) driver check,
 
 ## Long-term tax treatment — full book
 
-No tranche reaches LTCG inside the next quarter. The nearest are **RTX 2027-04-27 (208 days)** and **DIS parent 2027-05-08 (219 days)**. The other ten fall between 2027-07-09 and 2027-08-06. No position is near a completion or invalidation signal, so **no LTCG-timing coordination question arises.** Per Rev 39, exit timing is governed by thesis criteria alone, and there is no preference to delay an exit to qualify for LTCG. All 12 tranches carry a populated `ltcg_date`; the prior cycle's `D:DIS:2026-08-05` NULL was repaired by `bigquery/240`.
+No tranche reaches LTCG inside the next quarter. The nearest are **RTX on 2027-04-27 (177 days)** and the **DIS parent on 2027-05-08 (188 days)**. The other ten fall between 2027-07-09 and 2027-08-06.
+
+No position is at a completion or invalidation signal. GEV's leg (i) alone does not complete its thesis (F-1). **No LTCG-timing coordination question arises.** Under Rev 39, exit timing is governed by thesis criteria alone. All 12 tranches carry a populated `ltcg_date`.
 
 ---
 
@@ -411,36 +571,49 @@ No tranche reaches LTCG inside the next quarter. The nearest are **RTX 2027-04-2
 
 | Name | Recommendation | Basis | Next scheduled test |
 |---|---|---|---|
-| GEV | **HOLD** | 0 of 2 criteria breached; completion not met | Q3 print 2026-10-28 |
-| GOOGL | **HOLD** | 0 of 5 breached; structural-remedy risk reduced (ad-tech ruling 09-02) | 10-02 final-judgment proposal; Q3 ~10-27/28 |
-| AMZN | **HOLD** | 0 of 5 breached | Q3 ~10-29 |
-| DIS | **HOLD** | 0 of 4 breached; escalation c5 not engaged | FCC hearing 10-06; FQ4 ~11-12 |
-| TSM | **HOLD** | 0 of 3 breached; monthly revenue +53.3% YoY | Sept revenue ~10-10; Q3 10-15 |
-| ISRG | **HOLD** | 0 of 4 breached | Q3 ~10-20 |
-| UBER | **HOLD** | 0 of 4 breached; c2 testability risk at Q3 | Q3 ~10-29/11-03 |
-| RTX | **HOLD** | 0 of 6 breached; GTF Advantage EIS on schedule | Q3 10-20; CR expiry 12-11 |
+| GEV | **HOLD** | 0 of 2 breached; completion leg (i) $197B vs $200B, leg (ii) far | Q4 ~late Jan 2027 |
+| AMZN | **HOLD** | 0 of 5 breached; AWS +39.3% / 38.7% | EU DMA ~Nov; Q4 ~early Feb |
+| DIS | **HOLD** | 0 of 4 breached; c5 not engaged | FQ4 ~11-17; D.D.C. PI ruling |
+| GOOGL | **HOLD** | 0 of 5 breached; Cloud +103% / 36.2% / RPO +9.1% | Ad-tech judgment and appeal; Q4 ~early Feb |
+| TSM | **HOLD** | 0 of 3 breached; GM 66.4%, USD +41.2% | Oct revenue ~11-10; Q4 ~mid-Jan |
+| ISRG | **HOLD** | 0 of 4 breached; c3 pricing watch | Q4 ~late Jan |
+| UBER | **HOLD** | 0 of 4 breached; Q3 not yet printed | Q3 ~11-02/03; DH tender close 11-05 |
+| RTX | **HOLD** | 0 of 6 breached; backlog $340B, FCF guide raised | CR expiry 12-11; Q4 ~late Jan |
 
-**For M4:** no exits to stage, no research deferrals to schedule, and no IMMEDIATE-ACTION flag. F-16 (rates) and F-12 (sector-cap artifact) are **context only**. Neither creates an action, and manufacturing one from either would be an error. October's Q3 print round is the dense test window: **all eight names report between 10-15 and ~11-12**, so next cycle's file will carry real criterion measurements for every quarterly criterion.
+**For M4:** there are no exits to stage, no research deferrals to schedule and no IMMEDIATE-ACTION flag. **GEV is not a completion candidate** (F-1). F-18 (the GOOGL / Rev 55 record), F-19 (the price-fundamentals divergence and alpha swing) and F-16 (rates) are **context only**. Manufacturing an action from any of them would be an error.
 
 ## Items owned by a routine other than M4's exit path
 
-- **D1 (add-candidate HARD GATE):** all 12 tranches now carry an affirmative breach assessment (F-17). The ISRG/RTX/UBER structural ineligibility is cleared on the record side. Adds remain unfundable while D is DNA and capital-disabled.
-- **M1b / next D divergence review:** `div-D-202608-1`'s "10Y flat" premise is stale (F-16).
-- **Q2 (~2026-10-02):** apply W5's landed caveat to the sector-cap reading (F-12). Communication Services is now right at the 30% line on the artifact denominator.
+- **D1 (add-candidate HARD GATE):** all 12 tranches remain affirmatively assessed (F-17). This cycle's Q3 data supports the "strengthened conviction" reads D1 recorded for GEV, GOOGL and AMZN. Adds remain unfundable while D is DNA and capital-disabled.
+- **Next M3 (2026-12):** must cover four things:
+  - UBER Q3, including the c2 Adjusted EBITDA testability test;
+  - DIS FQ4;
+  - the TSM A16 confirmation;
+  - the AMZN 10-Q RPO scope wording (F-14).
 
 ## Method, and what this run did not do
 
-- **Sources.** BigQuery for positions, engine, NAV, regime, decision log, queue and alerts. `events.daily_marks` for the 2026-09-30 connector closes. Four Sonnet research sub-agents ran on SEC EDGAR / `data.sec.gov`, issuer IR and free web search. One further sub-agent handled the IBKR price-history correlation recompute. The orchestrator made one corroborating web search on the 10Y close.
-- **No FMP, no Tavily, no metered spend.** Every external call this run was on a free surface; the `ops.web_calls` rows are logged with `credits = 0`.
+- **Sources.**
+  - BigQuery for positions, marks, engine, NAV, regime, factor-cluster exposure, decision log, queue and alerts.
+  - Four Sonnet research sub-agents ran on SEC EDGAR / `sec.gov` (`WebFetch`), issuer IR and free web search: **52 calls**, all on the free `web_search` / `web_fetch` surfaces.
+  - A fifth sub-agent made 8 read-only IBKR `get_price_history` calls for the correlation recompute (unmetered).
+  - The orchestrator made no web call.
+- **No FMP, no Tavily, no metered spend.** The `ops.web_calls` rows are logged with `credits = 0`.
 - **Writes.**
-  - 7 `events.position_events` ADJUST rows (F-17).
   - This file.
   - `ops.run_log` start and end rows.
   - `ops.web_calls` telemetry.
+  - **No `events.position_events` row** (F-17: zero backlog).
 - **Not done, deliberately:**
   - No order, queue item or calendar event (M3 stages nothing).
-  - No re-derivation of any criterion.
-  - The GOOGL ad-tech opinion was not read in full.
-  - FCC press pages were not checked directly.
-  - Taiwan geopolitics was not researched.
-  - Uber Form 4 patterns were not analysed.
+  - No re-derivation or re-stamping of any criterion.
+  - No retroactive application of Rev 55.
+- **Not done, coverage gaps (stated):**
+  - GOOGL call transcript and MD&A (F-18).
+  - RTX 10-Q.
+  - GOOGL ad-tech final-judgment docket.
+  - Disney IR date page.
+  - Uber's Q3 date confirmation.
+  - The cause of GEV's 10-22 drop and TSM's 10-30 drop.
+  - ISRG competitor news search.
+  - GEV Q4'25 organic orders (needed for a trailing-4Q figure).
