@@ -4414,3 +4414,16 @@ email by design. (d) No second email/ntfy channel — the in-warehouse backstop 
 cannot be this class any more (the pending period would have absorbed it) — treat it as REAL or a longer platform
 event and run the §19 triage; do not just raise the number. After the apply, validate on the next firing via the
 alerts API rather than waiting on an email.
+
+## 57. Repairing a `research-screen` row after digest refusals, without re-typing it *(interactive sessions only)*
+
+A routine never edits a refused call. It stops after its bounded retries and raises `research_screen_write_refused`. The next D1 does not regenerate the missed session, so an interactive session repairs the row from the refused text BigQuery kept.
+
+1. Find the refused jobs in `` `stock-trading-498512.region-us.INFORMATION_SCHEMA.JOBS_BY_PROJECT` ``, by `error_result.message LIKE '%digest mismatch%'` over the run's window. Identical `TO_HEX(SHA256(query))` values mean the issuer repeated the same damage.
+2. Find the damage by reading the job text. Sibling items usually show it: on 2026-11-01 every source read `IBKR get_price_history ONE_DAY outside_rth=false` except XLP's, which had lost `ONE_DAY ` at a literal wrap.
+3. In one script, `DECLARE` the job's `query`, `REPLACE` the damaged span, and `RAISE` unless the length changed by exactly the expected amount. Extract each long literal with `REGEXP_EXTRACT` between its `-- in_<arg>` comments, strip the `'\n  '` piece joins, and unescape `\'`. `RAISE` if any backslash remains: `scripts/decision_call.py` `sql_str` also emits `\\`, `\uXXXX` and `\UXXXXXXXX`, so a row carrying those needs them decoded in one left-to-right pass first, never by sequential `REPLACE`s.
+4. `CALL ops.sp_log_decision_checked(...)` with those variables and the embedded digest. `EXECUTE IMMEDIATE` cannot run a `CALL`. Do not call `ops.sp_log_decision` directly.
+
+The digest is the proof. A wrong repair is refused and writes nothing, so a guess costs one query. A `written` outcome with the original `expected` digest means the row is byte-exact, and its tag `sha256:<digest>` records that. Row `0b27dc01` (2026-11-01) landed this way. Its `event_ts` is the repair time. Most consumers key on `entry_date`, but `event_ts` is a tie-break in places such as `state.shock_transmission_status`, so check for same-date siblings before repairing.
+
+**Split calls.** The steps above cover an unsplit `call.sql`. In a split call, `fields` and possibly `body_md` are NULL in `call.sql`, and the filter also matches `sp_stage_decision_part`'s refusals. Repair a refused part's `in_payload` the same way, recompute its digest with `TO_HEX(SHA256(payload))`, and re-`CALL ops.sp_stage_decision_part` with the job's other arguments. Then re-issue the stored `call.sql` text; `ops.sp_log_decision_staged` assembles the parts and applies the same whole-call digest.
