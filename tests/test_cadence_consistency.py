@@ -615,6 +615,7 @@ def _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, cata
     # shared fixture gains no new error. Tests that exercise those copies point the constant at a
     # fixture file of their own.
     monkeypatch.setattr(cc, "CATCHUP_INFLIGHT_HOSTED_SQL", str(tmp_path / "absent_184.sql"))
+    monkeypatch.setattr(cc, "CATCHUP_DEP_HALT_SQL", str(tmp_path / "absent_274.sql"))
     # check M's membership cross-check (evening_slot_guard_membership_errors) compares
     # EVENING_DAILY_GUARD_IDS/NOON_CLAUSE_EXEMPT_EVENING_IDS -- the REAL evening-slot cohort, 12
     # routines as of 2026-09-04 (this comment said 11 / "the 10 real ids" until then; W5 joined on

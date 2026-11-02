@@ -1,5 +1,5 @@
--- Parallel-run dbt port of bigquery/93_park_accounting.sql:analytics.account_reconciliation
--- (SUPERSEDES bigquery/22_cash_flows.sql's definition) — canonical source is bigquery/93 until owner
+-- Parallel-run dbt port of bigquery/273_account_reconciliation_park_income.sql:analytics.account_reconciliation
+-- (SUPERSEDES bigquery/156's definition) — canonical source is bigquery/273 until owner
 -- cutover. §13 account-integrity, ACCOUNT-LEVEL: the events-side expected total, sourced from
 -- events.cash_flows (self-improvement audit B-1-exec). D2 Step 0 compares it (+ the connector's live
 -- SGOV mark) to the connector NLV / SGOV shares / cash and flags any residual > ~$1. Per-strategy
@@ -61,6 +61,42 @@ park_now AS (
   FROM park_positions pp
   LEFT JOIN park_latest_close lc USING (ticker)
   WHERE ABS(pp.shares) > 0.0005
+),
+-- park_exited: net cash of park tickers fully exited, which park_now's dust guard drops from
+-- park_cost_basis even though that outflow really left the account.
+park_exited AS (
+  SELECT COALESCE(SUM(-net_cash), 0) AS exited_net_outflow
+  FROM park_positions
+  WHERE ABS(shares) <= 0.0005
+),
+park_signed AS (
+  SELECT ticker, action_date,
+    CASE action
+      WHEN 'BUY' THEN shares
+      WHEN 'DIVIDEND_REINVEST' THEN shares
+      WHEN 'RECON_ADJUST' THEN shares
+      WHEN 'SELL' THEN -shares
+      ELSE 0 END AS sh
+  FROM {{ source('events', 'parking_events') }}
+  WHERE ticker IS NOT NULL
+),
+park_div_marks AS (
+  SELECT ticker, mark_date, MAX(dividend) AS dividend
+  FROM (
+    SELECT ticker, mark_date, dividend FROM {{ ref('daily_marks_curated') }} WHERE dividend > 0
+    UNION ALL
+    SELECT ticker, mark_date, dividend FROM {{ source('state_external', 'signal_marks_curated') }} WHERE dividend > 0
+  )
+  GROUP BY ticker, mark_date
+),
+-- park_income: per-share dividend on each ex-date x park shares held before it. An ESTIMATE from marks,
+-- because no ledger records park dividends; ex-date to pay-date lag makes it briefly lead the cash.
+park_income AS (
+  SELECT COALESCE(SUM(dm.dividend * GREATEST(COALESCE(
+      (SELECT SUM(ps.sh) FROM park_signed ps
+       WHERE ps.ticker = dm.ticker AND ps.action_date < dm.mark_date), 0), 0)), 0) AS income_est
+  FROM park_div_marks dm
+  WHERE dm.ticker IN (SELECT ticker FROM park_signed)
 )
 SELECT
   (SELECT ROUND(SUM(amount), 2) FROM {{ source('events', 'cash_flows') }})               AS total_deposits,
@@ -89,5 +125,17 @@ SELECT
       - COALESCE(pn.park_mv_now, 0)
       - COALESCE((SELECT total_cash FROM {{ ref('account_latest') }}), 0)
     ) + (COALESCE(pn.park_mv_now, 0) - COALESCE(pn.park_cost_basis, 0))
-  , 2)                                                                                     AS residual_after_park
+  , 2)                                                                                     AS residual_after_park,
+  ROUND(pe.exited_net_outflow, 2)                                                                  AS park_exited_net_outflow,
+  ROUND(pi.income_est, 2)                                                                          AS park_income_est,
+  ROUND(
+    (
+      (SELECT SUM(available_funds) FROM {{ ref('strategy_nav') }})
+      - COALESCE(pn.park_mv_now, 0)
+      - COALESCE((SELECT total_cash FROM {{ ref('account_latest') }}), 0)
+    ) + (COALESCE(pn.park_mv_now, 0) - COALESCE(pn.park_cost_basis, 0))
+    - pe.exited_net_outflow + pi.income_est
+  , 2)                                                                                             AS residual_unexplained
 FROM park_now pn
+CROSS JOIN park_exited pe
+CROSS JOIN park_income pi
