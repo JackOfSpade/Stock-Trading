@@ -73,6 +73,7 @@ OPTIONS(description='Idempotency + audit trail for OPS0 Cadence Watchdog auto-re
 -- latest-row-wins 'started' definition is unchanged. Apply bigquery/184 -- do NOT re-apply the CREATE
 -- OR REPLACE VIEW below live in isolation. Kept here, unmodified, for DR-rebuild apply-in-order
 -- reference only.
+-- SUPERSEDED LIVE by bigquery/274_period_catchup_dependency_halt.sql (2026-11-02) -- the current canonical file for this view; do not re-apply this body.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.period_catchup_available` AS
 WITH catchup_safe_period_routines AS (
   SELECT routine FROM UNNEST([

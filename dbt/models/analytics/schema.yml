@@ -305,6 +305,18 @@ models:
           The existing events-vs-live residual (undeployed_total − park MV − cash), with
           park_unrealized netted out. An ongoing drift signal (magnitude/trend over time), not
           expected to be exactly zero on any given day — see bigquery/93's DEVIATION #2 note.
+      - name: park_exited_net_outflow
+        description: >-
+          Net cash of park tickers fully exited, which the dust guard drops from park_cost_basis
+          (bigquery/273).
+      - name: park_income_est
+        description: >-
+          Estimated park dividend income, from per-share dividends on ex-dates x park shares held. No
+          ledger records these, so this is an estimate that can lead the cash briefly (bigquery/273).
+      - name: residual_unexplained
+        description: >-
+          residual_after_park minus park_exited_net_outflow plus park_income_est: the part of the
+          standing residual nothing explains. Diagnostic only; nothing gates on it (bigquery/273).
 
   - name: park_nav_daily
     description: >-

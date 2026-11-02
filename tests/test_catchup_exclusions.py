@@ -63,6 +63,8 @@ CATCHUP_INPROGRESS_GUARD_SQL = REPO_ROOT / "bigquery" / "90_catchup_inprogress_g
 # test_inflight_guard_is_still_the_canonical_catchup_view_definer below re-derives the canonical definer
 # from the DDL on every run and fails loudly the day a bigquery/NNN supersedes this one.
 INFLIGHT_GUARD_SQL = REPO_ROOT / "bigquery" / "184_inflight_guard_hosted_runs.sql"
+# bigquery/274 supersedes 184 for state.period_catchup_available only, reproducing its allowlist verbatim.
+PERIOD_DEP_HALT_SQL = REPO_ROOT / "bigquery" / "274_period_catchup_dependency_halt.sql"
 # The two VIEWs whose canonical (highest-numbered) definer INFLIGHT_GUARD_SQL is pinned to be.
 CATCHUP_VIEWS = ("catchup_available", "period_catchup_available")
 TASK_PLAN = REPO_ROOT / "Claude_Task_Plan.md"
@@ -189,7 +191,7 @@ def test_order_crafting_routines_stay_catchup_excluded():
             f"auto-refireable by OPS0 and auto-executable inline by OPS2 with no human gate."
         )
 
-    for path in (CATCHUP_AUTOFIRE_SQL, CATCHUP_INPROGRESS_GUARD_SQL, INFLIGHT_GUARD_SQL):
+    for path in (CATCHUP_AUTOFIRE_SQL, CATCHUP_INPROGRESS_GUARD_SQL, INFLIGHT_GUARD_SQL, PERIOD_DEP_HALT_SQL):
         ids = _all_unnest_ids(path)
         # An empty parse (regex rot after a reformat) would make the leak check pass vacuously.
         assert ids, f"{path.name}: no catchup_safe UNNEST([...]) allowlist parsed — check the regex"
@@ -213,7 +215,7 @@ def test_queue_only_w4_stays_catchup_safe():
     doc = yaml.safe_load(CADENCE_YAML.read_text(encoding="utf-8")) or {}
     routines = {r["id"]: r for r in cadence_routines(doc)}
     assert routines["W4"].get("catchup_safe") is True
-    for path in (CATCHUP_AUTOFIRE_SQL, CATCHUP_INPROGRESS_GUARD_SQL, INFLIGHT_GUARD_SQL):
+    for path in (CATCHUP_AUTOFIRE_SQL, CATCHUP_INPROGRESS_GUARD_SQL, INFLIGHT_GUARD_SQL, PERIOD_DEP_HALT_SQL):
         assert "W4" in _all_unnest_ids(path), (
             f"{path.name}: queue-only W4 is missing from the catchup-safe allowlist; "
             "keep the manifest and all three readiness surfaces aligned."
@@ -274,8 +276,12 @@ def test_inflight_guard_is_still_the_canonical_catchup_view_definer():
     quietly going blind again. (It does NOT re-point the scans automatically: 184 also has to carry the
     UNNEST allowlists for that to be correct, and a successor might not, so a human decides.)
     """
+    expected_definers = {
+        "catchup_available": INFLIGHT_GUARD_SQL.name,
+        "period_catchup_available": PERIOD_DEP_HALT_SQL.name,
+    }
     for view, (number, fn) in sorted(_canonical_view_definers().items()):
-        assert fn == INFLIGHT_GUARD_SQL.name, (
+        assert fn == expected_definers[view], (
             f"state.{view} is now defined canonically by bigquery/{fn} (number {number}), not by "
             f"{INFLIGHT_GUARD_SQL.name}. The catchup_safe UNNEST allowlists this file scans are pinned "
             f"to the SUPERSEDED copy, so test_order_crafting_routines_stay_catchup_excluded and "

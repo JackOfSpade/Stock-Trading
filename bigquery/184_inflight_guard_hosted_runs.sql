@@ -95,6 +95,7 @@ WHERE w.needs_attention
   AND f.routine IS NULL;
 
 -- ===== state.period_catchup_available (supersedes bigquery/90, which superseded bigquery/59) =====
+-- SUPERSEDED LIVE by bigquery/274_period_catchup_dependency_halt.sql (2026-11-02) -- the current canonical file for this view; do not re-apply this body.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.period_catchup_available` AS
 WITH catchup_safe_period_routines AS (
   SELECT routine FROM UNNEST([

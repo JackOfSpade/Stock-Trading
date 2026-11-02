@@ -1,4 +1,4 @@
--- Parallel-run dbt port of bigquery/184_inflight_guard_hosted_runs.sql:state.period_catchup_available — canonical source is that
+-- Parallel-run dbt port of bigquery/274_period_catchup_dependency_halt.sql:state.period_catchup_available — canonical source is that
 -- file until owner cutover. Added 2026-08-22 (dbt view-coverage burn-down): this view had
 -- NO dbt presence at all, so scripts/dbt_parity.py had nothing to compare and it carried
 -- ZERO row-level parity protection. Ported MECHANICALLY from the canonical body — the only
@@ -27,10 +27,32 @@ in_flight AS (
   WHERE rn = 1
     AND status = 'started'
     AND log_ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 3 HOUR)
+),
+-- A catchup_safe routine a downstream routine has already halted on. Its own miss cannot wait for grace:
+-- the halt's missing_dependency critical blocks trading in the meantime. The 2-hour age lets a merely
+-- late upstream finish first, and own IS NULL keeps a blocked middle link from firing before its root.
+open_dep_alerts AS (
+  SELECT source, alert_ts, JSON_VALUE(payload, '$.missing_deps') AS deps
+  FROM {{ source('ops', 'alerts') }}
+  WHERE category = 'missing_dependency' AND NOT COALESCE(resolved, FALSE)
+),
+halted_upstream AS (
+  SELECT n.routine
+  FROM (
+    SELECT TRIM(d) AS routine, o.alert_ts
+    FROM open_dep_alerts o, UNNEST(SPLIT(o.deps, ',')) AS d
+    WHERE o.alert_ts <= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 2 HOUR)
+  ) n
+  JOIN {{ ref('cadence_period_watch') }} w ON w.routine = n.routine
+  LEFT JOIN open_dep_alerts own ON own.source = n.routine
+  WHERE n.alert_ts >= TIMESTAMP(w.period_start, 'America/Denver')
+    AND own.source IS NULL
+  GROUP BY n.routine
 )
 SELECT w.routine, w.monitor_class, w.today, w.period_start, w.grace_deadline
 FROM {{ ref('cadence_period_watch') }} w
 JOIN catchup_safe_period_routines s USING (routine)
 LEFT JOIN in_flight f ON f.routine = w.routine
-WHERE w.period_missed
+LEFT JOIN halted_upstream h ON h.routine = w.routine
+WHERE (w.period_missed OR (h.routine IS NOT NULL AND NOT w.ran_completed_this_period))
   AND f.routine IS NULL

@@ -202,6 +202,7 @@ CATCHUP_INPROGRESS_GUARD_SQL = os.path.join(ROOT, "bigquery", "90_catchup_inprog
 # as the three constants above; catchup_canonical_coverage_errors() below is what catches the NEXT
 # file to supersede this one instead of leaving it unwatched for weeks the way 184 was.
 CATCHUP_INFLIGHT_HOSTED_SQL = os.path.join(ROOT, "bigquery", "184_inflight_guard_hosted_runs.sql")
+CATCHUP_DEP_HALT_SQL = os.path.join(ROOT, "bigquery", "274_period_catchup_dependency_halt.sql")
 # Directory scanned for the canonical state.catchup_refire_readiness definition (check K's yesterday-
 # tier extension) -- a SEPARATE module constant from BIGQUERY_DIR/STALLED_RUNS_BIGQUERY_DIR, for the
 # identical test-isolation reason STALLED_RUNS_BIGQUERY_DIR's own comment (above) gives: so a test can
@@ -1289,7 +1290,7 @@ def catchup_canonical_coverage_errors(scan):
             (CATCHUP_NOTIFY_SQL, CATCHUP_INPROGRESS_GUARD_SQL, CATCHUP_INFLIGHT_HOSTED_SQL)),
         "state.period_catchup_available": (
             PERIOD_CATCHUP_AVAILABLE_VIEW_DDL,
-            (CATCHUP_AUTOFIRE_SQL, CATCHUP_INPROGRESS_GUARD_SQL, CATCHUP_INFLIGHT_HOSTED_SQL)),
+            (CATCHUP_AUTOFIRE_SQL, CATCHUP_INPROGRESS_GUARD_SQL, CATCHUP_INFLIGHT_HOSTED_SQL, CATCHUP_DEP_HALT_SQL)),
     }
     errs = []
     for view, (ddl, watched_paths) in watched.items():
@@ -1774,6 +1775,8 @@ def main():
         (CATCHUP_INFLIGHT_HOSTED_SQL, "bigquery/184_inflight_guard_hosted_runs.sql",
          "daily", DAILY_CLASSES, "catchup_safe_routines"),
         (CATCHUP_INFLIGHT_HOSTED_SQL, "bigquery/184_inflight_guard_hosted_runs.sql",
+         "period", PERIOD_CLASSES, "catchup_safe_period_routines"),
+        (CATCHUP_DEP_HALT_SQL, "bigquery/274_period_catchup_dependency_halt.sql",
          "period", PERIOD_CLASSES, "catchup_safe_period_routines"),
     )
     for _path, _filename, _tier, _classes, _cte in cte_scoped_catchup_copies:

@@ -78,6 +78,7 @@
 -- PARK_ROUTER_DESIGN.md's design doc re-characterized it) -- but it is now the CORRECT unexplained
 -- residual instead of one that structurally could never approach zero.
 
+-- SUPERSEDED LIVE by bigquery/273_account_reconciliation_park_income.sql (2026-11-02) -- the current canonical file for this view; do not re-apply this body.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.account_reconciliation` AS
 WITH park_marks AS (
   SELECT ticker, mark_date, close FROM `stock-trading-498512.state.daily_marks_curated`
