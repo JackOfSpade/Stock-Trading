@@ -30,6 +30,11 @@ assembles those exact values and delegates to the checked procedure with the unc
 Issue every part file verbatim, one at a time, then call.sql. A part refused for a digest mismatch is
 re-issued alone, never edited. A missing-parts refusal names what to issue before re-issuing call.sql.
 
+On 2026-11-02 D1's sector sub-agent logged convictions of 80/65/40 and the row landed, because nothing
+checked them, so it took an append-only correction (ops.alerts 8d2f052b). A research-screen row is now
+refused here, before anything is written, if an item in fields.passed or fields.rejected_notable carries
+a conviction_pct off the house 30/45/60/75 ladder (Operating_Protocols.md section 19). Null or absent is allowed.
+
 Digest: lowercase hex SHA-256 of the 16 arguments, in the procedure's order, joined by U+001F. A STRING,
 DATE or NUMERIC argument is 'N' when NULL, else 'S' + its rendering (a DATE as YYYY-MM-DD, a NUMERIC as
 BigQuery's CAST(... AS STRING), e.g. 75, 0.5, 100). An ARRAY argument is 'A' followed by its elements,
@@ -82,6 +87,8 @@ NUMERIC_INT_DIGITS = INTEGER_DIGITS
 WRAP = 400  # max characters of one literal piece per line of call.sql
 # Measured truncation at ~30-45KB of agent output 2026-10-29; paper book uses <30,000.
 FILE_BUDGET = 24000
+CONVICTION_LADDER = (30, 45, 60, 75)
+SCREEN_ITEM_LISTS = ("passed", "rejected_notable")
 
 
 class InputError(ValueError):
@@ -197,7 +204,25 @@ def normalise(raw: dict) -> dict:
             if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
                 raise InputError(f"{key} must be a list of strings")
             out[key] = [_check_text(key, v) for v in value]
+    if out["entry_type"] == "research-screen" and out["fields"] is not None:
+        check_conviction_ladder(json.loads(out["fields"]))
     return out
+
+
+def check_conviction_ladder(fields: dict) -> None:
+    """Refuse a research-screen item whose conviction_pct is off the ladder, naming every such item."""
+    off = []
+    for list_name in SCREEN_ITEM_LISTS:
+        items = fields.get(list_name)
+        for item in items if isinstance(items, list) else []:
+            value = item.get("conviction_pct") if isinstance(item, dict) else None
+            if value is None:
+                continue
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or value not in CONVICTION_LADDER:
+                off.append(f"{list_name} {item.get('name')!r}={value!r}")
+    if off:
+        raise InputError("conviction_pct off the 30/45/60/75 ladder, set each to its judged rung and "
+                         f"regenerate: {'; '.join(off)}")
 
 
 def digest(args: dict) -> str:
