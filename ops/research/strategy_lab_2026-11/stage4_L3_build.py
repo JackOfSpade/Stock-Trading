@@ -1,4 +1,5 @@
-import json, re, os, html as H, hashlib, random, bisect
+import json, re, os, hashlib, random, bisect
+from html.parser import HTMLParser
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 PACK = os.path.join(ROOT, "pack")
@@ -31,9 +32,35 @@ STOP = {"inc", "corp", "corporation", "company", "co", "ltd", "limited", "plc", 
         "pharmaceuticals", "industries", "systems", "partners", "new", "global", "capital", "services", "solutions"}
 
 
+class TextOnly(HTMLParser):
+    """Visible text of a page: drops script and style content, whatever the case or form of their tags."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.parts, self.skip = [], 0
+
+    def handle_starttag(self, tag, attrs):
+        self.skip += tag in ("script", "style")
+        self.parts.append(" ")
+
+    def handle_endtag(self, tag):
+        self.skip -= tag in ("script", "style") and self.skip > 0
+        self.parts.append(" ")
+
+    def handle_data(self, data):
+        if not self.skip:
+            self.parts.append(data)
+
+
+def plain(page):
+    p = TextOnly()
+    p.feed(page)
+    p.close()
+    return re.sub(r"\s+", " ", "".join(p.parts))
+
+
 def clean(page, e):
-    t = re.sub(r"<script.*?</script>|<style.*?</style>", " ", page, flags=re.S)
-    t = H.unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", t)))
+    t = plain(page)
     a = t.find("Download Transcript Full Transcript Full Summary")
     b = t.rfind("Download Transcript Speakers")
     if a < 0 or b < a:

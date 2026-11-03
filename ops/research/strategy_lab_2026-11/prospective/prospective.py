@@ -12,7 +12,7 @@ import collections
 import datetime as dt
 import glob
 import hashlib
-import html as H
+from html.parser import HTMLParser
 import json
 import math
 import os
@@ -63,9 +63,31 @@ def get(url, extra=()):
     return r.stdout.decode("utf-8", "ignore")
 
 
+class TextOnly(HTMLParser):
+    """Visible text of a page: drops script and style content, whatever the case or form of their tags."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.parts, self.skip = [], 0
+
+    def handle_starttag(self, tag, attrs):
+        self.skip += tag in ("script", "style")
+        self.parts.append(" ")
+
+    def handle_endtag(self, tag):
+        self.skip -= tag in ("script", "style") and self.skip > 0
+        self.parts.append(" ")
+
+    def handle_data(self, data):
+        if not self.skip:
+            self.parts.append(data)
+
+
 def plain(page):
-    t = re.sub(r"<script.*?</script>|<style.*?</style>", " ", page, flags=re.S)
-    return H.unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", t)))
+    p = TextOnly()
+    p.feed(page)
+    p.close()
+    return re.sub(r"\s+", " ", "".join(p.parts))
 
 
 def bars(s, frm="2026-05-01", to=None):
