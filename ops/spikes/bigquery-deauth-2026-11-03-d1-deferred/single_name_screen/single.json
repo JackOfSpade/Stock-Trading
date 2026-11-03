@@ -1,0 +1,1791 @@
+{
+ "entry_date": "2026-11-03",
+ "entry_type": "research-screen",
+ "title": "Single-name move screen 2026-11-03 (router-gated, BigQuery down)",
+ "body_md": "Router-gated single-name screen for 2026-11-03 (prior session 2026-11-02). Layer-1 rail: >=5% close-to-close and market cap >=$2B, discovered from Nasdaq quote/info closes dated 2026-11-03 across 2,117 measured names; 146 names cleared it. 49 were IBKR-confirmed, judged and passed; STVN (-28.57%) is the one rejected_notable item because its release time cannot be resolved from EDGAR (6-Ks stamped after the close).\n\nPassed (IBKR regular-session closes 11-02 to 11-03): GPK +21.22% (Q3 earnings; pre-open; conv 75; 1 prior >=5%); XMTR +16.55% (Q3 earnings; pre-open; conv 30; 3 prior >=5%); BETA +16.00% (Q3 earnings; pre-open; conv 75; 1 prior >=5%); DT -14.69% (Q3 earnings plus new $1B buyback authorization; pre-open; conv 60; 1 prior >=5%); CVI -13.09% (Q3 earnings plus a $4.2B cash acquisition of Marathon Petroleum refinery assets (CVI is the acquirer, not a target); pre-open; conv 45; 2 prior >=5%); FISV +12.46% (Q3 earnings; pre-open; conv 60; 1 prior >=5%); RRX +11.81% (Q3 earnings; pre-open; conv 45; 2 prior >=5%); DRVN -11.24% (Q3 earnings plus Item 4.02 non-reliance on prior financials; pre-open; conv 60; 1 prior >=5%); LIND -10.64% (Q3 earnings; pre-open; conv 60; 0 prior >=5%); SRAD +10.33% (Q3 earnings (6-K); pre-open; conv 45; 2 prior >=5%); TRI -9.87% (Q3 earnings (6-K); pre-open; conv 45; 1 prior >=5%); SHC -9.64% (Q3 earnings; pre-open; conv 45; 0 prior >=5%); SYY -9.33% (Q3 earnings plus CFO appointment; pre-open; conv 45; 0 prior >=5%); ADEA -13.59% (Q3 earnings; after-close; conv 30; 3 prior >=5%); NBIX +13.42% (Q3 earnings; after-close; conv 60; 0 prior >=5%); LSCC +10.98% (Q3 earnings; after-close; conv 30; 3 prior >=5%); TBBB +10.53% (Q3 earnings (6-K); after-close; conv 60; 0 prior >=5%); AEIS +9.63% (Q3 earnings; after-close; conv 30; 3 prior >=5%); PTCT +11.89% ($500M share repurchase authorization (Q3 earnings were 10-29); pre-open; conv 60; 1 prior >=5%); SHOP -8.74% (Q3 earnings; pre-open; conv 45; 1 prior >=5%); ZBRA -8.76% (Q3 earnings; pre-open; conv 45; 0 prior >=5%); MDGL -8.08% (Q3 earnings; pre-open; conv 45; 0 prior >=5%); MTCH -8.49% (Q3 earnings; after-close; conv 45; 0 prior >=5%); RVTY +7.84% (Q3 earnings; pre-open; conv 45; 1 prior >=5%); RYTM -7.49% (Q3 earnings; pre-open; conv 45; 0 prior >=5%); TLN +7.29% (Q3 earnings; pre-open; conv 45; 1 prior >=5%); ADM -6.82% (Q3 earnings; pre-open; conv 45; 0 prior >=5%); ALSN +5.16% (Q3 earnings; after-close; conv 45; 0 prior >=5%); APTV -6.53% (Q3 earnings (post-spin Aptiv; Item 8.01 supplemental investor information); pre-open; conv 45; 0 prior >=5%); BALL -7.14% (Q3 earnings; pre-open; conv 45; 0 prior >=5%); CALX -7.97% (Q3 earnings; after-close; conv 45; 0 prior >=5%); CE +5.05% (Q3 earnings (8-K 2.02 plus Item 7.01 webcast notice); after-close; conv 45; 0 prior >=5%); DD +8.61% (Q3 earnings; pre-open; conv 45; 0 prior >=5%); ETN +7.00% (Q3 earnings; pre-open; conv 45; 2 prior >=5%); FN +15.45% (Q3 earnings; after-close; conv 30; 5 prior >=5%); GRAB +9.09% (Q3 earnings (6-K; the calendar scheduled it after-hours 11-02, EDGAR shows 6-K stamps only on 11-03 pre-open); pre-open; conv 45; 1 prior >=5%); HGTY +7.17% (Q3 earnings; pre-open; conv 45; 0 prior >=5%); IT -13.19% (Q3 earnings; pre-open; conv 45; 2 prior >=5%); JAZZ +7.13% (Q3 earnings; after-close; conv 45; 0 prior >=5%); KDP -5.65% (Q3 earnings; pre-open; conv 45; 0 prior >=5%); KMX -5.39% (Strategic Update investor event at 8:00 ET (8-K Item 7.01); pre-open; conv 45; 0 prior >=5%); LBTYK +5.51% (Q3 earnings (8-K 2.02/7.01; spin-off plan discussed, no signed deal); pre-open; conv 45; 0 prior >=5%); LDOS -6.55% (Q3 earnings (8-K accepted 2026-11-02 22:38Z; the calendar scheduled it pre-market 11-03); after-close; conv 45; 0 prior >=5%); MSA -6.64% (Q3 earnings; after-close; conv 45; 0 prior >=5%); NPO +6.06% (Q3 earnings; pre-open; conv 45; 1 prior >=5%); OTTR -8.85% (Q3 earnings; pre-open; conv 45; 0 prior >=5%); PAY -11.50% (Q3 earnings; after-close; conv 60; 1 prior >=5%); RIG -5.30% (Q3 earnings plus fleet status report; after-close; conv 45; 2 prior >=5%); ULS +7.00% (Q3 earnings; pre-open; conv 45; 0 prior >=5%).\n\nNoisy names: FN has 5 other >=5% sessions in the prior 10; XMTR, ADEA, LSCC and AEIS have 3; CVI, RRX, SRAD, ETN, IT and RIG have 2.\n\nDegraded: BigQuery down, so the durable close-chain check did not run; Deal-pinned: none found. Metered calls: none.",
+ "fields": {
+  "routine": "D1",
+  "screen": "single-name-move",
+  "screen_mode": "router-gated",
+  "population_rail": "move>=5% mktcap>=2B router-gated",
+  "legacy_rule": "move >= 5% close-to-close (Strategy B frozen Entry criterion 1; mechanical record-only benchmark; legacy_rule_pass=true on every item here)",
+  "selection_rule": "Symbol list and marketCap from the key-less Nasdaq screener (its pctchange lags and was not used): 2,120 listed names with marketCap >= $2B; the 383 screener rows with no marketCap were not measured. Moves found from per-symbol Nasdaq quote/info regular-session closes dated 'Closed at Nov 3, 2026' (discovery only). Names with >=5% on that basis (non-common warrants/preferreds CORZZ, SLNHP, RVMDW excluded) were labelled from the key-less Nasdaq earnings calendar (schedule only) and one scripted EDGAR data.sec.gov/submissions batch (form, items, acceptanceDateTime); no Tavily, web_search, WebFetch or FMP call was made. Layer 2 then measured on IBKR regular-session daily bars (close array, ONE_DAY, outside_rth=false, 16 bars) every name with an own-event release on the reaction session (49 names); the IBKR search_contracts limit (30 requests/minute) was handled by pacing. Seven near-floor names whose Nasdaq close sat just under 5% were also IBKR-checked and dropped as below 5% on IBKR closes: TSEM +4.98%, ENS +4.99%, EFXT +4.99%, RMBS +4.96%, SFM -4.96%, APO -4.94%, LBTYA +4.93%. Source limit: free primary sources only (router-gated), so a name with no own filing is ANCHOR_UNRESOLVED. prior_qualifying_* counts other >=5% IBKR close-to-close sessions in the 10 sessions before the reaction session (2026-10-20 to 2026-11-02).",
+  "rail_tally": 146,
+  "universe_measured": 2117,
+  "surfaced_count": 49,
+  "agreement": {
+   "both": 49,
+   "ai_only": 0,
+   "rule_only": 97
+  },
+  "passed": [
+   {
+    "name": "GPK",
+    "metric_pct": 21.2219,
+    "conviction_pct": 75,
+    "reason": "Q3 earnings; pre-open release (EDGAR 8-K accepted 2026-11-03 13:10Z), anchor 2026-11-03, reaction session 2026-11-03 +21.22% on IBKR closes 9.33 to 11.31. 1 other >=5% session(s) in the prior 10 sessions (10-22 +7.75%), so the reaction is not a clean single-event move.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 9.33,
+    "event_close": 11.31,
+    "market_cap_usd": 2762347776,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 1,
+    "prior_qualifying_dates": [
+     "2026-10-22"
+    ],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-03 13:10Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/1408075/000140807526000047/gpk-20261103.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "XMTR",
+    "metric_pct": 16.5462,
+    "conviction_pct": 30,
+    "reason": "Q3 earnings; pre-open release (EDGAR 8-K accepted 2026-11-03 13:08Z), anchor 2026-11-03, reaction session 2026-11-03 +16.55% on IBKR closes 95.49 to 111.29. 3 other >=5% session(s) in the prior 10 sessions (10-21 -5.02%, 10-27 +7.87%, 10-30 -7.11%), so the reaction is not a clean single-event move.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 95.49,
+    "event_close": 111.29,
+    "market_cap_usd": 5473827986,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 3,
+    "prior_qualifying_dates": [
+     "2026-10-21",
+     "2026-10-27",
+     "2026-10-30"
+    ],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-03 13:08Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/1657573/000119312526444354/xmtr-20261103.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "BETA",
+    "metric_pct": 15.9961,
+    "conviction_pct": 75,
+    "reason": "Q3 earnings; pre-open release (EDGAR 8-K accepted 2026-11-03 13:13Z), anchor 2026-11-03, reaction session 2026-11-03 +16.00% on IBKR closes 20.38 to 23.64. 1 other >=5% session(s) in the prior 10 sessions (10-23 +6.45%), so the reaction is not a clean single-event move.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 20.38,
+    "event_close": 23.64,
+    "market_cap_usd": 4767718803,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 1,
+    "prior_qualifying_dates": [
+     "2026-10-23"
+    ],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-03 13:13Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/1784570/000162828026069120/bta-20261103.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "DT",
+    "metric_pct": -14.6925,
+    "conviction_pct": 60,
+    "reason": "Q3 earnings plus new $1B buyback authorization; pre-open release (EDGAR 8-K accepted 2026-11-03 13:08Z), anchor 2026-11-03, reaction session 2026-11-03 -14.69% on IBKR closes 55.13 to 47.03. 1 other >=5% session(s) in the prior 10 sessions (10-30 -5.40%), so the reaction is not a clean single-event move.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 55.13,
+    "event_close": 47.03,
+    "market_cap_usd": 15932687317,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 1,
+    "prior_qualifying_dates": [
+     "2026-10-30"
+    ],
+    "event": "Q3 earnings plus new $1B buyback authorization",
+    "release_utc": "2026-11-03 13:08Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/1773383/000177338326000069/dt-20261103.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "CVI",
+    "metric_pct": -13.0901,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings plus a $4.2B cash acquisition of Marathon Petroleum refinery assets (CVI is the acquirer, not a target); pre-open release (EDGAR 8-K accepted 2026-11-03 13:24Z), anchor 2026-11-03, reaction session 2026-11-03 -13.09% on IBKR closes 55.92 to 48.6. 2 other >=5% session(s) in the prior 10 sessions (10-26 +6.64%, 10-27 -7.40%), so the reaction is not a clean single-event move.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 55.92,
+    "event_close": 48.6,
+    "market_cap_usd": 5621671096,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 2,
+    "prior_qualifying_dates": [
+     "2026-10-26",
+     "2026-10-27"
+    ],
+    "event": "Q3 earnings plus a $4.2B cash acquisition of Marathon Petroleum refinery assets (CVI is the acquirer, not a target)",
+    "release_utc": "2026-11-03 13:24Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/1376139/000119312526444428/d87305d8k.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "FISV",
+    "metric_pct": 12.4591,
+    "conviction_pct": 60,
+    "reason": "Q3 earnings; pre-open release (EDGAR 8-K accepted 2026-11-03 13:11Z), anchor 2026-11-03, reaction session 2026-11-03 +12.46% on IBKR closes 51.93 to 58.4. 1 other >=5% session(s) in the prior 10 sessions (10-22 +5.41%), so the reaction is not a clean single-event move.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 51.93,
+    "event_close": 58.4,
+    "market_cap_usd": 27614645822,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 1,
+    "prior_qualifying_dates": [
+     "2026-10-22"
+    ],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-03 13:11Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/798354/000079835426000039/fi-20261103.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "RRX",
+    "metric_pct": 11.8064,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings; pre-open release (EDGAR 8-K accepted 2026-11-03 13:14Z), anchor 2026-11-03, reaction session 2026-11-03 +11.81% on IBKR closes 160.93 to 179.93. 2 other >=5% session(s) in the prior 10 sessions (10-22 -6.34%, 10-27 +5.14%), so the reaction is not a clean single-event move.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 160.93,
+    "event_close": 179.93,
+    "market_cap_usd": 10716629156,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 2,
+    "prior_qualifying_dates": [
+     "2026-10-22",
+     "2026-10-27"
+    ],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-03 13:14Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/82811/000008281126000236/rrx-20261103.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "DRVN",
+    "metric_pct": -11.2421,
+    "conviction_pct": 60,
+    "reason": "Q3 earnings plus Item 4.02 non-reliance on prior financials; pre-open release (EDGAR 8-K accepted 2026-11-03 13:08Z), anchor 2026-11-03, reaction session 2026-11-03 -11.24% on IBKR closes 12.72 to 11.29. 1 other >=5% session(s) in the prior 10 sessions (10-21 -5.93%), so the reaction is not a clean single-event move.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 12.72,
+    "event_close": 11.29,
+    "market_cap_usd": 2098543260,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 1,
+    "prior_qualifying_dates": [
+     "2026-10-21"
+    ],
+    "event": "Q3 earnings plus Item 4.02 non-reliance on prior financials",
+    "release_utc": "2026-11-03 13:08Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/1804745/000162828026069090/drvn-20261103.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "LIND",
+    "metric_pct": -10.6383,
+    "conviction_pct": 60,
+    "reason": "Q3 earnings; pre-open release (EDGAR 8-K accepted 2026-11-03 13:12Z), anchor 2026-11-03, reaction session 2026-11-03 -10.64% on IBKR closes 36.66 to 32.76. No other >=5% session in the prior 10 sessions.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 36.66,
+    "event_close": 32.76,
+    "market_cap_usd": 2405617799,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 0,
+    "prior_qualifying_dates": [],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-03 13:12Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/1512499/000143774926034519/lindb20261002_8k.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "SRAD",
+    "metric_pct": 10.3341,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings (6-K); pre-open release (EDGAR 6-K accepted 2026-11-03 13:10Z), anchor 2026-11-03, reaction session 2026-11-03 +10.33% on IBKR closes 12.87 to 14.2. 2 other >=5% session(s) in the prior 10 sessions (10-26 +5.44%, 11-02 +6.98%), so the reaction is not a clean single-event move.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 12.87,
+    "event_close": 14.2,
+    "market_cap_usd": 4012317275,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 2,
+    "prior_qualifying_dates": [
+     "2026-10-26",
+     "2026-11-02"
+    ],
+    "event": "Q3 earnings (6-K)",
+    "release_utc": "2026-11-03 13:10Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/1836470/000110465926121653/tm2628405d1_6k.htm (6-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "TRI",
+    "metric_pct": -9.8658,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings (6-K); pre-open release (EDGAR 6-K accepted 2026-11-03 13:13Z), anchor 2026-11-03, reaction session 2026-11-03 -9.87% on IBKR closes 122.24 to 110.18. 1 other >=5% session(s) in the prior 10 sessions (10-22 +6.94%), so the reaction is not a clean single-event move.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 122.24,
+    "event_close": 110.18,
+    "market_cap_usd": 52954368000,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 1,
+    "prior_qualifying_dates": [
+     "2026-10-22"
+    ],
+    "event": "Q3 earnings (6-K)",
+    "release_utc": "2026-11-03 13:13Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/1075124/000119312526444408/d65855d6k.htm (6-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "SHC",
+    "metric_pct": -9.6392,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings; pre-open release (EDGAR 8-K accepted 2026-11-03 13:11Z), anchor 2026-11-03, reaction session 2026-11-03 -9.64% on IBKR closes 17.74 to 16.03. No other >=5% session in the prior 10 sessions.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 17.74,
+    "event_close": 16.03,
+    "market_cap_usd": 5062548863,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 0,
+    "prior_qualifying_dates": [],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-03 13:11Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/1822479/000182247926000055/shc-20261103.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "SYY",
+    "metric_pct": -9.3345,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings plus CFO appointment; pre-open release (EDGAR 8-K accepted 2026-11-03 13:10Z), anchor 2026-11-03, reaction session 2026-11-03 -9.33% on IBKR closes 81.74 to 74.11. No other >=5% session in the prior 10 sessions.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 81.74,
+    "event_close": 74.11,
+    "market_cap_usd": 40210146739,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 0,
+    "prior_qualifying_dates": [],
+    "event": "Q3 earnings plus CFO appointment",
+    "release_utc": "2026-11-03 13:10Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/96021/000009602126000046/syy-20261103.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "ADEA",
+    "metric_pct": -13.5946,
+    "conviction_pct": 30,
+    "reason": "Q3 earnings; after-close release (EDGAR 8-K accepted 2026-11-02 21:05Z), anchor 2026-11-02, reaction session 2026-11-03 -13.59% on IBKR closes 20.67 to 17.86. 3 other >=5% session(s) in the prior 10 sessions (10-21 +5.92%, 10-22 -5.72%, 10-27 +5.93%), so the reaction is not a clean single-event move.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 20.67,
+    "event_close": 17.86,
+    "market_cap_usd": 2279490701,
+    "qualifying_event_date": "2026-11-02",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 3,
+    "prior_qualifying_dates": [
+     "2026-10-21",
+     "2026-10-22",
+     "2026-10-27"
+    ],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-02 21:05Z",
+    "release_timing": "after-close",
+    "source": "https://www.sec.gov/Archives/edgar/data/1803696/000119312526443634/adea-20261102.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "NBIX",
+    "metric_pct": 13.4159,
+    "conviction_pct": 60,
+    "reason": "Q3 earnings; after-close release (EDGAR 8-K accepted 2026-11-02 21:11Z), anchor 2026-11-02, reaction session 2026-11-03 +13.42% on IBKR closes 145.35 to 164.85. No other >=5% session in the prior 10 sessions.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 145.35,
+    "event_close": 164.85,
+    "market_cap_usd": 14774708458,
+    "qualifying_event_date": "2026-11-02",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 0,
+    "prior_qualifying_dates": [],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-02 21:11Z",
+    "release_timing": "after-close",
+    "source": "https://www.sec.gov/Archives/edgar/data/914475/000091447526000053/nbix-20261102.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "LSCC",
+    "metric_pct": 10.9807,
+    "conviction_pct": 30,
+    "reason": "Q3 earnings; after-close release (EDGAR 8-K accepted 2026-11-02 21:27Z), anchor 2026-11-02, reaction session 2026-11-03 +10.98% on IBKR closes 95.44 to 105.92. 3 other >=5% session(s) in the prior 10 sessions (10-22 -10.57%, 10-27 +5.24%, 10-30 -9.74%), so the reaction is not a clean single-event move.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 95.44,
+    "event_close": 105.92,
+    "market_cap_usd": 13555369160,
+    "qualifying_event_date": "2026-11-02",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 3,
+    "prior_qualifying_dates": [
+     "2026-10-22",
+     "2026-10-27",
+     "2026-10-30"
+    ],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-02 21:27Z",
+    "release_timing": "after-close",
+    "source": "https://www.sec.gov/Archives/edgar/data/855658/000143774926034452/lscc20260903_8k.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "TBBB",
+    "metric_pct": 10.5319,
+    "conviction_pct": 60,
+    "reason": "Q3 earnings (6-K); after-close release (EDGAR 6-K accepted 2026-11-02 21:30Z), anchor 2026-11-02, reaction session 2026-11-03 +10.53% on IBKR closes 56.97 to 62.97. No other >=5% session in the prior 10 sessions.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 56.97,
+    "event_close": 62.97,
+    "market_cap_usd": 6714321779,
+    "qualifying_event_date": "2026-11-02",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 0,
+    "prior_qualifying_dates": [],
+    "event": "Q3 earnings (6-K)",
+    "release_utc": "2026-11-02 21:30Z",
+    "release_timing": "after-close",
+    "source": "https://www.sec.gov/Archives/edgar/data/1978954/000119312526443746/6k_tbbb_3q26_earnings_re.htm (6-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "AEIS",
+    "metric_pct": 9.6275,
+    "conviction_pct": 30,
+    "reason": "Q3 earnings; after-close release (EDGAR 8-K accepted 2026-11-02 21:03Z), anchor 2026-11-02, reaction session 2026-11-03 +9.63% on IBKR closes 217.19 to 238.1. 3 other >=5% session(s) in the prior 10 sessions (10-22 -12.49%, 10-27 +5.32%, 10-30 -7.38%), so the reaction is not a clean single-event move.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 217.19,
+    "event_close": 238.1,
+    "market_cap_usd": 8698555498,
+    "qualifying_event_date": "2026-11-02",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 3,
+    "prior_qualifying_dates": [
+     "2026-10-22",
+     "2026-10-27",
+     "2026-10-30"
+    ],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-02 21:03Z",
+    "release_timing": "after-close",
+    "source": "https://www.sec.gov/Archives/edgar/data/927003/000092700326000037/aeis-20261102x8k.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "PTCT",
+    "metric_pct": 11.8922,
+    "conviction_pct": 60,
+    "reason": "$500M share repurchase authorization (Q3 earnings were 10-29); pre-open release (EDGAR 8-K accepted 2026-11-03 14:00Z), anchor 2026-11-03, reaction session 2026-11-03 +11.89% on IBKR closes 60.88 to 68.12. 1 other >=5% session(s) in the prior 10 sessions (10-30 -6.97%), so the reaction is not a clean single-event move.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 60.88,
+    "event_close": 68.12,
+    "market_cap_usd": 5086176010,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 1,
+    "prior_qualifying_dates": [
+     "2026-10-30"
+    ],
+    "event": "$500M share repurchase authorization (Q3 earnings were 10-29)",
+    "release_utc": "2026-11-03 14:00Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/1070081/000110465926121713/tmb-20261103x8k.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "SHOP",
+    "metric_pct": -8.7377,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings; pre-open release (EDGAR 8-K accepted 2026-11-03 13:08Z), anchor 2026-11-03, reaction session 2026-11-03 -8.74% on IBKR closes 156.22 to 142.57. 1 other >=5% session(s) in the prior 10 sessions (10-30 -5.63%), so the reaction is not a clean single-event move.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 156.22,
+    "event_close": 142.57,
+    "market_cap_usd": 202431598326,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 1,
+    "prior_qualifying_dates": [
+     "2026-10-30"
+    ],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-03 13:08Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/1594805/000159480526000067/shop-20261103.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "ZBRA",
+    "metric_pct": -8.7586,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings; pre-open release (EDGAR 8-K accepted 2026-11-03 14:24Z), anchor 2026-11-03, reaction session 2026-11-03 -8.76% on IBKR closes 361.13 to 329.5. No other >=5% session in the prior 10 sessions.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 361.13,
+    "event_close": 329.5,
+    "market_cap_usd": 17085298646,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 0,
+    "prior_qualifying_dates": [],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-03 14:24Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/877212/000162828026069148/zbra-20261103.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "MDGL",
+    "metric_pct": -8.0784,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings; pre-open release (EDGAR 8-K accepted 2026-11-03 13:08Z), anchor 2026-11-03, reaction session 2026-11-03 -8.08% on IBKR closes 431.15 to 396.32. No other >=5% session in the prior 10 sessions.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 431.15,
+    "event_close": 396.32,
+    "market_cap_usd": 9961459446,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 0,
+    "prior_qualifying_dates": [],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-03 13:08Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/1157601/000162828026069093/mdgl-20261103.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "MTCH",
+    "metric_pct": -8.4859,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings; after-close release (EDGAR 8-K accepted 2026-11-02 21:13Z), anchor 2026-11-02, reaction session 2026-11-03 -8.49% on IBKR closes 42.07 to 38.5. No other >=5% session in the prior 10 sessions.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 42.07,
+    "event_close": 38.5,
+    "market_cap_usd": 9657209939,
+    "qualifying_event_date": "2026-11-02",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 0,
+    "prior_qualifying_dates": [],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-02 21:13Z",
+    "release_timing": "after-close",
+    "source": "https://www.sec.gov/Archives/edgar/data/891103/000089110326000161/mtch-20261102.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "RVTY",
+    "metric_pct": 7.8364,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings; pre-open release (EDGAR 8-K accepted 2026-11-03 13:16Z), anchor 2026-11-03, reaction session 2026-11-03 +7.84% on IBKR closes 151.6 to 163.48. 1 other >=5% session(s) in the prior 10 sessions (10-30 -5.30%), so the reaction is not a clean single-event move.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 151.6,
+    "event_close": 163.48,
+    "market_cap_usd": 16916498392,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 1,
+    "prior_qualifying_dates": [
+     "2026-10-30"
+    ],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-03 13:16Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/31791/000003179126000031/pki-20261103.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "RYTM",
+    "metric_pct": -7.4914,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings; pre-open release (EDGAR 8-K accepted 2026-11-03 13:10Z), anchor 2026-11-03, reaction session 2026-11-03 -7.49% on IBKR closes 93.44 to 86.44. No other >=5% session in the prior 10 sessions.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 93.44,
+    "event_close": 86.44,
+    "market_cap_usd": 6433538542,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 0,
+    "prior_qualifying_dates": [],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-03 13:10Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/1649904/000162828026069106/rytm-20261103.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "TLN",
+    "metric_pct": 7.2945,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings; pre-open release (EDGAR 8-K accepted 2026-11-03 13:08Z), anchor 2026-11-03, reaction session 2026-11-03 +7.29% on IBKR closes 332.99 to 357.28. 1 other >=5% session(s) in the prior 10 sessions (10-22 -7.81%), so the reaction is not a clean single-event move.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 332.99,
+    "event_close": 357.28,
+    "market_cap_usd": 15954969104,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 1,
+    "prior_qualifying_dates": [
+     "2026-10-22"
+    ],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-03 13:08Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/1622536/000162253626000084/tln-20261103.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "ADM",
+    "metric_pct": -6.8233,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings; pre-open release (EDGAR 8-K accepted 2026-11-03 13:10Z), anchor 2026-11-03, reaction session 2026-11-03 -6.82% on IBKR closes 75.77 to 70.6. No other >=5% session in the prior 10 sessions.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 75.77,
+    "event_close": 70.6,
+    "market_cap_usd": 36518077604,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 0,
+    "prior_qualifying_dates": [],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-03 13:10Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/7084/000000708426000054/adm-20261103.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "ALSN",
+    "metric_pct": 5.1552,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings; after-close release (EDGAR 8-K accepted 2026-11-02 21:10Z), anchor 2026-11-02, reaction session 2026-11-03 +5.16% on IBKR closes 113.09 to 118.92. No other >=5% session in the prior 10 sessions.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 113.09,
+    "event_close": 118.92,
+    "market_cap_usd": 9338750317,
+    "qualifying_event_date": "2026-11-02",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 0,
+    "prior_qualifying_dates": [],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-02 21:10Z",
+    "release_timing": "after-close",
+    "source": "https://www.sec.gov/Archives/edgar/data/1411207/000119312526443664/d187329d8k.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "APTV",
+    "metric_pct": -6.534,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings (post-spin Aptiv; Item 8.01 supplemental investor information); pre-open release (EDGAR 8-K accepted 2026-11-03 13:42Z), anchor 2026-11-03, reaction session 2026-11-03 -6.53% on IBKR closes 44.23 to 41.34. No other >=5% session in the prior 10 sessions.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 44.23,
+    "event_close": 41.34,
+    "market_cap_usd": 9183622230,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 0,
+    "prior_qualifying_dates": [],
+    "event": "Q3 earnings (post-spin Aptiv; Item 8.01 supplemental investor information)",
+    "release_utc": "2026-11-03 13:42Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/1521332/000152133226000071/aptv-20261103.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "BALL",
+    "metric_pct": -7.1397,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings; pre-open release (EDGAR 8-K accepted 2026-11-03 13:11Z), anchor 2026-11-03, reaction session 2026-11-03 -7.14% on IBKR closes 68.07 to 63.21. No other >=5% session in the prior 10 sessions.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 68.07,
+    "event_close": 63.21,
+    "market_cap_usd": 18018357511,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 0,
+    "prior_qualifying_dates": [],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-03 13:11Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/9389/000110465926121661/ball-20261103x8k.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "CALX",
+    "metric_pct": -7.9712,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings; after-close release (EDGAR 8-K accepted 2026-11-02 22:07Z), anchor 2026-11-02, reaction session 2026-11-03 -7.97% on IBKR closes 36.13 to 33.25. No other >=5% session in the prior 10 sessions.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 36.13,
+    "event_close": 33.25,
+    "market_cap_usd": 2274888923,
+    "qualifying_event_date": "2026-11-02",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 0,
+    "prior_qualifying_dates": [],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-02 22:07Z",
+    "release_timing": "after-close",
+    "source": "https://www.sec.gov/Archives/edgar/data/1406666/000140666626000040/calx-20261102.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "CE",
+    "metric_pct": 5.048,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings (8-K 2.02 plus Item 7.01 webcast notice); after-close release (EDGAR 8-K accepted 2026-11-02 21:17Z), anchor 2026-11-02, reaction session 2026-11-03 +5.05% on IBKR closes 47.94 to 50.36. No other >=5% session in the prior 10 sessions.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 47.94,
+    "event_close": 50.36,
+    "market_cap_usd": 5261363512,
+    "qualifying_event_date": "2026-11-02",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 0,
+    "prior_qualifying_dates": [],
+    "event": "Q3 earnings (8-K 2.02 plus Item 7.01 webcast notice)",
+    "release_utc": "2026-11-02 21:17Z",
+    "release_timing": "after-close",
+    "source": "https://www.sec.gov/Archives/edgar/data/1306830/000130683026000129/ce-20261102.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "DD",
+    "metric_pct": 8.6058,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings; pre-open release (EDGAR 8-K accepted 2026-11-03 13:05Z), anchor 2026-11-03, reaction session 2026-11-03 +8.61% on IBKR closes 141.3 to 153.46. No other >=5% session in the prior 10 sessions.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 141.3,
+    "event_close": 153.46,
+    "market_cap_usd": 19081572368,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 0,
+    "prior_qualifying_dates": [],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-03 13:05Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/1666700/000166670026000058/dd-20261103.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "ETN",
+    "metric_pct": 7.0014,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings; pre-open release (EDGAR 8-K accepted 2026-11-03 13:08Z), anchor 2026-11-03, reaction session 2026-11-03 +7.00% on IBKR closes 366.07 to 391.7. 2 other >=5% session(s) in the prior 10 sessions (10-22 -6.33%, 10-30 -6.03%), so the reaction is not a clean single-event move.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 366.07,
+    "event_close": 391.7,
+    "market_cap_usd": 142181588000,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 2,
+    "prior_qualifying_dates": [
+     "2026-10-22",
+     "2026-10-30"
+    ],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-03 13:08Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/1551182/000155118226000037/etn-20261103.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "FN",
+    "metric_pct": 15.4528,
+    "conviction_pct": 30,
+    "reason": "Q3 earnings; after-close release (EDGAR 8-K accepted 2026-11-02 21:30Z), anchor 2026-11-02, reaction session 2026-11-03 +15.45% on IBKR closes 314.7 to 363.33. 5 other >=5% session(s) in the prior 10 sessions (10-22 -10.78%, 10-27 +5.53%, 10-28 +7.02%, 10-29 -5.07%, 10-30 -6.13%), so the reaction is not a clean single-event move.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 314.7,
+    "event_close": 363.33,
+    "market_cap_usd": 11276917945,
+    "qualifying_event_date": "2026-11-02",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 5,
+    "prior_qualifying_dates": [
+     "2026-10-22",
+     "2026-10-27",
+     "2026-10-28",
+     "2026-10-29",
+     "2026-10-30"
+    ],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-02 21:30Z",
+    "release_timing": "after-close",
+    "source": "https://www.sec.gov/Archives/edgar/data/1408710/000140871026000034/fn-20261102.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "GRAB",
+    "metric_pct": 9.0909,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings (6-K; the calendar scheduled it after-hours 11-02, EDGAR shows 6-K stamps only on 11-03 pre-open); pre-open release (EDGAR 6-K accepted 2026-11-03 13:13Z), anchor 2026-11-03, reaction session 2026-11-03 +9.09% on IBKR closes 2.86 to 3.12. 1 other >=5% session(s) in the prior 10 sessions (11-02 +5.54%), so the reaction is not a clean single-event move.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 2.86,
+    "event_close": 3.12,
+    "market_cap_usd": 11727377899,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 1,
+    "prior_qualifying_dates": [
+     "2026-11-02"
+    ],
+    "event": "Q3 earnings (6-K; the calendar scheduled it after-hours 11-02, EDGAR shows 6-K stamps only on 11-03 pre-open)",
+    "release_utc": "2026-11-03 13:13Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/1855612/000185561226000148/a6-kxearningsrelease4.htm (6-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "HGTY",
+    "metric_pct": 7.1743,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings; pre-open release (EDGAR 8-K accepted 2026-11-03 13:11Z), anchor 2026-11-03, reaction session 2026-11-03 +7.17% on IBKR closes 15.89 to 17.03. No other >=5% session in the prior 10 sessions.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 15.89,
+    "event_close": 17.03,
+    "market_cap_usd": 5753714815,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 0,
+    "prior_qualifying_dates": [],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-03 13:11Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/1840776/000184077626000043/hgty-20261103.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "IT",
+    "metric_pct": -13.1939,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings; pre-open release (EDGAR 8-K accepted 2026-11-03 13:05Z), anchor 2026-11-03, reaction session 2026-11-03 -13.19% on IBKR closes 235.26 to 204.22. 2 other >=5% session(s) in the prior 10 sessions (10-20 +5.74%, 10-22 +6.77%), so the reaction is not a clean single-event move.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 235.26,
+    "event_close": 204.22,
+    "market_cap_usd": 14856428094,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 2,
+    "prior_qualifying_dates": [
+     "2026-10-20",
+     "2026-10-22"
+    ],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-03 13:05Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/749251/000074925126000305/it-20261103.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "JAZZ",
+    "metric_pct": 7.1349,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings; after-close release (EDGAR 8-K accepted 2026-11-02 21:07Z), anchor 2026-11-02, reaction session 2026-11-03 +7.13% on IBKR closes 214.44 to 229.74. No other >=5% session in the prior 10 sessions.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 214.44,
+    "event_close": 229.74,
+    "market_cap_usd": 13920281892,
+    "qualifying_event_date": "2026-11-02",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 0,
+    "prior_qualifying_dates": [],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-02 21:07Z",
+    "release_timing": "after-close",
+    "source": "https://www.sec.gov/Archives/edgar/data/1232524/000123252426000056/jazz-20261102.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "KDP",
+    "metric_pct": -5.6491,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings; pre-open release (EDGAR 8-K accepted 2026-11-03 13:10Z), anchor 2026-11-03, reaction session 2026-11-03 -5.65% on IBKR closes 36.82 to 34.74. No other >=5% session in the prior 10 sessions.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 36.82,
+    "event_close": 34.74,
+    "market_cap_usd": 50105614719,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 0,
+    "prior_qualifying_dates": [],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-03 13:10Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/1418135/000141813526000064/kdp-20261103.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "KMX",
+    "metric_pct": -5.3882,
+    "conviction_pct": 45,
+    "reason": "Strategic Update investor event at 8:00 ET (8-K Item 7.01); pre-open release (EDGAR 8-K accepted 2026-11-03 13:07Z), anchor 2026-11-03, reaction session 2026-11-03 -5.39% on IBKR closes 56.42 to 53.38. No other >=5% session in the prior 10 sessions.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 56.42,
+    "event_close": 53.38,
+    "market_cap_usd": 8008413171,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 0,
+    "prior_qualifying_dates": [],
+    "event": "Strategic Update investor event at 8:00 ET (8-K Item 7.01)",
+    "release_utc": "2026-11-03 13:07Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/1170010/000117001026000110/kmx-20261103.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "LBTYK",
+    "metric_pct": 5.5069,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings (8-K 2.02/7.01; spin-off plan discussed, no signed deal); pre-open release (EDGAR 8-K accepted 2026-11-03 13:36Z), anchor 2026-11-03, reaction session 2026-11-03 +5.51% on IBKR closes 7.99 to 8.43. No other >=5% session in the prior 10 sessions.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 7.99,
+    "event_close": 8.43,
+    "market_cap_usd": 2725289652,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 0,
+    "prior_qualifying_dates": [],
+    "event": "Q3 earnings (8-K 2.02/7.01; spin-off plan discussed, no signed deal)",
+    "release_utc": "2026-11-03 13:36Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/1570585/000157058526000154/lbtya-20261103.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "LDOS",
+    "metric_pct": -6.5483,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings (8-K accepted 2026-11-02 22:38Z; the calendar scheduled it pre-market 11-03); after-close release (EDGAR 8-K accepted 2026-11-02 22:38Z), anchor 2026-11-02, reaction session 2026-11-03 -6.55% on IBKR closes 144.16 to 134.72. No other >=5% session in the prior 10 sessions.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 144.16,
+    "event_close": 134.72,
+    "market_cap_usd": 18090956849,
+    "qualifying_event_date": "2026-11-02",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 0,
+    "prior_qualifying_dates": [],
+    "event": "Q3 earnings (8-K accepted 2026-11-02 22:38Z; the calendar scheduled it pre-market 11-03)",
+    "release_utc": "2026-11-02 22:38Z",
+    "release_timing": "after-close",
+    "source": "https://www.sec.gov/Archives/edgar/data/1336920/000133692026000290/ldos-20261103.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "MSA",
+    "metric_pct": -6.6402,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings; after-close release (EDGAR 8-K accepted 2026-11-02 21:41Z), anchor 2026-11-02, reaction session 2026-11-03 -6.64% on IBKR closes 186.44 to 174.06. No other >=5% session in the prior 10 sessions.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 186.44,
+    "event_close": 174.06,
+    "market_cap_usd": 7192536201,
+    "qualifying_event_date": "2026-11-02",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 0,
+    "prior_qualifying_dates": [],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-02 21:41Z",
+    "release_timing": "after-close",
+    "source": "https://www.sec.gov/Archives/edgar/data/66570/000006657026000031/msa-20261102.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "NPO",
+    "metric_pct": 6.0562,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings; pre-open release (EDGAR 8-K accepted 2026-11-03 13:14Z), anchor 2026-11-03, reaction session 2026-11-03 +6.06% on IBKR closes 268.98 to 285.27. 1 other >=5% session(s) in the prior 10 sessions (10-22 -9.16%), so the reaction is not a clean single-event move.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 268.98,
+    "event_close": 285.27,
+    "market_cap_usd": 5693682835,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 1,
+    "prior_qualifying_dates": [
+     "2026-10-22"
+    ],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-03 13:14Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/1164863/000162828026069122/npo-20261103.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "OTTR",
+    "metric_pct": -8.8515,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings; pre-open release (EDGAR 8-K accepted 2026-11-03 14:17Z), anchor 2026-11-03, reaction session 2026-11-03 -8.85% on IBKR closes 91.51 to 83.41. No other >=5% session in the prior 10 sessions.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 91.51,
+    "event_close": 83.41,
+    "market_cap_usd": 3842100426,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 0,
+    "prior_qualifying_dates": [],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-03 14:17Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/1466593/000146659326000078/ottr-20261102.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "PAY",
+    "metric_pct": -11.4979,
+    "conviction_pct": 60,
+    "reason": "Q3 earnings; after-close release (EDGAR 8-K accepted 2026-11-02 21:09Z), anchor 2026-11-02, reaction session 2026-11-03 -11.50% on IBKR closes 35.05 to 31.02. 1 other >=5% session(s) in the prior 10 sessions (11-02 +6.79%), so the reaction is not a clean single-event move.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 35.05,
+    "event_close": 31.02,
+    "market_cap_usd": 4414184627,
+    "qualifying_event_date": "2026-11-02",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 1,
+    "prior_qualifying_dates": [
+     "2026-11-02"
+    ],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-02 21:09Z",
+    "release_timing": "after-close",
+    "source": "https://www.sec.gov/Archives/edgar/data/1841156/000119312526443656/pay-20261102.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "RIG",
+    "metric_pct": -5.297,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings plus fleet status report; after-close release (EDGAR 8-K accepted 2026-11-02 21:39Z), anchor 2026-11-02, reaction session 2026-11-03 -5.30% on IBKR closes 6.23 to 5.9. 2 other >=5% session(s) in the prior 10 sessions (10-23 +5.43%, 11-02 -10.23%), so the reaction is not a clean single-event move.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 6.23,
+    "event_close": 5.9,
+    "market_cap_usd": 6958162930,
+    "qualifying_event_date": "2026-11-02",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 2,
+    "prior_qualifying_dates": [
+     "2026-10-23",
+     "2026-11-02"
+    ],
+    "event": "Q3 earnings plus fleet status report",
+    "release_utc": "2026-11-02 21:39Z",
+    "release_timing": "after-close",
+    "source": "https://www.sec.gov/Archives/edgar/data/1451505/000145150526000083/rig-20261102x8k.htm (8-K, EDGAR acceptanceDateTime)"
+   },
+   {
+    "name": "ULS",
+    "metric_pct": 7.0003,
+    "conviction_pct": 45,
+    "reason": "Q3 earnings; pre-open release (EDGAR 8-K accepted 2026-11-03 13:09Z), anchor 2026-11-03, reaction session 2026-11-03 +7.00% on IBKR closes 75.14 to 80.4. No other >=5% session in the prior 10 sessions.",
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "b_eligible": true,
+    "prior_close": 75.14,
+    "event_close": 80.4,
+    "market_cap_usd": 15170628719,
+    "qualifying_event_date": "2026-11-03",
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 0,
+    "prior_qualifying_dates": [],
+    "event": "Q3 earnings",
+    "release_utc": "2026-11-03 13:09Z",
+    "release_timing": "pre-open",
+    "source": "https://www.sec.gov/Archives/edgar/data/1901440/000190144026000029/uls-20261103.htm (8-K, EDGAR acceptanceDateTime)"
+   }
+  ],
+  "rejected_notable": [
+   {
+    "name": "STVN",
+    "code": "ANCHOR_UNRESOLVED",
+    "metric_pct": -28.5714,
+    "conviction_pct": 30,
+    "below_spec_floor": false,
+    "legacy_rule_pass": true,
+    "reason": "ANCHOR_UNRESOLVED: the Nasdaq calendar schedules Q3 earnings pre-market 2026-11-03, but all three EDGAR 6-Ks (press release, presentation, long form) are stamped 2026-11-03 21:05-21:15Z, after the close, so no free primary source shows the release time; the -28.57% IBKR move cannot be tied to a stamped release, so no anchor is recorded and no watchlist action is written.",
+    "prior_close": 19.74,
+    "event_close": 14.1,
+    "market_cap_usd": 5389092920,
+    "qualifying_event_date": null,
+    "reaction_session": "2026-11-03",
+    "prior_qualifying_sessions": 0,
+    "prior_qualifying_dates": [],
+    "source": "https://www.sec.gov/Archives/edgar/data/1849853/000119312526445320/6-k_press_release_nov_3_.htm (6-K accepted 2026-11-03 21:05Z)"
+   }
+  ],
+  "rejected_compact": {
+   "ANCHOR_UNRESOLVED": [
+    [
+     "ABCL",
+     9.5324,
+     11.12,
+     12.18,
+     null
+    ],
+    [
+     "APLD",
+     9.8027,
+     16.22,
+     17.81,
+     null
+    ],
+    [
+     "APP",
+     7.2799,
+     228.85,
+     245.51,
+     null
+    ],
+    [
+     "BE",
+     9.0466,
+     196.25,
+     214.004,
+     null
+    ],
+    [
+     "CIEN",
+     5.5427,
+     284.34,
+     300.1,
+     null
+    ],
+    [
+     "CORZ",
+     13.8745,
+     12.505,
+     14.24,
+     null
+    ],
+    [
+     "COTY",
+     -5.7471,
+     3.48,
+     3.28,
+     null
+    ],
+    [
+     "CRDO",
+     7.7775,
+     140.02,
+     150.91,
+     null
+    ],
+    [
+     "CRWV",
+     7.1585,
+     50.15,
+     53.74,
+     null
+    ],
+    [
+     "CSQR",
+     8.0816,
+     13.24,
+     14.31,
+     null
+    ],
+    [
+     "DIOD",
+     5.6698,
+     79.72,
+     84.24,
+     null
+    ],
+    [
+     "DPC",
+     9.5337,
+     28.95,
+     31.71,
+     null
+    ],
+    [
+     "FIG",
+     -5.2027,
+     22.2,
+     21.045,
+     null
+    ],
+    [
+     "FPS",
+     10.5049,
+     24.56,
+     27.14,
+     null
+    ],
+    [
+     "FRVO",
+     12.9697,
+     8.25,
+     9.32,
+     null
+    ],
+    [
+     "HUT",
+     15.8986,
+     55.005,
+     63.75,
+     null
+    ],
+    [
+     "IOND",
+     7.5657,
+     63.18,
+     67.96,
+     null
+    ],
+    [
+     "IONQ",
+     6.4608,
+     28.17,
+     29.99,
+     null
+    ],
+    [
+     "IREN",
+     11.0808,
+     22.02,
+     24.46,
+     null
+    ],
+    [
+     "LGN",
+     7.5529,
+     36.41,
+     39.16,
+     null
+    ],
+    [
+     "LUNR",
+     6.288,
+     9.86,
+     10.48,
+     null
+    ],
+    [
+     "MAIR",
+     7.4807,
+     23.26,
+     25.0,
+     null
+    ],
+    [
+     "MARA",
+     11.353,
+     6.43,
+     7.16,
+     null
+    ],
+    [
+     "MTRN",
+     5.0452,
+     216.84,
+     227.78,
+     null
+    ],
+    [
+     "MTSI",
+     5.9906,
+     222.18,
+     235.49,
+     null
+    ],
+    [
+     "MWH",
+     11.7083,
+     24.0,
+     26.81,
+     null
+    ],
+    [
+     "NBIS",
+     7.2495,
+     141.39,
+     151.64,
+     null
+    ],
+    [
+     "OC",
+     -6.0678,
+     125.58,
+     117.96,
+     null
+    ],
+    [
+     "ONTO",
+     5.7602,
+     191.4,
+     202.425,
+     null
+    ],
+    [
+     "PBLS",
+     7.3394,
+     27.25,
+     29.25,
+     null
+    ],
+    [
+     "PENG",
+     11.9789,
+     47.5,
+     53.19,
+     null
+    ],
+    [
+     "POWL",
+     6.058,
+     154.01,
+     163.34,
+     null
+    ],
+    [
+     "QNT",
+     5.2342,
+     30.95,
+     32.57,
+     null
+    ],
+    [
+     "RAL",
+     7.2538,
+     66.31,
+     71.12,
+     null
+    ],
+    [
+     "RCUS",
+     5.9944,
+     17.85,
+     18.92,
+     null
+    ],
+    [
+     "RH",
+     -8.4835,
+     146.52,
+     134.09,
+     null
+    ],
+    [
+     "RIOT",
+     18.4122,
+     11.84,
+     14.02,
+     null
+    ],
+    [
+     "SITM",
+     6.4561,
+     417.9,
+     444.88,
+     null
+    ],
+    [
+     "SMG",
+     -5.1436,
+     65.13,
+     61.78,
+     null
+    ],
+    [
+     "SMMT",
+     6.7568,
+     14.8,
+     15.8,
+     null
+    ],
+    [
+     "TNGX",
+     6.4798,
+     21.76,
+     23.17,
+     null
+    ],
+    [
+     "TWST",
+     8.726,
+     129.04,
+     140.3,
+     null
+    ],
+    [
+     "TXG",
+     5.9387,
+     61.63,
+     65.29,
+     null
+    ],
+    [
+     "VIAV",
+     8.0935,
+     27.8,
+     30.05,
+     null
+    ],
+    [
+     "VSH",
+     6.7398,
+     25.52,
+     27.24,
+     null
+    ],
+    [
+     "WRBY",
+     -8.005,
+     23.86,
+     21.95,
+     null
+    ],
+    [
+     "WULF",
+     14.5338,
+     10.94,
+     12.53,
+     null
+    ],
+    [
+     "XE",
+     5.8824,
+     10.37,
+     10.98,
+     null
+    ]
+   ],
+   "DAY2_EVENT_PRIOR": [
+    [
+     "APH",
+     5.3983,
+     79.84,
+     84.15,
+     "2026-10-28"
+    ],
+    [
+     "AXTI",
+     6.4938,
+     48.2,
+     51.33,
+     "2026-10-28"
+    ],
+    [
+     "BAX",
+     5.223,
+     24.22,
+     25.485,
+     "2026-10-29"
+    ],
+    [
+     "BLDR",
+     -6.2961,
+     67.82,
+     63.55,
+     "2026-10-29"
+    ],
+    [
+     "BMNR",
+     5.0921,
+     19.54,
+     20.535,
+     "2026-11-02"
+    ],
+    [
+     "BTSG",
+     5.403,
+     66.26,
+     69.84,
+     "2026-10-30"
+    ],
+    [
+     "CDLR",
+     -7.2727,
+     27.5,
+     25.5,
+     "2026-11-02"
+    ],
+    [
+     "CIFR",
+     18.3673,
+     6.86,
+     8.12,
+     "2026-11-02"
+    ],
+    [
+     "COIN",
+     5.5285,
+     137.83,
+     145.45,
+     "2026-10-29"
+    ],
+    [
+     "DHI",
+     -5.0284,
+     152.93,
+     145.24,
+     "2026-10-29"
+    ],
+    [
+     "DRS",
+     5.2546,
+     36.92,
+     38.86,
+     "2026-10-29"
+    ],
+    [
+     "DXC",
+     -6.5718,
+     14.76,
+     13.79,
+     "2026-10-29"
+    ],
+    [
+     "ENPH",
+     8.9151,
+     27.93,
+     30.42,
+     "2026-10-27"
+    ],
+    [
+     "FIX",
+     7.1512,
+     1200.14,
+     1285.965,
+     "2026-10-28"
+    ],
+    [
+     "FORM",
+     10.8706,
+     87.3,
+     96.79,
+     "2026-10-28"
+    ],
+    [
+     "FOX",
+     6.5583,
+     55.96,
+     59.63,
+     "2026-11-02"
+    ],
+    [
+     "FOXA",
+     6.9152,
+     62.76,
+     67.1,
+     "2026-11-02"
+    ],
+    [
+     "GEV",
+     6.4981,
+     862.25,
+     918.28,
+     "2026-10-28"
+    ],
+    [
+     "GLXY",
+     15.353,
+     14.59,
+     16.83,
+     "2026-10-27"
+    ],
+    [
+     "ILMN",
+     5.1328,
+     226.58,
+     238.21,
+     "2026-10-29"
+    ],
+    [
+     "INIO",
+     11.5783,
+     16.41,
+     18.31,
+     "2026-10-27"
+    ],
+    [
+     "IOVA",
+     10.0998,
+     8.02,
+     8.83,
+     "2026-10-29"
+    ],
+    [
+     "LEN",
+     -5.4164,
+     91.02,
+     86.09,
+     "2026-10-29"
+    ],
+    [
+     "MPWR",
+     6.7808,
+     1243.95,
+     1328.3,
+     "2026-10-29"
+    ],
+    [
+     "MRX",
+     5.3621,
+     64.9,
+     68.38,
+     "2026-10-27"
+    ],
+    [
+     "MSGR",
+     6.9692,
+     217.53,
+     232.69,
+     "2026-10-27"
+    ],
+    [
+     "NICE",
+     -5.4453,
+     112.39,
+     106.27,
+     "2026-10-29"
+    ],
+    [
+     "NSP",
+     -5.8763,
+     53.18,
+     50.055,
+     "2026-10-29"
+    ],
+    [
+     "NWL",
+     -5.5369,
+     5.96,
+     5.63,
+     "2026-10-30"
+    ],
+    [
+     "NXT",
+     5.366,
+     91.13,
+     96.02,
+     "2026-10-28"
+    ],
+    [
+     "ORCL",
+     5.8631,
+     119.22,
+     126.21,
+     "2026-10-28"
+    ],
+    [
+     "PRCH",
+     6.6402,
+     20.18,
+     21.52,
+     "2026-10-28"
+    ],
+    [
+     "PWR",
+     5.7632,
+     621.18,
+     656.98,
+     "2026-10-29"
+    ],
+    [
+     "RBLX",
+     6.0401,
+     42.88,
+     45.47,
+     "2026-10-29"
+    ],
+    [
+     "RDDT",
+     5.7162,
+     90.97,
+     96.17,
+     "2026-10-29"
+    ],
+    [
+     "RSI",
+     10.0,
+     11.4,
+     12.54,
+     "2026-10-28"
+    ],
+    [
+     "SEI",
+     6.0703,
+     65.4,
+     69.37,
+     "2026-10-29"
+    ],
+    [
+     "SIMO",
+     7.4508,
+     187.9,
+     201.9,
+     "2026-10-28"
+    ],
+    [
+     "STLA",
+     -5.1907,
+     4.72,
+     4.475,
+     "2026-10-28"
+    ],
+    [
+     "STRL",
+     7.6599,
+     335.45,
+     361.145,
+     "2026-10-28"
+    ],
+    [
+     "TNET",
+     -5.1221,
+     67.55,
+     64.09,
+     "2026-10-29"
+    ],
+    [
+     "TTMI",
+     6.5944,
+     76.58,
+     81.63,
+     "2026-10-28"
+    ],
+    [
+     "VRT",
+     5.2444,
+     224.24,
+     236.0,
+     "2026-10-27"
+    ]
+   ],
+   "POST_MOVE_EVENT": [
+    [
+     "DUOL",
+     -5.3744,
+     135.27,
+     128.0,
+     "2026-11-03"
+    ],
+    [
+     "ECG",
+     9.7388,
+     102.99,
+     113.02,
+     "2026-11-03"
+    ],
+    [
+     "NVTS",
+     7.9445,
+     7.93,
+     8.56,
+     "2026-11-03"
+    ],
+    [
+     "PRIM",
+     7.9144,
+     73.79,
+     79.63,
+     "2026-11-03"
+    ],
+    [
+     "SEB",
+     -8.2569,
+     3733.72,
+     3425.43,
+     "2026-11-03"
+    ]
+   ]
+  },
+  "rejected_legend": {
+   "ANCHOR_UNRESOLVED": "No own-event EDGAR filing (8-K items 1.01/2.02/4.02/7.01/8.01 or 6-K) was accepted for the name between 2026-10-27 and 2026-11-03, so no release time exists and the anchor is UNRESOLVED; it stays in this row only with no watchlist action. Closes are Nasdaq quote/info regular-session closes (discovery basis, not IBKR): prior_close is the 2026-11-02 close and event_close the 2026-11-03 close.",
+   "DAY2_EVENT_PRIOR": "The name's own event filing (8-K/6-K) was accepted before the 2026-11-02 close, so 2026-11-03 is a second-or-later-day move; the tuple's qualifying_event_date is the date of that filing (CDLR: 2026-11-02 exchange-offer final results). Closes are Nasdaq quote/info discovery closes (2026-11-02 and 2026-11-03), not IBKR.",
+   "POST_MOVE_EVENT": "The only own-event filing for the name was accepted after the 2026-11-03 close (21:00Z or later), so the release cannot explain the 11-03 move; qualifying_event_date is the filing date. Closes are Nasdaq quote/info discovery closes, not IBKR."
+  },
+  "degraded_legs": [
+   "bigquery_down_close_chain_durable_check_not_run",
+   "durable-record chain check could not run (BigQuery down); passed items' prior_close compared by hand with yesterday's Daily.md item 3 passed table only: no name appears in both (hit count 0)",
+   "unmeasured_symbols: BRK/A, BRK/B (slash-symbol quote fetch returned no data), GJS (last print 2026-11-03 4:58 PM ET, no 'Closed at' regular-session print); 383 screener rows had no marketCap and were not screened; excluded as non-common: CORZZ, SLNHP, RVMDW",
+   "deal_pinned_rail: 8-K Items 1.01/7.01/8.01 text fetched for CVI, DT, PTCT, SYY, KMX, LBTYK (8-K 2.02/7.01 earnings, 425s are spin-off communications), CE, IT, HGTY, ULS, RIG, APTV: no signed all-cash target found",
+   "stvn_release_time_unresolved: 6-Ks stamped after the close"
+  ],
+  "fmp_profile_calls": 0,
+  "metered_calls": 0,
+  "notes": "Event identity: release times are EDGAR acceptanceDateTime (UTC); the calendar is a schedule only. GRAB (calendar after-hours 11-02, 6-K 11-03 13:13Z) is anchored 2026-11-03 on the EDGAR stamp. LDOS: 8-K accepted 2026-11-02 22:38Z (after-close) so anchor 2026-11-02, although the calendar listed pre-market 11-03; AAPL and PLTR (reported after close 11-02) did not appear in the >=5% set."
+ },
+ "tags": [
+  "D1",
+  "research-screen",
+  "degraded-bigquery-down"
+ ],
+ "superseded_by": null,
+ "source_session": "D1 2026-11-03"
+}

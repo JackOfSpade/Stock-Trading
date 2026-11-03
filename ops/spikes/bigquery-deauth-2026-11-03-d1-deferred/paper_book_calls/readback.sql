@@ -1,0 +1,170 @@
+-- scripts/paper_book.py calls readback (120 rows, call_date 2026-11-03). Issue after the last batch.
+-- ok: stored and reproduces its row_sha. missing_rows: re-run with --only <missing_rows>. Correctly not written:
+-- earlier_session_rows (another session called this headline today; its call stands), already_called_rows (the
+-- story, or a syndicated copy of it, was called on 2026-11-03 or the 4 days before), capped_rows (the ticker
+-- already holds 3 calls today). Defects, to report and never UPDATE or DELETE: mismatch_rows, duplicate_rows,
+-- over_cap_tickers (more than 3 calls stored for a ticker today).
+WITH e AS (
+  SELECT * FROM UNNEST(ARRAY<STRUCT<n INT64, ticker STRING, hh STRING, story STRING, sha STRING>>[
+  (1, 'AAPL', '0d59d7e18d735436', 'ef560e66099df30d', '758e1ff09d23b604'),
+  (2, 'AAPL', '4ff8ce53517a0d62', '35a2a42ad8016a6c', '1a0c741468152cc5'),
+  (3, 'AAPL', 'bfca2383ab51ea88', '9a08e5321a842ee1', '011401c9eee561ef'),
+  (4, 'ABBV', 'bfeb2f52a31830e1', 'a0cc515f7512d14e', 'e94cc1a20415ead8'),
+  (5, 'ABBV', 'f945bfb97584d141', 'ef08580226f5f213', '4008342ae5b7b5ad'),
+  (6, 'ABBV', '73ce7dbea47b14f3', '102cf95db5ac38e2', '299b4ad9ed182a7d'),
+  (7, 'AMD', '9fbe5210845f1b6d', 'fbec1842fd72abe4', '38c2eb55abee2706'),
+  (8, 'AMD', '5425dcc336a5e3c5', '47abbb1545056d7c', '22b81797468e9edb'),
+  (9, 'AMD', 'b38b2d41428eb39a', '542b42fbdd0a8970', '43e07d0425ce5339'),
+  (10, 'AMZN', '116027ae37f24568', '3ecd2efb99dabfa6', '1590d02d829168d3'),
+  (11, 'AMZN', '80998791a0c1ee23', '40f61c37c60de16a', '19cd259a75efbaa4'),
+  (12, 'AMZN', '6471d077fb5add5d', '904ae7d1122a129f', '7c00748d1a433d7a'),
+  (13, 'AVGO', 'd90bc6138d4b6c8b', 'f0449391105e0822', 'a1d48cf1c261776b'),
+  (14, 'AVGO', '07edbfdcee3bf967', '94f7bd7519081b58', 'c0439a753387b679'),
+  (15, 'AVGO', '0782a2eb6c723f1e', '31399c5dad66acb8', 'af38f38edb53e3c7'),
+  (16, 'BA', '1634aeaabef4d6ea', '87c1663912af1347', '59d25f03a5399766'),
+  (17, 'BA', 'a1bca62aa9de8efe', '07a8b1ec4b218988', 'c65e10426892dc06'),
+  (18, 'BA', '10444d7275ff9ce6', '935ddb7fd3de9609', '989714daa681dee3'),
+  (19, 'BAC', '1361c37505f5d980', 'b1a6c0cf8c363230', 'b291398df0619ee3'),
+  (20, 'BAC', '2aee7e422effdd69', '2ea7683ce63e3db7', 'fadc13c9c91f4c7f'),
+  (21, 'BAC', '6db2fef34f3bf44b', '99aa672e7bd242b1', '7ed2cead7cda9353'),
+  (22, 'CAT', '603c5adda2db496f', '9212f2b3e24ae8ca', 'd4e673b63813afa3'),
+  (23, 'CAT', '7c4f7463b2832c7d', 'b657158d689ed0e3', '4507b021bffb4189'),
+  (24, 'CAT', 'bc2dcfe5609e76fb', '60e8bc6598640a8f', '013d7921d825687b'),
+  (25, 'COP', '40b155061db68d43', '9b36f8a0704e1e38', 'c318d147cf0155ac'),
+  (26, 'COP', 'ec65689e72750323', '19f79fbc2a73cec7', '2c50c8c517874b84'),
+  (27, 'COP', '2dc4e76e8e01ee41', '2161d36aaf225895', '795c627265863779'),
+  (28, 'COST', '9d68768fe3c7e795', '3d6d14f436d3c7a6', '5360d6b8ae2d649d'),
+  (29, 'COST', '3912900b142493f8', '663bd93eb16ca6ab', 'fc9061f038e55053'),
+  (30, 'COST', '9e6a5d0278e12a3f', '9ab8e0aacd7d7fa9', '8dab8a813d223e8e'),
+  (31, 'CRM', 'eab8bcba6ed9874e', '2780a159cfd0775f', 'd461df133128bc7a'),
+  (32, 'CRM', 'a1a5c240e10fef10', 'be7b42ea1d81207c', 'bd277f84a228c9e2'),
+  (33, 'CRM', 'aa08daa9f7bc8c06', '84a7e320331232a3', 'dca5b86127007f00'),
+  (34, 'CVX', 'a72e786a1579adcf', '58d470d971a42489', '008e17930269f0ec'),
+  (35, 'CVX', '7515716e3b55edce', 'ae93ff3720760942', 'fec49995b148af60'),
+  (36, 'CVX', '47cbf1dd22dec090', '24c98df28159f035', 'dc77fc3f17103337'),
+  (37, 'DE', '2d89d0bd73882958', '952cab31ac8afbf2', '898da014a256ede4'),
+  (38, 'DE', '16180dad84259933', '55e8b835e8d4acea', '49ce10c7a768d2fa'),
+  (39, 'DE', 'd91e3544b5e5ec8c', '5204cde9d403d3e0', 'ce5edb6f136c4c09'),
+  (40, 'DIS', '17119d976f63b69f', '48ac70b602b593b4', '40b4415180727746'),
+  (41, 'DIS', 'bad1928431f2be96', '25f47883a37b52c9', 'cbe1c6bd94d225f1'),
+  (42, 'DIS', '1bcbd01dc4009321', '1218574249527260', 'f408f587895fa559'),
+  (43, 'GE', '5e10b09b9d909a15', '8426468d93a7d43e', 'c357dd4d79119b27'),
+  (44, 'GE', '628d65bcde321f1b', 'fb38cc7531eb9f55', '5ed7be1f07b595b6'),
+  (45, 'GE', 'ae4aec2c98b2789f', '4421087ac1af71cb', '06bcb2e668397a38'),
+  (46, 'GOOGL', 'bd0c3bb3f069de41', '6e83707226361b79', 'cf0c2003f17704c5'),
+  (47, 'GOOGL', '5b759cbcf6f55233', '71a777af748708c8', 'dc3ad7934086b4e6'),
+  (48, 'GOOGL', '595ef674ff8be5b8', '74e329cf1de67ab4', '869856e7c1ddc179'),
+  (49, 'GS', '72a3ac1cd79bf575', '2ec11ff42a99617d', '9ae8bfb026e6e60b'),
+  (50, 'GS', 'cba210822611b468', 'd7d6f218db2ed3cb', 'eaae6eda9fb9e1d5'),
+  (51, 'GS', 'd062d28fbc98d622', '41a8e78136591723', '8b00280d12b79edc'),
+  (52, 'HD', 'c63cf1bdcbd6983d', '5d7639e86602c19d', '8ada538fa3f7ec5e'),
+  (53, 'HD', '9806b86f22ff8d8c', '7c56cb7242353e86', '584fc4932e2f677b'),
+  (54, 'HD', 'c1bb6c13346d7f60', '2602ed20debc47c2', '52dc33fe6b63ff5c'),
+  (55, 'HON', 'f029f7712926e487', '122c1a55616d68be', '455c1767aba815ec'),
+  (56, 'HON', '248547abad7c35fd', '81b9bcee729dbbf5', 'bc61c1c277cb23dc'),
+  (57, 'HON', '2264fe3fc6702b4b', 'dac7cf9be283eb2b', 'bbd4d1911ce580b7'),
+  (58, 'INTC', 'f865908ec15cd3c2', '824b731b2dc6ac5d', '0e97ac40c0a52c8e'),
+  (59, 'INTC', '3cb703e6d21403a9', '90d138c7986a4c48', '6c4498c24aad3bb6'),
+  (60, 'INTC', '8e8b129a0dd09c15', 'd79287e7db25a077', 'a302197cef74575c'),
+  (61, 'JNJ', 'e7dc0b68e903e381', '98a03ac49e8acbe9', '66db3ecef8c2de78'),
+  (62, 'JNJ', 'ddd39e19c10fc024', '089317d5de65deb2', 'fe18547caaca2a06'),
+  (63, 'JNJ', '7c2b75e0071d93f1', '6e6aaf8100cf0a47', '97080f6533346ff2'),
+  (64, 'JPM', 'bf4b727fc08c0ac8', '6f900c84826e154d', '7e5ab817821145d5'),
+  (65, 'JPM', '9e50835f7df0231d', '6fcbb90d0b0865d6', '9e049b1f9cfc005a'),
+  (66, 'JPM', '9ab5fc1a9d0b5970', 'a77e9c6a4c4e346e', '8039d5297fe41655'),
+  (67, 'LLY', 'c4ff398fe469da8a', '379fbc31e4cd8420', '09a9a8cc59b52de2'),
+  (68, 'LLY', 'cf6860f51a252fca', 'cb8231c3e56caa20', 'b5aaf0d6d34c6059'),
+  (69, 'LLY', '3d45e87affc44edc', 'd71a017e66f53b48', '88360e3ccc548384'),
+  (70, 'MA', '03dcb11919982659', '60e774894bf20f06', 'ce57921dbc6b40fe'),
+  (71, 'MA', 'a2e1890ed6386225', 'c8436ca56cee7131', '65d974d2dcbeee5b'),
+  (72, 'MA', '29136b05a57b11c3', '588b934cffef77b3', '4421d667b257bc36'),
+  (73, 'MCD', '693d9ceeb00e7180', '4ede16f808b0606b', 'ef557634020c419c'),
+  (74, 'MCD', '176446a0c1b8096c', '5e026d19d33a733a', '3184e75c780a0335'),
+  (75, 'MCD', '37145273df77fe31', '7c34b13f0c89562c', 'f81506f1d0103694'),
+  (76, 'META', '35ffe58ac652080a', '8f9461ac4a41cfec', 'b0dd52b21c367aa2'),
+  (77, 'META', 'cd52cf04f343f924', '76d9b32709303f3e', '078db57122b30af3'),
+  (78, 'META', 'c6fa01c9b7adca53', 'dc04a5b35006640c', '7a6df50cdee895ea'),
+  (79, 'MRK', '70e0f7eb49fd9bbd', 'e6fcdda7c1727aee', '381bac550ebaf11a'),
+  (80, 'MRK', 'affdffe99dfc602f', 'c2ba0fb25442b847', 'f065785c648f45d5'),
+  (81, 'MRK', 'ff0ca32e763906d5', 'f34e16bc0f3f8d86', '4b05def99fad762b'),
+  (82, 'MSFT', '3194669bc810c9a5', 'f529dc26c0b491b3', '44965c0c94db9e6f'),
+  (83, 'MSFT', 'fa0bd72e59f76d11', 'd7a168a5a906acec', '228de957d4687e57'),
+  (84, 'MSFT', '78b0f07743ec2622', 'd49a910d3e9fd31a', 'b156fc065ec95e66'),
+  (85, 'NFLX', '496b0bc2aae67592', 'f946088841a7d548', '778c1943e75a4940'),
+  (86, 'NFLX', 'efc2bea42b9f9381', 'efb98eff1e3a2db7', 'eb7f787c01da16e6'),
+  (87, 'NFLX', '5f4fe0463e6e9c50', '145b4b0ea3957d1a', '9754b9a491b8d5a0'),
+  (88, 'NKE', '1f85360822066232', 'be30b42731c4b5fd', '72aac6636c77eec0'),
+  (89, 'NKE', 'ed7f57f96af6d8fc', 'de7e6fdd75c41052', '2931a788f942c18d'),
+  (90, 'NKE', '11e615de2d0b27ec', 'dffc8a4c1dfa5ee6', '5d7deea68b3007f4'),
+  (91, 'NVDA', 'c2f5f03623153867', '12165ebe88f3fc1c', '7d591bdc650241fb'),
+  (92, 'NVDA', '822b7924d458d3ed', 'd61faac0a9ff1470', 'a1ca4eb82a1798f2'),
+  (93, 'NVDA', '696fc4dd9bd80171', '5383ccf8591586f5', '9524a4e11a3048ab'),
+  (94, 'ORCL', 'dcbc1f7d7d04a3b8', 'bc1b0e6b8e701056', 'b9551d4bf40db583'),
+  (95, 'ORCL', '6a78388487e6d0a0', 'c97c5f1bd9654107', '673828d1e84bde18'),
+  (96, 'ORCL', 'ce44fe52694e40a9', 'f14e0bd6ac03ee1b', 'de32248ae3fc4da1'),
+  (97, 'PFE', '556713780c318408', 'cf16e7bbd3000d7c', '1faeec757b304e78'),
+  (98, 'PFE', 'ee84677316101ac1', '6fcf4a1959f91fd0', '6c619b109a600ac7'),
+  (99, 'PFE', '0dc13b6b052b98bb', 'd304523860fd5832', '00488ca798b38145'),
+  (100, 'QCOM', '10234f729115321f', '7160f07354e60872', '21df5baf5f9eb3cb'),
+  (101, 'QCOM', '30e477c9d30c44ff', '1c8a9ab6fcfd48eb', '380449cc505caa0c'),
+  (102, 'QCOM', '75517301f8ba2cd7', 'e07b044abb1823c5', '5607242d4d7132b8'),
+  (103, 'TSLA', '89620e9a8d417cd6', 'ec5bea9896c054ff', '26ef8e8fe626ca6a'),
+  (104, 'TSLA', 'f00ab44fa029b820', '3896a522e1037a89', 'f0a238ccb63a6b04'),
+  (105, 'TSLA', '5026dd0fafdd093e', '2473e95ebf5baa6b', '104adffe037457fc'),
+  (106, 'UNH', '9680e8bc6d265edd', '892e286a96f316f6', '2e357e5f990fe27f'),
+  (107, 'UNH', '5670dafdc6115f8c', '4a1d47f44be71473', '843bbc9b9faff7d6'),
+  (108, 'UNH', 'cb4b25a540381ff9', '0d9a88bb9b922298', '5dedd0135f0a72f5'),
+  (109, 'UPS', '4e525a319ec1c25e', 'b96bc88f48664d2d', 'e5a0beb8850d7606'),
+  (110, 'UPS', '6d8828c8248bbaf9', 'f67af20dbd281807', 'ea5832cc02264e93'),
+  (111, 'UPS', 'd0feba13f839b281', '894ae3c64c61cc9f', '3c1c817dc04f83c7'),
+  (112, 'V', 'efc2bea42b9f9381', 'efb98eff1e3a2db7', 'ef3c9332a2a17cd4'),
+  (113, 'V', 'bd7a2aad06b6902d', '37ff5fb4769727e8', '79b969eabb430879'),
+  (114, 'V', 'd218f027cfdbf17e', 'ece4dd6436c59b1b', 'c5a5b059fb0d016b'),
+  (115, 'WMT', '0047bb881a796b49', '839e3b28cb29f6f9', 'f1f4109e86c09120'),
+  (116, 'WMT', 'e963f5bfefcace04', '0cd88891ad6f5ea9', '3921b78d8d7c02ba'),
+  (117, 'WMT', '84c8f2ac3448c1e3', '3633c5bccea8ba76', '63c2fa5b9b87f515'),
+  (118, 'XOM', '9e0dbb8eeb20a164', '189d7ce24a5660d7', 'd973b666dd49b676'),
+  (119, 'XOM', 'cb8000a384534005', '6f51a4a38b4375b7', 'a753d67b572fa809'),
+  (120, 'XOM', '5131e15384245d1b', '38e2b60a8e0e446d', '671bf942d765adb9')
+  ])
+),
+recent AS (
+  SELECT x.*, LEFT(TO_HEX(SHA256(LOWER(TRIM(IF(STRPOS(REGEXP_REPLACE(x.headline, r'[\t\n\f\r ]+', ' '), ' - ') > 0, REGEXP_EXTRACT(REGEXP_REPLACE(x.headline, r'[\t\n\f\r ]+', ' '), r'^(.*) - '), REGEXP_REPLACE(x.headline, r'[\t\n\f\r ]+', ' ')), ' ')))), 16) AS story FROM `stock-trading-498512.events.news_reaction_calls` x
+  WHERE x.call_date BETWEEN DATE_SUB(DATE '2026-11-03', INTERVAL 4 DAY) AND DATE '2026-11-03'
+),
+hits AS (
+  SELECT e.n, e.ticker, e.hh, e.story,
+         COUNTIF(x.call_date = DATE '2026-11-03' AND STARTS_WITH(x.headline_hash, e.hh)) AS stored,
+         LOGICAL_OR(x.call_date = DATE '2026-11-03' AND STARTS_WITH(x.headline_hash, e.hh) AND LEFT(TO_HEX(SHA256(ARRAY_TO_STRING([CAST(x.call_date AS STRING), x.lead_id, CAST(x.k AS STRING), CAST(x.horizon_days AS STRING), x.scorer_routine, IFNULL(x.scorer_session, ''), x.ticker, x.headline_hash, x.headline, IFNULL(FORMAT_TIMESTAMP('%Y-%m-%dT%H:%M:%SZ', x.published_ts, 'UTC'), ''), x.source, IFNULL(x.source_url, ''), x.direction, CAST(x.agreement_score AS STRING), TO_JSON_STRING(x.votes_json)], '\x1f'))), 16) = e.sha) AS any_ok,
+         LOGICAL_OR(x.call_date = DATE '2026-11-03' AND STARTS_WITH(x.headline_hash, e.hh)
+                    AND IFNULL(x.scorer_session != '0ae50cfd-af1c-5586-8100-6d25daa8b824', FALSE)) AS other_session,
+         COUNTIF(NOT (x.call_date = DATE '2026-11-03' AND STARTS_WITH(x.headline_hash, e.hh))) AS twins
+  FROM e
+  LEFT JOIN recent x ON x.ticker = e.ticker AND (x.story = e.story OR STARTS_WITH(x.headline_hash, e.hh))
+  GROUP BY e.n, e.ticker, e.hh, e.story
+),
+today AS (SELECT ticker, COUNT(*) AS n FROM `stock-trading-498512.events.news_reaction_calls` WHERE call_date = DATE '2026-11-03' GROUP BY ticker),
+s AS (
+  SELECT h.n,
+    CASE
+      WHEN h.stored > 1 OR (h.stored = 1 AND h.twins > 0) THEN 'duplicate'
+      WHEN IFNULL(h.any_ok, FALSE) THEN 'ok'
+      WHEN h.stored = 1 AND IFNULL(h.other_session, FALSE) THEN 'earlier_session'
+      WHEN h.stored = 1 THEN 'mismatch'
+      WHEN h.twins > 0 THEN 'already_called'
+      WHEN IFNULL(c.n, 0) >= 3 THEN 'capped'
+      ELSE 'missing'
+    END AS status
+  FROM hits h
+  LEFT JOIN today c ON c.ticker = h.ticker
+)
+SELECT 120 AS rows_expected,
+  COUNTIF(status = 'ok') AS ok,
+  IFNULL(STRING_AGG(IF(status = 'missing', CAST(n AS STRING), NULL), ',' ORDER BY n), '') AS missing_rows,
+  IFNULL(STRING_AGG(IF(status = 'earlier_session', CAST(n AS STRING), NULL), ',' ORDER BY n), '') AS earlier_session_rows,
+  IFNULL(STRING_AGG(IF(status = 'already_called', CAST(n AS STRING), NULL), ',' ORDER BY n), '') AS already_called_rows,
+  IFNULL(STRING_AGG(IF(status = 'capped', CAST(n AS STRING), NULL), ',' ORDER BY n), '') AS capped_rows,
+  IFNULL(STRING_AGG(IF(status = 'mismatch', CAST(n AS STRING), NULL), ',' ORDER BY n), '') AS mismatch_rows,
+  IFNULL(STRING_AGG(IF(status = 'duplicate', CAST(n AS STRING), NULL), ',' ORDER BY n), '') AS duplicate_rows,
+  (SELECT IFNULL(STRING_AGG(ticker, ',' ORDER BY ticker), '') FROM today WHERE n > 3) AS over_cap_tickers
+FROM s
