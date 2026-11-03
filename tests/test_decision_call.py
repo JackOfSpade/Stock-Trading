@@ -277,5 +277,55 @@ class StagedSql(unittest.TestCase):
         self.assertEqual(new_params, [*old_params[:-1], ("in_staged_args", "ARRAY<STRING>"), old_params[-1]])
 
 
+class ConvictionLadder(unittest.TestCase):
+    """The 2026-11-02 sector row landed at 80/65/40 and took an append-only correction (ops.alerts 8d2f052b)."""
+
+    BASE = {"entry_date": "2026-11-02", "entry_type": "research-screen", "title": "t", "source_session": "s"}
+
+    def screen(self, **fields):
+        return dict(self.BASE, fields=fields)
+
+    def test_the_2026_11_02_row_is_refused_and_writes_nothing(self):
+        raw = self.screen(passed=[{"name": "XLE", "conviction_pct": 80}, {"name": "XLK", "conviction_pct": 65},
+                                  {"name": "XLY", "conviction_pct": 60}, {"name": "XLF", "conviction_pct": 40}])
+        code, files, err = run(raw)
+        self.assertEqual(code, 2)
+        self.assertEqual(files, {})
+        for name in ("XLE", "XLK", "XLF"):
+            self.assertIn(name, err)
+        self.assertNotIn("XLY", err)
+
+    def test_its_correction_passes(self):
+        raw = self.screen(passed=[{"name": "XLE", "conviction_pct": 75}, {"name": "XLK", "conviction_pct": 60},
+                                  {"name": "XLY", "conviction_pct": 60}, {"name": "XLF", "conviction_pct": 45}])
+        self.assertEqual(run(raw)[0], 0)
+
+    def test_rejected_notable_is_checked(self):
+        code, _, err = run(self.screen(rejected_notable=[{"name": "ABC", "conviction_pct": 55}]))
+        self.assertEqual(code, 2)
+        self.assertIn("rejected_notable 'ABC'=55", err)
+
+    def test_fields_given_as_a_string_is_checked(self):
+        raw = dict(self.BASE, fields=json.dumps({"passed": [{"name": "ABC", "conviction_pct": 72}]}))
+        self.assertEqual(run(raw)[0], 2)
+
+    def test_non_numeric_values_are_refused(self):
+        for bad in ("60", True):
+            self.assertEqual(run(self.screen(passed=[{"name": "ABC", "conviction_pct": bad}]))[0], 2)
+
+    def test_null_and_absent_are_allowed(self):
+        # 1,268 landed items have no value (measured 2026-11-03), so absence is not a defect.
+        raw = self.screen(passed=[{"name": "A", "conviction_pct": None}, {"name": "B"}], rejected_notable=[])
+        self.assertEqual(run(raw)[0], 0)
+
+    def test_compact_tuples_carry_no_conviction_and_pass(self):
+        raw = self.screen(rejected_compact={"ANCHOR_UNRESOLVED": [["A", -5.1, 10.0, 9.49, None]]})
+        self.assertEqual(run(raw)[0], 0)
+
+    def test_other_entry_types_are_untouched(self):
+        raw = dict(self.BASE, entry_type="research-note", fields={"passed": [{"name": "A", "conviction_pct": 80}]})
+        self.assertEqual(run(raw)[0], 0)
+
+
 if __name__ == "__main__":
     unittest.main()
