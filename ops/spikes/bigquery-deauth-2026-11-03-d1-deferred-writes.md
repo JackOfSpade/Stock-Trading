@@ -257,3 +257,100 @@ with notifications off.
 ### Unfiled findings
 
 None. Nothing new beyond the incident itself, which is already on the calendar thread.
+
+---
+
+## D2 slot, 2026-11-03: HALTED
+
+**Disposition: HALT, as D2's CONNECTOR-DOWN DISPOSITION requires.** Author: Claude (agent), the D2 slot for
+operating date 2026-11-03 (scheduled fire, ~16:17 MST / 23:17Z). Nothing was written:
+- no `ops.run_log` row, not even `started`;
+- no `events.*` row, no `ops.alerts` row, no `events.queue_events` row;
+- no `PENDING_ANALYSIS` drain, no thesis, no router review, no order crafted, nothing staged;
+- **no `Watchlist.md` edit**: the 49 B-index ADDs need the Strategy-B event-identity field dedupe
+  against `events.queue_events` + `events.decision_log`, which could not be read;
+- no second calendar event.
+
+**Same incident, still unresolved at 23:18Z.** The `Google-Cloud-BigQuery` MCP server is still listed as
+requiring authentication, and `bq query 'SELECT 1'` returns `Invalid Credentials`. That is auth wording, so
+the case is NON-WAITABLE and this slot spent no time on the wait ladder.
+
+**Two independent halt reasons, recorded separately because they are different findings:**
+1. **Connector-down (governing).** Canonical state is unreadable, and D2's own limb halts on that.
+2. **Dependency gate (would also RAISE against a live connector).** D2 is `depends_on: [D1, D2a]`. D2a
+   halted with no `ops.run_log` row, and D1's `completed` row is itself a deferred write (§3.8), so
+   `ops.sp_assert_deps('D2', ['D1','D2a'], 2026-11-03)` would fail even after re-auth until both land.
+
+**Calendar.** The existing event `en7a5vooom7a0c0mk1p8hnin78` got one line,
+`UPDATE 16:20 MST D2 halted — no queue drain, no conversion, no orders; …`. The description was checked
+first (about 1.1 KB against the 8,192 cap), and the update was sent with notifications off.
+
+### Checks that need no connector (run, verdicts below)
+
+- **Prose/`d1_actions` cross-check on today's `Daily.md` (commit `63f4573d`): MATCH.** The prose has 49
+  actionable items and the block has 49 entries, all `watchlist` / B / "ADD to B new-entry index; B GATED,
+  index only". Exits, new candidates, add candidates, router reviews and park are 0 on both sides, and the
+  explicit "none" lines count zero. The tickers match one-to-one and in order, and the YAML parses. Today's
+  file is trustworthy input for the replay.
+- **HISTORY-DEPTH PRECHECK (git half).** `git rev-parse --is-shallow-repository` returned `false`, so the
+  clone is complete and no deepen was needed.
+- **CATCH-UP window (git half).** D2's last completion could not be read from `state.routine_catchup_window`
+  or `ops.run_log`. The latest D2 commit marker on main is `c37cf9ff`
+  (`D2 2026-11-02: …`, 23:25Z). Since then `Daily.md` has exactly one commit, today's `63f4573d`. So the
+  replay's backfill set is today's snapshot only, unless BigQuery shows D2's last `completed` earlier than
+  2026-11-02. In that case, re-derive the set from BigQuery and do not rely on this marker.
+
+### What the halt cost, measured
+
+- **The staged-order re-craft had nothing to re-craft.** At 23:17Z, `get_account_orders(show_completed=true)`
+  and `get_order_instructions` both returned empty lists, the same as D2a at 22:42Z.
+  - The broker holds no live order or instruction.
+  - Whether `state.open_orders` holds a `pending` row is UNKNOWN; the registry was unreadable.
+- **Item 6 park conversion: not a cost.** It was retired 2026-10-15 (park VOO-only, `bigquery/256`), so
+  there is no park call to convert. D1's block carries no park entry.
+- **Order-craft points (items 1, 2, 2a, 5).** Today's block has no exit, entry, add or termination. The
+  router state D1 carried forward has A/B/D/E DO-NOT-ACTIVATE and C HYBRID (FOMC-only). The conversion half
+  of D2 would therefore have staged nothing from `d1_actions`.
+- **What the halt really delayed (all UNKNOWN, never "empty"):**
+  - the `PENDING_ANALYSIS` drain (`state.open_queue` unreadable): any item due ≤ 2026-11-03 is now one
+    evening late;
+  - ROUTER EVERY-RUN DUTIES: measured out-of-cycle triggers, unanswered `FUNDAMENTAL_AXIS`, and the daily
+    technical-flip divergence. These also read D2a's `TECHNICAL_SIGNAL` rows, which D2a did not write
+    today;
+  - the 49 Watchlist B-index ADDs.
+- **IBKR account at 23:18Z, for context only, not a snapshot input** (D2a's capture above is the snapshot
+  basis): `net_liquidation` 12285.34, `total_cash_value` 1.23, `gross_position_value` 12284.23.
+  - The first `get_account_summary` call returned a transient `-32400 "An error occurred. Please try again
+    later."`; the immediate retry succeeded.
+  - `RETRY[kind=ibkr_transient;n=2;waited_s=0;outcome=recovered]`.
+- **`ops.web_calls`.** Nothing is owed. This slot made zero metered calls; IBKR and Calendar are free.
+
+| Owed for 2026-11-03 | Recoverable later? |
+|---|---|
+| `PENDING_ANALYSIS` drain (due ≤ today) | **Yes.** The next D2 drains `due_date <= today`. Any item whose `conservative_default` window closed tonight is applied on replay, per STEP 1. |
+| ROUTER EVERY-RUN DUTIES | **Yes, re-derived.** On replay, after D2a writes today's `TECHNICAL_SIGNAL`, read state again. Never re-use tonight's carried-forward router text from `Daily.md` as a measured reading. |
+| 49 Watchlist B-index ADDs | **Yes.** Convert from `63f4573d:Daily.md` through the full event-identity field dedupe. They are index-only (B is DO-NOT-ACTIVATE), so the delay is not capital-relevant. |
+| Order re-craft (persist-and-wait) | **Yes.** The broker holds nothing, and the replay's registry read settles it. |
+| `ops.run_log` D2/2026-11-03 | **No, deliberately.** Never backfill it as `completed` (RUNBOOK §48). That is why this commit's subject does not lead with the routine id. |
+
+### Recovery and expected signature (WHAT EVERY HALTED SLOT OWES, item 6)
+
+- **Order.**
+  1. Re-auth.
+  2. Land D1's §3.
+  3. Replay D2a for 2026-11-03.
+  4. Replay D2. Its dependency gate then passes, and its CATCH-UP CHECK picks up `63f4573d:Daily.md`.
+  5. Replay D3.
+- **Never-refire.** D2 is in the never-refire set (not `catchup_safe`), so OPS0 STEP 2b raises the
+  manual-rerun notice. Otherwise the next regular D2 fire converts it through the CATCH-UP CHECK.
+- **Dependents.** D2's only declared dependent in `ops/cadence.yaml` is **D3** (`catchup_safe`). D3 has its
+  own catch-up loop and recovers once the upstream's catch-up lands.
+- **Expected signature.** `missed_run`/`staleness` for **D1/D2a/D2/D3/SL3** is the outage's expected
+  signature (RUNBOOK §26), not new faults.
+
+### Unfiled findings
+
+- **Owner D1 (prose hygiene), info.** Today's `d1_actions` entries carry
+  `source_research_screen_id: DEFERRED (…)` instead of an id. The replay D2 must back-fill the id from the
+  landed §3 #1 row's `entry_id` before citing it in any queue or decision payload. Otherwise a literal
+  "DEFERRED" string enters a durable record. Info-level only; this is the expected shape of a degraded D1.
