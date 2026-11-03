@@ -1,0 +1,79 @@
+# Salvage: K4 stale-guidance-assumption
+
+Source: two interrupted research transcripts (evidence, baserate). Only what the transcripts show. VERIFIED means the number appears in text the agent actually opened (full text, extracted PDF, or fetched page). Abstract-level search snippets are marked UNVERIFIED unless noted.
+
+## 1. What was established
+
+| # | Claim | Source / URL | Type | Sample | Magnitude | Direction | Status |
+|---|---|---|---|---|---|---|---|
+| 1 | Analysts underreact to negative macro (GDP) news in EPS forecasts | Hugon, Kumar, Lin, Accounting Review 2016; ink.library.smu.edu.sg ... article=2494 (2013 draft PDF, text extracted) | Peer-reviewed (draft read) | Quarterly forecasts 1998-2011 | 1 SD of negative GDP news = $0.04 forecast error, about 15% of median EPS $0.27 | Supports (analyst error, not returns) | VERIFIED (draft) |
+| 2 | Analysts underreact to negative macro news; stock market fixated on aggregate analyst forecasts | Hann, Ogneva, Sapriza, working paper Oct 2011, hbs.edu PDF (text extracted) | Working paper, "do not cite" | not captured | Announcement-day market returns 0.4% to 0.7% lower in most-negative-news quarters (snippet) | Supports (aggregate level) | Abstract VERIFIED; 0.4-0.7% from search snippet, UNVERIFIED |
+| 3 | Gap between macro-model growth and analyst growth predicts about 50% of current-quarter and 40% of next-quarter S&P 500 aggregate EPS forecast errors, and predicts 3/6-month index returns | Sharpe, Gil de Rubio Cruz, Fed FEDS 2024-049, federalreserve.gov/econres/feds/files/2024049pap.pdf | Fed staff paper | 1994-2023, aggregate S&P 500 | ~50% / ~40% of forecast errors; return R2 figure truncated in transcript | Supports, aggregate only | VERIFIED (error shares); return R2 not seen |
+| 4 | Nowcast-based long-short (top vs bottom decile) before earnings | Review of Accounting Studies 2017 (s11142-017-9436-9), via Tavily extract | Peer-reviewed | not captured | Monthly-equivalent five-factor alpha about 0.85%; coefficient 0.33, t=10.42 | Supports | VERIFIED (extract text); costs not shown |
+| 5 | Aggregate return on earnings day predicts firm's next-3-day return; about 23.2% of the macro return priced over 3 days for extreme announcers; dissipates by day 7; L/S spreads 170 bp smallest firms vs 72 bp largest; 60 bp to 173 bp across beta quintiles | Review of Accounting Studies, springer 10.1007/s11142-026-09959-y | Peer-reviewed | Earnings announcements 1998-2022 | as listed | Supports, but short-lived (days) and concentrated in small firms | VERIFIED (extract); no cost netting |
+| 6 | Oil changes predict equity returns (underreaction) | Driesprong, Jacobsen, Maat (JFE 2008; ERIM 2003 abstract via repub.eur.nl) | Peer-reviewed | 30 years monthly; 12 of 18 developed markets significant | Search summary: 10% oil drop about doubles next-month US expected return (secondary summary) | Supports | Abstract VERIFIED; doubling claim UNVERIFIED |
+| 7 | Same effect at US industry level: 9 of 49 industries (18.36%) for spot oil, 3 for futures; profitability vanishes as transaction costs rise (profitable at 0.10%, not above; Driesprong claimed robust to 0.5%) | Fan and Jahan-Parvar, MPRA 15670 (May 2009), text extracted | Working paper | monthly US industries | 18.36% of industries; cost break-even about 0.10% | Mixed, leans against tradability | VERIFIED |
+| 8 | Commodity (energy) price changes predict next-month stock returns, R2 up to 18% in sample, claims out-of-sample economic profits; industrial metals near-efficient | Jacobsen, Marshall, Visaltanachoti, Oct 2008 draft, efmaefm.org 383.pdf | Draft | monthly | R2 up to 18% (US 18.5%) | Supports | VERIFIED (abstract text); not firm-level |
+| 9 | Oil Price Exposure and Cross-Section of Stock Returns: investors slow to process oil effect on future earnings; cross-sectional strategy annualized Sharpe 0.50; stronger after large oil moves and in peak earnings season; consistent with limited attention | Moore and Velikov, Rev. Asset Pricing Studies 14(2) 2024, pure.psu.edu / OUP | Peer-reviewed | page did not give sample | Sharpe 0.50 | Supports (closest to design) | Fetched page text read; sample period, leg returns, costs NOT seen; one later search could not confirm Sharpe |
+| 10 | Management guidance drift: guidance and earnings each give about 200 bp drift to next earnings; about 50% of guidance drift lands at the next earnings date | Milian, European Accounting Review 2018 (ideas.repec.org) | Peer-reviewed | sample not stated | about 200 bp | Supports | VERIFIED (fetched abstract); sample unknown |
+| 11 | Lagged dollar changes explain abnormal returns of internationally active firms; simple strategy gives significant abnormal returns; analyst errors corroborate | Bartov and Bodnar, J. Finance 1994 (ideas.repec.org) | Peer-reviewed | 1994 era | not given | Supports (1994, pre-publication era) | VERIFIED abstract only |
+| 12 | Analysts do not fully adjust for inflation; forecast errors predictable, related to returns | Basu, Markov, Shivakumar, RAST 2010; Chordia and Shivakumar JAR 2005 | Peer-reviewed | not captured | none captured | Supports | abstract VERIFIED, no numbers |
+| 13 | Bonsall, Bozanic, Fischer JAR 2013: macro content of management forecasts, strongest for bellwether firms | repository.upenn.edu | Peer-reviewed | n/a | none | Mixed: guidance carries timely macro info, so assumptions may not be stale | UNVERIFIED (search summary) |
+| 14 | Delta test case: July 10, 2026 guidance assumed forward curve of July 2, all-in about $3.15/gal, Q3 EPS $2.00-$2.50, FY $6.50-$7.50 (SEC 8-K text read). Oct 9: Q3 fuel $3.61 adjusted, more than $500M higher fuel vs early-July guidance, FY cut to $5.10-$5.60, Q4 guided on Oct 2 curve at about $4.25 | Delta 8-K sec.gov/Archives/edgar/data/0000027904/000002790426000029/deltaairlinesannouncesjune.htm; prnewswire Sept-qtr release | Primary filings | Jul-Oct 2026, one firm | as listed | Staleness is real but one case | VERIFIED |
+| 15 | DAL price reaction: close $82.14 (Oct 8) to $82.17 (Oct 9), per FMP price series the agent pulled; intraday -4% per one article | FMP chart endpoint DAL; openbookanalytics article | Market data / secondary | Oct 2026 | +0.04% | Refutes "market ignores stale-assumption cut" for this event (the cut was priced) | Prices VERIFIED; intraday UNVERIFIED |
+| 16 | DAL own regression, 164 daily obs (2026): contemporaneous beta to Brent -0.317, t=-6.0, R2=0.28; next-day predictive beta -0.013, t=-0.33, R2=0.0005; 5-day non-overlap beta -0.017, t=-0.19 | Agent's own Python on FMP prices, transcript output | Own calc, tiny sample | 2026 | as listed | Refutes lag in this one stock: oil is priced same day | VERIFIED (script output) but 10-day non-overlap beta 0.276 t=7.80 with n=15 is noise-prone |
+| 17 | United adopted a policy (Jul 15, 2026) to base guidance on most current fuel prices; Q3 assumed about $3.69/gal on Jul 14 Gulf Coast jet curve; fuel up $575M since start of July | United 8-K ex 99.2 fetched from sec.gov (text read) | Primary filing | Jul 2026 | $3.69/gal | Refutes: guidance assumptions are getting fresher | VERIFIED |
+| 18 | Southwest guidance "based on forward fuel curve as of October 15, 2026"; ALGT assumes about $3.75/gal H2 fuel, $0.10/gal about $0.50 EPS | EDGAR 8-K scan output | Primary filing excerpts | Aug-Oct 2026 | as listed | Fuel-assumption disclosure is common among airlines | VERIFIED |
+
+## 2. Post-publication decay and crowding
+
+- McLean and Pontiff (J. Finance 2016): 97 predictors, returns 26% lower out of sample, 58% lower post-publication. UNVERIFIED (search summary only). Not specific to this signal.
+- Martineau (Critical Finance Review 2022): PEAD non-existent for large stocks since 2006; a UCLA brief says two 2025 papers dispute this. UNVERIFIED (search summary).
+- Fan and Jahan-Parvar (2009): oil-return profitability vanishes above 0.10% transaction costs. VERIFIED.
+- Sharpe/Gil de Rubio Cruz and Moore/Velikov (2024) are post-2008 and still report effects, but no post-publication split of Moore/Velikov was seen.
+- Delta Oct 9 reaction of +0.04% after the largest downgrade in years (secondary article's wording) suggests the information is priced at once in a large liquid name.
+- Searched explicitly for a post-2008 break in the oil-predictability result: none found.
+
+## 3. AI increment over a mechanical baseline
+
+None found. No paper or test was located that compares an LLM assumption extractor against a regex/rule-based extractor for guidance assumptions. Adjacent items only:
+- Gao, Jiang, Yan, "Detecting Lookahead Bias in LLM Forecasts" (arXiv 2512.23847, v2 Jun 2026): lookahead propensity is positive in-sample and near zero after the training cutoff; predictive power loses significance post-cutoff. Earnings-call design: Llama-3.3-70B, in-sample 2006Q1-2020Q4, out-of-sample 2023Q3-2024Q1. Abstract VERIFIED, no numbers given.
+- Lopez-Lira, Tang, Zhu (memorization): LLMs recall pre-cutoff values; masking fails; no recall post-cutoff. UNVERIFIED (search summary).
+- Glasserman and Lin: anonymization helps backtests (GPT-3.5 headlines). UNVERIFIED summary.
+- Kim, Muhn, Nikolaev (GPT-4 financial statements): beats median analyst on direction; no Sharpe seen. UNVERIFIED.
+- Lv (arXiv 2502.20489): LLM embeddings of 1.2M analyst reports 2000-2023 give significant returns; LLM cutoff and Sharpe not stated.
+- Li, Wang, Ma (arXiv 2605.24564) on look-ahead mitigation: not about guidance extraction.
+No masked, prospective or post-cutoff test of this specific idea exists in the transcripts. The mechanical baseline (regex on "assumes ... per gallon ... forward curve as of") was itself shown workable by the agent's EDGAR scan (see 4).
+
+## 4. Frequency, cost, execution, borrow, data access
+
+- EDGAR 8-K scan of S&P 500 constituents (agent's own code, partial; 249 companies scanned at the time reported, 314 earnings filings analysed): explicit energy-price assumption in 13 filings, price-deck 8, forward-curve language 6, FX explicit 15, rate explicit 9, commodity explicit 1. Q2 season (Jul 1-Sep 15, 238 companies): energy explicit 7. Q3 season (Sep 16-Oct 25, 65 companies): energy explicit 6, forward-curve 3. Scan was partial and keyword-based (undercounts); S&P 400/600 scans were started but not finished. Counts are VERIFIED script output but not a validated base rate.
+- FactSet Earnings Insight Oct 2 2026 (pdftotext read): 116 S&P 500 companies issued Q3 quarterly EPS guidance, 44 negative, 72 positive (62%), highest positive count since tracking began 2006. Earlier searches: about 100-112 per quarter (UNVERIFIED snippet). URL: advantage.factset.com/hubfs/Website/Resources%20Section/Research%20Desk/Earnings%20Insight/EarningsInsight_100226.pdf.
+- Data access that worked: SEC data.sec.gov submissions (HTTP 200); sec.gov company_tickers.json; sec.gov Archives 8-K exhibits; FRED fredgraph.csv for DCOILBRENTEU, DCOILWTICO, DJFUELUSGULF (daily, Brent from 1990-01-02, jet Gulf Coast from 1990-04-02, data through 2026-10-20); FMP `commodity` BZUSD and `chart` historical-price-eod-light (works; some chart parameters need a higher plan; `indexes` endpoint denied); Wikipedia constituent lists. EDGAR full-text search (efts.sec.gov) returned 403 in the baserate run, though the evidence run obtained hits from it; behaviour inconsistent, so treat as unreliable. Tavily hit 429 rate limits.
+- Forward curves: no forward-curve data source was found. The agent used spot FRED series as a proxy. This is a hard gap for "code compares to forward curves".
+- Costs (IBKR Fixed, search summary, sources disagree on what it covers): USD 0.005/share, USD 1.00 min, 1% of trade value cap per order. UNVERIFIED. No spread or borrow data was gathered. Liquidity snapshots (IBKR, Oct 23 2026, FROZEN status): DAL 90-day avg USD volume about $487M, JETS about $60M... (JETS ETF about $60.2M is the 4th-last snapshot, not separately labelled in the transcript; treat the ID mapping as uncertain), NCLH, ALK about $94M, SAIA about $107M. Mapping of each snapshot to symbol is inferred from call order: UNVERIFIED.
+- Base rates of 10%+ gaps (agent code, FRED Brent): 1990-2025 unconditional, share of start dates where Brent end-of-horizon differs from start by more than 10%: 20d 30.1%, 40d 45.9%, 60d 52.8%; any-time-in-window 48.6%/75.7%/86.4%. In high-vol states (trailing vol at or above the 2026 Mar-Oct median 0.63), 60d end-gap 76.9%, any-time 99.8%. Jet fuel Gulf Coast: 60d unconditional 52.9%, high-vol 67.3%. These say a guidance assumption goes stale by more than 10% within 60 trading days more often than not, so a trigger on "assumption stale" fires almost always in volatile regimes.
+- Market context (2026): Brent monthly mean about 66.6 (Jan), 103.1 (Mar), 117.3 (Apr), 85.4 (Jun), 83.8 (Jul), 114.2 (Sep), 125.0 (Oct) from FRED script output. Source narratives attribute the shock to an Iran war and Hormuz closure (Trillium commentary, secondary).
+
+## 5. Strongest evidence against
+
+1. Staleness is being fixed by issuers: United adopted a "most current fuel prices" policy (Jul 15 2026); Delta, Southwest, Alaska-type guidance cites a recent forward-curve date. The edge shrinks as assumptions are refreshed at each print.
+2. Same-day pricing in the one case tested: DAL beta to Brent contemporaneous -0.317 (t=-6.0), next-day -0.013 (t=-0.33); DAL closed +0.04% on a 24% midpoint guidance cut. A market that already trades the commodity does not wait for the guidance revision.
+3. Published effects are monthly/industry level and small or cost-fragile: only 18.36% of US industries predictable by oil; profitability vanishes above 0.10% costs (Fan and Jahan-Parvar). Commodity-leads-industry thesis (BI thesis via search summary) reports no abnormal trading profit (UNVERIFIED).
+4. Effects at announcement scale are short-lived (macro delay dissipates by day 7) and strongest in small firms; large-cap spread 72 bp.
+5. Published decay: McLean-Pontiff 58% post-publication (UNVERIFIED); PEAD gone for large caps since 2006 (UNVERIFIED).
+6. Hedge window: base rates show 60-day windows nearly always see more than a 10% commodity move in high volatility, so "hedge until revision or 60 days" will be active almost continuously in such regimes, and the hedge may carry cost with no edge.
+7. Explicit macro assumptions are rare: scan showed only a handful of explicit energy assumptions among 314 filings (mostly airlines); universe is a few dozen names per season.
+8. Guidance carries timely macro information for bellwether firms (Bonsall et al., UNVERIFIED), which cuts against stale assumptions.
+9. LLM look-ahead: pre-cutoff LLM backtests inflate results; masking fails (UNVERIFIED), so any historical backtest of the LLM extractor is untrustworthy.
+
+## 6. Not reached when cut off
+
+- Any measurement of how often assumptions are stale at the time of a trade, and the stock return after a stale-assumption flag (no event study built).
+- Full S&P 500/400/600 scan: only about 443 of 566 (S&P 500 plus overlap) were reached; S&P 400/600 scans were launched but stopped (disk full). The scan was keyword-based, no LLM extraction.
+- A mechanical (regex) versus LLM extraction comparison; any post-cutoff or prospective test.
+- Forward-curve data source and costs of obtaining it; options/futures hedge costs; borrow/short costs; spreads.
+- Moore and Velikov sample period, leg returns, post-publication behaviour; full text of Hugon et al. return results; Fed paper return R2.
+- Verification of McLean-Pontiff, Martineau, Lopez-Lira, Kim-Muhn-Nikolaev figures against full text.
+- Q3 2026 event data for UAL/LUV/ALK stock reactions beyond DAL; United Q4 assumption ($4.80/gal was queried but not confirmed).
+- The run ended with a full-disk error in the local environment (ENOSPC), which blocked the last analysis script (Gulf jet-fuel statistic).
