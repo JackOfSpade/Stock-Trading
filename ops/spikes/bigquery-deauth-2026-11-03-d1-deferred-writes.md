@@ -161,3 +161,99 @@ above is the durable tally.
   screen hit it mid-confirmation on 2026-11-03, and an orchestrator-directed paced second pass was needed
   to measure the remaining own-event names. The screen scripts could pace contract resolution, or cache
   the symbol → `contract_id` map, so one pass suffices. Info-level; it did not change the run's output.
+
+---
+
+## D2a slot, 2026-11-03: HALTED
+
+**Disposition: HALT, as D2a's CONNECTOR-DOWN DISPOSITION requires.** Author: Claude (agent), the D2a slot
+for operating date 2026-11-03 (session `3042e66d-11b0-57a5-81a9-30e9caaa7318`). It fired on schedule at
+~15:40 MST (22:40Z). Nothing was written:
+- no `ops.run_log` row, not even `started`;
+- no `events.*` row and no `ops.alerts` row;
+- no order crafted and nothing staged;
+- no second calendar event.
+
+**Same incident, still unresolved at 22:41Z:**
+- the `Google-Cloud-BigQuery` MCP server was still listed as requiring authentication;
+- `bq ls` returned `Invalid Credentials`.
+
+That is auth wording, so the case is NON-WAITABLE and this slot spent no time on the wait ladder.
+
+**Calendar.** The existing event `en7a5vooom7a0c0mk1p8hnin78` got one line,
+`UPDATE 15:45 MST D2a halted — first broker-reconcile/order-staging routine blocked …`. Before amending I
+checked the description length: about 0.8 KB against the 8,192 cap, so there was room. The update was sent
+with notifications off.
+
+**Raw evidence.** IBKR responses are captured verbatim, except the YTD/1Y PA arrays, in
+`ops/spikes/bigquery-deauth-2026-11-03-d2a-ibkr-capture.md` (reads at 22:42:24–22:42:52Z, post-close).
+
+### What the halt cost, measured from IBKR
+
+- **The staged-order re-craft had nothing to re-craft.** `get_account_orders` and `get_order_instructions`
+  both returned empty lists.
+  - This is an inference: it means the broker holds no live order or instruction. It does not prove the
+    registry holds no `pending` row, because `state.open_orders` could not be read.
+  - On replay, D2a's window-open → re-craft and window-closed → `expired` branches settle the question.
+- **The §13.E sweep/cover was a no-op on its own thresholds.** Neither bound was reached, so the halt
+  suppressed nothing:
+  - `settled_cash` was **1.23** (BASE and USD agree; `total_cash_value` 1.23).
+  - There were no fills today, so `bridge_adjusted_settled_cash` was also **1.23**.
+  - A sweep needs at least +$25 and a cover needs −$5 or less.
+- **No new fills were missed.** `get_account_trades(DAYS_30)` returned 5 trades, all park-vehicle trades.
+  - The latest is a VOO SELL of 0.8357 @ 705.36 on 2026-10-27T13:30:06Z.
+  - The other four are the VOO/SGOV pair from 2026-10-06.
+  - There are zero trades on or after 2026-10-28, so this slot's fill-reconciliation duty was empty.
+  - Several D2a slots have run since 10-27. That the 10-27 fill was reconciled there is an inference; on
+    replay, the idempotent `trade_id` window confirms it either way.
+- **The book matches what D1 recorded this afternoon.**
+  - Eight strategy names: AMZN, DIS, GEV, GOOGL, ISRG, RTX, TSM, UBER.
+  - Park: VOO 16.895 sh, and nothing else. SGOV is fully gone, which fits the VOO-only pin. That is
+    consistent with the pin, not a read of it.
+
+| Owed for 2026-11-03 | Recoverable later? |
+|---|---|
+| `ops.account_snapshot`. D2a is the sole writer and nothing backfills it (`bigquery/153`). | **Only from the capture below.** The replay writes it from these values. It must not re-read them. |
+| `events.daily_marks` (8 names + VOO + SPY) and `events.signal_marks` | **Yes, exactly.** IBKR daily bars are immutable, so the replay re-pulls them. Closes are deliberately not frozen here, to avoid a second, unpinned price basis. |
+| `events.regime_events` `TECHNICAL_SIGNAL` (4 keys), `perf.strategy_daily`, engine recompute | Yes. Each is recomputed mechanically from marks. |
+| The tripwires that never ran: cash/park, mark-discontinuity, connector-sanity band, soft-drawdown, owner-confirmation liveness, funds deficit | The next run sees the state at that time. A condition that arose and cleared inside this window stays unobserved. |
+| `ops.run_log` D2a/2026-11-03 | **No, deliberately.** Never backfill it as `completed` (RUNBOOK §48). That is why this commit's subject does not lead with the routine id. |
+| `ops.web_calls` | Nothing is owed. This slot made zero metered calls; IBKR and Calendar are free. |
+
+**Three gates could not be evaluated. Do not record them as passed:**
+1. the same-day double-run guard;
+2. `state.trading_enabled_mechanical`, whose verdict is unknown. That is a second, independent reason not
+   to craft;
+3. the cash/park tripwire.
+
+### Perishable evidence: the inputs the snapshot needs
+
+| Field | Value |
+|---|---|
+| `get_account_summary` | net_liquidation **12271.94**, equity_with_loan 12271.88, gross_position_value 12270.83, total_cash 1.23, available_funds 9050.78, buying_power 36203.14, init/maint margin 3221.09/3067.71, excess_liquidity 9204.17, dividends 0.06 |
+| `get_account_balances` (BASE=USD) | cash 1.23, settled 1.23, NLV **12271.9367**, stock_market_value 12270.83, unrealized −438.52, realized 0 |
+| PA TWR, `last_successful_update` 2026-11-03 22:42:44 | 1D +0.00561022 (from 20261102, start_nav 12203.472562) · 7D −0.0180693 (from 20261027) · MTD +0.0011155 (from 20261030) · 1M −0.02121219 (from 20261002) · YTD/1Y −0.04279051 (start_nav 98.711006, the young-account artifact) |
+| PA NAV series | **20261103 = 12271.9367**; 20261102 = 12203.472562; 20261030 = 12258.262562 |
+| Session | SPY (756733) has a 2026-11-03 RTH daily bar: O 752.72 / H 757.07 / L 752.39 / C 754.35, vol 21,674,585. The day was a regular session, so the marks and snapshot are genuinely owed. |
+
+**Which NAV the replay should stamp.**
+- **Use the PA series' 12271.9367.** It equals the `get_account_balances` NLV exactly, and it is the source
+  of the TWR columns.
+- Do not use the per-position `market_value` sum. That sum is 12276.99, **+6.16** against
+  `gross_position_value`, so the positions surface is the outlier, as it was on 2026-09-21 (Step 0b
+  caveat (iii)).
+- This is not a cash/park tripwire residual. That tripwire could not be evaluated.
+
+### Recovery and expected signature (WHAT EVERY HALTED SLOT OWES, item 6)
+
+- **Order.** After re-auth and D1's §3 landing, replay D2a for 2026-11-03 first, then D2, then D3.
+  - D2a and D2 are in the never-refire set: OPS0 STEP 2b raises the manual-rerun notice.
+  - D2a's declared dependents in `ops/cadence.yaml` are **D2** and **SL3**.
+  - SL3 is `catchup_safe` and needs no manual replay. It has its own catch-up loop and recovers once the
+    upstream's catch-up lands.
+- **Expected signature.** `missed_run`/`staleness` for **D1/D2a/D2/D3/SL3** is the outage's expected
+  signature (RUNBOOK §26), not new faults.
+
+### Unfiled findings
+
+None. Nothing new beyond the incident itself, which is already on the calendar thread.
