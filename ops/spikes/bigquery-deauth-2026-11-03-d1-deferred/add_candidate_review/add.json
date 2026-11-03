@@ -1,0 +1,142 @@
+{
+ "entry_date": "2026-11-03",
+ "entry_type": "add-candidate-review",
+ "title": "D1 2026-11-03 add-candidate sweep (degraded): 12 evaluated, 0 flagged, 12 declined at hard gate",
+ "body_md": "DEGRADED RUN (BigQuery de-authed). 12 open D tranches evaluated against 11-03 IBKR closes; 0 flagged; all 12 declined at the HARD GATE because invalidation_status is a BigQuery field the run could not read, so 'unbreached' cannot be affirmed (fail-closed, as on 2026-09-21). Dip triggers (name-level, 11-03 vs 10-28): GOOGL -13.81%, TSM -7.90%. GEV's dip trigger from 11-02 cleared after its +6.49% session. No strengthened-conviction trigger: no new reinforcing information in window. D is DO-NOT-ACTIVATE / capital-disabled, so no funding path exists in any case.",
+ "fields": {
+  "positions": [
+   {
+    "ticker": "AMZN",
+    "position_key": "D:AMZN:2026-07-09",
+    "strategy": "D",
+    "mark_vs_cost_pct": 3.92,
+    "trigger_type": "none",
+    "disposition": "declined_hard_gate",
+    "invalidation_criteria_evaluable": false,
+    "reason": "BigQuery unreadable this run (connector de-authed), so state.current_positions.invalidation_status cannot affirmatively confirm 'unbreached'; gate fails closed. No add trigger in window; D is DO-NOT-ACTIVATE regardless."
+   },
+   {
+    "ticker": "AMZN",
+    "position_key": "D:AMZN:2026-07-30",
+    "strategy": "D",
+    "mark_vs_cost_pct": -5.65,
+    "trigger_type": "none",
+    "disposition": "declined_hard_gate",
+    "invalidation_criteria_evaluable": false,
+    "reason": "BigQuery unreadable this run (connector de-authed), so state.current_positions.invalidation_status cannot affirmatively confirm 'unbreached'; gate fails closed. No add trigger in window; D is DO-NOT-ACTIVATE regardless."
+   },
+   {
+    "ticker": "DIS",
+    "position_key": "D:DIS:2026-05-07",
+    "strategy": "D",
+    "mark_vs_cost_pct": 2.57,
+    "trigger_type": "none",
+    "disposition": "declined_hard_gate",
+    "invalidation_criteria_evaluable": false,
+    "reason": "BigQuery unreadable this run (connector de-authed), so state.current_positions.invalidation_status cannot affirmatively confirm 'unbreached'; gate fails closed. No add trigger in window; D is DO-NOT-ACTIVATE regardless."
+   },
+   {
+    "ticker": "DIS",
+    "position_key": "D:DIS:2026-08-05",
+    "strategy": "D",
+    "mark_vs_cost_pct": 10.02,
+    "trigger_type": "none",
+    "disposition": "declined_hard_gate",
+    "invalidation_criteria_evaluable": false,
+    "reason": "BigQuery unreadable this run (connector de-authed), so state.current_positions.invalidation_status cannot affirmatively confirm 'unbreached'; gate fails closed. No add trigger in window; D is DO-NOT-ACTIVATE regardless."
+   },
+   {
+    "ticker": "GEV",
+    "position_key": "D:GEV:2026-08-03",
+    "strategy": "D",
+    "mark_vs_cost_pct": -5.33,
+    "trigger_type": "none",
+    "disposition": "declined_hard_gate",
+    "invalidation_criteria_evaluable": false,
+    "reason": "BigQuery unreadable this run (connector de-authed), so state.current_positions.invalidation_status cannot affirmatively confirm 'unbreached'; gate fails closed. No add trigger in window; D is DO-NOT-ACTIVATE regardless."
+   },
+   {
+    "ticker": "GOOGL",
+    "position_key": "D:GOOGL:2026-07-09",
+    "strategy": "D",
+    "mark_vs_cost_pct": -22.18,
+    "trigger_type": "dip-with-intact-thesis",
+    "disposition": "declined_hard_gate",
+    "invalidation_criteria_evaluable": false,
+    "reason": "BigQuery unreadable this run (connector de-authed), so state.current_positions.invalidation_status cannot affirmatively confirm 'unbreached'; gate fails closed. Name-level dip (11-03 close >=5% below 10-28) with no invalidation news; D is DO-NOT-ACTIVATE and capital-disabled regardless."
+   },
+   {
+    "ticker": "GOOGL",
+    "position_key": "D:GOOGL:2026-07-26",
+    "strategy": "D",
+    "mark_vs_cost_pct": -14.58,
+    "trigger_type": "dip-with-intact-thesis",
+    "disposition": "declined_hard_gate",
+    "invalidation_criteria_evaluable": false,
+    "reason": "BigQuery unreadable this run (connector de-authed), so state.current_positions.invalidation_status cannot affirmatively confirm 'unbreached'; gate fails closed. Name-level dip (11-03 close >=5% below 10-28) with no invalidation news; D is DO-NOT-ACTIVATE and capital-disabled regardless."
+   },
+   {
+    "ticker": "ISRG",
+    "position_key": "D:ISRG:2026-07-20",
+    "strategy": "D",
+    "mark_vs_cost_pct": 26.1,
+    "trigger_type": "none",
+    "disposition": "declined_hard_gate",
+    "invalidation_criteria_evaluable": false,
+    "reason": "BigQuery unreadable this run (connector de-authed), so state.current_positions.invalidation_status cannot affirmatively confirm 'unbreached'; gate fails closed. No add trigger in window; D is DO-NOT-ACTIVATE regardless."
+   },
+   {
+    "ticker": "RTX",
+    "position_key": "D:RTX:2026-04-27",
+    "strategy": "D",
+    "mark_vs_cost_pct": 15.22,
+    "trigger_type": "none",
+    "disposition": "declined_hard_gate",
+    "invalidation_criteria_evaluable": false,
+    "reason": "BigQuery unreadable this run (connector de-authed), so state.current_positions.invalidation_status cannot affirmatively confirm 'unbreached'; gate fails closed. No add trigger in window; D is DO-NOT-ACTIVATE regardless."
+   },
+   {
+    "ticker": "TSM",
+    "position_key": "D:TSM:2026-07-21",
+    "strategy": "D",
+    "mark_vs_cost_pct": -5.39,
+    "trigger_type": "dip-with-intact-thesis",
+    "disposition": "declined_hard_gate",
+    "invalidation_criteria_evaluable": false,
+    "reason": "BigQuery unreadable this run (connector de-authed), so state.current_positions.invalidation_status cannot affirmatively confirm 'unbreached'; gate fails closed. Name-level dip (11-03 close >=5% below 10-28) with no invalidation news; D is DO-NOT-ACTIVATE and capital-disabled regardless."
+   },
+   {
+    "ticker": "TSM",
+    "position_key": "D:TSM:2026-07-29",
+    "strategy": "D",
+    "mark_vs_cost_pct": 3.03,
+    "trigger_type": "dip-with-intact-thesis",
+    "disposition": "declined_hard_gate",
+    "invalidation_criteria_evaluable": false,
+    "reason": "BigQuery unreadable this run (connector de-authed), so state.current_positions.invalidation_status cannot affirmatively confirm 'unbreached'; gate fails closed. Name-level dip (11-03 close >=5% below 10-28) with no invalidation news; D is DO-NOT-ACTIVATE and capital-disabled regardless."
+   },
+   {
+    "ticker": "UBER",
+    "position_key": "D:UBER:2026-07-09",
+    "strategy": "D",
+    "mark_vs_cost_pct": -9.03,
+    "trigger_type": "none",
+    "disposition": "declined_hard_gate",
+    "invalidation_criteria_evaluable": false,
+    "reason": "BigQuery unreadable this run (connector de-authed), so state.current_positions.invalidation_status cannot affirmatively confirm 'unbreached'; gate fails closed. No add trigger in window; D is DO-NOT-ACTIVATE regardless."
+   }
+  ],
+  "n_evaluated": 12,
+  "n_flagged": 0,
+  "n_declined_hard_gate": 12,
+  "price_basis": "IBKR get_price_history ONE_DAY outside_rth=false close 2026-11-03; tranche cost_basis/shares carried from Daily.md 2026-11-02 table (state.current_positions unreadable)",
+  "degraded": "bigquery_down"
+ },
+ "tags": [
+  "D1",
+  "add-candidate-review",
+  "degraded-bigquery-down"
+ ],
+ "superseded_by": null,
+ "source_session": "D1 2026-11-03"
+}
