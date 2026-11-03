@@ -200,5 +200,32 @@ class TestContractsAndSources(unittest.TestCase):
         self.assertRegex(text, r"(?m)^      - name: news_reaction_marks$")
 
 
+class FutilityStopTests(unittest.TestCase):
+    """The owner's 2026-11-02 stop rule, in D1's prompt and without touching the pre-registered view."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.plan = (ROOT / "Claude_Task_Plan.md").read_text(encoding="utf-8")
+
+    def test_stop_runs_before_step_1(self):
+        stop = self.plan.index("**FUTILITY STOP — RUN THIS BEFORE STEP 1")
+        step1 = self.plan.index("1. **UNIVERSE.** `SELECT ticker, role FROM ops.news_reaction_universe`.")
+        self.assertLess(self.plan.index("**NEWS-REACTION PAPER BOOK — J LEAD"), stop)
+        self.assertLess(stop, step1)
+
+    def test_stop_is_date_clustered_spy_excess_at_20_dates(self):
+        stop = self.plan[self.plan.index("**FUTILITY STOP — RUN THIS BEFORE STEP 1"):]
+        stop = stop[: stop.index("\n")]
+        self.assertIn("AVG(realized_return - realized_spy_return)", stop)
+        self.assertIn("GROUP BY call_date", stop)
+        self.assertIn("s.realized_call_dates >= 20", stop)
+        self.assertIn("IFNULL(s.clustered_excess_mu <= 0, FALSE)", stop)
+        self.assertIn("q.open_items = 0", stop)
+        self.assertNotIn("CONVERTED'", stop.split("Run this one query:")[1].split("`.")[0])
+
+    def test_sl1_writes_the_closed_event(self):
+        self.assertIn("\n\n**J FUTILITY STOP (owner directive 2026-11-02; memo section 8).** On every fire,", self.plan)
+
+
 if __name__ == "__main__":
     unittest.main()

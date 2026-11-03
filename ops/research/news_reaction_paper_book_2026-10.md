@@ -160,3 +160,13 @@ reports `n_realized` and `days_since_last_call` so the estimate is checkable fro
 
 If `net_mu` after 30 realized calls is not positive, the readiness view never flips, no queue item is written,
 SL1 next sees the lead at its scheduled 2027-01-02 fire with a measured negative, and nothing deploys.
+
+## 8. Futility stop (added 2026-11-02, owner directive, interactive session)
+
+SL1's 2026-11-02 fire found that this book had no stopping rule (`ops.alerts` `e2aa2a4e`). Each D1 fire spends five readers on each headline indefinitely, and a measured negative never ended that.
+
+The stop: D1 stops the book when gated long calls have realized on at least 20 call-dates and their mean over call-dates of excess versus SPY is at or below zero. An open `PENDING_QUALIFICATION` item defers the check until SL1 drains it. A `CONVERTED` lead is not exempt, because a candidate SL1 rejects leaves the lead's latest event at `CONVERTED` and the readers would otherwise run forever. SL1 writes the `CLOSED` lead event at its next fire unless the lead is `CONVERTED`. A latest `CLOSED` lead event, whatever closed it, also stops D1 at any count or mean, because the lead has ended. D1 checks this on every fire from the twentieth realized call-date on, so a later fall to zero or below also stops the book.
+
+It uses call-dates rather than calls because the calls on one date share one market move. At the 2026-11-02 fire, 189 realized calls fell on 7 call-dates, with a mean excess of -0.19% per date (sd 0.73%).
+
+Nothing in section 1 changes. The readiness rule, gate, cost, horizon and universe stand, so this does not re-open the book. The stop can only end the book. It can never produce a ready flag. A mean above zero at 20 call-dates is not a pass, and unless the lead is `CLOSED` the book keeps running under the original readiness rule.
