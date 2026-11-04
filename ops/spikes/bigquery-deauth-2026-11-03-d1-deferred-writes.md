@@ -502,3 +502,64 @@ times were preserved (22:30Z–23:00Z).
 ### Unfiled findings
 
 None from this slot.
+
+## D3 slot, 2026-11-03: HALTED
+
+**Disposition: HALT, per the FLEET CONNECTOR-DOWN DISPOSITION TABLE (D3 row: HALT, `catchup_safe`).**
+Author: Claude (agent), the D3 slot for operating date 2026-11-03 (scheduled fire, ~17:47 MST / 2026-11-04
+00:47Z). Nothing was written:
+- no `ops.run_log` row, not even `started`; the SAME-DAY DOUBLE-RUN GUARD could not be evaluated (it is a
+  BigQuery read), so this slot cannot tell whether an earlier D3 fire completed today. None did on git
+  evidence: no D3 commit since the incident began;
+- no `sp_auto_resolve_alerts`, no TRADING-ENABLE read, no dependency gate, no QUEUE HYGIENE / terminal-entry
+  sweep, no staged-order registry reconcile, no GO-WITHOUT-ORDER check, no PRE-FILL INVALIDATION RE-CHECK,
+  no golden-scenario prose-regression check, no self-heal / monitor-promotion step, no DISPLAY-TIMEZONE write;
+- no order crafted, re-crafted or deleted; no `ops.alerts` / `events.*` row;
+- **no quiet-day line.** Queue, registry and self-heal state are UNKNOWN, not clean;
+- no second calendar event.
+
+**Two independent halt reasons:**
+1. **Connector-down (governing).** The `Google-Cloud-BigQuery` MCP server is still listed as requiring
+   authentication; `bq query 'SELECT 1'` returns `Invalid Credentials`; `gcloud auth list` shows no
+   credentialed account. Auth wording, so NON-WAITABLE; no time went on the wait ladder.
+2. **Dependency gate (would also fail against a live connector).** D3 is `depends_on: [D2]`, and D2 halted
+   with no `ops.run_log` row (D2 slot above), so `ops.sp_assert_deps('D3', ['D2'])` would raise until D2's
+   replay lands.
+
+**Calendar.** The existing event `en7a5vooom7a0c0mk1p8hnin78` got one line, `UPDATE 17:50 MST D3 halted (as
+predicted) — …`. The description was checked first (about 1.5 KB against the 8,192 cap, ending on a complete
+sentence) and the update was sent with notifications off; start/end times were preserved (22:30Z–23:00Z).
+The event's own deletion is D3's job once BigQuery is confirmed live (calendar reconcile bullet "For a
+`[Claude] ATTENTION — RE-AUTH BigQuery connector` event"), so the replay D3 deletes it.
+
+### Checks that need no connector
+
+- **HISTORY-DEPTH PRECHECK (git half).** `git rev-parse --is-shallow-repository` returned `false`.
+- **Broker side of the registry reconcile, measured at 00:47Z:** `get_account_orders(show_completed=true)`
+  and `get_order_instructions` both returned empty lists, matching D2a (22:42Z) and D2 (23:17Z). So nothing
+  can sit un-tapped at the broker; whether `state.open_orders` holds a `pending` row is UNKNOWN.
+- **Operating-plane date.** Denver clock: 2026-11-03 MST (UTC already read 2026-11-04).
+- **`ops.web_calls`.** Nothing is owed: zero metered calls (IBKR and Calendar are free).
+
+| Owed for 2026-11-03 | Recoverable later? |
+|---|---|
+| Queue hygiene (terminal sweep, `queue_item_stale`, venue-claim, lifecycle-provenance) | **Yes.** All predicates are state reads re-done by the replay. |
+| Registry ↔ IBKR reconcile, GO-WITHOUT-ORDER, PRE-FILL re-check | **Yes.** Broker holds nothing (measured above); the replay's registry read settles the BigQuery side. |
+| Golden-scenario prose-regression check | **Yes, exactly.** It keys on `governing_files` changed since D3's last completed run, which a later run still sees. |
+| Self-heal / monitor-promotion / CI-findings adjudication | **Yes.** Readiness views are re-read on replay. |
+| RE-AUTH calendar event deletion | **Yes.** First D3 with a passing BigQuery pre-flight. |
+| `ops.run_log` D3/2026-11-03 | **No, deliberately.** Never backfilled as `completed` (RUNBOOK §48); hence no routine-id prefix on this commit's subject. |
+
+### Recovery and expected signature (WHAT EVERY HALTED SLOT OWES, item 6)
+
+- **Order.** Re-auth → land D1's §3 → replay D2a → replay D2 → **replay D3** (the catch-up path,
+  `catchup_safe: true`; its dependency gate passes only after D2's replay lands). Then AR_att before AR_orc,
+  as in the AR_orc slot above.
+- **Dependents.** D3 has **no** declared dependent in `ops/cadence.yaml` (no routine lists `D3` in
+  `depends_on`), so no downstream replay is owed on its account.
+- **Expected signature.** `missed_run`/`staleness` for **D3** on 2026-11-03 joins the outage signature
+  (RUNBOOK §26), not a new fault.
+
+### Unfiled findings
+
+None from this slot.
