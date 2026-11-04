@@ -354,3 +354,79 @@ first (about 1.1 KB against the 8,192 cap), and the update was sent with notific
   `source_research_screen_id: DEFERRED (…)` instead of an id. The replay D2 must back-fill the id from the
   landed §3 #1 row's `entry_id` before citing it in any queue or decision payload. Otherwise a literal
   "DEFERRED" string enters a durable record. Info-level only; this is the expected shape of a degraded D1.
+
+## AR_att slot, 2026-11-03: HALTED
+
+**Disposition: HALT, as AR_att's CONNECTOR-DOWN DISPOSITION requires.** Author: Claude (agent), the AR_att
+slot for operating date 2026-11-03 (scheduled fire, ~17:06 MST / 2026-11-04 00:06Z). Nothing was written:
+- no `ops.run_log` row, not even `started`;
+- no STEP 0 reconciliation, no due scan, no RESIDUAL SWEEP, no heal;
+- no `ops.sp_write_adversarial_review` call, no `attacker-complete` transition, no `ops.alerts` row;
+- **no quiet-day line.** The review queue is UNKNOWN, not empty;
+- no second calendar event.
+
+**Same incident, still unresolved at 00:06Z.** The `Google-Cloud-BigQuery` MCP server is still listed as
+requiring authentication. `bq --project_id=stock-trading-498512 query 'SELECT * FROM state.trading_day_today'`
+returns `Invalid Credentials`, and `gcloud auth list` shows no credentialed account. That is auth wording, so
+the case is NON-WAITABLE and this slot spent no time on the wait ladder.
+
+**Calendar.** The existing event `en7a5vooom7a0c0mk1p8hnin78` got one line, `UPDATE 17:10 MST AR_att halted —
+first review-lane routine blocked (prior reports were all capital-path); …`. The description was checked first
+(about 1.2 KB against the 8,192 cap, ending on a complete sentence), and the update was sent with
+notifications off. Start/end times were preserved.
+
+### Checks that need no connector (run, verdicts below)
+
+- **HISTORY-DEPTH PRECHECK (git half).** `git rev-parse --is-shallow-repository` returned `false`; the clone is
+  complete (1,894 commits reachable from `origin/main` at `90bfc3ab`).
+- **Operating-plane date.** Taken from the Denver clock: 2026-11-03 (MST). The UTC clock already read
+  2026-11-04, the trap the limb names.
+
+### What the halt cost — a PRIOR from git, not a measurement
+
+The queue could not be read, so nothing below is a finding about `state.open_queue_detail`. It is what the
+repo says the producers did, and the replay must re-measure it.
+
+- **Likely due today: three `pre-mortem` re-reviews.** SL2 commit `450c0f36` (2026-11-03 01:10Z =
+  2026-11-02 18:10 MST, Denver enqueue date **2026-11-02**) re-enqueued `premortem-A-2026-a3` cycle 11,
+  `premortem-B-2026-a3` cycle 12 and `premortem-D-2026-a3` cycle 10. On the Denver plane their
+  `attacker_due_date` would be **2026-11-03 (today)** and `orchestrator_due_date` 2026-11-04.
+- **Possibly open: five `divergence-review` items.** M1b commit `087c3796` (2026-11-01) reports 5 divergences
+  (A–E), the lane's monthly recurring producer. Their attacker due date would be 2026-11-02, so the
+  2026-11-02 AR_att fire should have taken them. Whether it did is UNKNOWN from here.
+- **Last enqueue / gap.** The last enqueue git can see is 2026-11-02 (Denver), a gap of 1 day. That is well
+  inside the lane's pinned Denver gap distribution (longest healthy gap 27 days). It is labelled a prior,
+  not a measurement.
+- **`ops.web_calls`.** Nothing is owed. This slot made zero metered calls; Calendar is free.
+
+| Owed for 2026-11-03 | Recoverable later? |
+|---|---|
+| STEP 0, due scan, RESIDUAL SWEEP + heal | **Yes, exactly.** The predicates are `<= today`, an entry due today is still due on replay, and each artifact is pinned by `p_source_commit_sha` and does not decay. |
+| Attacks on the (likely) three A/B/D pre-mortem cycles | **Yes, the content.** The next AR_att fire with BigQuery live attacks them from `pending`. |
+| Due-date discipline (attacker 11-03 → orchestrator 11-04) | **No.** It slips with the paired `orchestrator_due_date` and does not come back. |
+| `ops.run_log` AR_att/2026-11-03 | **No, deliberately.** Never backfill it as `completed` (RUNBOOK §48). That is why this commit's subject does not lead with the routine id. |
+
+### Recovery and expected signature (WHAT EVERY HALTED SLOT OWES, item 6)
+
+- **Order.** Re-auth, then the D1 → D2a → D2 → D3 replay above. AR_att itself is queue-driven and not
+  `catchup_safe`: no replay is owed, and the next regular AR_att fire picks up everything with
+  `attacker_due_date <= today`.
+- **Dependents (`ops/cadence.yaml depends_on`).**
+  - **AR_orc** (`depends_on: [AR_att]`): HALTS by cascade (UPSTREAM-HALT LIMB). An AR_orc fire that precedes
+    AR_att's next live fire will correctly find nothing `attacker-complete` for today's entries, and must not
+    read that as a quiet lane.
+  - **SL5** (`depends_on: [AR_orc]`): queue-driven, HALT, as AR_att. No replay is owed; it recovers when the
+    AR_orc → SL5 handoff next lands.
+- **Expected signature.** `missed_run` for **AR_att / AR_orc** on 2026-11-03 joins the D1/D2a/D2/D3/SL3
+  outage signature (RUNBOOK §26), not new faults.
+
+### Unfiled findings
+
+- **Owner OPS0 (UNFILED-FINDINGS INTAKE) / RUNBOOK §26 step 4, info. FIXED IN THIS COMMIT — file as
+  already resolved.** The intake read only `ops/spikes/bigquery-deauth-*-halt-record.md`. This incident's
+  record is D1's `*-d1-deferred-writes.md`, because D2a, D2 and AR_att followed its header and appended here.
+  So its three unfiled-findings headings (D1 §6, D2a, D2) would have been skipped by the intake. A one-line
+  correction in `Claude_Task_Plan.md` §OPS0 and RUNBOOK §26 step 4 widens the glob to
+  `ops/spikes/bigquery-deauth-*.md` and accepts the heading at any level. The pre-existing records are
+  unaffected: every older `Unfiled findings` heading is already marked `FILED`, and the 2026-09-21 D1 record
+  has none.
