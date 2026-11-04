@@ -623,3 +623,68 @@ Nothing was written:
 ### Unfiled findings
 
 None from this slot.
+
+## SL3 slot, 2026-11-03: HALTED
+
+**Disposition: HALT, per the FLEET CONNECTOR-DOWN DISPOSITION TABLE (SL3 row: HALT, `catchup_safe`).** Author:
+Claude (agent), the SL3 slot for operating date 2026-11-03 (scheduled fire, ~19:10 MST / 2026-11-04 02:10Z).
+There are two grounds for the halt:
+1. **Own pre-flight failed (the governing reason).** Step (1) of SL3's QUIET-RUN FAST PATH says "if BigQuery
+   is unreachable, HALT and never emit the no-transition line". The `Google-Cloud-BigQuery` MCP server still
+   requires authentication. `bq --project_id=stock-trading-498512 query 'SELECT * FROM state.trading_day_today'`
+   returns `Invalid Credentials`, and `gcloud auth list` shows no credentialed account. Auth wording, so
+   NON-WAITABLE; no time went on the wait ladder.
+2. **Upstream halt (would apply even with a live connector).** D2a, SL3's only declared dependency, halted with
+   no `ops.run_log` row (D2a slot above). Under SL3's DEPENDENCY GATE → UPSTREAM-HALT LIMB that is the FUTILE
+   branch with zero polls waited. The gate was never reached, because (1) comes first, and the D2a halt record
+   was **not** turned into a `completed` row.
+
+Nothing was written:
+- no `ops.run_log` row, not even `started`; the SAME-DAY DOUBLE-RUN GUARD could not be evaluated (a BigQuery
+  read). No SL3 commit exists on `origin/main` since the incident began;
+- no kill-switch gate, `sp_auto_resolve_alerts`, dependency gate, empty-population check, coverage read,
+  re-resolve row, R3 NOTICE-CLOSE PASS or `probe_funding_stalled` duty;
+- no `analytics.strategy_incubation_perf` / `events.shadow_positions` / `events.strategy_lifecycle` /
+  `ops.roster_change_log` row, no `probe-register` / `adopt-register` enqueue, no `ops.alerts` row;
+- no `arsenal-heartbeat` decision-log entry (W5's META-HEARTBEAT CHECK will see the gap; it is part of this
+  outage, not a heartbeat defect);
+- **no "SL3 evaluated, no incubation transition." line.** SHADOW/PAPER/PROBE populations are UNKNOWN, not empty;
+- no second calendar event. The existing event `en7a5vooom7a0c0mk1p8hnin78` got one line, `UPDATE 19:15 MST SL3
+  halted …`, after checking the description (~2.2 KB of 8,192, ending on a complete sentence), notifications
+  off, start/end preserved.
+
+### Checks that need no connector
+
+- **HISTORY-DEPTH PRECHECK (git half).** `git rev-parse --is-shallow-repository` returned `false`.
+- **Operating-plane date.** Denver clock: 2026-11-03 MST (UTC already read 2026-11-04).
+- **Repo-side population prior.** `strategy/roster.yaml` has A–E, all `roster_state: adopted`, and the SL5 slot
+  above found no `probe-register` / `adopt-register` / SHADOW-entry evidence on `origin/main` since 2026-10-20.
+  So git suggests SHADOW/PAPER/PROBE are empty (a quiet fire), but SHADOW entries are BigQuery-only and this
+  cannot be confirmed.
+- **`ops/cadence.yaml` (parsed).** SL3: `depends_on: [D2a]`, `catchup_safe: true`. No routine lists `SL3` in
+  `depends_on`.
+- **`ops.web_calls`.** Nothing is owed: zero metered calls (Calendar is free).
+
+| Owed for 2026-11-03 | Recoverable later? |
+|---|---|
+| STEP 1 forward-test series (shadow signals / paper sim fills) for any SHADOW/PAPER member | **Yes, exactly — conditional.** STEP 1's per-member day set covers every day `>= MAX(incubation_day)` with a `state.daily_marks_curated` row, so 2026-11-03 is re-covered once D2a's OWN marks catch-up lands that day's marks (OPS0 never refires D2a). |
+| STEPS 2–4 readiness / SHADOW→PAPER advance / culls; R1–R4 ramp monitor; STEP 5 coverage | **Yes.** All are reads of views re-evaluated on the next live fire (catch-up path, `catchup_safe: true`). |
+| R3(a) `ramp_surprise_cut` notices | **Yes.** Keyed on `idx > last_surprise_idx` of the previous heartbeat, so a skipped heartbeat delays but does not lose them. |
+| `arsenal-heartbeat` for 2026-11-03 | **No, deliberately.** Never backfilled; the gap is the outage signature. |
+| `ops.run_log` SL3/2026-11-03 | **No, deliberately.** Never backfilled as `completed` (RUNBOOK §48); hence no routine-id prefix on this commit's subject. |
+
+### Recovery and expected signature (WHAT EVERY HALTED SLOT OWES, item 6)
+
+- **Order.** Re-auth → land D1's §3 → replay D2a (manual / its own marks catch-up) → D2 → D3 → **SL3** (the
+  catch-up path, `catchup_safe: true`; its dependency gate passes only once D2a has a `completed` row for the
+  replayed operating date). SL3 needs no manual replay of its own: its STEP 1 loop recovers 2026-11-03 once
+  D2a's marks catch-up lands.
+- **Dependents (`ops/cadence.yaml depends_on`).** None — no routine lists `SL3`, so no downstream replay is owed
+  on its account.
+- **Expected signature.** `missed_run` / `staleness` for **SL3** on 2026-11-03, plus a missing
+  `arsenal-heartbeat` noticed by W5's META-HEARTBEAT CHECK, join the outage signature (RUNBOOK §26), not new
+  faults.
+
+### Unfiled findings
+
+None from this slot.
