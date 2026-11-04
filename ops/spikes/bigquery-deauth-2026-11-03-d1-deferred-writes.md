@@ -430,3 +430,75 @@ repo says the producers did, and the replay must re-measure it.
   `ops/spikes/bigquery-deauth-*.md` and accepts the heading at any level. The pre-existing records are
   unaffected: every older `Unfiled findings` heading is already marked `FILED`, and the 2026-09-21 D1 record
   has none.
+
+## AR_orc slot, 2026-11-03: HALTED
+
+**Disposition: HALT.** Author: Claude (agent), the AR_orc slot for operating date 2026-11-03 (scheduled fire,
+~17:36 MST / 2026-11-04 00:36Z). The halt has two independent grounds, and they are different findings:
+1. **Own pre-flight failed (the governing reason).** Step (1) of the QUIET-RUN FAST PATH says "if BigQuery is
+   unreachable, HALT". The `Google-Cloud-BigQuery` MCP server is still listed as requiring authentication.
+   `bq --project_id=stock-trading-498512 query 'SELECT * FROM state.trading_day_today'` returns
+   `Invalid Credentials`, and `gcloud auth list` shows no credentialed account. That is auth wording, so the
+   case is NON-WAITABLE and no time went on the wait ladder.
+2. **Upstream cascade (would apply even with a live connector).** AR_att's halt record (`1fd678a2`, merged
+   as `e12ec854`) is a same-day halt record for the named upstream on `origin/main`. Under the UPSTREAM-HALT
+   LIMB that alone makes the DEPENDENCY GATE's FUTILE branch apply. The gate was never reached, because (1)
+   comes first. The halt record was **not** converted into a `completed` row for AR_att.
+
+Nothing was written:
+- no `ops.run_log` row, not even `started`;
+- no `sp_auto_resolve_alerts`, no STEP 0 / STEP 0.5, no due scan, no RESIDUAL SWEEP, no NOTICE-CLOSE PASS;
+- no orchestrator verdict, no `PENDING_REVIEW` close or re-enqueue, no `ops.alerts` row;
+- no sub-agent was spawned, because there was nothing to grade;
+- **no quiet-day line.** The orchestrator lane is UNKNOWN, not empty;
+- no second calendar event.
+
+**Calendar.** The existing event `en7a5vooom7a0c0mk1p8hnin78` got one line, `UPDATE 17:40 MST AR_orc halted
+(own pre-flight failed; cascade as predicted) — …`. The description was checked first (about 1.5 KB against
+the 8,192 cap, ending on a complete sentence), and the update was sent with notifications off. Start/end
+times were preserved (22:30Z–23:00Z).
+
+### Checks that need no connector
+
+- **HISTORY-DEPTH PRECHECK (git half).** `git rev-parse --is-shallow-repository` returned `false`.
+- **Operating-plane date.** Taken from the Denver clock: 2026-11-03 MST. The UTC clock already read
+  2026-11-04.
+
+### What the halt cost: a prior from git, not a measurement
+
+- **The three A/B/D pre-mortem cycles that AR_att flagged** (SL2 `450c0f36`) would carry
+  `orchestrator_due_date` **2026-11-04**. So even a live AR_orc fire tonight would not have found them due.
+  More importantly, they cannot reach `attacker-complete` until AR_att's next live fire. This slot's halt
+  costs them nothing beyond AR_att's halt.
+- **Anything AR_att completed on its 2026-11-02 fire** (for example the M1b `087c3796` divergence items)
+  would carry `orchestrator_due_date` <= 2026-11-03 and was due tonight. Git cannot tell whether such rows
+  exist: AR_att and AR_orc quiet runs commit nothing (`REPO OUTPUT: NONE`). So the count is **UNKNOWN**.
+  The DIVERGENCE-REVIEW STANDING-CYCLE PRE-CHECK and the NOTICE-CLOSE PASS are UNKNOWN for the same reason.
+- **Last handoff / gap.** This cannot be measured. The producer-side basis
+  (`MAX(event_ts)` of `attacker-complete`) is a BigQuery read.
+- **`ops.web_calls`.** Nothing is owed. Zero metered calls were made; Calendar is free.
+
+| Owed for 2026-11-03 | Recoverable later? |
+|---|---|
+| STEP 0 / 0.5, due scan, RESIDUAL SWEEP + heal, NOTICE-CLOSE PASS | **Yes, exactly.** The predicates are `<= today`, and the next live fire re-reads them. |
+| Grading of any `attacker-complete` entry due <= 11-03 | **Yes, the content.** The transcripts are pinned by `p_source_commit_sha` and do not decay. |
+| Due-date discipline for those entries | **No.** It slips by at least one day. |
+| `ops.run_log` AR_orc/2026-11-03 | **No, deliberately.** It is never backfilled as `completed` (RUNBOOK §48). That is why this commit's subject does not lead with the routine id. |
+
+### Recovery and expected signature (WHAT EVERY HALTED SLOT OWES, item 6)
+
+- **Order.** Re-auth, then the D1 → D2a → D2 → D3 replay above. Then **AR_att before AR_orc**: AR_orc is
+  queue-driven and not `catchup_safe`, so no replay is owed. The next regular AR_orc fire after AR_att's next
+  live fire picks up everything with `orchestrator_due_date <= today`. An AR_orc fire that lands first will
+  correctly find nothing for the A/B/D cycles, and must not read that as a quiet lane.
+- **Dependents (`ops/cadence.yaml depends_on`).** **SL5** (`depends_on: [AR_orc]`): queue-driven, HALT, as
+  AR_att. No replay is owed. It has its own catch-up loop and recovers once the AR_orc → SL5 handoff next
+  lands. This halt wrote no `ops.run_log` row, so SL5's gate meets the "invisible upstream halt" case that its
+  own section flags (the `dependency_gate_misreads_upstream_halt_record` exposure). This halt record on
+  `origin/main` is the FUTILE evidence for it.
+- **Expected signature.** `missed_run` for **AR_orc** (and SL5 if it fires tonight) on 2026-11-03 joins the
+  outage signature (RUNBOOK §26). These are not new faults.
+
+### Unfiled findings
+
+None from this slot.
