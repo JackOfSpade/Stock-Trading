@@ -563,3 +563,63 @@ The event's own deletion is D3's job once BigQuery is confirmed live (calendar r
 ### Unfiled findings
 
 None from this slot.
+
+## SL5 slot, 2026-11-03: HALTED
+
+**Disposition: HALT, per the FLEET CONNECTOR-DOWN DISPOSITION TABLE (SL5 row: HALT, "as AR_att").** Author:
+Claude (agent), the SL5 slot for operating date 2026-11-03 (scheduled fire, ~18:25 MST / 2026-11-04 01:25Z).
+There are two grounds for the halt:
+1. **Own pre-flight failed (the governing reason).** Step (1) of SL5's QUIET-RUN FAST PATH says "if BigQuery
+   is unreachable, HALT and never emit the no-op line". The `Google-Cloud-BigQuery` MCP server still requires
+   authentication. `bq --project_id=stock-trading-498512 query 'SELECT * FROM state.trading_day_today'`
+   returns `Invalid Credentials`, and `gcloud auth list` shows no credentialed account. That is auth wording,
+   so the case is NON-WAITABLE and no time went on the wait ladder.
+2. **Upstream cascade (would apply even with a live connector).** AR_orc, SL5's only declared dependency, has
+   a same-day halt record on `origin/main` (`4c7cbc45`, merged as `e7db53be`) and wrote no `ops.run_log` row.
+   Under SL5's DEPENDENCY GATE paragraph, that is the FUTILE branch with zero polls waited
+   (AR_orc is `catchup_safe: false` in `ops/cadence.yaml`, checked by parsing the file). It is also the
+   "invisible upstream halt" case that the paragraph flags as the
+   `dependency_gate_misreads_upstream_halt_record` exposure. The gate was never reached, because (1) comes
+   first, and the halt record was **not** turned into a `completed` row for AR_orc.
+
+Nothing was written:
+- no `ops.run_log` row, not even `started`;
+- no kill-switch gate, dependency gate, `sp_auto_resolve_alerts`, STEP 0 heal, or `sp_score_theater()`;
+- none of the three roster inputs was read;
+- no roster mutation, no `ops.roster_change_log` row, no `ops.alerts` row;
+- **no "No roster mutations due." line.** All three inputs are UNKNOWN, not empty;
+- no second calendar event. The existing event gets one `UPDATE … SL5 halted` line.
+
+### Checks that need no connector
+
+- **HISTORY-DEPTH PRECHECK (git half).** `git rev-parse --is-shallow-repository` returned `false`.
+- **Operating-plane date.** Taken from the Denver clock: 2026-11-03 MST. The UTC clock already read
+  2026-11-04.
+- **Repo-side roster state (a prior, not the BigQuery inputs).** `strategy/roster.yaml` has A–E, all
+  `roster_state: adopted`. `Strategy.md` has no `[CANDIDATE]` heading. Since 2026-10-20, no commit
+  on `origin/main` mentions `probe-register`, `adopt-register`, a SUFFICIENT `strategy-adoption` verdict or a
+  TERMINATED transition. So the git evidence suggests nothing was due for registration, but it cannot rule
+  that out. In particular, an SL3 `probe-register`/`adopt-register` enqueue or a D2/AR_orc TERMINATED row
+  would be BigQuery-only.
+- **`ops.web_calls`.** Nothing is owed. Zero metered calls were made; Calendar is free.
+
+| Owed for 2026-11-03 | Recoverable later? |
+|---|---|
+| STEP 0 heal, theater-judge score, the three roster-input reads | **Yes, exactly.** The predicates are `<= today` or anti-joins on `ops.roster_change_log`, so the next live fire re-reads them. |
+| Any due roster mutation (SHADOW / PROBE / ADOPT register, deregister) | **Yes, the content.** It is applied on the next live fire after AR_orc's. Its timing slips by at least one day. |
+| `ops.run_log` SL5/2026-11-03 | **No, deliberately.** It is never backfilled as `completed` (RUNBOOK §48). That is why this commit's subject does not start with the routine id. |
+
+### Recovery and expected signature (WHAT EVERY HALTED SLOT OWES, item 6)
+
+- **Order.** Re-auth, then the D1 → D2a → D2 → D3 replay above. Then AR_att, then AR_orc, then **SL5**. SL5 is
+  queue-driven and not `catchup_safe`, so no replay is owed. The next regular SL5 fire (Sun–Thu) after AR_orc's
+  next live `completed` run picks up everything. If an SL5 fire lands before that, its dependency gate must
+  read AR_orc's halt correctly. It must not report a quiet run.
+- **Dependents (`ops/cadence.yaml depends_on`).** No routine lists `SL5` in `depends_on`, so no downstream
+  replay is owed on its account.
+- **Expected signature.** A `queue_driven_missed_fire` / `missed_run` for **SL5** on 2026-11-03 is part of the
+  outage signature (RUNBOOK §26). It is not a new fault.
+
+### Unfiled findings
+
+None from this slot.
