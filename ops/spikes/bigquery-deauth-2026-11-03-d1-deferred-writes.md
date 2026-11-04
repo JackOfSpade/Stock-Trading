@@ -688,3 +688,63 @@ Nothing was written:
 ### Unfiled findings
 
 None from this slot.
+
+## OPS2 slot, 2026-11-03: HALTED
+
+**Disposition: HALT, per the FLEET CONNECTOR-DOWN DISPOSITION TABLE (OPS0/OPS2 row: HALT, not `catchup_safe`, no
+replay owed).** Author: Claude (agent), the OPS2 (catch-up executor) slot for operating date 2026-11-03 (scheduled
+fire, ~21:15 MST / 2026-11-04 04:15Z, on its configured cron).
+
+**Why it halted.** OPS2's QUIET-RUN FAST PATH step (2) is a BigQuery-only connector pre-flight
+(`state.trading_day_today`). The `Google-Cloud-BigQuery` MCP server still requires authentication.
+`bq --project_id=stock-trading-498512 query 'SELECT * FROM state.trading_day_today'` returns `Invalid Credentials`,
+and `gcloud auth list` shows no credentialed account. That is auth wording, so the case is NON-WAITABLE and no time
+went on the wait ladder. OPS2 has no dependency gate (`depends_on: []`), so the halt has only this one ground.
+
+Nothing was written or hosted:
+- no SAME-DAY DOUBLE-RUN GUARD read (it is a BigQuery read), and no `ops.run_log` row, not even `started`;
+- no `sp_auto_resolve_alerts`, no STEP 0 `sp_backfill_run_log_from_markers` self-heal;
+- no STEP 1 `state.catchup_refire_readiness` read and no STEP 1a `PENDING_QUALIFICATION` lead-readiness read;
+- **no routine hosted inline.** Even with the feed known, every hosted routine would itself fail its own BigQuery
+  pre-flight, so STEP 2 item 4's CONNECTOR CHECK would have DEFERRED each one (`deferred:connector`);
+- no `ops.catchup_refire_log`, `ops.alerts` or `ops.web_calls` row;
+- **no quiet-night line.** The miss feed and the lead-readiness lane are UNKNOWN, not empty;
+- IBKR, FMP and Gmail were not probed (conditional, and nothing was hosted). Calendar was used only for the
+  existing event's single `UPDATE 21:20 MST OPS2 halted …` line, after checking the description (~2.8 KB of 8,192,
+  ending on a complete sentence), with notifications off and start/end preserved.
+- **Zero metered calls** were made (Calendar is free), so nothing is owed to `ops.web_calls`.
+
+### Checks that need no connector
+
+- **HISTORY-DEPTH PRECHECK (git half).** `git rev-parse --is-shallow-repository` returned `false`.
+- **Operating-plane date.** Denver clock: 2026-11-03 MST (UTC already read 2026-11-04).
+- **`ops/cadence.yaml` (parsed).** OPS2: `depends_on: []`, `catchup_safe: false`. No routine lists `OPS2` in
+  `depends_on`.
+- **What the feed would likely have held (git prior, not the BigQuery read).** Every slot of this incident so far
+  wrote no `ops.run_log` row: D1 (degraded), D2a, D2, AR_att, AR_orc, D3, SL2, SL5 and SL3. Of those, the
+  `catchup_safe` set that `state.catchup_refire_readiness` would normally surface is **D1, D3 and SL3** (plus any
+  period-tier slot due today, which this record cannot see). D2a and D2 are in the never-refire set, so OPS0 STEP 2b
+  owns their manual-rerun notice. AR_att, AR_orc, SL2 and SL5 are queue-driven and owe no replay.
+
+| Owed for 2026-11-03 | Recoverable later? |
+|---|---|
+| Inline catch-up of the outage's `catchup_safe` misses (D1, D3, SL3, …) | **Yes.** The misses stay in `state.catchup_refire_readiness` until a run logs them. The next live OPS2 fire after re-auth (Sun–Thu, 04:15Z) hosts them, bounded at N=4 per run. OPS0's `catchup_refire_blocked` email covers the residual. |
+| STEP 0 marker self-heal | **Yes, exactly.** `sp_backfill_run_log_from_markers` is idempotent and also runs from `sp_assert_deps` and the nightly `cadence_check`. Note that this outage's halt-record commits use the RUNBOOK §48 subject, so they create no routine markers and nothing is wrongly healed to `completed`. |
+| STEP 1a hosted SL1 for any due `lead-readiness` item | **Yes.** The predicate is `due_date <= today`, so the next live fire re-reads it. A due item that stays open is surfaced by D3's `queue_item_stale` warning. |
+| `ops.run_log` OPS2/2026-11-03 | **No, deliberately.** It is never backfilled (WHAT EVERY HALTED SLOT OWES item 3). That is why this commit's subject has no routine-id prefix. |
+
+### Recovery and expected signature (WHAT EVERY HALTED SLOT OWES, item 6)
+
+- **Order.** Re-auth, then land D1's §3, then the D2a → D2 → D3 replay above, then the AR_att → AR_orc → SL5 and SL3
+  recoveries above. **OPS2 itself needs no replay.** Its next regular fire is the catch-up mechanism for D1, D3, SL3
+  and any other `catchup_safe` miss that is still open. If re-auth lands before 2026-11-04 22:30 MST, OPS0's next
+  sweep is the fallback.
+- **Dependents (`ops/cadence.yaml depends_on`).** None. No routine lists `OPS2`, so no downstream replay is owed on
+  its account.
+- **Expected signature.** A `missed_run` for **OPS2** on 2026-11-03 is part of the outage signature (RUNBOOK §26).
+  It is not a new fault. The same holds for any `catchup_refire_blocked` email that OPS0 raises after re-auth for
+  this outage's slots.
+
+### Unfiled findings
+
+None from this slot.
