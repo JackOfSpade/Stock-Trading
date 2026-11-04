@@ -748,3 +748,64 @@ Nothing was written or hosted:
 ### Unfiled findings
 
 None from this slot.
+
+## OPS0 slot, 2026-11-03: HALTED
+
+**Disposition: HALT, per the FLEET CONNECTOR-DOWN DISPOSITION TABLE (OPS0/OPS2 row: HALT, not `catchup_safe`, no
+replay owed).** Author: Claude (agent), the OPS0 (cadence watchdog) slot for operating date 2026-11-03 (scheduled
+fire, ~21:30 MST / 2026-11-04 04:30Z, on its configured cron).
+
+**Why it halted.** OPS0's observability preamble requires a BigQuery connector pre-flight
+(`state.trading_day_today`). The `Google-Cloud-BigQuery` MCP server still requires authentication. `bq ls` returns
+`Invalid Credentials`, and `gcloud auth list` shows no credentialed account. That is auth wording, so the case is
+NON-WAITABLE and no time went on the wait ladder. OPS0 has no dependency gate (`depends_on: []`), so the halt has only
+this one ground.
+
+Nothing was written:
+- no `ops.run_log` row, not even `started`; no `sp_auto_resolve_alerts`;
+- no UNFILED-FINDINGS INTAKE (it needs BigQuery live, so this incident's `Unfiled findings` headings stay unfiled);
+- no STEP 1 `state.catchup_refire_readiness` read, so no STEP 2 re-fire and no `catchup_refire_blocked` email;
+- no STEP 2b manual-rerun notice for the never-refire set (D2a and D2 both halted today and are owed one);
+- no STEP 2c `state.staged_order_reconciliation_overdue` read;
+- STEP 3 (trigger-config sweep) is Sunday-only and would have been skipped anyway (2026-11-03 is a Tuesday);
+- no STEP 4 (c)/(e)/(f) alerts or resolves, and no STEP 5 telemetry sweep;
+- no `ops.catchup_refire_log`, `ops.alerts`, `events.decision_log` or `ops.web_calls` row;
+- **no "no catchup-safe misses pending" heartbeat.** The miss feed is UNKNOWN, not empty;
+- Calendar was used only for the existing event's single `UPDATE 21:35 MST OPS0 halted …` line, after checking the
+  description (~3.1 KB of 8,192, ending on a complete sentence), with notifications off and start/end preserved.
+- **Zero metered calls** were made (Calendar and GitHub are free), so nothing is owed to `ops.web_calls`.
+
+### Checks that need no connector
+
+- **HISTORY-DEPTH PRECHECK.** `git rev-parse --is-shallow-repository` returned `false` (1,906 commits reachable from
+  `origin/main`), so git verdicts this run carry evidentiary weight.
+- **STEP 4(a) DETECT (pure git).** After `git fetch origin '+refs/heads/*:refs/remotes/origin/*' --prune`,
+  `git ls-remote --heads origin 'claude/*'` lists **zero** branches, so no `claude/*` ref is unlanded and there is no
+  stranded-branch candidate. Every halt record of this incident (PRs #157–#159 and earlier) is merged.
+- **STEP 4(f) git half.** Latest routine-subject commit on `origin/main` is `63f4573d` (D1 2026-11-03, degraded,
+  writes deferred). The `ops.run_log` half of (f) cannot be read, so no unlanded-completed-run verdict is drawn.
+- **`ops/cadence.yaml` (parsed).** OPS0: `depends_on: []`, `catchup_safe: false`. No routine lists `OPS0` in
+  `depends_on`.
+
+| Owed for 2026-11-03 | Recoverable later? |
+|---|---|
+| STEP 2 re-fire / `catchup_refire_blocked` email for the outage's `catchup_safe` misses (D1, D3, SL3, OPS1 if missed, …) | **Yes.** The misses stay in `state.catchup_refire_readiness` until a run logs them. OPS2's next live fire hosts them inline first; OPS0's next live sweep is the fallback. |
+| STEP 2b manual-rerun notice for D2a and D2 (never-refire set) | **Yes, if they are still missed.** STEP 2b re-reads `state.cadence_watch` on every live run and re-checks completion first. A manual re-run of D2a then D2 after re-auth needs no notice at all. |
+| UNFILED-FINDINGS INTAKE for this incident's `Unfiled findings` headings | **Yes, exactly.** It runs on OPS0's first run with BigQuery live, and marks each heading `FILED <date>`. |
+| STEP 2c / STEP 5 reads | **Yes.** Both are recomputed from live state on every run. |
+| `ops.run_log` OPS0/2026-11-03 | **No, deliberately.** It is never backfilled (WHAT EVERY HALTED SLOT OWES item 3). That is why this commit's subject has no routine-id prefix. |
+
+### Recovery and expected signature (WHAT EVERY HALTED SLOT OWES, item 6)
+
+- **Order.** Re-auth, then land D1's §3, then the D2a → D2 → D3 replay above, then the AR_att → AR_orc → SL5 and SL3
+  recoveries above. **OPS0 itself needs no replay.** Its next regular fire (Sun–Thu, 04:30Z) runs the intake and the
+  STEP 2/2b catch-up fallback.
+- **Dependents (`ops/cadence.yaml depends_on`).** None. No routine lists `OPS0`, so no downstream replay is owed on
+  its account.
+- **Expected signature.** A `missed_run` for **OPS0** on 2026-11-03 is part of the outage signature (RUNBOOK §26). It
+  is not a new fault. The same holds for `catchup_refire_blocked` emails that OPS0 raises after re-auth for this
+  outage's slots.
+
+### Unfiled findings
+
+None from this slot.
