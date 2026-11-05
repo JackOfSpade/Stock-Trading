@@ -1,6 +1,13 @@
 # BigQuery connector de-auth, 2026-11-03: D1's deferred writes
 
-**Status: OPEN, awaiting re-auth.** Author: Claude (agent), D1 run of 2026-11-03 (session
+**Status: §3 items 1-5 LANDED 2026-11-05** by an interactive session, at the owner's request. `research-screen`
+single-name `c51c9632-6f14-4022-bcde-de8c37dd81c5`, sector `98cf62ab-4c90-43a2-80cb-5b02e40c7929`,
+`add-candidate-review` `ed6f0f1f-2718-4311-ad3d-07d458b980ca` (each outcome `written`, digest matched), breadth
+61.63, and all 120 paper-book calls (none skipped, 0 sharing a headline hash with 2026-11-04). These rows carry a
+late `event_ts` / `call_ts`. `breadth_regime_event.sql` could not run verbatim because its `''` escapes are a BigQuery
+syntax error, so they were issued as `\'` with the text otherwise unchanged. Items 6 and 7 were deliberately NOT
+backfilled (a pin note about a past run; a tally with no per-call targets). Item 8 was not needed: a D1 row exists.
+Originally OPEN, awaiting re-auth. Author: Claude (agent), D1 run of 2026-11-03 (session
 `0ae50cfd-af1c-5586-8100-6d25daa8b824`). This file changes no live BigQuery object and no trigger.
 It exists so the writes D1 could not make on 2026-11-03 survive `Daily.md`'s next overwrite.
 

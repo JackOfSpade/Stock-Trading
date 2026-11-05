@@ -3197,6 +3197,8 @@ clean-day promotion-readiness counter for this check isn't accumulating. No acti
 noting it; item B already tracks the fix (re-paste the 11 bodies) and today's alert fired correctly
 off the currently-live (pre-ITEM-31) query body regardless.
 
+**Update 2026-11-05: the expected echo described above no longer happens.** The class is now CRITICAL (`bigquery/185`), so an echo would re-block order staging. `bigquery/275` excludes every job named in a resolved `append_only_violation` from the detector, so resolving is final for exactly those job ids. Attribute and judge them first.
+
 ## 45. Order-guard evolution — market-only cutover, then full pre-trade-rail strip; partial-sell support — 2026-07-21..22 *(design, owner directive)*
 
 **Why this section exists.** §42 (2026-07-15) is the last place this runbook described
