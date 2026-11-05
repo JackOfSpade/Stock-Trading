@@ -1,30 +1,31 @@
-2026-11-04
-<!-- d1_scan_through_utc: 2026-11-04T22:48:03Z -->
+2026-11-05
+<!-- d1_scan_through_utc: 2026-11-05T22:42:50Z -->
 
-# Daily Market Development Scan — session 2026-11-04 (Wed), run 2026-11-04 (Wed)
+# Daily Market Development Scan — session 2026-11-05 (Thu), run 2026-11-05 (Thu)
 
-Scan window: 2026-11-03 15:22 MT → 2026-11-04 15:48 MT (~24h). The start is the prior `Daily.md` marker `2026-11-03T22:22:24Z`; the window holds one completed US session, Wednesday 2026-11-04, the day after the US midterms. BigQuery is back (re-authorized overnight), so this is a normal run, not a degraded one.
+Scan window: 2026-11-04 15:48 MT → 2026-11-05 15:42 MT (~24h). The start is the prior `Daily.md` marker `2026-11-04T22:48:03Z`, which agrees with that file's commit time (22:48:20Z). The window holds one completed US session, Thursday 2026-11-05.
 
 SCAN MODE: ROUTER-GATED (A DO-NOT-ACTIVATE; B DO-NOT-ACTIVATE; D DO-NOT-ACTIVATE; E DO-NOT-ACTIVATE), read live from `state.current_regime`. C is `HYBRID ACTIVATE (FOMC-only)`, so only its carve-out class is evaluated.
 
-Tape: **a broad relief rally on a Democratic midterm sweep, with oil collapsing and chips lagging.** IBKR regular-session closes, 11-03 → 11-04:
-- **Indices.** SPY 754.35 → **766.81 (+1.65%, 1.58x its 20-day volume)**; SPX 7568.92 → 7688.73 (+1.58%). DIA **+3.10%**, RSP +1.86%, IWM +1.51%, QQQ +0.97%. **SMH −2.75%** (518.52 → 504.27), giving back Tuesday's +2.0%.
-- **Volatility.** VIX 20.83 → **16.61 (−4.22 points)**, inside the NORMAL band (IBKR IND/CBOE bar, delayed flag).
-- **Rates, credit, havens.** TLT +0.80%, HYG +0.70%, **GLD +3.68%**; the dollar was reported at a one-month low.
-- **Oil.** Brent (BZUSD, provisional same-evening read) **94.60 on 2026-11-04**, against **103.60 on 2026-11-03** in the same FMP series (**−8.69%**). The vendor has revised 11-03 from the 104.36 quoted yesterday. USO −8.07%, XLE −4.74%.
-- **Breadth.** Up to **66.13** (from 61.55 as Barchart now carries 11-03), Barchart `$S5TH`, settled-stamped 16:46 ET; single settled source.
+Tape: **an AI, chip and data-center rout on the second day after the Democratic midterm sweep.** IBKR regular-session closes, 11-04 → 11-05:
+- **Indices.** SPY 766.81 → **733.00 (−4.41%, 3.14x its 20-day volume)**; SPX 7688.62 → 7356.73 (−4.32%). QQQ **−6.49%**, IWM −4.59%, DIA −3.53%, RSP −2.89%. **SMH −11.21%.** Outlets call it the worst day since the April 2025 tariff crash; the Nasdaq Composite closed −5.52% (Yahoo) and is in correction.
+- **Volatility.** VIX 16.61 → **28.18 (+11.57 points)**, above the HIGH threshold of 25 (IBKR IND/CBOE bar, delayed flag).
+- **Rates, credit, havens.** TLT +0.21%, HYG −0.31%, GLD +0.81%. Closing yields and the dollar were not obtained.
+- **Oil.** Brent (BZUSD, provisional same-evening read) **99.18 on 2026-11-05**, against **94.62 on 2026-11-04** in the same FMP series (**+4.82%**); the curated series carries 94.60 for 11-04 (vendor revision). USO +1.93%.
+- **Crypto.** IBIT −5.07%.
+- **Breadth.** Down to **58.56** from 66.13, Barchart `$S5TH`, settled-stamped 16:44 ET; single settled source.
 
 ## TL;DR
 
-- **Exits triggered: none.** No tranche carries a mechanical trigger, and no development meets an invalidation criterion. UBER's Q3 print (pre-open 11-04) passed c1–c3.
-- **New entry candidates: none routed.** **93** names cleared Strategy B's frozen ≥5% floor on their own stamped events, all confirmed on IBKR bars. B is `DO-NOT-ACTIVATE`, so all 93 go to the new-entry index only; no thesis handoff. The screen's durable row did not land this run (see item 3). No new FOMC-class C candidate.
-- **Add candidates: none (0 of 12).** The hard gate cleared all 12 tranches today. Six carry triggers (dips on GEV, GOOGL ×2, TSM ×2; strengthened conviction on UBER), all declined because D is DO-NOT-ACTIVATE and has no funding path.
-- **Watchlist: 93 changes.** ADD the 93 names to the Strategy B new-entry index.
-- **Regime review: no review.** No Gulf/Hormuz settlement is in force (Iran still conditions reopening on lifting the blockade), so the two-session oil drop is not a qualifying resolution event. The VIX and shock-price-leg measured triggers are D2's to detect.
+- **Exits triggered: none.** No tranche carries a mechanical trigger, and no development meets an invalidation criterion; the GEV (−7.48%) and TSM (−10.78%) falls are sentiment on data-center policy, which their criteria list as not exit-triggering.
+- **New entry candidates: none routed.** **138** names cleared Strategy B's frozen ≥5% floor on their own stamped events, all confirmed on IBKR bars. B is `DO-NOT-ACTIVATE`, so all 138 go to the new-entry index only; no thesis handoff. The screen's durable row did not land this run (see item 3). No new FOMC-class C candidate.
+- **Add candidates: none (0 of 12).** The hard gate cleared all 12 tranches. Three carry dip triggers (GEV, TSM ×2), all declined because D is DO-NOT-ACTIVATE and has no funding path.
+- **Watchlist: 138 changes.** ADD the 138 names to the Strategy B new-entry index.
+- **Regime review: no review.** The selloff runs through a domestic political channel, not a geopolitical or trade one, and no Gulf/Hormuz settlement is in force. VIX closing at 28.18 (above 25) is a measured VIX_REGIME HIGH trigger for D2 to detect from D2a's rows.
 
 Park: VOO-only pin verified
 
-Paper book (J): 99 calls, 270/30 realized, net_mu -0.56%, ready=FALSE
+Paper book (J): 120 calls, 288/30 realized, net_mu -0.49%, ready=FALSE
 
 ---
 
@@ -32,897 +33,1260 @@ Paper book (J): 99 calls, 270/30 realized, net_mu -0.56%, ready=FALSE
 
 ### 1. Market-wide breaking events
 
-- **US midterms: a Democratic sweep.**
-  - AP projections give Democrats majorities in **both the House and the Senate** (AP via Fox10, 11-04 07:11 CST). Final seat counts are incomplete; a single secondary count (Variety: Senate D 54–R 44 with MS and AK uncalled, House D 228 with 68 open) is unconfirmed.
-  - Also: AP projects Gina Hinojosa (D) won the Texas governorship on a data-center-moratorium pledge (CNBC live blog).
-  - **Reaction.** Overnight, Nasdaq futures fell more than 2% and Korean/Taiwanese chipmakers dropped on AI and data-center regulation fears (DW). The cash session then rallied: Dow +3.10% (DIA), S&P +1.58%, defensives and cyclicals together, while chips (SMH −2.75%), defense (RTX −2.64%; NOC and LMT lower) and AI-power names (GEV −9.30%) fell. The dollar hit a one-month low and gold rose about 2.9% (ZeroHedge, AP).
-- **Iran / Hormuz: talk, nothing in force.**
-  - An Iranian envoy in Dhaka said on 11-04 the strait reopens only if the US lifts its naval blockade and meets Iran's other conditions (TBS News, 12:20 GMT). Rezaei called the US response "not convincing" (Arab Weekly, 11-04); Qatar says proposals are under review after the Doha round. No agreement, ceasefire or blockade lift is in force.
-  - No new kinetic event was confirmed in the window; Trump played down imminent post-midterm strikes. One Middle East Online page on mine-layer strikes carries an 11-03 stamp but reads as stale content and is not counted.
-  - **Oil.** Brent fell for a third session, to 94.60 (−8.69%) on the FMP series; OilPrice framed it as "traders bet on a US-Iran deal", Reuters as Iran-war uncertainty plus the midterm sweep.
-- **Other.** Bitcoin about $78.5k (+1%). Block's 10-Q discloses an October DOJ agreement in principle on a deferred prosecution agreement (about $764M net), not verified against the filing. Euro-area October HICP flash 4.0% (as expected, prior 3.8%; single aggregator).
-- **Unmeasured:** bankruptcies, disasters, tariffs and other enforcement. Nothing turned up in the searches run, which were not exhaustive; several searches hit Tavily HTTP 429 limits.
+- **AI / data-center rout after the Democratic sweep.**
+  - Outlets attribute the selloff to investors re-pricing a slower US data-center build-out once Democrats took both chambers (AP projection, 11-04). Jefferies called the sweep a "worst-case near-term scenario" for the AI trade and cut its data-center capacity outlook to 2030 (Business Insider, 11-05). Siebert's Mark Malek expects hearings and higher power and water costs rather than a legislative stop (Reuters via Devdiscourse).
+  - **Reaction.** S&P 500 −4.4%, Dow −1,833 points (−3.4%) (WSJ, 4:32pm ET); Nasdaq lost about $2.5T of market value (WSJ). Only about 1 in 7 S&P 500 names rose (Yahoo). NVDA, AMD, CRWV, NBIS, ALAB, LITE, COHR, DELL, GLW, PWR fell; TSLA, HOOD, COIN and MSTR fell 9% or more (Yahoo). Asian chipmakers had already fallen overnight (Advantest −11.7%, Tokyo Electron −9.9%, SK Hynix −9.0%; CNBC). Hyperscalers fell less; APP rose about 31% on earnings.
+  - OpenAI published a commitment to pay the full cost of powering its data centers (CNBC live).
+- **Iran / Hormuz: talks, nothing in force.** Iran's foreign minister spoke with Oman's and other regional counterparts on 11-05 "amid escalating tensions over a US naval blockade" (Anadolu, 11:50Z); Tehran still conditions reopening the strait on the blockade ending (Trend, 11:19Z). Qatar is mediating. No ceasefire, settlement or blockade lift is in force, and no new kinetic event was found in the window.
+- **Other.** Challenger October layoffs were the lowest in 10 months (Yahoo). Gold rose about 1.5% intraday (Investing.com).
+- **Unmeasured:** final seat counts, tariff, CR or defense-budget actions, bankruptcies, disasters, enforcement and crypto-specific events. The searches run were thin and not exhaustive.
 
 ### 2. Scheduled events that resolved in the window
 
-- **ADP, October:** **+86k** against a consensus of about +69k, a beat; September revised to 86k from 90k (Reuters via Yahoo; Fox Business).
-- **ISM Services, October:** actual **not obtained** (search rate-limited); consensus 54.8, prior 54.9. UNRESOLVED.
-- **Treasury quarterly refunding:** statement content **not obtained**. UNRESOLVED.
-- **Fed:** no speakers on 11-04. Hammack (a hike dissenter) and Barkin speak 11-05; Bowman after payrolls on 11-06.
-- **Earnings.** The key-less Nasdaq calendar lists 236 reporters for 11-04 with market cap ≥$2B (77 pre-market, 148 after-hours, 11 unspecified), largest TM, ARM (after), MCD (pre), NVO (pre), QCOM (after), UBER (pre, held), CVS (pre), MCK (after). Under the router-gated source limit, non-held names are not researched per name; pre-market reporters that cleared B's floor are in item 3, and after-hours reporters react on 11-05.
-  - **UBER (held)**, Q3 2026 from the issuer's 8-K (accepted 2026-11-04 11:55Z, pre-open): gross bookings $59.8B (+20% cc), trips 4.06B (+16%), revenue $14.77B (+10%), non-GAAP EPS $0.88, adjusted EBITDA 5.0% of GB (from 4.5%); Q4 guide GB $63.25–65.25B. Close +4.91%.
-- **FDA:** no PDUFA outcome was resolved against FDA's own pages; any in-window action is **UNRESOLVED**.
-- **Upcoming:** 11-05 BoE (a hike was expected; not re-verified), Fed's Hammack and Barkin, plus after-hours reporters' reactions; 11-06 October payrolls (consensus about +65k against −29k, unemployment 4.2%); 11-10/11 Russia-Ukraine round in Abu Dhabi; TSM October sales about 11-10; DIS FQ4 on 11-17.
+- **ISM Services, October (11-04):** **54.5** against 54.8 consensus (prior 54.9), a small miss; prices paid 73.0 against 74.6 expected (Barchart via TradingView). Resolves yesterday's UNRESOLVED item.
+- **Treasury quarterly refunding (11-04):** auction sizes unchanged; the November refunding is $125B (3-year $58B 11-09, 10-year $42B 11-10, 30-year $25B 11-12) (Barchart). Resolves yesterday's UNRESOLVED item.
+- **Jobless claims (week to 10-31):** **189k** against 197k expected (Dow Jones via Morningstar). Q3 unit labor costs (prelim) −0.7% against +0.6% expected (Trading Economics).
+- **Bank of England (11-05):** raised Bank Rate **25bp to 4.00%**, 8–1, its first hike since 2023, as expected; one member wanted a larger move; it sees inflation at 5% by mid-2027 and says the path hinges on the Iran war (Yahoo, AP). Norges Bank held.
+- **Fed:** Hammack said policy "will need to move to a restrictive stance" and prefers "more frequent smaller adjustments" (Reuters via AOL). Barkin and Logan content not obtained (UNRESOLVED).
+- **Earnings.** The key-less Nasdaq calendar lists 247 reporters ≥$2B for 11-04 and 228 for 11-05 (117 pre-market, 98 after-hours, 13 unspecified). Prints verified against the issuer's own 8-K/6-K exhibit (EDGAR acceptance time, stated fiscal period); consensus from MarketBeat or the Nasdaq calendar as labelled:
+
+|Ticker|Release (UTC)|Period|Result|Consensus|
+|---|---|---|---|---|
+|ARM|11-04 21:02 (6-K)|FQ2 FY27|rev $1.44B (+27%), non-GAAP EPS $0.52|$0.48 / $1.38B (MarketBeat)|
+|QCOM|11-04 21:03|FQ4 FY26|non-GAAP rev $10.44B, non-GAAP EPS $2.17; handset rev $5.14B (−26%)|$2.17 / $10.14B (MarketBeat)|
+|MELI|11-04 21:01|Q3 2026|rev $10.75B (+45%), op income $676M (6.3% margin)|$10.69B rev (MarketBeat)|
+|APP|11-04 21:08|Q3 2026|rev $2.185B (+55%), diluted EPS $4.30; stock +31.04% on IBKR|$4.04 / $2.08B (MarketBeat)|
+|MCK|11-04 21:06|FQ2 FY27|rev $111.0B (+8%), adj EPS $11.68; FY guide raised|$10.69 (Nasdaq cal)|
+|MSI|11-04 21:13|Q3 2026|sales $3.4B (+12%), non-GAAP EPS $4.69, record backlog; FY raised, +$2B buyback|$3.99 (Nasdaq cal)|
+|DDOG|11-04 12:11 (pre-market, not after-hours)|Q3 2026|rev $1.20B (+35%), non-GAAP EPS $0.81|$0.64 / $1.15B (MarketBeat)|
+|COP|11-05 12:13|Q3 2026|adj EPS $3.27, CFO $7.2B, dividend +11%|$3.06 (Nasdaq cal)|
+|PH|11-05 12:52|FQ1 FY27|sales $6.0B (+18%), adj EPS $8.90; outlook raised|$8.23 (Nasdaq cal)|
+|CI|11-05 11:15|Q3 2026|rev $73.7B, adj EPS $7.98; FY26 ≥$30.60|$7.46 (Nasdaq cal)|
+|CMI|11-05 12:48|Q3 2026|rev $9.4B (+13%), EPS $8.25, record EBITDA 18.9%|$8.38 (Nasdaq cal)|
+|CAH|11-05 11:47|FQ1 FY27|rev $67.5B, non-GAAP EPS $3.26; FY27 guide raised|$2.92 (Nasdaq cal)|
+|BDX|11-05 11:31|FQ4 FY26|rev $5.3B (+5.4%), adj EPS $4.15|$4.06 (Nasdaq cal)|
+|ABNB|11-05 21:02 (after close)|Q3 2026|rev $4.9B (+19%), NI $1.9B|EPS not extracted|
+|NET|11-05 21:18 (after close)|Q3 2026|rev $782.5M (+39%), cRPO +37%|EPS not extracted|
+|MCHP|11-05 21:18 (after close)|FQ2 FY27|net sales $1.622B (+42%), non-GAAP EPS $0.97|$0.82 (Nasdaq cal)|
+|TEAM|11-05 21:09 (after close)|FQ1 FY27|rev $1.772B (+24%), RPO $4.746B (+44%)|$0.24 (Nasdaq cal)|
+
+  Identity confirmed by 8-K Item 2.02 only (figures not read): EOG, SPG, MNST, MTD, LYV, AXON (11-05 after close); SO, DUK, APD, KMB, TRGP, SRE, ROK (11-05 pre-market). Not checked (pending): TM, NVO, MFC, SLF, RVMD, WPM, DVN, NTRA and others. After-close 11-05 prints react on 11-06.
+- **FDA:** no PDUFA outcome or CRL for a ≥$2B sponsor was found on FDA's own pages (the novel-approvals list ends 10/20/2026); any in-window action is **UNRESOLVED**.
+- **Upcoming:** 11-06 08:30 ET October payrolls (consensus about +65k, unemployment 4.2%); Williams and Bowman speak 11-06; Logan's date conflicts between sources. Treasury auctions 11-09/10/12.
 
 ### 3. Large single-name moves — AI-significance screen, ROUTER-GATED MODE
 
-- **Population.** US-listed common stocks, market cap ≥$2B, |close-to-close| ≥5% on 11-04 against 11-03 (B's frozen floor; no sub-floor write-ups in this mode).
-- **Discovery.** The Nasdaq screener supplied symbols and caps only (its `pctchange` lags). Moves came from per-symbol Nasdaq `quote/info` closes dated "Closed at Nov 4, 2026": **2009** names measured, **666** at ≥5% (`rail_tally`). A broad rally day: the discovery median was +2.3%, so most ≥5% names have no own event.
-  - Unmeasured: BRK/A and BRK/B (no data), 382 screener rows with no market cap. BGC, CACC, CCK and CNK had no Nasdaq print and were measured on IBKR instead (all below 5%); CARG likewise (+8.14%, no own-event filing).
-- **Confirmation and identity.** Every passed name is confirmed on IBKR regular-session daily bars (`close` array, `outside_rth=false`); release times come only from the scripted EDGAR batch, labels from the key-less earnings calendar. No metered call. IBKR's `search_contracts` 30-per-minute limit forced a second paced pass, which confirmed all remaining own-event names.
-  - **Dropped below 5% on IBKR (10):** STVN -4.68%, MGEE +4.95%, PLGO +4.98%, NVO +4.95%, TARS -4.91%, IFF -4.89%, UBER +4.91%, BIRK +4.90%, ASH +4.68%, BCO +4.65%.
-- **Close-chain check.** No durable row carries an 11-03 or 11-04 anchor (0 hits). Against the unlanded 11-03 file: **2 hits**, DUOL and NVTS, both after-close 11-03 anchors that chain forward legitimately (yesterday coded them `POST_MOVE_EVENT`, consistent). Not a clearance.
+- **Population.** US-listed common stocks, market cap ≥$2B, |close-to-close| ≥5% on 11-05 against 11-04 (B's frozen floor; no sub-floor write-ups in this mode).
+- **Discovery.** The Nasdaq screener supplied symbols and caps only (its `pctchange` lags). Moves came from per-symbol Nasdaq `quote/info` closes dated "Closed at Nov 5, 2026": **1993** names measured, **591** at ≥5% (`rail_tally`). A broad down day (discovery median −2.7%), so most ≥5% names have no own event.
+  - Unmeasured: BRK/A and BRK/B (no data), SIM and WLYB (after-hours print only), 1,191 screener rows with no market cap. Near-floor names (4.5–5.0% on discovery) with no in-window filing were not IBKR-checked.
+- **Confirmation and identity.** Every passed name is confirmed on IBKR regular-session daily bars (`close` array, `outside_rth=false`); release times come only from the scripted EDGAR batch, labels from the key-less earnings calendar. No metered call. The first IBKR pass stopped after 88 names on tool-output volume; a paced second pass measured the remaining 52, and every prior close matched the discovery close. CMI (−4.93%) and JOBY (+4.95%) fell below 5% on IBKR and are dropped.
+- **Close-chain check.** 12 landed rows read (2026-10-20 → 11-04). **22 hits**, all names coded `POST_MOVE_EVENT` in the 11-04 row (filing after the 11-04 close) that now pass on that after-close 11-04 anchor: a legitimate forward chain, consistent with yesterday's code, recorded in each `reason`. No intraday or pre-open anchor hit. Not a clearance.
 
-**Passed (93, `surfaced_count = 93`, all anchors resolved):**
+**Passed (138, `surfaced_count = 138`, all anchors resolved; 87 after-close 11-04 anchors, 51 pre-open 11-05 anchors):**
 
-|Ticker|Move|IBKR closes 11-03 → 11-04|Event|Release|Anchor|Conv.|Prior ≥5% sessions|
+|Ticker|Move|IBKR closes 11-04 → 11-05|Event|Release|Anchor|Conv.|Prior ≥5% sessions|
 |---|---|---|---|---|---|---|---|
-|NRIX|-38.23%|25.82 → 15.95|Sanofi discontinues SAR448272 (oral STAT6 degrader) Phase 1 and terminates the program (8-|after-close|2026-11-03|75|0|
-|KD|+30.14%|12.94 → 16.84|earnings release (8-K Item 2.02, quarter ending Sep/2026)|pre-open|2026-11-04|75|1|
-|DOX|-30.07%|62.43 → 43.66|fiscal Q4 earnings (6-K)|after-close|2026-11-03|75|0|
-|ECG|-29.29%|112.73 → 79.71|earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01)|after-close|2026-11-03|45|2|
-|DUOL|+25.99%|128 → 161.27|earnings release (8-K Item 2.02, quarter ending Sep/2026)|after-close|2026-11-03|75|0|
-|YOU|+23.70%|47.76 → 59.08|earnings release (8-K Item 2.02, quarter ending Sep/2026)|pre-open|2026-11-04|75|0|
-|FIS|-23.67%|38.99 → 29.76|earnings release (8-K Item 2.02, quarter ending Sep/2026)|pre-open|2026-11-04|75|1|
-|HUT|-23.23%|63.75 → 48.94|earnings release (8-K Item 2.02, quarter ending Sep/2026)|pre-open|2026-11-04|30|4|
-|MOD|-21.43%|125.45 → 98.56|earnings release (8-K Item 2.02, quarter ending Sep/2026)|after-close|2026-11-03|30|3|
-|PCOR|+19.68%|63.17 → 75.6|earnings release (8-K Item 2.02, quarter ending Sep/2026)|after-close|2026-11-03|75|0|
-|IOSP|-18.72%|99.23 → 80.65|earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01)|after-close|2026-11-03|75|0|
-|MDLN|+18.36%|34.09 → 40.35|earnings release (8-K Item 2.02)|pre-open|2026-11-04|75|0|
-|LIVN|+17.88%|79.9 → 94.19|earnings release (8-K Item 2.02, quarter ending Sep/2026)|pre-open|2026-11-04|75|0|
-|UNM|-17.84%|91.03 → 74.79|earnings release (8-K Item 2.02, quarter ending Sep/2026)|after-close|2026-11-03|75|0|
-|MTRN|-17.66%|227.43 → 187.26|earnings release (8-K Item 2.02, quarter ending Sep/2026)|pre-open|2026-11-04|45|2|
-|UFPT|+17.66%|280.32 → 329.82|earnings release (8-K Item 2.02, quarter ending Sep/2026)|after-close|2026-11-03|75|0|
-|BTU|-17.62%|20.66 → 17.02|earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 8.01)|pre-open|2026-11-04|75|1|
-|MOS|+17.37%|18.42 → 21.62|earnings release (8-K Item 2.02, quarter ending Sep/2026)|after-close|2026-11-03|75|1|
-|TRMB|-17.31%|65.61 → 54.25|earnings release (8-K Item 2.02, quarter ending Sep/2026)|pre-open|2026-11-04|75|0|
-|OUST|+15.73%|28.98 → 33.54|earnings release (8-K Item 2.02, quarter ending Sep/2026)|after-close|2026-11-03|30|5|
-|VRDN|+15.51%|25.15 → 29.05|earnings release (8-K Item 2.02, quarter ending Sep/2026)|pre-open|2026-11-04|75|1|
-|XYZ|+15.30%|76 → 87.63|earnings release (8-K Item 2.02, quarter ending Sep/2026)|after-close|2026-11-03|75|0|
-|SM|-15.30%|36.67 → 31.06|earnings release (8-K Item 2.02, quarter ending Sep/2026)|after-close|2026-11-03|75|1|
-|DDOG|-14.42%|220.52 → 188.72|earnings release (8-K Item 2.02, quarter ending Sep/2026)|pre-open|2026-11-04|30|4|
-|TREX|+14.30%|50 → 57.15|earnings release (8-K Item 2.02, quarter ending Sep/2026)|pre-open|2026-11-04|60|0|
-|PRIM|-13.98%|79.57 → 68.45|earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 8.01)|after-close|2026-11-03|45|2|
-|KMT|-13.92%|30.53 → 26.28|earnings release (8-K Item 2.02, quarter ending Sep/2026)|pre-open|2026-11-04|60|1|
-|FLYW|+13.89%|19.15 → 21.81|earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 5.02/7.01)|after-close|2026-11-03|60|0|
-|PFGC|+13.53%|96.51 → 109.57|earnings release (8-K Item 2.02, quarter ending Sep/2026)|pre-open|2026-11-04|60|0|
-|ZBH|+13.49%|97.06 → 110.15|earnings release (8-K Item 2.02, quarter ending Sep/2026)|pre-open|2026-11-04|60|0|
-|MCY|-13.42%|102.71 → 88.93|earnings release (8-K Item 2.02, quarter ending Sep/2026)|after-close|2026-11-03|60|0|
-|HL|+13.17%|13.21 → 14.95|earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 5.02/8.01)|after-close|2026-11-03|45|2|
-|SWK|+13.10%|104.62 → 118.33|earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01)|pre-open|2026-11-04|60|0|
-|BRKR|+12.90%|56.5 → 63.79|earnings release (8-K Item 2.02, quarter ending Sep/2026)|pre-open|2026-11-04|45|2|
-|HURN|-12.70%|198.17 → 173.01|earnings release (8-K Item 2.02, quarter ending Sep/2026)|after-close|2026-11-03|60|1|
-|ATHM|+12.68%|19.96 → 22.49|results press release (6-K; calendar lists pre-market 2026-11-04)|pre-open|2026-11-04|60|0|
-|CDW|+12.67%|149.77 → 168.75|earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 8.01)|pre-open|2026-11-04|60|1|
-|CVS|-12.53%|91.41 → 79.96|earnings release (8-K Item 2.02, quarter ending Sep/2026)|pre-open|2026-11-04|60|0|
-|CPNG|+11.95%|15.23 → 17.05|earnings release (8-K Item 2.02, quarter ending Sep/2026)|after-close|2026-11-03|60|0|
-|ANDE|-11.68%|62.67 → 55.35|earnings release (8-K Item 2.02, quarter ending Sep/2026)|after-close|2026-11-03|60|0|
-|MIRM|+11.42%|87.03 → 96.97|earnings release (8-K Item 2.02, quarter ending Sep/2026)|after-close|2026-11-03|60|0|
-|SKY|+11.35%|86.37 → 96.17|earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 8.01)|after-close|2026-11-03|60|1|
-|W|+11.00%|111.32 → 123.56|earnings release (8-K Item 2.02, quarter ending Sep/2026)|pre-open|2026-11-04|60|1|
-|JKHY|+10.83%|161.66 → 179.16|earnings release (8-K Item 2.02, quarter ending Sep/2026)|after-close|2026-11-03|60|1|
-|AVNT|+10.66%|43.25 → 47.86|earnings release (8-K Item 2.02, quarter ending Sep/2026)|pre-open|2026-11-04|60|0|
-|BKNG|+9.83%|155.67 → 170.97|earnings release (8-K Item 2.02, quarter ending Sep/2026)|after-close|2026-11-03|45|0|
-|CAMT|-9.71%|112.37 → 101.46|Q3 earnings (6-K)|pre-open|2026-11-04|30|3|
-|RIOT|+9.63%|14.02 → 15.37|earnings release (8-K Item 2.02, quarter ending Sep/2026)|pre-open|2026-11-04|30|5|
-|CWK|+9.62%|13.62 → 14.93|earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01)|pre-open|2026-11-04|45|1|
-|CAR|+9.58%|109.34 → 119.81|earnings release (8-K Item 2.02, quarter ending Sep/2026)|after-close|2026-11-03|45|1|
-|SEPN|+9.57%|43.7 → 47.88|SEP-204 development-candidate selection for Graves disease/TED plus preclinical data at AT|pre-open|2026-11-04|45|2|
-|MMM|+9.55%|177.05 → 193.95|settlement of the PFAS/AFFF MDL personal-injury claims (8-K Items 1.01/8.01)|after-close|2026-11-03|45|1|
-|GXO|+9.48%|52.03 → 56.96|earnings release (8-K Item 2.02, quarter ending Sep/2026)|after-close|2026-11-03|45|0|
-|ALMR|-9.36%|30.22 → 27.39|earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 5.02)|after-close|2026-11-03|30|7|
-|KAI|+9.11%|282.79 → 308.56|earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01)|after-close|2026-11-03|45|1|
-|PENG|-9.10%|53.19 → 48.35|agreement to sell its Optimized LED business (Penguin is the seller; 8-K Items 8.01/7.01/5|pre-open|2026-11-04|30|4|
-|NVTS|+9.00%|8.56 → 9.33|earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01)|after-close|2026-11-03|30|4|
-|SMG|+8.72%|61.8 → 67.19|earnings release (8-K Item 2.02, quarter ending Sep/2026)|pre-open|2026-11-04|45|1|
-|SEDG|-8.70%|32.88 → 30.02|earnings release (8-K Item 2.02, quarter ending Sep/2026)|pre-open|2026-11-04|45|2|
-|OC|+8.53%|117.76 → 127.8|earnings release (8-K Item 2.02, quarter ending Sep/2026)|pre-open|2026-11-04|45|0|
-|PAYP|+8.50%|14.71 → 15.96|fiscal Q2 results (6-K)|after-close|2026-11-03|45|0|
-|ATRC|+8.48%|60.41 → 65.53|earnings release (8-K Item 2.02, quarter ending Sep/2026)|after-close|2026-11-03|45|0|
-|LTM|+8.37%|44.09 → 47.78|Q3 results (6-K)|after-close|2026-11-03|45|2|
-|TKR|-7.81%|115.66 → 106.63|earnings release (8-K Item 2.02, quarter ending Sep/2026)|pre-open|2026-11-04|45|1|
-|DNLI|+7.76%|19.45 → 20.96|earnings release (8-K Item 2.02, quarter ending Sep/2026)|after-close|2026-11-03|45|0|
-|PACS|+7.67%|46.68 → 50.26|earnings release (8-K Item 2.02, quarter ending Sep/2026)|after-close|2026-11-03|45|0|
-|CVE|-7.64%|30.74 → 28.39|Q3 results (6-K)|pre-open|2026-11-04|45|1|
-|SSRM|+7.61%|26.16 → 28.15|earnings release (8-K Item 2.02, quarter ending Sep/2026)|after-close|2026-11-03|45|2|
-|SNN|+7.59%|30.17 → 32.46|Q3 trading report (6-K)|pre-open|2026-11-04|45|1|
-|CRL|-7.27%|351.87 → 326.29|earnings release (8-K Item 2.02, quarter ending Sep/2026)|pre-open|2026-11-04|30|3|
-|MTDR|-7.25%|54.31 → 50.37|earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01)|after-close|2026-11-03|45|2|
-|HRMY|-7.05%|37.02 → 34.41|earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01)|pre-open|2026-11-04|45|1|
-|TFPM|+6.69%|28.25 → 30.14|Q3 results (6-K, MD&A and interim financials)|after-close|2026-11-03|45|0|
-|WULF|-6.62%|12.53 → 11.7|credit-support agreements for the Anthropic-leased Kentucky data-center campus (8-K Items |pre-open|2026-11-04|30|7|
-|PRU|+6.58%|118.81 → 126.63|earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01)|after-close|2026-11-03|45|0|
-|PODD|+6.56%|154.86 → 165.02|earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01)|pre-open|2026-11-04|45|0|
-|SOLS|-6.54%|61.74 → 57.7|earnings release (8-K Item 2.02)|pre-open|2026-11-04|45|1|
-|GWW|+6.54%|1397.98 → 1489.39|earnings release (8-K Item 2.02, quarter ending Sep/2026)|pre-open|2026-11-04|45|0|
-|MCD|+6.53%|263.04 → 280.22|earnings release (8-K Item 2.02, quarter ending Sep/2026)|pre-open|2026-11-04|45|0|
-|SDRL|-6.48%|46.32 → 43.32|earnings release (8-K Item 2.02, quarter ending Sep/2026)|after-close|2026-11-03|45|2|
-|EL|+6.31%|105.39 → 112.04|Capital Markets Experience China event announcing fiscal 2030 ambition (8-K Item 7.01)|pre-open|2026-11-04|45|0|
-|FRSH|-6.29%|14.15 → 13.26|earnings release (8-K Item 2.02, quarter ending Sep/2026)|after-close|2026-11-03|45|1|
-|UWMC|+6.29%|1.59 → 1.69|earnings release (8-K Item 2.02, quarter ending Sep/2026)|pre-open|2026-11-04|30|3|
-|NICE|-6.29%|106.27 → 99.59|Q3 results (6-K; beat guidance ranges)|pre-open|2026-11-04|45|0|
-|GFS|-5.95%|42.89 → 40.34|Q3 earnings (6-K; calendar pre-market 2026-11-04)|pre-open|2026-11-04|45|2|
-|SMCI|-5.70%|31.39 → 29.6|earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 8.01)|after-close|2026-11-03|30|4|
-|OVV|-5.61%|66.43 → 62.7|earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 8.01)|after-close|2026-11-03|45|1|
-|TOST|+5.49%|33.53 → 35.37|earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 5.02)|after-close|2026-11-03|45|1|
-|OPLN|-5.45%|38.88 → 36.76|earnings release (8-K Item 2.02, quarter ending Sep/2026)|pre-open|2026-11-04|45|0|
-|AVA|+5.41%|38.11 → 40.17|earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01)|after-close|2026-11-03|45|0|
-|RRR|-5.31%|51.39 → 48.66|earnings release (8-K Item 2.02, quarter ending Sep/2026)|after-close|2026-11-03|45|0|
-|VSH|-5.07%|27.22 → 25.84|earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01)|pre-open|2026-11-04|30|3|
-|ANET|+5.04%|169.91 → 178.48|earnings release (8-K Item 2.02, quarter ending Sep/2026)|after-close|2026-11-03|30|3|
+|VCYT|-54.30%|52.52 → 24.0|Earnings release (8-K Item 2.02, Item 8.01)|after-close|2026-11-04|75|0|
+|APP|+31.04%|271.75 → 356.1|Earnings release (8-K Item 2.02)|after-close|2026-11-04|30|3|
+|FSLY|-26.90%|21.04 → 15.38|Earnings release (8-K Item 2.02, Item 7.01)|after-close|2026-11-04|30|5|
+|ECPG|+26.26%|99.93 → 126.17|Earnings release (8-K Item 2.02)|after-close|2026-11-04|75|0|
+|ADMA|+26.05%|10.48 → 13.21|Earnings release (8-K Item 2.02)|after-close|2026-11-04|75|1|
+|WRBY|+22.50%|21.29 → 26.08|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|75|1|
+|ROAD|-21.88%|99.24 → 77.53|Earnings release (8-K Item 2.02, Item 7.01)|pre-open|2026-11-05|45|2|
+|CAI|-21.64%|33.22 → 26.03|Earnings release (8-K Item 2.02)|after-close|2026-11-04|30|3|
+|BROS|-21.41%|43.99 → 34.57|Earnings release (8-K Item 2.02, Item 7.01)|after-close|2026-11-04|75|0|
+|MGNI|+20.75%|22.79 → 27.52|Earnings release (8-K Item 2.02)|after-close|2026-11-04|75|1|
+|ARQT|-20.70%|34.05 → 27.0|Earnings release (8-K Item 2.02)|after-close|2026-11-04|75|1|
+|EPAM|+20.63%|137.36 → 165.7|Earnings release (8-K Item 2.02, Item 8.01)|after-close|2026-11-04|75|0|
+|RELY|-20.42%|27.08 → 21.55|Earnings release (8-K Item 2.02, Item 7.01)|after-close|2026-11-04|75|1|
+|GIL|-19.07%|43.27 → 35.02|Q3 2026 results and updated full-year guidance (6-K press release)|pre-open|2026-11-05|75|1|
+|LOPE|-18.86%|150.67 → 122.25|Earnings release (8-K Item 2.02)|after-close|2026-11-04|75|0|
+|MTSI|-18.35%|233.13 → 190.35|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|30|4|
+|TTAM|-18.32%|14.3 → 11.68|Q3 2026 earnings release (6-K)|after-close|2026-11-04|75|0|
+|DAVE|-18.11%|336.22 → 275.34|Earnings release (8-K Item 2.02, Item 1.01)|after-close|2026-11-04|30|4|
+|GRAL|-17.07%|143.66 → 119.13|Earnings release (8-K Item 2.02)|after-close|2026-11-04|30|4|
+|POWI|-17.01%|46.8 → 38.84|Earnings release (8-K Item 2.02)|after-close|2026-11-04|75|1|
+|SHOO|-17.01%|46.98 → 38.99|Earnings release (8-K Item 2.02, Item 8.01)|pre-open|2026-11-05|45|2|
+|PBH|-16.82%|53.28 → 44.32|Earnings release (8-K Item 2.02, Item 7.01)|pre-open|2026-11-05|75|1|
+|FIG|-16.67%|22.13 → 18.44|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|2|
+|NTCT|-16.46%|38.1 → 31.83|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|75|0|
+|DCO|-15.24%|156.33 → 132.5|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|45|2|
+|U|+14.93%|42.46 → 48.8|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|60|0|
+|ENHA|+14.91%|7.11 → 8.17|Private placement of 2,109,705 Class A shares at $7.11 (about $15M) in|pre-open|2026-11-05|30|4|
+|WMS|-14.88%|144.07 → 122.63|Earnings release (8-K Item 2.02, Item 7.01, Item 8.01)|pre-open|2026-11-05|60|1|
+|PGNY|+14.19%|30.1 → 34.37|Earnings release (8-K Item 2.02, Item 7.01)|after-close|2026-11-04|60|0|
+|ROK|-14.15%|443.88 → 381.05|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|60|0|
+|SNAP|-14.02%|5.92 → 5.09|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|2|
+|VCEL|+13.85%|45.48 → 51.78|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|30|3|
+|EXPE|-13.74%|315.88 → 272.48|Earnings release (8-K Item 2.02, Item 7.01, Item 8.01)|after-close|2026-11-04|60|1|
+|NGVT|-13.59%|73.73 → 63.71|Earnings release (8-K Item 2.02)|after-close|2026-11-04|60|0|
+|SEZL|+13.40%|136.69 → 155.0|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|2|
+|NWSA|-13.35%|30.56 → 26.48|Earnings release (8-K Item 2.02)|after-close|2026-11-04|60|0|
+|NWS|-13.24%|33.39 → 28.97|Earnings release (8-K Item 2.02)|after-close|2026-11-04|60|0|
+|ARM|-13.08%|191.8 → 166.72|Q2 FY2027 results (6-K shareholder letter)|after-close|2026-11-04|30|4|
+|NSIT|-13.04%|175.62 → 152.72|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|60|0|
+|COHR|-12.98%|195.09 → 169.76|Earnings release (8-K Item 2.02, Item 7.01)|after-close|2026-11-04|30|5|
+|COTY|+12.68%|3.47 → 3.91|Earnings release (8-K Item 2.02)|after-close|2026-11-04|30|3|
+|CYTK|-12.66%|63.6 → 55.55|Earnings release (8-K Item 2.02)|after-close|2026-11-04|60|0|
+|ARW|-12.61%|202.63 → 177.07|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|60|1|
+|STM|-12.39%|45.6 → 39.95|Q3 2026 results (6-K)|after-close|2026-11-04|30|4|
+|SEI|-12.30%|57.64 → 50.55|Earnings release (8-K Item 2.02)|after-close|2026-11-04|30|6|
+|RUN|+12.29%|8.79 → 9.87|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|2|
+|SMMT|-12.24%|16.17 → 14.19|Earnings release (8-K Item 2.02)|after-close|2026-11-04|30|4|
+|MELI|-12.05%|1739.88 → 1530.28|Earnings release (8-K Item 2.02)|after-close|2026-11-04|60|1|
+|MH|-11.99%|12.76 → 11.23|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|60|0|
+|SITM|-11.97%|403.27 → 355.0|Earnings release (8-K Item 2.02)|after-close|2026-11-04|30|6|
+|ACMR|-11.52%|44.43 → 39.31|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|30|3|
+|IRM|-11.09%|118.66 → 105.5|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|60|0|
+|RVMD|-11.04%|199.7 → 177.65|Earnings release (8-K Item 2.02)|after-close|2026-11-04|60|0|
+|IOVA|-11.03%|8.7 → 7.74|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|30|5|
+|LUMN|-10.96%|4.47 → 3.98|Earnings release (8-K Item 2.02, Item 7.01)|after-close|2026-11-04|45|2|
+|CORZ|-10.81%|12.76 → 11.38|Earnings release (8-K Item 2.02, Item 7.01)|pre-open|2026-11-05|30|7|
+|DNOW|-10.74%|15.37 → 13.72|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|60|0|
+|LB|-10.66%|69.26 → 61.88|Earnings release (8-K Item 2.02, Item 7.01)|after-close|2026-11-04|45|2|
+|Z|-10.65%|33.9 → 30.29|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|2|
+|CGNX|-10.50%|53.06 → 47.49|Earnings release (8-K Item 2.02, Item 8.01)|after-close|2026-11-04|45|2|
+|VERX|+10.49%|15.92 → 17.59|Earnings release (8-K Item 2.02)|after-close|2026-11-04|60|0|
+|VIAV|-10.48%|29.38 → 26.3|Earnings release (8-K Item 2.02, Item 8.01)|after-close|2026-11-04|30|4|
+|SLF|-10.37%|81.98 → 73.48|Q3 2026 results and common dividend increase (6-K)|after-close|2026-11-04|60|0|
+|AMC|-10.19%|3.12 → 2.802|Earnings release (8-K Item 2.02)|after-close|2026-11-04|60|1|
+|TIC|-10.09%|10.7 → 9.62|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|60|0|
+|UEC|-9.87%|7.19 → 6.48|Definitive long-term uranium sales agreements with two U.S. nuclear ut|pre-open|2026-11-05|30|3|
+|LMND|-9.63%|45.9 → 41.48|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|2|
+|IOND|-9.58%|60.55 → 54.75|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|2|
+|FWONA|+9.55%|91.03 → 99.72|Liberty Media acquires high-vote Series B common stock from Malone-rel|pre-open|2026-11-05|45|0|
+|QCOM|-9.49%|173.19 → 156.75|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|2|
+|IPAR|+9.48%|123.57 → 135.28|Earnings release (8-K Item 2.02, Item 7.01, Item 8.01)|after-close|2026-11-04|45|1|
+|ZG|-9.40%|34.45 → 31.21|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|2|
+|MKSI|-9.30%|194.95 → 176.82|Earnings release (8-K Item 2.02, Item 7.01, Item 8.01)|after-close|2026-11-04|45|2|
+|MAIR|-9.28%|23.61 → 21.42|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|30|3|
+|CTRI|-9.20%|20.54 → 18.65|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|45|1|
+|RYN|+8.63%|20.17 → 21.91|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|0|
+|GEO|-8.57%|27.53 → 25.17|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|45|0|
+|APPN|+8.45%|49.82 → 54.03|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|45|0|
+|RCUS|-8.39%|19.31 → 17.69|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|1|
+|PK|-8.31%|16.96 → 15.55|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|0|
+|NVST|-8.20%|27.19 → 24.96|Earnings release (8-K Item 2.02, Item 7.01)|after-close|2026-11-04|45|2|
+|PLMR|+8.07%|144.04 → 155.67|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|1|
+|WBI|-8.03%|26.04 → 23.95|Earnings release (8-K Item 2.02, Item 7.01)|after-close|2026-11-04|30|3|
+|ZTS|-7.95%|89.2 → 82.11|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|45|1|
+|ACHC|+7.88%|32.25 → 34.79|Earnings release (8-K Item 2.02, Item 7.01)|after-close|2026-11-04|45|1|
+|FWONK|+7.67%|98.93 → 106.52|Liberty Media acquires high-vote Series B common stock from Malone-rel|pre-open|2026-11-05|45|0|
+|TGB|-7.67%|7.56 → 6.98|Q3 2026 interim financial statements (6-K, Trekor Metals, formerly Tas|after-close|2026-11-04|45|2|
+|MRX|-7.65%|70.34 → 64.96|Q3 2026 earnings release (6-K)|pre-open|2026-11-05|45|1|
+|VECO|-7.64%|36.0 → 33.25|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|2|
+|FCX|-7.51%|62.6 → 57.9|Board approves $4.5B Bagdad copper-molybdenum expansion and modernizat|after-close|2026-11-04|45|2|
+|CXW|-7.50%|30.52 → 28.23|Earnings release (8-K Item 2.02, Item 8.01)|after-close|2026-11-04|45|0|
+|ALGT|+7.43%|81.53 → 87.59|Earnings release (8-K Item 2.02, Item 7.01)|after-close|2026-11-04|30|3|
+|RL|-7.35%|412.06 → 381.78|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|45|0|
+|BGC|-7.19%|11.27 → 10.46|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|45|0|
+|SOBO|-7.17%|34.05 → 31.61|Q3 2026 results (6-K)|after-close|2026-11-04|45|0|
+|YPF|-7.09%|41.61 → 38.66|Q3 2026 condensed interim financial statements (6-K)|after-close|2026-11-04|45|2|
+|TPR|+7.07%|125.31 → 134.17|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|45|1|
+|IMAX|-7.01%|51.76 → 48.13|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|45|0|
+|ORCL|-6.93%|123.73 → 115.16|Issuance of $10B of common stock, 86,206,897 shares (8-K Item 8.01)|after-close|2026-11-04|30|4|
+|VRSK|+6.88%|197.85 → 211.47|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|45|1|
+|PRVA|+6.88%|22.4 → 23.94|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|45|0|
+|CPAY|+6.78%|418.6 → 447.0|Earnings release (8-K Item 2.02, Item 7.01)|after-close|2026-11-04|45|0|
+|LPG|-6.78%|49.43 → 46.08|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|2|
+|PAYC|-6.76%|268.16 → 250.02|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|0|
+|AAUC|+6.76%|20.41 → 21.79|Q3 2026 MD&A, financial statements and press release (6-K)|after-close|2026-11-04|45|1|
+|CG|-6.53%|42.75 → 39.96|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|1|
+|WU|+6.53%|6.59 → 7.02|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|1|
+|MDU|-6.51%|19.82 → 18.53|Earnings release (8-K Item 2.02, Item 7.01)|pre-open|2026-11-05|45|0|
+|OGC|+6.48%|25.78 → 27.45|Q3 2026 condensed interim financial statements (6-K)|after-close|2026-11-04|45|2|
+|VCTR|-6.47%|120.19 → 112.41|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|0|
+|INGM|-6.43%|26.12 → 24.44|Secondary offering of 11,000,000 Ingram Micro common shares by selling|after-close|2026-11-04|45|0|
+|VIR|-6.37%|11.77 → 11.02|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|0|
+|DYN|-6.36%|18.54 → 17.36|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|45|1|
+|AMPL|-6.34%|17.19 → 16.1|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|0|
+|WES|-6.32%|42.54 → 39.85|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|0|
+|NEOG|-6.26%|12.46 → 11.68|Zoetis purchase of the Genomics business: regulatory review now expect|after-close|2026-11-04|45|0|
+|CNR|-6.25%|80.22 → 75.21|Earnings release (8-K Item 2.02, Item 7.01)|pre-open|2026-11-05|45|0|
+|BOBS|+6.22%|18.33 → 19.47|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|30|3|
+|RGLD|+6.18%|246.08 → 261.28|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|1|
+|VNT|+6.17%|37.58 → 39.9|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|45|0|
+|CF|+6.17%|111.68 → 118.57|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|0|
+|SONY|+6.13%|25.95 → 27.54|Q2 FY2026 consolidated financial results (6-K)|pre-open|2026-11-05|45|0|
+|AMLX|-6.05%|29.4 → 27.62|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|45|0|
+|TRLV|-6.03%|11.6 → 10.9|Earnings release (8-K Item 2.02, Item 7.01)|pre-open|2026-11-05|45|1|
+|LNC|-5.87%|41.6 → 39.16|Earnings release (8-K Item 2.02, Item 7.01)|pre-open|2026-11-05|45|0|
+|IRON|-5.78%|83.28 → 78.47|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|45|0|
+|PCVX|-5.72%|65.68 → 61.92|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|1|
+|RLAY|-5.71%|18.03 → 17.0|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|2|
+|OSCR|-5.71%|35.19 → 33.18|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|45|2|
+|HST|-5.67%|26.11 → 24.63|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|0|
+|LFST|-5.49%|14.21 → 13.43|Earnings release (8-K Item 2.02, Item 7.01)|after-close|2026-11-04|45|1|
+|AMCR|-5.48%|48.5 → 45.84|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|0|
+|HUBS|-5.39%|216.64 → 204.96|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|2|
+|IBP|-5.24%|235.42 → 223.08|Earnings release (8-K Item 2.02, Item 7.01)|pre-open|2026-11-05|30|3|
+|HCI|-5.18%|202.53 → 192.03|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|0|
+|AAP|-5.18%|50.75 → 48.12|Earnings release (8-K Item 2.02)|pre-open|2026-11-05|45|2|
+|NVMI|-5.10%|295.35 → 280.3|Record Q3 2026 results (6-K)|pre-open|2026-11-05|45|2|
+|LMAT|-5.04%|87.92 → 83.49|Earnings release (8-K Item 2.02)|after-close|2026-11-04|45|2|
 
-- **Noisy names** (≥3 other ≥5% sessions in the 10-day window, criteria 2 and 4 context): HUT (4), MOD (3), OUST (5), DDOG (4), CAMT (3), RIOT (5), ALMR (7), PENG (4), NVTS (4), CRL (3), WULF (7), UWMC (3), SMCI (4), VSH (3), ANET (3).
-- **Event notes:** NRIX fell on Sanofi ending a partnered Phase 1 program (Item 8.01); MMM's 8-K carries a PFAS settlement (1.01/8.01); PENG is the seller in a business-unit sale; EL's event is an investor day (7.01); SEPN's is a preclinical candidate selection (7.01); WULF's 1.01 is a financing (low confidence).
-- **Rejected:** `rejected_notable` is empty. `rejected_compact` (574), closes on the discovery basis unless the legend says IBKR: 275 `ANCHOR_UNRESOLVED` (no own-event filing, or one that does not explain the move, or an unreadable exhibit: SII, LKFT, LEGN), 257 `DAY2_EVENT_PRIOR`, 42 `POST_MOVE_EVENT`.
-- **Deal-pinned:** none. Filing text was read for every passed name with Items 1.01/7.01/8.01 or a 6-K without 2.02.
+- **Noisy names** (≥3 other ≥5% sessions in the 10-day window, criteria 2 and 4 context): APP (3), FSLY (5), CAI (3), MTSI (4), DAVE (4), GRAL (4), ENHA (4), VCEL (3), ARM (4), COHR (5), COTY (3), STM (4), SEI (6), SMMT (4), SITM (6), ACMR (3), IOVA (5), CORZ (7), VIAV (4), UEC (3), MAIR (3), WBI (3), ALGT (3), ORCL (4), BOBS (3), IBP (3).
+- **Rejected:** `rejected_notable` is empty. `rejected_compact` (452), closes on the discovery basis: 196 `ANCHOR_UNRESOLVED` (no own-event filing, or one that does not explain the move — e.g. AAOI, BWXT, DINO, FIX, HPE, TM, TECK, UMC, VST, WAB; CDLR's −71% is a redomiciliation artifact), 214 `DAY2_EVENT_PRIOR`, 42 `POST_MOVE_EVENT`.
+- **Deal-pinned:** none. Filing text was read for every window filing that is not a plain Item 2.02 (e.g. FWONA/FWONK exchange, INGM secondary, ORCL equity issuance, NEOG unit sale).
 - **Metered calls:** none.
-- **Durable row: NOT WRITTEN this run.** The generated, digest-checked split write (6 parts + call) is committed at `ops/spikes/d1-2026-11-04-single-name-screen-unlanded/`; its issuing sub-agent staged part 1 and was then stopped by a provider safety filter. In-run issue `research_screen_write_refused` asks for an interactive landing. agreement = {both 93, ai_only 0, rule_only 574}.
+- **Durable row: NOT WRITTEN this run.** The generated, digest-checked split write (7 parts + 1 short part + call) is committed at `ops/spikes/d1-2026-11-05-single-name-screen-unlanded/`; its issuing sub-agent staged part 1 and was then stopped by a provider safety filter, and the harness barred the orchestrator from taking over that work. In-run issue `research_screen_write_refused` filed; an interactive session lands it per RUNBOOK §57.
 
-### 4. Sector-level moves (IBKR regular-session closes 11-03 → 11-04)
+### 4. Sector-level moves (IBKR regular-session closes 11-04 → 11-05)
 
-- **Surfaced (8 of 11; rail tally 9 at |move| ≥ 1%).**
-  - **XLE −4.74%** (66.68 → 63.52, conviction 75). The oil collapse: Brent (BZUSD, provisional same-evening read) 94.60 on 11-04 against 103.60 on 11-03, USO −8.07%.
-  - **XLY +4.26%** (117.33 → 122.33, conviction 60). Best sector in a broad relief rally, with lower oil easing consumer costs.
-  - **XLF +3.51%, XLC +3.47%, XLP +3.36%, XLRE +3.32%, XLV +3.06%** (conviction 45 each). One broad beta move in which defensives and cyclicals rose together, after the midterm result and a 4-point VIX drop; healthcare policy read-through is plausible but unverified.
-  - **XLK −0.01%** (176.51 → 176.50, conviction 45, dispersion-only): flat against SPX +1.58% while SMH fell 2.75%, the chip reversal on data-center regulation fears.
-- **Rejected notable:** XLB +2.49% (moved with the cyclical tape, no metals driver found) and XLI −1.09% (no catalyst found), conviction 30 each.
-- **Not surfaced:** XLU +0.44%.
-- **Id check.** All 11 prior closes equal the 11-03 closes recorded yesterday, so no contract ids were re-resolved.
-- **Caveat.** Drivers other than XLE are inferred from the cross-asset tape; no sector-by-sector wrap was read (searches thin and partly rate-limited).
-- **Durable row:** `research-screen` `sector-move`, entry `a4e2f628-7fc8-4d87-abaa-739b8cecdaa3`.
+- **Surfaced (4 of 8 at |move| ≥ 1%; rail tally 8).**
+  - XLK **−8.00%** (176.50 → 162.38): the epicentre, semis and AI hardware on data-center policy fears; conviction 75.
+  - XLI **−4.12%** (169.46 → 162.47): AI-power and electrical-equipment names (GEV, Eaton, Quanta) on the same channel; conviction 60.
+  - XLY **−3.83%** (122.33 → 117.64): high-beta discretionary (Tesla, crypto-linked); conviction 45.
+  - XLE **−2.98%** (63.52 → 61.63) although Brent (BZUSD, provisional same-evening read) rose to 99.18 on 2026-11-05 from 94.62 on 2026-11-04: a beta-driven session, not an oil-driven one; conviction 45.
+- **Rejected notable (beta moves, no sector channel found):** XLF −2.87%, XLB −2.91%, XLV −2.50%, XLRE −1.82%; conviction 30 each.
+- **Not surfaced:** XLP −0.75%, XLU −0.71%, XLC −0.59%.
+- **Id check.** All 11 prior closes equal the 11-04 closes recorded yesterday, so no contract ids were re-resolved.
+- **Durable row:** `research-screen` `sector-move`, entry `23dea2da-133c-401b-8d1e-55bece77a6e7`.
 
 ### 5. Notable commentary
 
-- Jay Woods (Freedom Capital Markets, via Variety): gridlock has historically been good for markets.
-- Brian Sozzi (Yahoo Finance): the rally reads as relief on hyperscaler capex and free cash flow.
-- CNBC analysts: Democratic control could weigh on AI-buildout names through data-center restrictions, which matches the GEV, SMH and Texas-moratorium read.
-- No sell-side or central-bank note text was retrieved (the commentary searches returned little or hit 429).
+- Jay Hatfield (Infrastructure Capital, WSJ): "This is a true panic… 100% about the chip stocks and the potential slowdown in the AI trade."
+- Jefferies: the sweep is a "worst-case near-term scenario" for the AI trade (Business Insider).
+- Cummins (release): demand for power-generation equipment "remains exceptionally strong, driven by data center buildout", against the day's narrative.
+- Qualcomm CEO Amon reiterated a $5B FY27 data-center target and an Amazon AI data-center collaboration (8-K).
+- Fed's Hammack (hawkish, above); BoE says its path hinges on the Iran war.
 
 ---
 
 ## ANALYSIS — RISK TO EXISTING POSITIONS
 
-**Mechanical exit-trigger sweep.**
-- **Union of book and view.** IBKR `get_account_positions` and `state.current_positions` agree on all 8 names and share counts (AMZN 0.3464, DIS 0.7244, GEV 0.1244, GOOGL 0.2577, ISRG 0.1091, RTX 0.1601, TSM 0.155, UBER 0.5156). VOO (16.895 sh) is the park holding. No connector-only position, so no `position_reconciliation_lag`.
+- **Union of book and view.** IBKR `get_account_positions` and `state.current_positions` agree on all 8 names and share counts (AMZN 0.3464, DIS 0.7244, GEV 0.1244, GOOGL 0.2577, ISRG 0.1091, RTX 0.1601, TSM 0.155, UBER 0.5156). IBKR also holds the VOO park (16.895 shares), which is not a strategy position. No reconciliation-lag position.
 - **Exit triggers.** No tranche carries a `convergence_target` or `time_exit_date`. **No EXIT TRIGGERED.**
-
-**Per-strategy kill-trigger sweep.**
-- **Strategy D.** `perf.kill_flags` (as of 11-02): every flag FALSE; unit 1.0180 against peak 1.1065 (−7.99%). Refreshed against IBKR 11-04 closes, the book's market value moved about +3.3% since 11-02 (the 11-03 rebound plus 11-04's mixed session), which leaves the drawdown at roughly −5%, far from the −50% kill. `interim_underperf_warning` is FALSE (deployed 132 days, excess vs SGOV −0.13%), and no alert of that category is open.
-- **Strategy B.** No open positions; `analytics.b_pairwise_correlation` reports 0 positions, so the correlation check is inert.
-
-**Thesis-invalidation check** (criteria read from `state.current_positions.invalidation_status`; closes IBKR 11-04, moves against 11-03).
-- **AMZN** 266.03 (+6.12%). A hyperscaler rebound; no company news; criteria are quarterly AWS and commitment metrics. **NO.**
-- **DIS** 118.95 (+4.18%, a 52-week high intraday). Only the known cost plan; FQ4 is 11-17 and has **not occurred** (EVENT-IDENTITY GATE). **NO.**
-- **GEV** 832.83 (**−9.30%**). Profit-taking after Tuesday's +6.5%, data-center backlash fears on the sweep, and analyst target trims (Argus, Guggenheim and others; Barron's, Investing.com). The criterion is organic orders growth below 15% for two quarters; the latest reading is +96%, and price action is listed as not exit-triggering. **NO.**
-- **GOOGL** 288.93 (+3.18%). Rebound; no structural-remedy ruling in the window. **NO.**
-- **ISRG** 482.10 (+9.38%). A healthcare-sector bounce with no company catalyst found. **NO.**
-- **RTX** 198.43 (−2.64%). Defense names fell on budget fears after the sweep. c6 needs an enacted or proposed FY27 procurement cut of 10% or more; none exists (a CR funds FY26 levels through 12-11). **NO.**
-- **TSM** 395.75 (−2.24%). No company news; October sales are due about 11-10. **NO.**
-- **UBER** 69.87 (+4.91%). Q3 2026 verified from the issuer 8-K (accepted 11:55Z, quarter ended 2026-09-30): c1 gross bookings +20% cc passes; c2 adjusted EBITDA margin expanded to 5.0% of GB; c3 Uber One about 55M (from the call; the prior count was not re-read, so "no sequential decline" rests on management's record-high language); c4 no definition change seen in the release. The President's departure (Item 5.02) is not a criterion. **NO.**
-
-Price-level criteria: `state.price_level_criterion_drift` holds 4 rows (DIS, RTX ×2, TSM), all parsed non-price figures with `actionable_price_level = FALSE`; no verdict here tests a price level, so no dividend netting applies.
-
-Caveat: only UBER was checked against a primary filing; the other seven rest on one secondary-press search each, so absence of news is weak evidence.
-
-Watchlist candidates: no existing B-index name's candidacy changes beyond the adds below.
+- **Kill-trigger sweep.**
+  - **Strategy D.** `perf.kill_flags` (as of 11-04): every flag FALSE (drawdown, runaway, m2m, evidence, interim warning); unit 1.0485 against peak 1.1065 (−5.24%). Refreshed against IBKR 11-05 closes, the book's market value fell 4.16%, putting the unit near 1.0049 and drawdown near **−9.2%**, far from the 50% kill.
+  - **Strategy B.** No open positions; `analytics.b_pairwise_correlation` reports 0 positions, so the correlation check is inert.
+- **Price-level criteria.** The 4 `state.price_level_criterion_drift` rows (DIS, RTX ×2, TSM) are non-price numbers parsed from criterion text; none is actionable.
+- **Thesis-invalidation sweep** (IBKR 11-05 closes; criteria from each tranche's `invalidation_status`):
+  - **AMZN** 260.21 (−2.19%). Market move; only company news is Prime restaurant delivery moving to Uber Eats. AWS growth, margin, backlog and commitment criteria have no new datapoint. **NO.**
+  - **DIS** 117.22 (−1.45%). No company news; FQ4 is 11-17 and has **not occurred** (EVENT-IDENTITY GATE). **NO.**
+  - **GEV** 770.51 (**−7.48%**, −13.22% over five sessions). Data-center-policy fear and analyst target trims (Argus, Guggenheim, TD Cowen, JPMorgan, Citi; Jefferies Franchise Pick removal). The invalidation criterion is organic orders growth below 15% for two quarters; no new datapoint, and price action is listed as not exit-triggering. **NO.**
+  - **GOOGL** 282.57 (−2.20%). No structural-remedy ruling and no Cloud datapoint in the window. **NO.**
+  - **ISRG** 468.52 (−2.82%). Market move; routine 10b5-1 insider sales only. **NO.**
+  - **RTX** 191.88 (−3.30%). c6 needs an enacted or proposed FY27 procurement cut of 10% or more; none found. **NO.**
+  - **TSM** 353.10 (**−10.78%**, −18.23% over five sessions). A sector-wide chip rout on fear of US data-center regulation. c3 (structural AI-capex reset) needs hyperscaler or Nvidia order cuts or a CoWoS utilization drop; none found, so this is sentiment, not an order cut. Q3 GM 66.4% and USD revenue +41.2% keep c1–c2 clear; October sales are due 11-10. **NO.**
+  - **UBER** 68.78 (−1.56%). Market move; Amazon Prime adopting Uber Eats is incremental. **NO.**
+- **Watchlist candidates:** B is gated and the new-entry index is not changed by any development other than today's additions.
 
 ## ANALYSIS — OPPORTUNITY CHECK
 
 - **A, D and E are GATED** under the ROUTER-GATED SCAN RULE, so nothing was evaluated for them.
-- **B is GATED.** Its 93 ≥5% own-event names still reach the new-entry index as `watchlist` actions (item 3); no deal-pinned target, and no thesis handoff is routed. None of the 93 is a held name (UBER fell just below the floor at +4.91%).
+- **B is GATED.** Its 138 ≥5% own-event names still reach the new-entry index as `watchlist` actions (item 3); no deal-pinned target, and no thesis handoff is routed. None of the 138 is a held name.
 - **C, HYBRID (FOMC-only carve-out).** No new FOMC-class candidate; the December 8–9 FOMC is already inside the 45-day window.
 
 ## ANALYSIS — ADD-CANDIDATE CHECK
 
-- **Durable row:** `add-candidate-review`, entry `e97e5eb3-7825-4f4f-8ef4-b20b67e5387f`. 12 evaluated, **0 flagged, 0 `declined_hard_gate`**, 12 `declined`.
-- **Gate.** `invalidation_status` is readable and populated for all 12 (no NULL, no `NOT_DISCRETELY_RECORDED_AT_ENTRY`, no `NOT_ASSESSED_BY_THIS_BACKFILL`), and the sweep above found no criterion breached, so the hard gate clears and `invalidation_criteria_evaluable = TRUE` on all 12.
+- **Durable row:** `add-candidate-review`, entry `2cadd7b3-d9c9-427d-8f80-62c320b4d05d`. 12 evaluated, **0 flagged, 0 `declined_hard_gate`**, 12 `declined`.
+- **Gate.** `invalidation_status` is readable and populated for all 12 (no NULL, no `NOT_DISCRETELY_RECORDED_AT_ENTRY`, no `NOT_ASSESSED_BY_THIS_BACKFILL`), and the sweep above found no criterion breached.
 
-| Tranche | Close 11-04 | Tranche cost | Mark vs cost | Trigger | Disposition |
-|---|---|---|---|---|---|
-| D:AMZN:2026-07-09 | 266.03 | 241.2441 | +10.27% | none | declined |
-| D:AMZN:2026-07-30 | 266.03 | 265.6930 | +0.13% | none | declined |
-| D:DIS:2026-05-07 | 118.95 | 111.3190 | +6.86% | none | declined |
-| D:DIS:2026-08-05 | 118.95 | 103.7854 | +14.61% | none | declined |
-| D:GEV:2026-08-03 | 832.83 | 969.9058 | −14.13% | dip-with-intact-thesis | declined |
-| D:GOOGL:2026-07-09 | 288.93 | 359.8484 | −19.71% | dip-with-intact-thesis | declined |
-| D:GOOGL:2026-07-26 | 288.93 | 327.8435 | −11.87% | dip-with-intact-thesis | declined |
-| D:ISRG:2026-07-20 | 482.10 | 349.5106 | +37.94% | none | declined |
-| D:RTX:2026-04-27 | 198.43 | 176.8988 | +12.17% | none | declined |
-| D:TSM:2026-07-21 | 395.75 | 427.8613 | −7.51% | dip-with-intact-thesis | declined |
-| D:TSM:2026-07-29 | 395.75 | 392.8830 | +0.73% | dip-with-intact-thesis | declined |
-| D:UBER:2026-07-09 | 69.87 | 73.2073 | −4.56% | strengthened-conviction | declined |
+|Tranche|Close 11-05|Mark vs cost|Trigger|Disposition|
+|---|---|---|---|---|
+|D:AMZN:2026-07-09|260.21|+7.86%|none|declined|
+|D:AMZN:2026-07-30|260.21|−2.06%|none|declined|
+|D:DIS:2026-05-07|117.22|+5.30%|none|declined|
+|D:DIS:2026-08-05|117.22|+12.94%|none|declined|
+|D:GEV:2026-08-03|770.51|−20.56%|dip-with-intact-thesis|declined (no funding path)|
+|D:GOOGL:2026-07-09|282.57|−21.48%|none|declined|
+|D:GOOGL:2026-07-26|282.57|−13.81%|none|declined|
+|D:ISRG:2026-07-20|468.52|+34.05%|none|declined|
+|D:RTX:2026-04-27|191.88|+8.47%|none|declined|
+|D:TSM:2026-07-21|353.10|−17.47%|dip-with-intact-thesis|declined (no funding path)|
+|D:TSM:2026-07-29|353.10|−10.13%|dip-with-intact-thesis|declined (no funding path)|
+|D:UBER:2026-07-09|68.78|−6.05%|none|declined|
 
-- **Price basis.** IBKR 11-04 regular-session closes over each tranche's own `cost_basis / shares`.
-- **Dip rule.** The 11-04 close at least 5% below the 10-28 close with no invalidation news: GEV −5.15% (only after today's −9.30%), GOOGL −11.07%, TSM −9.96%. UBER's print reinforces c1–c3 (strengthened conviction).
-- **Why none is flagged.** D is DO-NOT-ACTIVATE and capital-disabled, so no add has a funding path, the same disposition as 11-02.
+- **Price basis.** IBKR 11-05 regular-session closes over each tranche's own `cost_basis / shares` (snapshot marks were after-hours, `is_close` false, and not used).
+- **Dip rule.** The 11-05 close at least 5% below the 10-29 close with no invalidation news: GEV −13.22%, TSM −18.23%. GOOGL is −0.44% and RTX −3.77% over the same span.
+- **Why none is flagged.** D is DO-NOT-ACTIVATE and capital-disabled, so no add has a funding path, the same disposition as 11-04.
 
 ## ANALYSIS — REGIME CHECK
 
-**No router review.** The standing regime is `shock_overlay = acute` (Gulf/Hormuz), as of 2026-11-02.
+**No router review.** The standing `shock_overlay` reads `latent` (live read this run).
 
-**Qualifying shock event: no flag needed.** No new dated kinetic event was confirmed in the window, and the overlay already reads `acute`.
+**Qualifying shock event: NO.** The 11-05 selloff is attributed to a domestic political channel (the midterm result and data-center policy), not a named geopolitical or trade channel, and its measurable legs are equity and volatility moves rather than the rubric's oil, sovereign-spread or currency legs. Brent rose 4.56 dollars (94.62 → 99.18), below the $5 bar and not attributed to the Gulf channel. No new dated kinetic Gulf event was confirmed.
 
-**Qualifying resolution event: NO.**
-- No ceasefire, settlement or blockade lift is in force: Iran's envoy and Rezaei restated that the strait reopens only once the US blockade is lifted and Iran's conditions are met; Qatar is still reviewing proposals.
-- Oil's two-session drop (BZUSD 104.77 → 103.60 → 94.60 on the revised series, about −9.7% over 11-02 → 11-04) is priced on deal hopes and the election, not on a resolution of the channel. That is narrative de-escalation with no event behind it, so it does not qualify. If a settlement is signed, the next D1 flags it with this window's moves stated.
+**Qualifying resolution event: NO.** No ceasefire, settlement or blockade lift is in force (Iran still conditions reopening on the US blockade ending; Qatar mediating), and oil rose rather than fell.
 
-**Measured triggers, for D2 to detect (not computed here).** VIX fell 4.22 points in one session to 16.61, and Brent's drop may move the shock price leg; D2 item 4 reads D2a's step-1d/1e rows. This run's breadth row (66.13, up about 4.5pp) is the input to the two breadth triggers.
+**Measured triggers, for D2 to detect (not computed here).** VIX closed at 28.18 (above 25): VIX_REGIME into HIGH. SPY fell 4.41%, which may bear on SPY_TREND, and breadth fell 7.57 points in one session to 58.56 (this run's row is the input to the two breadth triggers). D2 item 4 reads D2a's step-1d/1e rows.
 
 ## EQUITY-BREADTH OBSERVATION
 
-**Row written:** `events.regime_events` `TECHNICAL_INPUT` / `EQUITY_BREADTH_PCT` = **66.13** for as_of_date **2026-11-04**.
-- **Source.** Barchart `$S5TH`, via `tavily_extract` (advanced, `?cb=20261104`), fetched about 22:07Z. The page reads "Quote Overview for Wed, Nov 4th, 2026", stamped 16:46 ET (settled). O 64.14, H 66.33, L 63.34; not an exact repeat.
-- **Prior-session revision.** Barchart's Previous Close is now **61.55**, against the 61.63 D1 recorded for 11-03 (a 0.08pp settlement revision, expected noise). The true change is +4.58 off 61.55. Note that the 11-03 row itself is still not in BigQuery (see the out-of-scope note at the end).
-- **Corroboration.** EODData read 65.53 with a 15:51 quote stamp (pre-close, `unsettled_at_fetch=15:51 ET`) and shares Barchart's feed, so this is a **single settled source**. MacroMicro was not probed (Wednesday; the probe rides on Sunday).
-- **ChartRow lags one session.** Its 200-day tile is dated Nov 3: 304 of 496 (61%), read twice including a final re-read. Recorded `chartrow_unconfirmed=lag session 2026-11-03` and `chartrow_lagged_dod_gap=0.03 for 2026-11-03` (ChartRow −1.81pp against `$S5TH` −1.78pp for 11-02 → 11-03). A plain one-session lag on a non-repeat row, so not an in-run issue.
+- **Row written:** `events.regime_events` `TECHNICAL_INPUT` / `EQUITY_BREADTH_PCT`, as_of 2026-11-05, **58.56**.
+- **Source.** Barchart `$S5TH`, via `tavily_extract` (advanced, `?cb=20261105`), fetched about 22:10Z after one HTTP 429 and a 65-second retry. The page reads "Quote Overview for Thu, Nov 5th, 2026", stamped 16:44 ET (settled). O 66.53, H 66.53, L 58.16, Previous Close 66.13, equal to the stored 11-04 value (no revision). Not an exact repeat.
+- **Corroboration.** EODData read 58.76 with a 15:50 quote stamp (pre-close, `unsettled_at_fetch=15:50 ET`) and shares Barchart's feed, so this is a **single settled source**.
+- **ChartRow lags one session.** Its 200-day tile is dated Nov 4: 328 of 496 (66.13%), read twice including a final re-read. Recorded `chartrow_unconfirmed=lag session 2026-11-04` and `chartrow_lagged_dod_gap=0.26 for 2026-11-04` (ChartRow +4.84pp against `$S5TH` +4.58pp over 11-03 → 11-04), inside the 1.0pp bar. The next run's lagged read checks today's direction.
 
 ## RECOMMENDED ACTIONS
 
-- Watchlist: ADD NRIX to the Strategy B new-entry index — Sanofi discontinues SAR448272 (oral STAT6 degrader) Phase 1 and terminates the program (8-K Item 8.01), after-close release; reaction session 11-04, -38.23% (25.82 → 15.95); qualifying_event_date 2026-11-03.
-- Watchlist: ADD KD to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), pre-open release; reaction session 11-04, +30.14% (12.94 → 16.84), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD DOX to the Strategy B new-entry index — fiscal Q4 earnings (6-K), after-close release; reaction session 11-04, -30.07% (62.43 → 43.66); qualifying_event_date 2026-11-03.
-- Watchlist: ADD ECG to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01), after-close release; reaction session 11-04, -29.29% (112.73 → 79.71), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-03.
-- Watchlist: ADD DUOL to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), after-close release; reaction session 11-04, +25.99% (128 → 161.27); qualifying_event_date 2026-11-03.
-- Watchlist: ADD YOU to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), pre-open release; reaction session 11-04, +23.70% (47.76 → 59.08); qualifying_event_date 2026-11-04.
-- Watchlist: ADD FIS to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), pre-open release; reaction session 11-04, -23.67% (38.99 → 29.76), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD HUT to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), pre-open release; reaction session 11-04, -23.23% (63.75 → 48.94), with 4 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD MOD to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), after-close release; reaction session 11-04, -21.43% (125.45 → 98.56), with 3 prior ≥5% sessions in the window; qualifying_event_date 2026-11-03.
-- Watchlist: ADD PCOR to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), after-close release; reaction session 11-04, +19.68% (63.17 → 75.6); qualifying_event_date 2026-11-03.
-- Watchlist: ADD IOSP to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01), after-close release; reaction session 11-04, -18.72% (99.23 → 80.65); qualifying_event_date 2026-11-03.
-- Watchlist: ADD MDLN to the Strategy B new-entry index — earnings release (8-K Item 2.02), pre-open release; reaction session 11-04, +18.36% (34.09 → 40.35); qualifying_event_date 2026-11-04.
-- Watchlist: ADD LIVN to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), pre-open release; reaction session 11-04, +17.88% (79.9 → 94.19); qualifying_event_date 2026-11-04.
-- Watchlist: ADD UNM to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), after-close release; reaction session 11-04, -17.84% (91.03 → 74.79); qualifying_event_date 2026-11-03.
-- Watchlist: ADD MTRN to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), pre-open release; reaction session 11-04, -17.66% (227.43 → 187.26), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD UFPT to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), after-close release; reaction session 11-04, +17.66% (280.32 → 329.82); qualifying_event_date 2026-11-03.
-- Watchlist: ADD BTU to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 8.01), pre-open release; reaction session 11-04, -17.62% (20.66 → 17.02), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD MOS to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), after-close release; reaction session 11-04, +17.37% (18.42 → 21.62), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-03.
-- Watchlist: ADD TRMB to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), pre-open release; reaction session 11-04, -17.31% (65.61 → 54.25); qualifying_event_date 2026-11-04.
-- Watchlist: ADD OUST to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), after-close release; reaction session 11-04, +15.73% (28.98 → 33.54), with 5 prior ≥5% sessions in the window; qualifying_event_date 2026-11-03.
-- Watchlist: ADD VRDN to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), pre-open release; reaction session 11-04, +15.51% (25.15 → 29.05), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD XYZ to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), after-close release; reaction session 11-04, +15.30% (76 → 87.63); qualifying_event_date 2026-11-03.
-- Watchlist: ADD SM to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), after-close release; reaction session 11-04, -15.30% (36.67 → 31.06), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-03.
-- Watchlist: ADD DDOG to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), pre-open release; reaction session 11-04, -14.42% (220.52 → 188.72), with 4 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD TREX to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), pre-open release; reaction session 11-04, +14.30% (50 → 57.15); qualifying_event_date 2026-11-04.
-- Watchlist: ADD PRIM to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 8.01), after-close release; reaction session 11-04, -13.98% (79.57 → 68.45), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-03.
-- Watchlist: ADD KMT to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), pre-open release; reaction session 11-04, -13.92% (30.53 → 26.28), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD FLYW to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 5.02/7.01), after-close release; reaction session 11-04, +13.89% (19.15 → 21.81); qualifying_event_date 2026-11-03.
-- Watchlist: ADD PFGC to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), pre-open release; reaction session 11-04, +13.53% (96.51 → 109.57); qualifying_event_date 2026-11-04.
-- Watchlist: ADD ZBH to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), pre-open release; reaction session 11-04, +13.49% (97.06 → 110.15); qualifying_event_date 2026-11-04.
-- Watchlist: ADD MCY to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), after-close release; reaction session 11-04, -13.42% (102.71 → 88.93); qualifying_event_date 2026-11-03.
-- Watchlist: ADD HL to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 5.02/8.01), after-close release; reaction session 11-04, +13.17% (13.21 → 14.95), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-03.
-- Watchlist: ADD SWK to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01), pre-open release; reaction session 11-04, +13.10% (104.62 → 118.33); qualifying_event_date 2026-11-04.
-- Watchlist: ADD BRKR to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), pre-open release; reaction session 11-04, +12.90% (56.5 → 63.79), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD HURN to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), after-close release; reaction session 11-04, -12.70% (198.17 → 173.01), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-03.
-- Watchlist: ADD ATHM to the Strategy B new-entry index — results press release (6-K; calendar lists pre-market 2026-11-04), pre-open release; reaction session 11-04, +12.68% (19.96 → 22.49); qualifying_event_date 2026-11-04.
-- Watchlist: ADD CDW to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 8.01), pre-open release; reaction session 11-04, +12.67% (149.77 → 168.75), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD CVS to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), pre-open release; reaction session 11-04, -12.53% (91.41 → 79.96); qualifying_event_date 2026-11-04.
-- Watchlist: ADD CPNG to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), after-close release; reaction session 11-04, +11.95% (15.23 → 17.05); qualifying_event_date 2026-11-03.
-- Watchlist: ADD ANDE to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), after-close release; reaction session 11-04, -11.68% (62.67 → 55.35); qualifying_event_date 2026-11-03.
-- Watchlist: ADD MIRM to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), after-close release; reaction session 11-04, +11.42% (87.03 → 96.97); qualifying_event_date 2026-11-03.
-- Watchlist: ADD SKY to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 8.01), after-close release; reaction session 11-04, +11.35% (86.37 → 96.17), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-03.
-- Watchlist: ADD W to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), pre-open release; reaction session 11-04, +11.00% (111.32 → 123.56), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD JKHY to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), after-close release; reaction session 11-04, +10.83% (161.66 → 179.16), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-03.
-- Watchlist: ADD AVNT to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), pre-open release; reaction session 11-04, +10.66% (43.25 → 47.86); qualifying_event_date 2026-11-04.
-- Watchlist: ADD BKNG to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), after-close release; reaction session 11-04, +9.83% (155.67 → 170.97); qualifying_event_date 2026-11-03.
-- Watchlist: ADD CAMT to the Strategy B new-entry index — Q3 earnings (6-K), pre-open release; reaction session 11-04, -9.71% (112.37 → 101.46), with 3 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD RIOT to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), pre-open release; reaction session 11-04, +9.63% (14.02 → 15.37), with 5 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD CWK to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01), pre-open release; reaction session 11-04, +9.62% (13.62 → 14.93), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD CAR to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), after-close release; reaction session 11-04, +9.58% (109.34 → 119.81), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-03.
-- Watchlist: ADD SEPN to the Strategy B new-entry index — SEP-204 development-candidate selection for Graves disease/TED plus preclinical data at ATA (8-K Item 7.01 press release), pre-open release; reaction session 11-04, +9.57% (43.7 → 47.88), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD MMM to the Strategy B new-entry index — settlement of the PFAS/AFFF MDL personal-injury claims (8-K Items 1.01/8.01), after-close release; reaction session 11-04, +9.55% (177.05 → 193.95), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-03.
-- Watchlist: ADD GXO to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), after-close release; reaction session 11-04, +9.48% (52.03 → 56.96); qualifying_event_date 2026-11-03.
-- Watchlist: ADD ALMR to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 5.02), after-close release; reaction session 11-04, -9.36% (30.22 → 27.39), with 7 prior ≥5% sessions in the window; qualifying_event_date 2026-11-03.
-- Watchlist: ADD KAI to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01), after-close release; reaction session 11-04, +9.11% (282.79 → 308.56), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-03.
-- Watchlist: ADD PENG to the Strategy B new-entry index — agreement to sell its Optimized LED business (Penguin is the seller; 8-K Items 8.01/7.01/5.02, outlook reaffirmed), pre-open release; reaction session 11-04, -9.10% (53.19 → 48.35), with 4 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD NVTS to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01), after-close release; reaction session 11-04, +9.00% (8.56 → 9.33), with 4 prior ≥5% sessions in the window; qualifying_event_date 2026-11-03.
-- Watchlist: ADD SMG to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), pre-open release; reaction session 11-04, +8.72% (61.8 → 67.19), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD SEDG to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), pre-open release; reaction session 11-04, -8.70% (32.88 → 30.02), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD OC to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), pre-open release; reaction session 11-04, +8.53% (117.76 → 127.8); qualifying_event_date 2026-11-04.
-- Watchlist: ADD PAYP to the Strategy B new-entry index — fiscal Q2 results (6-K), after-close release; reaction session 11-04, +8.50% (14.71 → 15.96); qualifying_event_date 2026-11-03.
-- Watchlist: ADD ATRC to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), after-close release; reaction session 11-04, +8.48% (60.41 → 65.53); qualifying_event_date 2026-11-03.
-- Watchlist: ADD LTM to the Strategy B new-entry index — Q3 results (6-K), after-close release; reaction session 11-04, +8.37% (44.09 → 47.78), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-03.
-- Watchlist: ADD TKR to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), pre-open release; reaction session 11-04, -7.81% (115.66 → 106.63), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD DNLI to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), after-close release; reaction session 11-04, +7.76% (19.45 → 20.96); qualifying_event_date 2026-11-03.
-- Watchlist: ADD PACS to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), after-close release; reaction session 11-04, +7.67% (46.68 → 50.26); qualifying_event_date 2026-11-03.
-- Watchlist: ADD CVE to the Strategy B new-entry index — Q3 results (6-K), pre-open release; reaction session 11-04, -7.64% (30.74 → 28.39), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD SSRM to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), after-close release; reaction session 11-04, +7.61% (26.16 → 28.15), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-03.
-- Watchlist: ADD SNN to the Strategy B new-entry index — Q3 trading report (6-K), pre-open release; reaction session 11-04, +7.59% (30.17 → 32.46), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD CRL to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), pre-open release; reaction session 11-04, -7.27% (351.87 → 326.29), with 3 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD MTDR to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01), after-close release; reaction session 11-04, -7.25% (54.31 → 50.37), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-03.
-- Watchlist: ADD HRMY to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01), pre-open release; reaction session 11-04, -7.05% (37.02 → 34.41), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD TFPM to the Strategy B new-entry index — Q3 results (6-K, MD&A and interim financials), after-close release; reaction session 11-04, +6.69% (28.25 → 30.14); qualifying_event_date 2026-11-03.
-- Watchlist: ADD WULF to the Strategy B new-entry index — credit-support agreements for the Anthropic-leased Kentucky data-center campus (8-K Items 1.01/7.01/8.01), pre-open release; reaction session 11-04, -6.62% (12.53 → 11.7), with 7 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD PRU to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01), after-close release; reaction session 11-04, +6.58% (118.81 → 126.63); qualifying_event_date 2026-11-03.
-- Watchlist: ADD PODD to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01), pre-open release; reaction session 11-04, +6.56% (154.86 → 165.02); qualifying_event_date 2026-11-04.
-- Watchlist: ADD SOLS to the Strategy B new-entry index — earnings release (8-K Item 2.02), pre-open release; reaction session 11-04, -6.54% (61.74 → 57.7), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD GWW to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), pre-open release; reaction session 11-04, +6.54% (1397.98 → 1489.39); qualifying_event_date 2026-11-04.
-- Watchlist: ADD MCD to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), pre-open release; reaction session 11-04, +6.53% (263.04 → 280.22); qualifying_event_date 2026-11-04.
-- Watchlist: ADD SDRL to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), after-close release; reaction session 11-04, -6.48% (46.32 → 43.32), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-03.
-- Watchlist: ADD EL to the Strategy B new-entry index — Capital Markets Experience China event announcing fiscal 2030 ambition (8-K Item 7.01), pre-open release; reaction session 11-04, +6.31% (105.39 → 112.04); qualifying_event_date 2026-11-04.
-- Watchlist: ADD FRSH to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), after-close release; reaction session 11-04, -6.29% (14.15 → 13.26), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-03.
-- Watchlist: ADD UWMC to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), pre-open release; reaction session 11-04, +6.29% (1.59 → 1.69), with 3 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD NICE to the Strategy B new-entry index — Q3 results (6-K; beat guidance ranges), pre-open release; reaction session 11-04, -6.29% (106.27 → 99.59); qualifying_event_date 2026-11-04.
-- Watchlist: ADD GFS to the Strategy B new-entry index — Q3 earnings (6-K; calendar pre-market 2026-11-04), pre-open release; reaction session 11-04, -5.95% (42.89 → 40.34), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD SMCI to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 8.01), after-close release; reaction session 11-04, -5.70% (31.39 → 29.6), with 4 prior ≥5% sessions in the window; qualifying_event_date 2026-11-03.
-- Watchlist: ADD OVV to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 8.01), after-close release; reaction session 11-04, -5.61% (66.43 → 62.7), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-03.
-- Watchlist: ADD TOST to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 5.02), after-close release; reaction session 11-04, +5.49% (33.53 → 35.37), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-03.
-- Watchlist: ADD OPLN to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), pre-open release; reaction session 11-04, -5.45% (38.88 → 36.76); qualifying_event_date 2026-11-04.
-- Watchlist: ADD AVA to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01), after-close release; reaction session 11-04, +5.41% (38.11 → 40.17); qualifying_event_date 2026-11-03.
-- Watchlist: ADD RRR to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), after-close release; reaction session 11-04, -5.31% (51.39 → 48.66); qualifying_event_date 2026-11-03.
-- Watchlist: ADD VSH to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01), pre-open release; reaction session 11-04, -5.07% (27.22 → 25.84), with 3 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
-- Watchlist: ADD ANET to the Strategy B new-entry index — earnings release (8-K Item 2.02, quarter ending Sep/2026), after-close release; reaction session 11-04, +5.04% (169.91 → 178.48), with 3 prior ≥5% sessions in the window; qualifying_event_date 2026-11-03.
+- Watchlist: ADD VCYT to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 8.01), after-close release; reaction session 11-05, -54.30% (52.52 → 24.0); qualifying_event_date 2026-11-04.
+- Watchlist: ADD APP to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, +31.04% (271.75 → 356.1), with 3 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD FSLY to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 7.01), after-close release; reaction session 11-05, -26.90% (21.04 → 15.38), with 5 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD ECPG to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, +26.26% (99.93 → 126.17); qualifying_event_date 2026-11-04.
+- Watchlist: ADD ADMA to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, +26.05% (10.48 → 13.21), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD WRBY to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, +22.50% (21.29 → 26.08), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD ROAD to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 7.01), pre-open release; reaction session 11-05, -21.88% (99.24 → 77.53), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD CAI to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -21.64% (33.22 → 26.03), with 3 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD BROS to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 7.01), after-close release; reaction session 11-05, -21.41% (43.99 → 34.57); qualifying_event_date 2026-11-04.
+- Watchlist: ADD MGNI to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, +20.75% (22.79 → 27.52), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD ARQT to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -20.70% (34.05 → 27.0), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD EPAM to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 8.01), after-close release; reaction session 11-05, +20.63% (137.36 → 165.7); qualifying_event_date 2026-11-04.
+- Watchlist: ADD RELY to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 7.01), after-close release; reaction session 11-05, -20.42% (27.08 → 21.55), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD GIL to the Strategy B new-entry index — Q3 2026 results and updated full-year guidance (6-K press release), pre-open release; reaction session 11-05, -19.07% (43.27 → 35.02), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD LOPE to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -18.86% (150.67 → 122.25); qualifying_event_date 2026-11-04.
+- Watchlist: ADD MTSI to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, -18.35% (233.13 → 190.35), with 4 prior ≥5% sessions in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD TTAM to the Strategy B new-entry index — Q3 2026 earnings release (6-K), after-close release; reaction session 11-05, -18.32% (14.3 → 11.68); qualifying_event_date 2026-11-04.
+- Watchlist: ADD DAVE to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 1.01), after-close release; reaction session 11-05, -18.11% (336.22 → 275.34), with 4 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD GRAL to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -17.07% (143.66 → 119.13), with 4 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD POWI to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -17.01% (46.8 → 38.84), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD SHOO to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 8.01), pre-open release; reaction session 11-05, -17.01% (46.98 → 38.99), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD PBH to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 7.01), pre-open release; reaction session 11-05, -16.82% (53.28 → 44.32), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD FIG to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -16.67% (22.13 → 18.44), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD NTCT to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, -16.46% (38.1 → 31.83); qualifying_event_date 2026-11-05.
+- Watchlist: ADD DCO to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, -15.24% (156.33 → 132.5), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD U to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, +14.93% (42.46 → 48.8); qualifying_event_date 2026-11-05.
+- Watchlist: ADD ENHA to the Strategy B new-entry index — Private placement of 2,109,705 Class A shares at $7.11 (about $15M) incl. related-party investors (8-K Items 1.01, 3.02, 7.01), pre-open release; reaction session 11-05, +14.91% (7.11 → 8.17), with 4 prior ≥5% sessions in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD WMS to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 7.01, Item 8.01), pre-open release; reaction session 11-05, -14.88% (144.07 → 122.63), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD PGNY to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 7.01), after-close release; reaction session 11-05, +14.19% (30.1 → 34.37); qualifying_event_date 2026-11-04.
+- Watchlist: ADD ROK to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, -14.15% (443.88 → 381.05); qualifying_event_date 2026-11-05.
+- Watchlist: ADD SNAP to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -14.02% (5.92 → 5.09), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD VCEL to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, +13.85% (45.48 → 51.78), with 3 prior ≥5% sessions in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD EXPE to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 7.01, Item 8.01), after-close release; reaction session 11-05, -13.74% (315.88 → 272.48), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD NGVT to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -13.59% (73.73 → 63.71); qualifying_event_date 2026-11-04.
+- Watchlist: ADD SEZL to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, +13.40% (136.69 → 155.0), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD NWSA to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -13.35% (30.56 → 26.48); qualifying_event_date 2026-11-04.
+- Watchlist: ADD NWS to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -13.24% (33.39 → 28.97); qualifying_event_date 2026-11-04.
+- Watchlist: ADD ARM to the Strategy B new-entry index — Q2 FY2027 results (6-K shareholder letter), after-close release; reaction session 11-05, -13.08% (191.8 → 166.72), with 4 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD NSIT to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, -13.04% (175.62 → 152.72); qualifying_event_date 2026-11-05.
+- Watchlist: ADD COHR to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 7.01), after-close release; reaction session 11-05, -12.98% (195.09 → 169.76), with 5 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD COTY to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, +12.68% (3.47 → 3.91), with 3 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD CYTK to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -12.66% (63.6 → 55.55); qualifying_event_date 2026-11-04.
+- Watchlist: ADD ARW to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, -12.61% (202.63 → 177.07), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD STM to the Strategy B new-entry index — Q3 2026 results (6-K), after-close release; reaction session 11-05, -12.39% (45.6 → 39.95), with 4 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD SEI to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -12.30% (57.64 → 50.55), with 6 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD RUN to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, +12.29% (8.79 → 9.87), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD SMMT to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -12.24% (16.17 → 14.19), with 4 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD MELI to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -12.05% (1739.88 → 1530.28), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD MH to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, -11.99% (12.76 → 11.23); qualifying_event_date 2026-11-05.
+- Watchlist: ADD SITM to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -11.97% (403.27 → 355.0), with 6 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD ACMR to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, -11.52% (44.43 → 39.31), with 3 prior ≥5% sessions in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD IRM to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, -11.09% (118.66 → 105.5); qualifying_event_date 2026-11-05.
+- Watchlist: ADD RVMD to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -11.04% (199.7 → 177.65); qualifying_event_date 2026-11-04.
+- Watchlist: ADD IOVA to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, -11.03% (8.7 → 7.74), with 5 prior ≥5% sessions in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD LUMN to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 7.01), after-close release; reaction session 11-05, -10.96% (4.47 → 3.98), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD CORZ to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 7.01), pre-open release; reaction session 11-05, -10.81% (12.76 → 11.38), with 7 prior ≥5% sessions in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD DNOW to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, -10.74% (15.37 → 13.72); qualifying_event_date 2026-11-05.
+- Watchlist: ADD LB to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 7.01), after-close release; reaction session 11-05, -10.66% (69.26 → 61.88), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD Z to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -10.65% (33.9 → 30.29), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD CGNX to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 8.01), after-close release; reaction session 11-05, -10.50% (53.06 → 47.49), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD VERX to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, +10.49% (15.92 → 17.59); qualifying_event_date 2026-11-04.
+- Watchlist: ADD VIAV to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 8.01), after-close release; reaction session 11-05, -10.48% (29.38 → 26.3), with 4 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD SLF to the Strategy B new-entry index — Q3 2026 results and common dividend increase (6-K), after-close release; reaction session 11-05, -10.37% (81.98 → 73.48); qualifying_event_date 2026-11-04.
+- Watchlist: ADD AMC to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -10.19% (3.12 → 2.802), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD TIC to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, -10.09% (10.7 → 9.62); qualifying_event_date 2026-11-05.
+- Watchlist: ADD UEC to the Strategy B new-entry index — Definitive long-term uranium sales agreements with two U.S. nuclear utilities (8-K Item 7.01), pre-open release; reaction session 11-05, -9.87% (7.19 → 6.48), with 3 prior ≥5% sessions in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD LMND to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -9.63% (45.9 → 41.48), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD IOND to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -9.58% (60.55 → 54.75), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD FWONA to the Strategy B new-entry index — Liberty Media acquires high-vote Series B common stock from Malone-related entities under an Exchange Agreement (8-K Items 1.01, 7.01), pre-open release; reaction session 11-05, +9.55% (91.03 → 99.72); qualifying_event_date 2026-11-05.
+- Watchlist: ADD QCOM to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -9.49% (173.19 → 156.75), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD IPAR to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 7.01, Item 8.01), after-close release; reaction session 11-05, +9.48% (123.57 → 135.28), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD ZG to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -9.40% (34.45 → 31.21), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD MKSI to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 7.01, Item 8.01), after-close release; reaction session 11-05, -9.30% (194.95 → 176.82), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD MAIR to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, -9.28% (23.61 → 21.42), with 3 prior ≥5% sessions in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD CTRI to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, -9.20% (20.54 → 18.65), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD RYN to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, +8.63% (20.17 → 21.91); qualifying_event_date 2026-11-04.
+- Watchlist: ADD GEO to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, -8.57% (27.53 → 25.17); qualifying_event_date 2026-11-05.
+- Watchlist: ADD APPN to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, +8.45% (49.82 → 54.03); qualifying_event_date 2026-11-05.
+- Watchlist: ADD RCUS to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -8.39% (19.31 → 17.69), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD PK to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -8.31% (16.96 → 15.55); qualifying_event_date 2026-11-04.
+- Watchlist: ADD NVST to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 7.01), after-close release; reaction session 11-05, -8.20% (27.19 → 24.96), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD PLMR to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, +8.07% (144.04 → 155.67), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD WBI to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 7.01), after-close release; reaction session 11-05, -8.03% (26.04 → 23.95), with 3 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD ZTS to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, -7.95% (89.2 → 82.11), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD ACHC to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 7.01), after-close release; reaction session 11-05, +7.88% (32.25 → 34.79), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD FWONK to the Strategy B new-entry index — Liberty Media acquires high-vote Series B common stock from Malone-related entities under an Exchange Agreement (8-K Items 1.01, 7.01), pre-open release; reaction session 11-05, +7.67% (98.93 → 106.52); qualifying_event_date 2026-11-05.
+- Watchlist: ADD TGB to the Strategy B new-entry index — Q3 2026 interim financial statements (6-K, Trekor Metals, formerly Taseko), after-close release; reaction session 11-05, -7.67% (7.56 → 6.98), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD MRX to the Strategy B new-entry index — Q3 2026 earnings release (6-K), pre-open release; reaction session 11-05, -7.65% (70.34 → 64.96), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD VECO to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -7.64% (36.0 → 33.25), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD FCX to the Strategy B new-entry index — Board approves $4.5B Bagdad copper-molybdenum expansion and modernization program (8-K Item 8.01), after-close release; reaction session 11-05, -7.51% (62.6 → 57.9), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD CXW to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 8.01), after-close release; reaction session 11-05, -7.50% (30.52 → 28.23); qualifying_event_date 2026-11-04.
+- Watchlist: ADD ALGT to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 7.01), after-close release; reaction session 11-05, +7.43% (81.53 → 87.59), with 3 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD RL to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, -7.35% (412.06 → 381.78); qualifying_event_date 2026-11-05.
+- Watchlist: ADD BGC to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, -7.19% (11.27 → 10.46); qualifying_event_date 2026-11-05.
+- Watchlist: ADD SOBO to the Strategy B new-entry index — Q3 2026 results (6-K), after-close release; reaction session 11-05, -7.17% (34.05 → 31.61); qualifying_event_date 2026-11-04.
+- Watchlist: ADD YPF to the Strategy B new-entry index — Q3 2026 condensed interim financial statements (6-K), after-close release; reaction session 11-05, -7.09% (41.61 → 38.66), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD TPR to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, +7.07% (125.31 → 134.17), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD IMAX to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, -7.01% (51.76 → 48.13); qualifying_event_date 2026-11-05.
+- Watchlist: ADD ORCL to the Strategy B new-entry index — Issuance of $10B of common stock, 86,206,897 shares (8-K Item 8.01), after-close release; reaction session 11-05, -6.93% (123.73 → 115.16), with 4 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD VRSK to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, +6.88% (197.85 → 211.47), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD PRVA to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, +6.88% (22.4 → 23.94); qualifying_event_date 2026-11-05.
+- Watchlist: ADD CPAY to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 7.01), after-close release; reaction session 11-05, +6.78% (418.6 → 447.0); qualifying_event_date 2026-11-04.
+- Watchlist: ADD LPG to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -6.78% (49.43 → 46.08), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD PAYC to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -6.76% (268.16 → 250.02); qualifying_event_date 2026-11-04.
+- Watchlist: ADD AAUC to the Strategy B new-entry index — Q3 2026 MD&A, financial statements and press release (6-K), after-close release; reaction session 11-05, +6.76% (20.41 → 21.79), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD CG to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -6.53% (42.75 → 39.96), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD WU to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, +6.53% (6.59 → 7.02), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD MDU to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 7.01), pre-open release; reaction session 11-05, -6.51% (19.82 → 18.53); qualifying_event_date 2026-11-05.
+- Watchlist: ADD OGC to the Strategy B new-entry index — Q3 2026 condensed interim financial statements (6-K), after-close release; reaction session 11-05, +6.48% (25.78 → 27.45), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD VCTR to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -6.47% (120.19 → 112.41); qualifying_event_date 2026-11-04.
+- Watchlist: ADD INGM to the Strategy B new-entry index — Secondary offering of 11,000,000 Ingram Micro common shares by selling stockholder Ingram Holdco under an underwriting agreement (8-K Items 1.01, 8.01), after-close release; reaction session 11-05, -6.43% (26.12 → 24.44); qualifying_event_date 2026-11-04.
+- Watchlist: ADD VIR to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -6.37% (11.77 → 11.02); qualifying_event_date 2026-11-04.
+- Watchlist: ADD DYN to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, -6.36% (18.54 → 17.36), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD AMPL to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -6.34% (17.19 → 16.1); qualifying_event_date 2026-11-04.
+- Watchlist: ADD WES to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -6.32% (42.54 → 39.85); qualifying_event_date 2026-11-04.
+- Watchlist: ADD NEOG to the Strategy B new-entry index — Zoetis purchase of the Genomics business: regulatory review now expected to conclude early 2027 (8-K Item 8.01), after-close release; reaction session 11-05, -6.26% (12.46 → 11.68); qualifying_event_date 2026-11-04.
+- Watchlist: ADD CNR to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 7.01), pre-open release; reaction session 11-05, -6.25% (80.22 → 75.21); qualifying_event_date 2026-11-05.
+- Watchlist: ADD BOBS to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, +6.22% (18.33 → 19.47), with 3 prior ≥5% sessions in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD RGLD to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, +6.18% (246.08 → 261.28), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD VNT to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, +6.17% (37.58 → 39.9); qualifying_event_date 2026-11-05.
+- Watchlist: ADD CF to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, +6.17% (111.68 → 118.57); qualifying_event_date 2026-11-04.
+- Watchlist: ADD SONY to the Strategy B new-entry index — Q2 FY2026 consolidated financial results (6-K), pre-open release; reaction session 11-05, +6.13% (25.95 → 27.54); qualifying_event_date 2026-11-05.
+- Watchlist: ADD AMLX to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, -6.05% (29.4 → 27.62); qualifying_event_date 2026-11-05.
+- Watchlist: ADD TRLV to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 7.01), pre-open release; reaction session 11-05, -6.03% (11.6 → 10.9), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD LNC to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 7.01), pre-open release; reaction session 11-05, -5.87% (41.6 → 39.16); qualifying_event_date 2026-11-05.
+- Watchlist: ADD IRON to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, -5.78% (83.28 → 78.47); qualifying_event_date 2026-11-05.
+- Watchlist: ADD PCVX to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -5.72% (65.68 → 61.92), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD RLAY to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -5.71% (18.03 → 17.0), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD OSCR to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, -5.71% (35.19 → 33.18), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD HST to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -5.67% (26.11 → 24.63); qualifying_event_date 2026-11-04.
+- Watchlist: ADD LFST to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 7.01), after-close release; reaction session 11-05, -5.49% (14.21 → 13.43), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD AMCR to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -5.48% (48.5 → 45.84); qualifying_event_date 2026-11-04.
+- Watchlist: ADD HUBS to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -5.39% (216.64 → 204.96), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
+- Watchlist: ADD IBP to the Strategy B new-entry index — Earnings release (8-K Item 2.02, Item 7.01), pre-open release; reaction session 11-05, -5.24% (235.42 → 223.08), with 3 prior ≥5% sessions in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD HCI to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -5.18% (202.53 → 192.03); qualifying_event_date 2026-11-04.
+- Watchlist: ADD AAP to the Strategy B new-entry index — Earnings release (8-K Item 2.02), pre-open release; reaction session 11-05, -5.18% (50.75 → 48.12), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD NVMI to the Strategy B new-entry index — Record Q3 2026 results (6-K), pre-open release; reaction session 11-05, -5.10% (295.35 → 280.3), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-05.
+- Watchlist: ADD LMAT to the Strategy B new-entry index — Earnings release (8-K Item 2.02), after-close release; reaction session 11-05, -5.04% (87.92 → 83.49), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-04.
 
 ```yaml d1_actions
 - action: watchlist
-  ticker: NRIX
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; Sanofi discontinues SAR448272 (oral STAT6 degrader) Phase 1 and terminates the p after-close, -38.23% (25.82 -> 15.95), 0 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: KD
+  ticker: VCYT
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) pre-open, +30.14% (12.94 -> 16.84), 1 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 8.01), after-close, -54.30% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: DOX
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; fiscal Q4 earnings (6-K) after-close, -30.07% (62.43 -> 43.66), 0 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: ECG
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01) after-close, -29.29% (112.73 -> 79.71), 2 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: DUOL
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) after-close, +25.99% (128 -> 161.27), 0 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: YOU
+  ticker: APP
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) pre-open, +23.70% (47.76 -> 59.08), 0 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, +31.04% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: FIS
+  ticker: FSLY
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) pre-open, -23.67% (38.99 -> 29.76), 1 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 7.01), after-close, -26.90% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: HUT
+  ticker: ECPG
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) pre-open, -23.23% (63.75 -> 48.94), 4 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, +26.26% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: MOD
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) after-close, -21.43% (125.45 -> 98.56), 3 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: PCOR
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) after-close, +19.68% (63.17 -> 75.6), 0 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: IOSP
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01) after-close, -18.72% (99.23 -> 80.65), 0 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: MDLN
+  ticker: ADMA
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02) pre-open, +18.36% (34.09 -> 40.35), 0 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, +26.05% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: LIVN
+  ticker: WRBY
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, +22.50% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: ROAD
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 7.01), pre-open, -21.88% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: CAI
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) pre-open, +17.88% (79.9 -> 94.19), 0 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -21.64% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: UNM
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) after-close, -17.84% (91.03 -> 74.79), 0 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: MTRN
+  ticker: BROS
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) pre-open, -17.66% (227.43 -> 187.26), 2 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 7.01), after-close, -21.41% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: UFPT
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) after-close, +17.66% (280.32 -> 329.82), 0 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: BTU
+  ticker: MGNI
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 8.01) pre-open, -17.62% (20.66 -> 17.02), 1 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, +20.75% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: MOS
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) after-close, +17.37% (18.42 -> 21.62), 1 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: TRMB
+  ticker: ARQT
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) pre-open, -17.31% (65.61 -> 54.25), 0 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -20.70% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: OUST
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) after-close, +15.73% (28.98 -> 33.54), 5 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: VRDN
+  ticker: EPAM
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) pre-open, +15.51% (25.15 -> 29.05), 1 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 8.01), after-close, +20.63% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: XYZ
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) after-close, +15.30% (76 -> 87.63), 0 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: SM
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) after-close, -15.30% (36.67 -> 31.06), 1 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: DDOG
+  ticker: RELY
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) pre-open, -14.42% (220.52 -> 188.72), 4 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 7.01), after-close, -20.42% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: TREX
+  ticker: GIL
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Q3 2026 results and updated full-year guidance (6-K press release), pre-open, -19.07% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: LOPE
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) pre-open, +14.30% (50 -> 57.15), 0 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -18.86% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: PRIM
+  ticker: MTSI
   strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 8.01) after-close, -13.98% (79.57 -> 68.45), 2 prior >=5% sessions; B GATED, index only
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, -18.35% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: KMT
-  strategy: B
-  qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) pre-open, -13.92% (30.53 -> 26.28), 1 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: FLYW
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 5.02/7.01) after-close, +13.89% (19.15 -> 21.81), 0 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: PFGC
+  ticker: TTAM
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) pre-open, +13.53% (96.51 -> 109.57), 0 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Q3 2026 earnings release (6-K), after-close, -18.32% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: ZBH
+  ticker: DAVE
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) pre-open, +13.49% (97.06 -> 110.15), 0 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 1.01), after-close, -18.11% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: MCY
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) after-close, -13.42% (102.71 -> 88.93), 0 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: HL
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 5.02/8.01) after-close, +13.17% (13.21 -> 14.95), 2 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: SWK
+  ticker: GRAL
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01) pre-open, +13.10% (104.62 -> 118.33), 0 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -17.07% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: BRKR
+  ticker: POWI
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) pre-open, +12.90% (56.5 -> 63.79), 2 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -17.01% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: HURN
+  ticker: SHOO
   strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) after-close, -12.70% (198.17 -> 173.01), 1 prior >=5% sessions; B GATED, index only
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 8.01), pre-open, -17.01% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: ATHM
+  ticker: PBH
   strategy: B
-  qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; results press release (6-K; calendar lists pre-market 2026-11-04) pre-open, +12.68% (19.96 -> 22.49), 0 prior >=5% sessions; B GATED, index only
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 7.01), pre-open, -16.82% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: CDW
-  strategy: B
-  qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 8.01) pre-open, +12.67% (149.77 -> 168.75), 1 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: CVS
+  ticker: FIG
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) pre-open, -12.53% (91.41 -> 79.96), 0 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -16.67% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: CPNG
+  ticker: NTCT
   strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) after-close, +11.95% (15.23 -> 17.05), 0 prior >=5% sessions; B GATED, index only
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, -16.46% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: ANDE
+  ticker: DCO
   strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) after-close, -11.68% (62.67 -> 55.35), 0 prior >=5% sessions; B GATED, index only
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, -15.24% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: MIRM
+  ticker: U
   strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) after-close, +11.42% (87.03 -> 96.97), 0 prior >=5% sessions; B GATED, index only
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, +14.93% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: SKY
+  ticker: ENHA
   strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 8.01) after-close, +11.35% (86.37 -> 96.17), 1 prior >=5% sessions; B GATED, index only
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Private placement of 2,109,705 Class A shares at $7.11 (about $15M) incl. related-party investors (8-K Items 1.01, 3.02, 7.01), pre-open, +14.91% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: W
+  ticker: WMS
   strategy: B
-  qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) pre-open, +11.00% (111.32 -> 123.56), 1 prior >=5% sessions; B GATED, index only
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 7.01, Item 8.01), pre-open, -14.88% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: JKHY
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) after-close, +10.83% (161.66 -> 179.16), 1 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: AVNT
+  ticker: PGNY
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) pre-open, +10.66% (43.25 -> 47.86), 0 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 7.01), after-close, +14.19% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: BKNG
+  ticker: ROK
   strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) after-close, +9.83% (155.67 -> 170.97), 0 prior >=5% sessions; B GATED, index only
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, -14.15% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: CAMT
-  strategy: B
-  qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; Q3 earnings (6-K) pre-open, -9.71% (112.37 -> 101.46), 3 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: RIOT
+  ticker: SNAP
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) pre-open, +9.63% (14.02 -> 15.37), 5 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -14.02% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: CWK
+  ticker: VCEL
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, +13.85% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: EXPE
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01) pre-open, +9.62% (13.62 -> 14.93), 1 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 7.01, Item 8.01), after-close, -13.74% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: CAR
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) after-close, +9.58% (109.34 -> 119.81), 1 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: SEPN
+  ticker: NGVT
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; SEP-204 development-candidate selection for Graves disease/TED plus preclinical  pre-open, +9.57% (43.7 -> 47.88), 2 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -13.59% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: MMM
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; settlement of the PFAS/AFFF MDL personal-injury claims (8-K Items 1.01/8.01) after-close, +9.55% (177.05 -> 193.95), 1 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: GXO
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) after-close, +9.48% (52.03 -> 56.96), 0 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: ALMR
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 5.02) after-close, -9.36% (30.22 -> 27.39), 7 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: KAI
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01) after-close, +9.11% (282.79 -> 308.56), 1 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: PENG
+  ticker: SEZL
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; agreement to sell its Optimized LED business (Penguin is the seller; 8-K Items 8 pre-open, -9.10% (53.19 -> 48.35), 4 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, +13.40% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: NVTS
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01) after-close, +9.00% (8.56 -> 9.33), 4 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: SMG
+  ticker: NWSA
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) pre-open, +8.72% (61.8 -> 67.19), 1 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -13.35% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: SEDG
+  ticker: NWS
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) pre-open, -8.70% (32.88 -> 30.02), 2 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -13.24% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: OC
+  ticker: ARM
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) pre-open, +8.53% (117.76 -> 127.8), 0 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Q2 FY2027 results (6-K shareholder letter), after-close, -13.08% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: PAYP
+  ticker: NSIT
   strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; fiscal Q2 results (6-K) after-close, +8.50% (14.71 -> 15.96), 0 prior >=5% sessions; B GATED, index only
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, -13.04% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: ATRC
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) after-close, +8.48% (60.41 -> 65.53), 0 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: LTM
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; Q3 results (6-K) after-close, +8.37% (44.09 -> 47.78), 2 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: TKR
+  ticker: COHR
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) pre-open, -7.81% (115.66 -> 106.63), 1 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 7.01), after-close, -12.98% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: DNLI
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) after-close, +7.76% (19.45 -> 20.96), 0 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: PACS
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) after-close, +7.67% (46.68 -> 50.26), 0 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: CVE
+  ticker: COTY
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; Q3 results (6-K) pre-open, -7.64% (30.74 -> 28.39), 1 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, +12.68% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: SSRM
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) after-close, +7.61% (26.16 -> 28.15), 2 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: SNN
+  ticker: CYTK
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; Q3 trading report (6-K) pre-open, +7.59% (30.17 -> 32.46), 1 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -12.66% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: CRL
+  ticker: ARW
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, -12.61% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: STM
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) pre-open, -7.27% (351.87 -> 326.29), 3 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Q3 2026 results (6-K), after-close, -12.39% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: MTDR
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01) after-close, -7.25% (54.31 -> 50.37), 2 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: HRMY
+  ticker: SEI
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01) pre-open, -7.05% (37.02 -> 34.41), 1 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -12.30% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: TFPM
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; Q3 results (6-K, MD&A and interim financials) after-close, +6.69% (28.25 -> 30.14), 0 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: WULF
+  ticker: RUN
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; credit-support agreements for the Anthropic-leased Kentucky data-center campus ( pre-open, -6.62% (12.53 -> 11.7), 7 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, +12.29% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: PRU
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01) after-close, +6.58% (118.81 -> 126.63), 0 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: PODD
+  ticker: SMMT
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01) pre-open, +6.56% (154.86 -> 165.02), 0 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -12.24% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: SOLS
+  ticker: MELI
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02) pre-open, -6.54% (61.74 -> 57.7), 1 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -12.05% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: GWW
+  ticker: MH
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, -11.99% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: SITM
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) pre-open, +6.54% (1397.98 -> 1489.39), 0 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -11.97% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: MCD
+  ticker: ACMR
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, -11.52% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: IRM
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, -11.09% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: RVMD
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) pre-open, +6.53% (263.04 -> 280.22), 0 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -11.04% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: SDRL
+  ticker: IOVA
   strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) after-close, -6.48% (46.32 -> 43.32), 2 prior >=5% sessions; B GATED, index only
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, -11.03% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: EL
-  strategy: B
-  qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; Capital Markets Experience China event announcing fiscal 2030 ambition (8-K Item pre-open, +6.31% (105.39 -> 112.04), 0 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: FRSH
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) after-close, -6.29% (14.15 -> 13.26), 1 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: UWMC
+  ticker: LUMN
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) pre-open, +6.29% (1.59 -> 1.69), 3 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 7.01), after-close, -10.96% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: NICE
+  ticker: CORZ
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 7.01), pre-open, -10.81% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: DNOW
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, -10.74% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: LB
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; Q3 results (6-K; beat guidance ranges) pre-open, -6.29% (106.27 -> 99.59), 0 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 7.01), after-close, -10.66% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: GFS
+  ticker: Z
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; Q3 earnings (6-K; calendar pre-market 2026-11-04) pre-open, -5.95% (42.89 -> 40.34), 2 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -10.65% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: SMCI
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 8.01) after-close, -5.70% (31.39 -> 29.6), 4 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: OVV
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 8.01) after-close, -5.61% (66.43 -> 62.7), 1 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: TOST
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 5.02) after-close, +5.49% (33.53 -> 35.37), 1 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: OPLN
+  ticker: CGNX
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) pre-open, -5.45% (38.88 -> 36.76), 0 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 8.01), after-close, -10.50% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: AVA
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01) after-close, +5.41% (38.11 -> 40.17), 0 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: RRR
-  strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) after-close, -5.31% (51.39 -> 48.66), 0 prior >=5% sessions; B GATED, index only
-- action: watchlist
-  ticker: VSH
+  ticker: VERX
   strategy: B
   qualifying_event_date: 2026-11-04
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 7.01) pre-open, -5.07% (27.22 -> 25.84), 3 prior >=5% sessions; B GATED, index only
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, +10.49% on IBKR 11-04 → 11-05
 - action: watchlist
-  ticker: ANET
+  ticker: VIAV
   strategy: B
-  qualifying_event_date: 2026-11-03
-  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-04-single-name-screen-unlanded)
-  detail: ADD to B new-entry index; earnings release (8-K Item 2.02, quarter ending Sep/2026) after-close, +5.04% (169.91 -> 178.48), 3 prior >=5% sessions; B GATED, index only
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 8.01), after-close, -10.48% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: SLF
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Q3 2026 results and common dividend increase (6-K), after-close, -10.37% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: AMC
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -10.19% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: TIC
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, -10.09% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: UEC
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Definitive long-term uranium sales agreements with two U.S. nuclear utilities (8-K Item 7.01), pre-open, -9.87% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: LMND
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -9.63% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: IOND
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -9.58% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: FWONA
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Liberty Media acquires high-vote Series B common stock from Malone-related entities under an Exchange Agreement (8-K Items 1.01, 7.01), pre-open, +9.55% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: QCOM
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -9.49% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: IPAR
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 7.01, Item 8.01), after-close, +9.48% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: ZG
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -9.40% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: MKSI
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 7.01, Item 8.01), after-close, -9.30% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: MAIR
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, -9.28% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: CTRI
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, -9.20% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: RYN
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, +8.63% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: GEO
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, -8.57% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: APPN
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, +8.45% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: RCUS
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -8.39% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: PK
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -8.31% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: NVST
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 7.01), after-close, -8.20% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: PLMR
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, +8.07% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: WBI
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 7.01), after-close, -8.03% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: ZTS
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, -7.95% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: ACHC
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 7.01), after-close, +7.88% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: FWONK
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Liberty Media acquires high-vote Series B common stock from Malone-related entities under an Exchange Agreement (8-K Items 1.01, 7.01), pre-open, +7.67% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: TGB
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Q3 2026 interim financial statements (6-K, Trekor Metals, formerly Taseko), after-close, -7.67% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: MRX
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Q3 2026 earnings release (6-K), pre-open, -7.65% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: VECO
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -7.64% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: FCX
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Board approves $4.5B Bagdad copper-molybdenum expansion and modernization program (8-K Item 8.01), after-close, -7.51% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: CXW
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 8.01), after-close, -7.50% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: ALGT
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 7.01), after-close, +7.43% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: RL
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, -7.35% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: BGC
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, -7.19% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: SOBO
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Q3 2026 results (6-K), after-close, -7.17% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: YPF
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Q3 2026 condensed interim financial statements (6-K), after-close, -7.09% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: TPR
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, +7.07% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: IMAX
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, -7.01% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: ORCL
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Issuance of $10B of common stock, 86,206,897 shares (8-K Item 8.01), after-close, -6.93% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: VRSK
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, +6.88% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: PRVA
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, +6.88% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: CPAY
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 7.01), after-close, +6.78% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: LPG
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -6.78% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: PAYC
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -6.76% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: AAUC
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Q3 2026 MD&A, financial statements and press release (6-K), after-close, +6.76% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: CG
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -6.53% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: WU
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, +6.53% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: MDU
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 7.01), pre-open, -6.51% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: OGC
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Q3 2026 condensed interim financial statements (6-K), after-close, +6.48% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: VCTR
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -6.47% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: INGM
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Secondary offering of 11,000,000 Ingram Micro common shares by selling stockholder Ingram Holdco under an underwriting agreement (8-K Items 1.01, 8.01), after-close, -6.43% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: VIR
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -6.37% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: DYN
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, -6.36% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: AMPL
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -6.34% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: WES
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -6.32% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: NEOG
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Zoetis purchase of the Genomics business: regulatory review now expected to conclude early 2027 (8-K Item 8.01), after-close, -6.26% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: CNR
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 7.01), pre-open, -6.25% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: BOBS
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, +6.22% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: RGLD
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, +6.18% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: VNT
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, +6.17% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: CF
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, +6.17% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: SONY
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Q2 FY2026 consolidated financial results (6-K), pre-open, +6.13% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: AMLX
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, -6.05% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: TRLV
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 7.01), pre-open, -6.03% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: LNC
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 7.01), pre-open, -5.87% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: IRON
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, -5.78% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: PCVX
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -5.72% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: RLAY
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -5.71% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: OSCR
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, -5.71% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: HST
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -5.67% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: LFST
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 7.01), after-close, -5.49% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: AMCR
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -5.48% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: HUBS
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -5.39% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: IBP
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02, Item 7.01), pre-open, -5.24% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: HCI
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -5.18% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: AAP
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), pre-open, -5.18% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: NVMI
+  strategy: B
+  qualifying_event_date: 2026-11-05
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Record Q3 2026 results (6-K), pre-open, -5.10% on IBKR 11-04 → 11-05
+- action: watchlist
+  ticker: LMAT
+  strategy: B
+  qualifying_event_date: 2026-11-04
+  source_research_screen_id: UNLANDED (ops/spikes/d1-2026-11-05-single-name-screen-unlanded)
+  detail: ADD to the Strategy B new-entry index (B DO-NOT-ACTIVATE, index only); Earnings release (8-K Item 2.02), after-close, -5.04% on IBKR 11-04 → 11-05
 ```
-
----
-
-**Out-of-scope note (2026-11-03 deferred writes).** The degraded 2026-11-03 run's BigQuery rows (two `research-screen` rows, the `add-candidate-review`, the 61.63 breadth row and 120 paper-book calls) are still unlanded; the ledger is `ops/spikes/bigquery-deauth-2026-11-03-d1-deferred-writes.md`. This run's attempt to land them stopped before writing anything, and the item is tracked on the open `ops.alerts` row `639c1422` (owner: OPS2 catch-up), with evidence added to `events.decision_log` this run.
