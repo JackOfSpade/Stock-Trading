@@ -155,7 +155,7 @@ END;
 The per-call targets are in the run's scratch `web_calls.json` files, which are ephemeral; the table
 above is the durable tally.
 
-## 6. Unfiled findings (`ops.alerts` unreachable; RUNBOOK §26 step 4, OPS0 intake)
+## 6. Unfiled findings (`ops.alerts` unreachable; RUNBOOK §26 step 4, OPS0 intake) — FILED 2026-11-04
 
 - **Owner D1 (screen tooling): IBKR `search_contracts` rate limit, 30 requests/minute.** The router-gated
   screen hit it mid-confirmation on 2026-11-03, and an orchestrator-directed paced second pass was needed
@@ -254,7 +254,7 @@ with notifications off.
 - **Expected signature.** `missed_run`/`staleness` for **D1/D2a/D2/D3/SL3** is the outage's expected
   signature (RUNBOOK §26), not new faults.
 
-### Unfiled findings
+### Unfiled findings — FILED 2026-11-04
 
 None. Nothing new beyond the incident itself, which is already on the calendar thread.
 
@@ -348,7 +348,7 @@ first (about 1.1 KB against the 8,192 cap), and the update was sent with notific
 - **Expected signature.** `missed_run`/`staleness` for **D1/D2a/D2/D3/SL3** is the outage's expected
   signature (RUNBOOK §26), not new faults.
 
-### Unfiled findings
+### Unfiled findings — FILED 2026-11-04
 
 - **Owner D1 (prose hygiene), info.** Today's `d1_actions` entries carry
   `source_research_screen_id: DEFERRED (…)` instead of an id. The replay D2 must back-fill the id from the
@@ -420,7 +420,7 @@ repo says the producers did, and the replay must re-measure it.
 - **Expected signature.** `missed_run` for **AR_att / AR_orc** on 2026-11-03 joins the D1/D2a/D2/D3/SL3
   outage signature (RUNBOOK §26), not new faults.
 
-### Unfiled findings
+### Unfiled findings — FILED 2026-11-04
 
 - **Owner OPS0 (UNFILED-FINDINGS INTAKE) / RUNBOOK §26 step 4, info. FIXED IN THIS COMMIT — file as
   already resolved.** The intake read only `ops/spikes/bigquery-deauth-*-halt-record.md`. This incident's
@@ -499,7 +499,7 @@ times were preserved (22:30Z–23:00Z).
 - **Expected signature.** `missed_run` for **AR_orc** (and SL5 if it fires tonight) on 2026-11-03 joins the
   outage signature (RUNBOOK §26). These are not new faults.
 
-### Unfiled findings
+### Unfiled findings — FILED 2026-11-04
 
 None from this slot.
 
@@ -560,7 +560,7 @@ The event's own deletion is D3's job once BigQuery is confirmed live (calendar r
 - **Expected signature.** `missed_run`/`staleness` for **D3** on 2026-11-03 joins the outage signature
   (RUNBOOK §26), not a new fault.
 
-### Unfiled findings
+### Unfiled findings — FILED 2026-11-04
 
 None from this slot.
 
@@ -620,7 +620,7 @@ Nothing was written:
 - **Expected signature.** A `queue_driven_missed_fire` / `missed_run` for **SL5** on 2026-11-03 is part of the
   outage signature (RUNBOOK §26). It is not a new fault.
 
-### Unfiled findings
+### Unfiled findings — FILED 2026-11-04
 
 None from this slot.
 
@@ -685,7 +685,7 @@ Nothing was written:
   `arsenal-heartbeat` noticed by W5's META-HEARTBEAT CHECK, join the outage signature (RUNBOOK §26), not new
   faults.
 
-### Unfiled findings
+### Unfiled findings — FILED 2026-11-04
 
 None from this slot.
 
@@ -745,7 +745,7 @@ Nothing was written or hosted:
   It is not a new fault. The same holds for any `catchup_refire_blocked` email that OPS0 raises after re-auth for
   this outage's slots.
 
-### Unfiled findings
+### Unfiled findings — FILED 2026-11-04
 
 None from this slot.
 
@@ -806,6 +806,6 @@ Nothing was written:
   is not a new fault. The same holds for `catchup_refire_blocked` emails that OPS0 raises after re-auth for this
   outage's slots.
 
-### Unfiled findings
+### Unfiled findings — FILED 2026-11-04
 
 None from this slot.
