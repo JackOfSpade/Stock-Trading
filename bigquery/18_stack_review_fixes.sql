@@ -73,6 +73,8 @@ ALTER TABLE `stock-trading-498512.ops.alerts` ADD COLUMN IF NOT EXISTS notified_
 -- ledger and its two-phase staging table, which were audit-truth all along but were never watched.
 -- Every other predicate, including the decision_log.sub_pattern sanctioned exception, is unchanged.
 -- The OTHER objects defined in this file are NOT superseded and remain canonical here.
+-- FURTHER SUPERSEDED by bigquery/275_append_only_resolved_jobs_disposition.sql (2026-11-05), now the current
+-- single source of truth for this object.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.append_only_integrity` AS
 SELECT
   job_id,

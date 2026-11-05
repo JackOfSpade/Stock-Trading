@@ -63,6 +63,8 @@
 --      trading halt via bigquery/107's halt_reason CASE. That is the intended severity for someone
 --      mutating the money ledger out of band.
 
+-- SUPERSEDED LIVE by bigquery/275_append_only_resolved_jobs_disposition.sql (2026-11-05) -- current single
+-- source of truth for state.append_only_integrity. Kept for DR-rebuild history; do not re-apply in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.append_only_integrity` AS
 SELECT
   job_id,

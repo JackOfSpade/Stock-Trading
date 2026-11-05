@@ -1,6 +1,6 @@
 # D1 2026-11-04: single-name `research-screen` row not landed
 
-**Status: OPEN.** Author: Claude (agent), D1 run of 2026-11-04 (session `session_018igQFzEmKHQYowAkqeVnfN`).
+**Status: LANDED 2026-11-05** by an interactive session, entry_id `7701d3bc-1d7c-4a3b-9de8-3bf1eb1d91e3`, outcome `written` with the digest below, 93 passed read back. Originally OPEN. Author: Claude (agent), D1 run of 2026-11-04 (session `session_018igQFzEmKHQYowAkqeVnfN`).
 
 The 2026-11-04 router-gated single-name move screen (93 passed, 574 compact rejections) was generated
 with `scripts/decision_call.py` into the files in this directory (5 full parts + 1 short part + `call.sql`).

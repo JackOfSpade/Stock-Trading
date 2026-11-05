@@ -1,4 +1,4 @@
--- Parallel-run dbt port of bigquery/162_append_only_watchlist_cash_flows.sql:state.append_only_integrity — canonical source is that
+-- Parallel-run dbt port of bigquery/275_append_only_resolved_jobs_disposition.sql:state.append_only_integrity — canonical source is that
 -- file until owner cutover. Added 2026-08-22 (dbt view-coverage burn-down): this view had
 -- NO dbt presence at all, so scripts/dbt_parity.py had nothing to compare and it carried
 -- ZERO row-level parity protection. Ported MECHANICALLY from the canonical body — the only
@@ -40,4 +40,12 @@ WHERE creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 2 DAY)
       WHERE r.routine = 'W5' AND r.status = 'completed'
         AND r.run_date = DATE(creation_time, 'America/Denver')
     )
+  )
+  -- A job named in a RESOLVED append_only_violation has been adjudicated by hand: do not re-raise it
+  -- (bigquery/275). A job in no resolved alert still raises, so a NEW violation is unaffected.
+  AND job_id NOT IN (
+    SELECT JSON_VALUE(item, '$.job_id')
+    FROM {{ source('ops', 'alerts') }} a, UNNEST(JSON_QUERY_ARRAY(a.payload)) AS item
+    WHERE a.category = 'append_only_violation' AND a.resolved
+      AND JSON_VALUE(item, '$.job_id') IS NOT NULL
   )
