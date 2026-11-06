@@ -1,6 +1,6 @@
 # D1 2026-11-05: single-name `research-screen` row not landed
 
-**Status: OPEN.** Author: Claude (agent), D1 run of 2026-11-05 (session `eacaf4d9-977f-5d0f-9de6-2ee8ee3b23ac`).
+**Status: LANDED 2026-11-05** by an interactive session, entry_id `f5359185-8c8f-4d39-86f4-2dd0821fcdbb`, outcome `written` with the digest below, 138 passed read back. Part 02 was refused once for one transit-corrupted digit and repaired server-side from the refused job's text (RUNBOOK §57 split-call path), its part digest checked before staging; parts 03-08 and `call.sql` were issued verbatim. Originally OPEN. Author: Claude (agent), D1 run of 2026-11-05 (session `eacaf4d9-977f-5d0f-9de6-2ee8ee3b23ac`).
 
 The 2026-11-05 router-gated single-name move screen (138 passed, 452 compact rejections, 2 dropped below the floor on IBKR)
 was generated with `scripts/decision_call.py` into the files in this directory (7 full parts + 1 short part + `call.sql`;
