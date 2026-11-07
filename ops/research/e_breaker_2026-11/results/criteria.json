@@ -1,0 +1,208 @@
+{
+  "1_substantive_trips": {
+    "evidence": {
+      "calibration": {
+        "W-2018Q4": {
+          "hit": true,
+          "months": 3,
+          "substantive_trip_months": [
+            "2018-12-28"
+          ]
+        },
+        "W-2020COVID": {
+          "hit": true,
+          "months": 3,
+          "substantive_trip_months": [
+            "2020-02-28",
+            "2020-04-24"
+          ]
+        }
+      },
+      "held_out": {
+        "W-2022": {
+          "hit": true,
+          "months": 5,
+          "substantive_trip_months": [
+            "2022-03-25",
+            "2022-04-29",
+            "2022-06-24"
+          ]
+        },
+        "W-2023BANKS": {
+          "hit": false,
+          "months": 3,
+          "substantive_trip_months": []
+        },
+        "W-2025TARIFF": {
+          "hit": true,
+          "months": 2,
+          "substantive_trip_months": [
+            "2025-04-25"
+          ]
+        },
+        "W-2026GULF": {
+          "hit": false,
+          "months": 8,
+          "substantive_trip_months": []
+        }
+      },
+      "held_out_required": 3,
+      "held_out_total": 4,
+      "held_out_windows_hit": 2
+    },
+    "pass": false
+  },
+  "2_group_local_power": {
+    "evidence": {
+      "S_L": 0.06,
+      "T_H": 0.92,
+      "group": "401010",
+      "months": [
+        {
+          "banks_l_group": false,
+          "banks_leg_h": false,
+          "banks_median_c60": 0.8118,
+          "banks_present_as_group": true,
+          "banks_share_below_0.3": 0.0,
+          "banks_trip_and_pop_quiet": false,
+          "date": "2023-03-31",
+          "pop_l_pop_share": 0.0,
+          "pop_median_below_T_H": true,
+          "pop_median_c60": 0.7618,
+          "pop_share_below_S_L": true
+        },
+        {
+          "banks_l_group": false,
+          "banks_leg_h": false,
+          "banks_median_c60": 0.8131,
+          "banks_present_as_group": true,
+          "banks_share_below_0.3": 0.0,
+          "banks_trip_and_pop_quiet": false,
+          "date": "2023-04-28",
+          "pop_l_pop_share": 0.013333333333333334,
+          "pop_median_below_T_H": true,
+          "pop_median_c60": 0.7589,
+          "pop_share_below_S_L": true
+        },
+        {
+          "banks_l_group": false,
+          "banks_leg_h": false,
+          "banks_median_c60": 0.8163,
+          "banks_present_as_group": true,
+          "banks_share_below_0.3": 0.0,
+          "banks_trip_and_pop_quiet": false,
+          "date": "2023-05-26",
+          "pop_l_pop_share": 0.0,
+          "pop_median_below_T_H": true,
+          "pop_median_c60": 0.7316,
+          "pop_share_below_S_L": true
+        }
+      ],
+      "window": [
+        "2023-03-01",
+        "2023-05-31"
+      ]
+    },
+    "pass": false
+  },
+  "3_lead_time": {
+    "evidence": {
+      "fraction": 0.44680851063829785,
+      "n_stress_months": 47,
+      "n_tripped_at_open": 21,
+      "required": 0.5,
+      "stress_dates": [
+        "2022-01-28",
+        "2022-02-25",
+        "2022-03-25",
+        "2022-04-29",
+        "2022-05-27",
+        "2022-08-26",
+        "2022-09-30",
+        "2022-10-28",
+        "2022-11-25",
+        "2022-12-30",
+        "2023-01-27",
+        "2023-02-24",
+        "2023-03-31",
+        "2023-04-28",
+        "2023-06-30",
+        "2023-07-28",
+        "2023-08-25",
+        "2023-10-27",
+        "2023-11-24",
+        "2023-12-29",
+        "2024-01-26",
+        "2024-02-23",
+        "2024-03-28",
+        "2024-04-26",
+        "2024-05-31",
+        "2024-08-30",
+        "2024-10-25",
+        "2024-12-27",
+        "2025-02-28",
+        "2025-03-28",
+        "2025-04-25",
+        "2025-05-30",
+        "2025-06-27",
+        "2025-07-25",
+        "2025-08-29",
+        "2025-09-26",
+        "2025-10-31",
+        "2025-11-28",
+        "2026-01-30",
+        "2026-02-27",
+        "2026-03-27",
+        "2026-04-24",
+        "2026-05-29",
+        "2026-06-26",
+        "2026-07-31",
+        "2026-08-28",
+        "2026-09-25"
+      ],
+      "tripped_dates": [
+        "2022-03-25",
+        "2022-04-29",
+        "2022-10-28",
+        "2022-11-25",
+        "2023-01-27",
+        "2023-06-30",
+        "2023-07-28",
+        "2023-08-25",
+        "2023-12-29",
+        "2024-01-26",
+        "2024-03-28",
+        "2024-04-26",
+        "2024-08-30",
+        "2025-04-25",
+        "2025-05-30",
+        "2025-06-27",
+        "2025-07-25",
+        "2025-08-29",
+        "2025-09-26",
+        "2025-10-31",
+        "2025-11-28"
+      ]
+    },
+    "pass": false
+  },
+  "4_false_bind_ceiling": {
+    "evidence": {
+      "ceiling": 0.4,
+      "false_bind_fraction": 0.4406779661016949,
+      "n_months": 59,
+      "n_tripped": 26
+    },
+    "pass": false
+  },
+  "5_discrimination": {
+    "evidence": {
+      "mean_outcome_clear": 0.07383942637009513,
+      "mean_outcome_tripped": 0.0856422194619074,
+      "n_clear_months": 31,
+      "n_tripped_months": 26
+    },
+    "pass": true
+  },
+  "all_pass": false
+}

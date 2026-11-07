@@ -1,0 +1,13 @@
+{
+  "S_L": 0.06,
+  "S_L_unrounded": 0.0554054054054054,
+  "T_H": 0.92,
+  "T_H_unrounded": 0.9203399999999999,
+  "calibration_end": "2021-12-31",
+  "calibration_start": "2017-11-10",
+  "monthly_outcome_p90": 0.14215686274509806,
+  "n_calibration_months": 50,
+  "n_months_l_pop_share": 50,
+  "n_months_max_group_median": 50,
+  "weekly_outcome_p90": 0.15127118644067797
+}
