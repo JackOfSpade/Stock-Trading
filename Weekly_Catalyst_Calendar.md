@@ -1,852 +1,723 @@
-2026-W44
+2026-W45
 
 # Weekly Catalyst Calendar — Strategies A and C
 
-**Run date 2026-11-01** (Sunday, `weekly_sun`). ISO week of TODAY's run date, 2026-W44. The upcoming trading week opens Monday 2026-11-02; that is context, not the marker.
+**Run date 2026-11-08** (Sunday, `weekly_sun`). ISO week of TODAY's run date, 2026-W45. The upcoming trading week opens Monday 2026-11-09; that is context, not the marker.
 
-**Windows.** Strategy A: 6 months, **2026-11-01 → 2027-05-01** — **effective confirmed-earnings horizon 2026-12-18 (47 days, ~6.7 weeks); sparse vendor coverage beyond it, per-name (E) fallback for shortlisted names.** Strategy C: 45 days, **2026-11-01 → 2026-12-16** (run date + 45 days, the same convention as W43's 10-25 → 12-09; the 12-09 FOMC decision sits on day 38 counting from 11-01 as day 0).
+**Windows.** Strategy A: 6 months, **2026-11-08 → 2027-05-08** — **effective confirmed-earnings horizon 2026-12-18 (40 days, ~5.7 weeks); sparse vendor coverage beyond it, per-name (E) fallback for shortlisted names.** Strategy C: 45 days, **2026-11-08 → 2026-12-23** (run date + 45 days, the same convention as W44's 11-01 → 12-16; the 12-09 FOMC decision sits on day 31 counting from 11-08 as day 0).
 
-**EFFECTIVE CONFIRMED-EARNINGS HORIZON: 2026-12-18, 47 days (~6.7 weeks) from 2026-11-01. The terminal date did NOT move for a fifth week** (CCL 2026-12-18). Depth fell 54 → 47 days only because the clock advanced. Nine-week series, terminal date / days from that week's run date: 2026-12-03/88d (09-06), 2026-12-09/87d (09-13), 2026-12-09/80d (09-20), 2026-12-10/74d (09-27), 2026-12-18/75d (10-04), 2026-12-18/68d (10-11), 2026-12-18/61d (10-18), 2026-12-18/54d (10-25), **2026-12-18/47d (11-01)**. Standing plan-tier constraint (`FMP-earn-horizon`, `OWNER_ACTIONS.md`), deliberately NOT re-alerted; all FMP pulls chunked ≤ 60 days.
+**EFFECTIVE CONFIRMED-EARNINGS HORIZON: 2026-12-18, 40 days (~5.7 weeks) from 2026-11-08. The terminal date did NOT move for a sixth week** (MEASURED: FMP chunk 1, 2026-11-08 → 2027-01-07, returned 17 rows, last row CCL 2026-12-18; chunk 2 begins 2027-01-11). Depth fell 47 → 40 days only because the clock advanced. Ten-week series, terminal date / days from that week's run date: 2026-12-03/88d (09-06), 2026-12-09/87d (09-13), 2026-12-09/80d (09-20), 2026-12-10/74d (09-27), 2026-12-18/75d (10-04), 2026-12-18/68d (10-11), 2026-12-18/61d (10-18), 2026-12-18/54d (10-25), 2026-12-18/47d (11-01), **2026-12-18/40d (11-08)**. Dead zone 2026-12-19 → 2027-01-10 (no FMP row). Separate fact from the orchestrator's fmp_summary: FMP chunk 2 returns a block of 56 rows dated 2027-01-11 → 02-18 (peak ISO weeks 2027-W04 18 rows, W05 16 rows) = the January/February mega-cap season projected as a sparse top-name sample; that block is NOT part of the series above (the series definition is the end of the contiguous near-term chunk-1 coverage, unchanged since W40). Standing plan-tier constraint (`FMP-earn-horizon`, `OWNER_ACTIONS.md`), deliberately NOT re-alerted; all FMP pulls chunked ≤ 60 days (4 chunks this run, 76 deduped rows, no errors).
 
-**Nasdaq key-less per-day calendar** (every weekday 2026-10-26 → 2026-12-16, shared CSV, not re-fetched): 4,224 total rows fetched (orchestrator figure); **1,712 rows at market cap ≥ $2B** (CSV parsed: 1,712 data rows). Of those: 561 fall 10-26 → 10-30 (week just printed) and **1,151 are forward 2026-11-02 → 2026-12-16** (1,061 in November, 90 in December to 12-16). 129 forward rows are ≥ $50B. 308 of 1,151 forward rows carry `time-not-supplied` (projected (E) signature). Latest Nasdaq date fetched: 2026-12-16.
+**Nasdaq key-less per-day calendar** (every weekday 2026-11-02 → 2026-12-23, shared CSV, not re-fetched; 11-26 and 12-23 returned zero rows at ≥ $2B; 12-22 has 8 rows of all caps but none ≥ $2B; last ≥ $2B date 2026-12-21): 3,430 rows at all market caps; **1,136 rows at market cap ≥ $2B** (CSV parsed: 1,136 data rows). Of those: 737 fall 11-02 → 11-06 (week just printed) and **399 are forward 2026-11-09 → 2026-12-21** (294 in 11-09 → 11-30, 105 in December). **54 forward rows are ≥ $50B.** **164 of 399 forward rows carry `time-not-supplied`** (projected (E) signature); 119 BMO, 116 AMC. (For the printed week, 734 of 737 rows show n/s because Nasdaq drops the time field after the print.) Forward per-day counts at ≥ $2B: 11-09 67, 11-10 34, 11-11 24, 11-12 39, 11-13 10, 11-16 13, 11-17 19, 11-18 20, 11-19 21, 11-20 7, 11-23 12, 11-24 23, 11-25 4, 11-27 1, 12-01 11, 12-02 17, 12-03 21, 12-04 1, 12-07 2, 12-08 11, 12-09 8, 12-10 7, 12-14 1, 12-15 3, 12-16 6, 12-17 12, 12-18 4, 12-21 1.
 
-**FMP coverage shape** (MEASURED, four chunked `calendar/earnings-calendar` calls by the orchestrator; 104 symbol-date rows over 77 symbols; counts parsed from the shared file):
+**FMP coverage shape** (MEASURED, four chunked `calendar/earnings-calendar` calls by the orchestrator; 76 deduped symbol-date rows; counts parsed from the shared file):
 
 | Span | Rows | Notes |
 |---|---|---|
-| Printed 10-26 → 10-30 | 27 | with actuals (e.g. MSFT, GOOGL, AMZN, INTC, XOM, CVX, ABBV, V, KO, BA, HCA, SBUX, F, FDX…) |
-| 11-01 → 11-30 | 24 | AAPL, PLTR, ROKU 11-02 … BABA, NIO 11-24 |
-| 12-01 → 12-24 | 5 | DOCU 12-03; ADBE 12-09; COST 12-10; NKE 12-17; CCL 12-18 |
-| 12-24 → 2027-02-21 | 46 | chunk-2 header says 45; the row list parses to 46 (TLRY 01-11 … ETSY 02-18). Same shape as W43 plus the printed-week names re-projected (MSFT, AMZN, GOOGL, INTC, XOM, CVX, V, ABBV, SBUX…) |
-| 2027-02-22 → 05-01 | 2 | RKT 02-25, FDX 03-25 (RIVN no longer here: now 02-11) |
+| 11-08 → 11-30 | 12 | LCID 11-09 … NIO/BILI 11-24 (CSCO 11-12, BIDU 11-16, DIS/NVDA/FUBO 11-17, TGT 11-18, BABA/WMT 11-19, ZM 11-23) |
+| 12-01 → 12-18 | 5 | DOCU 12-03; ADBE 12-09; COST 12-10; NKE 12-17; CCL 12-18 (terminal row) |
+| 12-19 → 2027-01-10 | 0 | dead zone (plan-tier constraint, not alerted) |
+| 2027-01-11 → 02-21 | 56 | TLRY 01-11 … ETSY 02-18; ISO weeks 2027-W02 6, W03 6, W04 18, W05 16, W06 9, W07 1 (names that printed 11-02..11-06 appear re-projected, e.g. AAPL 02-04, AMD 02-02, PLTR 02-01) |
+| 2027-02-22 → 05-08 | 3 | RKT 02-25, RIOT 03-01, FDX 03-25 (chunk 3) ; chunk 4 (05-07 → 05-08) 0 rows |
 
-Terminal date 2026-12-18 (CCL) = 47 days from 11-01, unchanged for a FIFTH week. Dead zones: 11-25 → 12-02 (DOCU 12-03 nearest) and 12-19 → 2027-01-10 (plan-tier constraint, not alerted).
+FMP also lists FDX twice (2027-02-02 in chunk 2 and 2027-03-25 in chunk 3): internal inconsistency in the vendor feed; neither is relied on.
 
-**Cross-check FMP vs Nasdaq:** FMP covers 24 of the 1,151 forward Nasdaq names inside the window; **0 date disagreements** between FMP and Nasdaq for the in-window overlap. FMP names ABSENT from Nasdaq inside the pull: FUBO (11-17), LCID (11-09), ET (11-03) — same three as W43 (below the ≥ $2B filter or not in Nasdaq's feed). FMP names absent from Nasdaq because they report outside the pull dates (≥ 12-17 or already printed before 10-26 or 2027): CCL, NKE, LMT, NOK, PEP, META, T, TSLA, AAL, GM, GE, TSM, JNJ, UNH, GS, NFLX, UAL, BAC, C, JPM, WFC, DAL, TLRY (not an error). Nasdaq ≥ $2B forward names not in FMP: 1,127 of 1,151 (FMP is a sparse mega-cap subset; A-queue names with a forward date but no FMP row include HPE, PANW, AMAT, TTWO, CRWD, NTAP, SMCI, SNOW, DDOG, CRM, OKTA, MRVL, NBIS, INTU, ORCL, AVGO, MU, DELL, HD, COP, ANET, VRTX, AKAM).
+**Cross-check FMP vs Nasdaq (inside 11-09 → 12-23):** FMP has 17 in-window rows; 15 of them are also on the Nasdaq ≥ $2B forward list (CSCO, BIDU, DIS, NVDA, TGT, BABA, WMT, ZM, BILI, NIO, DOCU, ADBE, COST, NKE, CCL). **14 agree on the date; 1 DISAGREES: BABA (FMP 2026-11-19 vs Nasdaq 2026-11-24)** — new vs W44 (which had 0 disagreements), unresolved. FMP-only names (absent from the Nasdaq ≥ $2B file): **LCID** (11-09; Nasdaq all-caps file shows market cap $1.17B) and **FUBO** (11-17; $0.84B) — both below the $2B floor (ET, the third W44 FMP-only name, printed 11-03 and left the window). FMP rows beyond 12-23 (58 rows, 2027-01-11 → 03-25) are outside the Nasdaq pull by construction. Nasdaq ≥ $2B forward names not in FMP: 384 of 399 (FMP is a sparse mega-cap subset, not an enumeration).
 
-A-queue (46) census vs Nasdaq forward window: 31 have a forward Nasdaq date inside 11-02 → 12-16, 12 printed 10-26 → 10-30 (AMZN, INTC, MSFT, CVX, LLY, NOW, XOM, GEV, MRK, FSLR, GOOGL, CAT), 3 have none: IBM, META, JPM (META/JPM FMP-only: 2027-01-27 / 2027-01-14).
+**A-queue (46) census vs Nasdaq** (pinned census, orchestrator-MEASURED this run, same 46 as W44): **22 have a forward Nasdaq date inside 11-09 → 12-23** (ADBE, AMAT, AVGO, CRM, CRWD, CSCO, DELL, HD, HPE, INTU, MRVL, MU, NBIS, NTAP, NVDA, OKTA, ORCL, PANW, SNOW, TGT, TTWO, WMT); **9 printed 11-02 → 11-06** (AAPL 11-02, VRTX 11-02, AMD 11-03, ANET 11-03, SMCI 11-03, DDOG 11-04, QCOM 11-04, AKAM 11-05, COP 11-05); **15 have none** (the 12 that printed 10-26 → 10-30: AMZN, INTC, MSFT, CVX, LLY, NOW, XOM, GEV, MRK, FSLR, GOOGL, CAT; plus IBM, META, JPM). Of the 22 forward names, 14 are issuer-confirmed this run ((C) or (C-secondary): TTWO, AMAT, CSCO, NBIS, NVDA, HD, PANW, TGT, WMT, INTU, CRWD, MRVL, OKTA, SNOW), 1 has an issuer target date (NTAP) and 7 remain (E) (DELL, HPE, CRM, ORCL, ADBE, AVGO, MU).
 
-**Every count in PART 1 beyond the C window is a FLOOR.** Universe enumeration past 2026-12-16 is impossible on this plan tier: `search/search-company-screener`, every `directory.*` route and `quote/batch-quote` are tool-level ACCESS DENIED (`ops.alerts` `6c4004e3`, standing, not re-alerted). The market-cap rail inside the C window is Nasdaq's own `marketCap` field; the 30-day ADV ≥ $10M rail is carried, not re-measured (1A.11).
+**Every count in PART 1 beyond the C window (after 2026-12-23) is a FLOOR.** Universe enumeration past the Nasdaq pull is impossible on this plan tier: `search/search-company-screener`, every `directory.*` route and `quote/batch-quote` are tool-level ACCESS DENIED (`ops.alerts` `6c4004e3`, standing, not re-alerted). The market-cap rail inside the C window is Nasdaq's own `marketCap` field; the 30-day ADV ≥ $10M rail is carried, not re-measured (1A.11).
 
-## PART 1A — Strategy A universe, 6-month window (2026-11-01 → 2027-05-01)
+## PART 1A — Strategy A universe, 6-month window (2026-11-08 → 2027-05-08)
 
 No interpretation in this PART. Provenance tags:
-- **(C)** company- or primary-source confirmed
+- **(C)** company- or primary-source confirmed (**(C-secondary)** = issuer notice seen only through a copy or search snippet)
 - **(E)** estimated (vendor or aggregator projection)
 - **(T)** tentative, no firm day
 
-"Δ" marks a change against the 2026-10-25 (2026-W43) artifact. Rows tagged (C) "carried from W43" were issuer-confirmed last cycle and the date still matches; they were NOT re-read this run.
+"Δ" marks a change against the 2026-11-01 (2026-W44) artifact. Rows tagged (C) 'carried from W44' were issuer-confirmed last cycle and the Nasdaq date still matches; they were NOT re-read this run. Metered calls this sub-agent: 28 WebSearch, 4 WebFetch, 2 Tavily basic (see call log).
 
-### 1A.1 — Earnings, inside the 45-day C window (2026-11-01 → 2026-12-16)
+### 1A.1 — Earnings, inside the 45-day C window (2026-11-09 → 2026-12-23)
 
-**Enumeration.** Nasdaq key-less per-day calendar, every weekday 2026-10-26 → 2026-12-16, market cap ≥ $2B: 1,712 rows, of which **1151 are forward (2026-11-02 → 2026-12-16)**; 129 of those are ≥ $50B. FMP rows (consensus detail) cover 24 of the forward Nasdaq names; all FMP dates inside the window agree with Nasdaq (FUBO 11-17, LCID 11-09 and ET 11-03 are FMP-only, below/outside the Nasdaq ≥ $2B pull). The 10-26 → 10-30 rows are the week just printed and are NOT in this table (see 'Printed this week'). `time-not-supplied` = projected (E): 308 of 1151 forward rows.
-
-Tags this run: **(C)** issuer-confirmed. 'NEW' = confirmed by search of issuer release this run (WebSearch result citing the issuer's release; issuer page not opened first-hand unless stated). 'carried from W43, not re-read' = W43 file had an issuer confirmation for the same date, Nasdaq date unchanged. Everything else (E). Δ = date moved vs the 2026-W43 file.
-
-**Detail table** — every forward reporter that is on the A queue, ≥ $50B, or tagged (C) last week (135 rows). Time codes: BMO before open, AMC after close, n/s not supplied. 'FMP' column = FMP consensus where covered (EPS est / revenue est).
+**Enumeration.** Nasdaq key-less per-day calendar, market cap ≥ $2B: 399 forward rows (2026-11-09 → 12-21); 54 are ≥ $50B. The detail table lists every forward row that is on the A queue, ≥ $50B, or tagged (C)/(E)-with-source this run (58 rows); the remainder is enumerated by session below. Time codes: BMO before open, AMC after close, n/s not supplied. Mcap = Nasdaq `marketCap` field as fetched. D marks held Strategy D positions. All Nasdaq-only rows are (E).
 
 | Ticker | Name | Type | Date | Tag | Mcap | Source / consensus |
 |---|---|---|---|---|---|---|
-| AAPL | Apple Inc. [A-queue] | Earnings (AMC, FQ Sep/2026) | 2026-11-02 | **(C)** | $5,092B | Nasdaq calendar; (C) Apple IR notice via secondary relay (C-secondary), carried from W43, not re-read; FMP agrees (EPS est 1.99, rev est $113.40B) |
-| PLTR | Palantir Technologies Inc. | Earnings (AMC, FQ Sep/2026) | 2026-11-02 | **(C)** | $472B | Nasdaq calendar; (C) Palantir Business Wire release (read via copies), carried from W43, not re-read; FMP agrees (EPS est 0.4072, rev est $2.18B) |
-| VRTX | Vertex Pharmaceuticals Incorporated [A-queue] | Earnings (AMC, FQ Sep/2026) | 2026-11-02 | **(C)** | $137B | Nasdaq calendar; (C) Vertex release 2026-10-07, carried from W43, not re-read |
-| MAR | Marriott International | Earnings (BMO, FQ Sep/2026) | 2026-11-02 | (E) | $104B | Nasdaq calendar |
-| WMB | Williams Companies, Inc. (The) | Earnings (AMC, FQ Sep/2026) | 2026-11-02 | (E) | $92B | Nasdaq calendar |
-| FANG | Diamondback Energy, Inc. | Earnings (AMC, FQ Sep/2026) | 2026-11-02 | (E) | $58B | Nasdaq calendar |
-| O | Realty Income Corporation | Earnings (AMC, FQ Sep/2026) | 2026-11-02 | (E) | $54B | Nasdaq calendar |
-| ETR | Entergy Corporation | Earnings (BMO, FQ Sep/2026) | 2026-11-02 | (E) | $51B | Nasdaq calendar |
-| AMD | Advanced Micro Devices, Inc. [A-queue] | Earnings (AMC, FQ Sep/2026) | 2026-11-03 | **(C)** | $925B | Nasdaq calendar; (C) ir.amd.com 2026-10-06, carried from W43, not re-read; FMP agrees (EPS est 1.95, rev est $13.09B) |
-| AMGN | Amgen Inc. | Earnings (AMC, FQ Sep/2026) | 2026-11-03 | (E) | $249B | Nasdaq calendar |
-| ANET | Arista Networks, Inc. [A-queue] | Earnings (AMC (call 1:30 pm PT), FQ Sep/2026) | 2026-11-03 | **(C)** | $232B | NEW (C): arista.com press release 24817-pr-20261006 (2026-10-06) |
-| SHOP | Shopify Inc. | Earnings (BMO (call 8:30 am ET), FQ Sep/2026) | 2026-11-03 | **(C)** | $217B | NEW (C): Shopify release 2026-10-06 "to Announce Third-Quarter 2026 Financial Results"; FMP agrees (EPS est 0.4613, rev est $3.70B) |
-| PFE | Pfizer, Inc. | Earnings (BMO (call 10:00 am ET), FQ Sep/2026) | 2026-11-03 | **(C)** | $171B | NEW (C): Pfizer release 2026-09-22 "Invites Public to View and Listen to Webcast of November 3 Conference Call"; FMP agrees (EPS est 0.729, rev est $15.85B) |
-| ETN | Eaton Corporation, PLC | Earnings (BMO, FQ Sep/2026) | 2026-11-03 | (E) | $153B | Nasdaq calendar |
-| MPC | Marathon Petroleum Corporation | Earnings (BMO, FQ Sep/2026) | 2026-11-03 | (E) | $121B | Nasdaq calendar |
-| BKNG | Booking Holdings Inc. | Earnings (AMC, FQ Sep/2026) | 2026-11-03 | (E) | $113B | Nasdaq calendar |
-| RACE | Ferrari N.V. | Earnings (BMO, FQ Sep/2026) | 2026-11-03 | (E) | $94B | Nasdaq calendar |
-| SU | Suncor Energy  Inc. | Earnings (AMC, FQ Sep/2026) | 2026-11-03 | (E) | $91B | Nasdaq calendar |
-| ITUB | Itau Unibanco Banco Holding SA | Earnings (AMC, FQ Sep/2026) | 2026-11-03 | (E) | $81B | Nasdaq calendar |
-| APO | Apollo Global Management, Inc. | Earnings (BMO, FQ Sep/2026) | 2026-11-03 | (E) | $70B | Nasdaq calendar |
-| MPLX | MPLX LP | Earnings (BMO, FQ Sep/2026) | 2026-11-03 | (E) | $61B | Nasdaq calendar |
-| AME | AMTEK, Inc. | Earnings (BMO, FQ Sep/2026) | 2026-11-03 | (E) | $58B | Nasdaq calendar |
-| ALAB | Astera Labs, Inc. | Earnings (AMC, FQ Sep/2026) | 2026-11-03 | (E) | $50B | Nasdaq calendar; new to the ≥ $50B / detail set this week (cap at the $50B boundary) |
-| TRI | Thomson Reuters Corp | Earnings (BMO, FQ Sep/2026) | 2026-11-03 | (E) | $50B | Nasdaq calendar |
-| SMCI | Super Micro Computer, Inc. [A-queue] | Earnings (AMC (call 5:00 pm ET), FQ Sep/2026) | 2026-11-03 | **(C)** | $23B | NEW (C): Supermicro IR (ir.supermicro.com) conference-call notice; 10-20 preliminary update also on IR |
-| TM | Toyota Motor Corp Ltd Ord | Earnings (n/s, FQ Sep/2026) | 2026-11-04 | (E) | $256B | Nasdaq calendar |
-| ARM | Arm Holdings plc | Earnings (AMC, FQ Sep/2026) | 2026-11-04 | (E) | $243B | Nasdaq calendar |
-| QCOM | QUALCOMM Incorporated [A-queue] | Earnings (AMC, FQ Sep/2026) | 2026-11-04 | **(C)** | $195B | NEW (C): Qualcomm release 2026-10-22 "Schedules Fourth Quarter and Fiscal 2026 Earnings Release and Conference Call" (qualcomm.com/news/releases/2026/10) |
-| MCD | McDonald's Corporation | Earnings (BMO, FQ Sep/2026) | 2026-11-04 | (E) | $182B | Nasdaq calendar |
-| NVO | Novo Nordisk A/S | Earnings (BMO, FQ Sep/2026) | 2026-11-04 | (E) | $173B | Nasdaq calendar |
-| UBER | Uber Technologies, Inc. [D held] | Earnings (BMO, FQ Sep/2026) | 2026-11-04 | **(C)** | $134B | Nasdaq calendar; (C) investor.uber.com release 2026-10-05, carried from W43, not re-read; FMP agrees (EPS est 0.864, rev est $14.67B) |
-| CVS | CVS Health Corporation | Earnings (BMO, FQ Sep/2026) | 2026-11-04 | (E) | $116B | Nasdaq calendar |
-| MCK | McKesson Corporation | Earnings (AMC, FQ Sep/2026) | 2026-11-04 | (E) | $114B | Nasdaq calendar |
-| DDOG | Datadog, Inc. [A-queue] | Earnings (BMO, FQ Sep/2026) | 2026-11-04 | **(C)** | $95B | Nasdaq calendar; (C) Datadog date release, carried from W43, not re-read |
-| EMR | Emerson Electric Company | Earnings (BMO, FQ Sep/2026) | 2026-11-04 | (E) | $95B | Nasdaq calendar |
-| APP | Applovin Corporation | Earnings (AMC, FQ Sep/2026) | 2026-11-04 | (E) | $85B | Nasdaq calendar |
-| MELI | MercadoLibre, Inc. | Earnings (AMC, FQ Sep/2026) | 2026-11-04 | (E) | $84B | Nasdaq calendar |
-| MSI | Motorola Solutions, Inc. | Earnings (AMC, FQ Sep/2026) | 2026-11-04 | (E) | $81B | Nasdaq calendar |
-| MFC | Manulife Financial Corp | Earnings (AMC, FQ Sep/2026) | 2026-11-04 | (E) | $76B | Nasdaq calendar |
-| ALL | Allstate Corporation (The) | Earnings (AMC, FQ Sep/2026) | 2026-11-04 | (E) | $65B | Nasdaq calendar |
-| GWW | W.W. Grainger, Inc. | Earnings (BMO, FQ Sep/2026) | 2026-11-04 | (E) | $65B | Nasdaq calendar |
-| MET | MetLife, Inc. | Earnings (AMC, FQ Sep/2026) | 2026-11-04 | (E) | $64B | Nasdaq calendar |
-| COR | Cencora, Inc. | Earnings (BMO, FQ Sep/2026) | 2026-11-04 | (E) | $63B | Nasdaq calendar |
-| AFL | Aflac Incorporated | Earnings (AMC, FQ Sep/2026) | 2026-11-04 | (E) | $62B | Nasdaq calendar |
-| CVE | Cenovus Energy Inc | Earnings (BMO, FQ Sep/2026) | 2026-11-04 | (E) | $60B | Nasdaq calendar; **Δ vs W43 2026-10-30** |
-| EW | Edwards Lifesciences Corporation | Earnings (AMC, FQ Sep/2026) | 2026-11-04 | (E) | $54B | Nasdaq calendar |
-| COP | ConocoPhillips [A-queue] | Earnings (BMO (call 12:00 pm ET), FQ Sep/2026) | 2026-11-05 | **(C)** | $180B | NEW (C): ConocoPhillips Business Wire release 2026-09-24 |
-| SONY | Sony Group Corporation | Earnings (BMO, FQ Sep/2026) | 2026-11-05 | (E) | $150B | Nasdaq calendar; FMP agrees (EPS est 0.38, rev est $20.15B) |
-| MNST | Monster Beverage Corporation | Earnings (AMC, FQ Sep/2026) | 2026-11-05 | (E) | $136B | Nasdaq calendar |
-| PH | Parker-Hannifin Corporation | Earnings (BMO, FQ Sep/2026) | 2026-11-05 | (E) | $117B | Nasdaq calendar |
-| CNQ | Canadian Natural Resources Limited | Earnings (BMO, FQ Sep/2026) | 2026-11-05 | (E) | $114B | Nasdaq calendar |
-| NET | Cloudflare, Inc. | Earnings (AMC, FQ Sep/2026) | 2026-11-05 | (E) | $110B | Nasdaq calendar |
-| SO | Southern Company (The) | Earnings (BMO, FQ Sep/2026) | 2026-11-05 | (E) | $107B | Nasdaq calendar |
-| ABNB | Airbnb, Inc. | Earnings (AMC, FQ Sep/2026) | 2026-11-05 | (E) | $100B | Nasdaq calendar |
-| DUK | Duke Energy Corporation | Earnings (BMO, FQ Sep/2026) | 2026-11-05 | (E) | $98B | Nasdaq calendar |
-| EOG | EOG Resources, Inc. | Earnings (AMC, FQ Sep/2026) | 2026-11-05 | (E) | $85B | Nasdaq calendar |
-| LITE | Lumentum Holdings Inc. | Earnings (AMC, FQ Sep/2026) | 2026-11-05 | (E) | $83B | Nasdaq calendar |
-| CI | The Cigna Group | Earnings (BMO, FQ Sep/2026) | 2026-11-05 | (E) | $79B | Nasdaq calendar |
-| CMI | Cummins Inc. | Earnings (BMO, FQ Sep/2026) | 2026-11-05 | (E) | $71B | Nasdaq calendar |
-| SPG | Simon Property Group, Inc. | Earnings (AMC, FQ Sep/2026) | 2026-11-05 | (E) | $70B | Nasdaq calendar |
-| APD | Air Products and Chemicals, Inc. | Earnings (BMO, FQ Sep/2026) | 2026-11-05 | (E) | $69B | Nasdaq calendar |
-| TRGP | Targa Resources, Inc. | Earnings (BMO, FQ Sep/2026) | 2026-11-05 | (E) | $67B | Nasdaq calendar |
-| TRP | TC Energy Corporation | Earnings (BMO, FQ Sep/2026) | 2026-11-05 | (E) | $64B | Nasdaq calendar |
-| NTRA | Natera, Inc. | Earnings (AMC, FQ Sep/2026) | 2026-11-05 | (E) | $63B | Nasdaq calendar |
-| CAH | Cardinal Health, Inc. | Earnings (BMO, FQ Sep/2026) | 2026-11-05 | (E) | $58B | Nasdaq calendar |
-| DVN | Devon Energy Corporation | Earnings (AMC, FQ Sep/2026) | 2026-11-05 | (E) | $56B | Nasdaq calendar |
-| SRE | Sempra  | Earnings (BMO, FQ Sep/2026) | 2026-11-05 | (E) | $56B | Nasdaq calendar |
-| WPM | Wheaton Precious Metals Corp. | Earnings (AMC, FQ Sep/2026) | 2026-11-05 | (E) | $56B | Nasdaq calendar |
-| BDX | Becton, Dickinson and Company | Earnings (BMO, FQ Sep/2026) | 2026-11-05 | (E) | $54B | Nasdaq calendar |
-| TEAM | Atlassian Corporation  | Earnings (AMC, FQ Sep/2026) | 2026-11-05 | (E) | $51B | Nasdaq calendar |
-| ROK | Rockwell Automation, Inc. | Earnings (BMO, FQ Sep/2026) | 2026-11-05 | (E) | $50B | Nasdaq calendar; new to the ≥ $50B / detail set this week (cap at the $50B boundary) |
-| AKAM | Akamai Technologies, Inc. [A-queue] | Earnings (AMC, FQ Sep/2026) | 2026-11-05 | **(C)** | $14B | Nasdaq calendar; (C) Akamai release 2026-10-08, carried from W43, not re-read |
-| BRK.A | Berkshire Hathaway Inc. | Earnings (n/s, FQ Sep/2026) | 2026-11-06 | (E) | $1,174B | Nasdaq calendar |
-| BRK.B | Berkshire Hathaway Inc. | Earnings (n/s, FQ Sep/2026) | 2026-11-06 | (E) | $1,174B | Nasdaq calendar |
-| ENB | Enbridge Inc | Earnings (BMO, FQ Sep/2026) | 2026-11-06 | (E) | $108B | Nasdaq calendar |
-| MRNA | Moderna, Inc. | Earnings (BMO, FQ Sep/2026) | 2026-11-06 | (E) | $89B | Nasdaq calendar; FMP agrees (EPS est -1.1, rev est $0.89B) |
-| BAM | Brookfield Asset Management | Earnings (BMO, FQ Sep/2026) | 2026-11-06 | (E) | $78B | Nasdaq calendar |
-| HUM | Humana Inc. | Earnings (BMO, FQ Sep/2026) | 2026-11-06 | (E) | $50B | Nasdaq calendar |
-| CEG | Constellation Energy Corporation | Earnings (BMO, FQ Sep/2026) | 2026-11-09 | (E) | $94B | Nasdaq calendar; **Δ vs W43 2026-11-06** |
-| KKR | KKR & Co. Inc. | Earnings (BMO, FQ Sep/2026) | 2026-11-09 | (E) | $86B | Nasdaq calendar |
-| B | Barrick Mining Corporation | Earnings (BMO, FQ Sep/2026) | 2026-11-09 | (E) | $64B | Nasdaq calendar |
-| OXY | Occidental Petroleum Corporation | Earnings (AMC, FQ Sep/2026) | 2026-11-09 | (E) | $63B | Nasdaq calendar |
-| TTWO | Take-Two Interactive Software, Inc. [A-queue] | Earnings (AMC (4:30 pm ET), FQ Sep/2026) | 2026-11-09 | **(C)** | $36B | NEW (C): Take-Two IR release "to Report Second Quarter Fiscal Year 2027 Results on Monday, November 9, 2026" |
-| PBR | Petroleo Brasileiro S.A.- Petrobras | Earnings (AMC, FQ Sep/2026) | 2026-11-10 | (E) | $141B | Nasdaq calendar |
-| PBR.A | Petroleo Brasileiro S.A.- Petrobras | Earnings (AMC, FQ Sep/2026) | 2026-11-10 | (E) | $141B | Nasdaq calendar |
-| NBIS | Nebius Group N.V. [A-queue] | Earnings (n/s, FQ Sep/2026) | 2026-11-10 | (E) | $47B | Nasdaq calendar; searched 2026-11-01, no issuer notice found (calendar sites only) |
-| CSCO | Cisco Systems, Inc. [A-queue] | Earnings (n/s, FQ Oct/2026) | 2026-11-11 | (E) | $428B | Nasdaq calendar; FMP agrees (EPS est 1.32, rev est $18.11B); searched 2026-11-01, no FQ1 notice found |
-| TDG | Transdigm Group Incorporated | Earnings (n/s, FQ Sep/2026) | 2026-11-11 | (E) | $65B | Nasdaq calendar |
-| AMAT | Applied Materials, Inc. [A-queue] | Earnings (AMC (call 4:30 pm ET), FQ Oct/2026) | 2026-11-12 | **(C)** | $335B | NEW (C): Applied Materials release 2026-10-22 "to Report Fourth Quarter Fiscal 2026 Results" (appliedmaterials.com/.../102226-...) |
-| BN | Brookfield Corporation | Earnings (BMO, FQ Sep/2026) | 2026-11-12 | (E) | $97B | Nasdaq calendar |
-| NU | Nu Holdings Ltd. | Earnings (n/s, FQ Sep/2026) | 2026-11-12 | (E) | $59B | Nasdaq calendar |
-| MUFG | Mitsubishi UFJ Financial Group Inc | Earnings (n/s, FQ Sep/2026) | 2026-11-13 | (E) | $260B | Nasdaq calendar |
-| SMFG | Sumitomo Mitsui Financial Group Inc | Earnings (n/s, FQ Sep/2026) | 2026-11-13 | (E) | $157B | Nasdaq calendar |
-| MFG | Mizuho Financial Group, Inc. | Earnings (n/s, FQ Sep/2026) | 2026-11-13 | (E) | $124B | Nasdaq calendar |
-| NVDA | NVIDIA Corporation [A-queue] | Earnings (AMC (call 2:00 pm PT), FQ Oct/2026) | 2026-11-17 | **(C)** | $5,149B | NEW (C): nvidianews.nvidia.com "NVIDIA Sets Conference Call for Third-Quarter Financial Results" (search result, issuer newsroom); release ~1:20 pm PT; FMP agrees (EPS est 2.47, rev est $108.80B); **Δ vs W43 2026-11-18** |
-| HD | Home Depot, Inc. (The) [A-queue] | Earnings (BMO, FQ Oct/2026) | 2026-11-17 | (E) | $328B | Nasdaq calendar; searched 2026-11-01, no issuer notice found (calendar sites only) |
-| BHP | BHP Group Limited | Earnings (n/s, FQ Sep/2026) | 2026-11-17 | (E) | $208B | Nasdaq calendar |
-| DIS | Walt Disney Company (The) [D held] | Earnings (BMO (webcast 8:30 am ET), FQ Sep/2026) | 2026-11-17 | **(C)** | $192B | NEW (C): Disney release 2026-10-12 (s206.q4cdn.com Walt Disney webcast notice); FMP agrees (EPS est 1.69, rev est $25.19B) |
-| MDT | Medtronic plc | Earnings (n/s, FQ Oct/2026) | 2026-11-17 | (E) | $124B | Nasdaq calendar |
-| PDD | PDD Holdings Inc. | Earnings (n/s, FQ Sep/2026) | 2026-11-17 | (E) | $113B | Nasdaq calendar |
-| PANW | Palo Alto Networks, Inc. [A-queue] | Earnings (n/s, FQ Oct/2026) | 2026-11-18 | (E) | $311B | Nasdaq calendar; searched 2026-11-01, no issuer notice found (calendar sites only) |
-| TJX | TJX Companies, Inc. (The) | Earnings (BMO, FQ Oct/2026) | 2026-11-18 | (E) | $156B | Nasdaq calendar |
-| LOW | Lowe's Companies, Inc. | Earnings (BMO, FQ Oct/2026) | 2026-11-18 | (E) | $116B | Nasdaq calendar |
-| TGT | Target Corporation [A-queue] | Earnings (BMO, FQ Oct/2026) | 2026-11-18 | **(C)** | $69B | Nasdaq calendar; (C) corporate.target.com, carried from W43, not re-read; FMP agrees (EPS est 2.05, rev est $26.39B) |
-| WMT | Walmart Inc. [A-queue] | Earnings (BMO, FQ Oct/2026) | 2026-11-19 | **(C)** | $962B | Nasdaq calendar; (C) corporate.walmart.com, carried from W43, not re-read; FMP agrees (EPS est 0.638, rev est $187.24B) |
-| INTU | Intuit Inc. [A-queue] | Earnings (n/s, FQ Oct/2026) | 2026-11-19 | (E) | $89B | Nasdaq calendar; searched 2026-11-01, no issuer notice found (calendar sites only) |
-| ROST | Ross Stores, Inc. | Earnings (n/s, FQ Oct/2026) | 2026-11-19 | (E) | $74B | Nasdaq calendar |
-| NTES | NetEase, Inc. | Earnings (n/s, FQ Sep/2026) | 2026-11-19 | (E) | $72B | Nasdaq calendar |
-| KEYS | Keysight Technologies Inc. | Earnings (AMC, FQ Oct/2026) | 2026-11-19 | (E) | $56B | Nasdaq calendar; **Δ vs W43 2026-11-23** |
+| KKR | KKR & Co. Inc. | Earnings (BMO, FQ Sep/2026) | 2026-11-09 | (E) | $88B | Nasdaq calendar |
+| CEG | Constellation Energy Corporation | Earnings (BMO, FQ Sep/2026) | 2026-11-09 | (E) | $85B | Nasdaq calendar |
+| B | Barrick Mining Corporation | Earnings (BMO, FQ Sep/2026) | 2026-11-09 | (E) | $66B | Nasdaq calendar |
+| OXY | Occidental Petroleum Corporation | Earnings (AMC, FQ Sep/2026) | 2026-11-09 | (E) | $56B | Nasdaq calendar |
+| TTWO | Take-Two Interactive Software, Inc. [A-queue] | Earnings (AMC, FQ Sep/2026) | 2026-11-09 | **(C)** | $40B | Take-Two IR release "to Report Second Quarter Fiscal Year 2027 Results on Monday, November 9, 2026" (4:30 pm ET), carried from W44, not re-read |
+| PBR | Petroleo Brasileiro S.A.- Petrobras | Earnings (AMC, FQ Sep/2026) | 2026-11-10 | (E) | $121B | Nasdaq calendar |
+| PBR.A | Petroleo Brasileiro S.A.- Petrobras | Earnings (AMC, FQ Sep/2026) | 2026-11-10 | (E) | $121B | Nasdaq calendar |
+| TDG | Transdigm Group Incorporated | Earnings (BMO, FQ Sep/2026) | 2026-11-10 | (E) | $66B | Nasdaq calendar; **Δ 11-11→11-10 vs W44** |
+| CSCO | Cisco Systems, Inc. [A-queue] | Earnings (AMC, FQ Oct/2026) | 2026-11-12 | **(C)** | $377B | NEW (C): Cisco release 2026-11-03 "Schedules Conference Call for Q1 FY2027 Financial Results": call Thu 11-12 1:30 pm PT, results after market close (newsroom.cisco.com / investor.cisco.com via WebSearch 2026-11-08); FMP agrees (EPS est 1.32, rev est $18.11B); **Δ 11-11→11-12 vs W44** |
+| AMAT | Applied Materials, Inc. [A-queue] | Earnings (AMC, FQ Oct/2026) | 2026-11-12 | **(C)** | $253B | Applied Materials release 2026-10-22, carried from W44, not re-read |
+| BN | Brookfield Corporation | Earnings (BMO, FQ Sep/2026) | 2026-11-12 | (E) | $102B | Nasdaq calendar |
+| NU | Nu Holdings Ltd. | Earnings (n/s, FQ Sep/2026) | 2026-11-12 | (E) | $57B | Nasdaq calendar |
+| NBIS | Nebius Group N.V. [A-queue] | Earnings (BMO, FQ Sep/2026) | 2026-11-12 | **(C)** | $33B | NEW (C): Nebius notice dated 2026-10-30 (nebius.com/newsroom, WebFetch 2026-11-08): results Thu 11-12 before market open, call 8:00 am ET. Δ vs W44 Nasdaq 11-10 (E); Nasdaq now 11-12 n/s |
+| MUFG | Mitsubishi UFJ Financial Group Inc | Earnings (n/s, FQ Sep/2026) | 2026-11-13 | (E) | $251B | Nasdaq calendar |
+| SMFG | Sumitomo Mitsui Financial Group Inc | Earnings (n/s, FQ Sep/2026) | 2026-11-13 | (E) | $150B | Nasdaq calendar |
+| MFG | Mizuho Financial Group, Inc. | Earnings (n/s, FQ Sep/2026) | 2026-11-13 | (E) | $117B | Nasdaq calendar |
+| NVDA | NVIDIA Corporation [A-queue] | Earnings (AMC, FQ Oct/2026) | 2026-11-17 | **(C)** | $4,377B | nvidianews.nvidia.com call notice (call Tue 11-17 2:00 pm PT), carried from W44, not re-read; FMP agrees (EPS est 2.47, rev est $108.80B) |
+| HD | Home Depot, Inc. (The) [A-queue] | Earnings (BMO, FQ Oct/2026) | 2026-11-17 | **(C)** | $349B | NEW (C): Home Depot IR events page (ir.homedepot.com/events-and-presentations, WebFetch 2026-11-08): Q3 release Tue 11-17 9:00 am ET [page text as returned by the fetch tool]; search results disagree on time (pre-market vs 4:05 pm) |
+| BHP | BHP Group Limited | Earnings (n/s, FQ Sep/2026) | 2026-11-17 | (E) | $203B | Nasdaq calendar |
+| DIS | Walt Disney Company (The) [D held] | Earnings (BMO, FQ Sep/2026) | 2026-11-17 | **(C)** | $202B | Disney webcast notice 2026-10-12 (Tue 11-17, webcast 8:30 am ET), carried from W44, not re-read; FMP agrees (EPS est 1.69, rev est $25.19B) |
+| PDD | PDD Holdings Inc. | Earnings (n/s, FQ Sep/2026) | 2026-11-17 | (E) | $119B | Nasdaq calendar |
+| PANW | Palo Alto Networks, Inc. [A-queue] | Earnings (AMC, FQ Oct/2026) | 2026-11-18 | **(C-secondary)** | $258B | NEW: title "Palo Alto Networks to Announce Fiscal First Quarter 2027 Financial Results on Wednesday, November 18, 2026" (PR Newswire copy on stockhub.kr; paloaltonetworks.com not opened); webcast time not returned |
+| TJX | TJX Companies, Inc. (The) | Earnings (BMO, FQ Oct/2026) | 2026-11-18 | (E) | $152B | Nasdaq calendar |
+| LOW | Lowe's Companies, Inc. | Earnings (BMO, FQ Oct/2026) | 2026-11-18 | (E) | $127B | Nasdaq calendar |
+| TGT | Target Corporation [A-queue] | Earnings (BMO, FQ Oct/2026) | 2026-11-18 | **(C)** | $72B | corporate.target.com, carried from W44, not re-read; FMP agrees (EPS est 2.06, rev est $26.43B) |
+| WMT | Walmart Inc. [A-queue] | Earnings (BMO, FQ Oct/2026) | 2026-11-19 | **(C)** | $1,013B | corporate.walmart.com, carried from W44, not re-read; FMP agrees (EPS est 0.638, rev est $187.24B) |
+| INTU | Intuit Inc. [A-queue] | Earnings (AMC, FQ Oct/2026) | 2026-11-19 | **(C-secondary)** | $95B | NEW: investors.intuit.com IR calendar snippet (WebSearch 2026-11-08) lists Q1 FY27 call 11-19 4:30 pm ET; single source, press release not seen |
+| NTES | NetEase, Inc. | Earnings (BMO, FQ Sep/2026) | 2026-11-19 | (E) | $81B | Nasdaq calendar |
+| ROST | Ross Stores, Inc. | Earnings (n/s, FQ Oct/2026) | 2026-11-19 | (E) | $75B | Nasdaq calendar |
 | VEEV | Veeva Systems Inc. | Earnings (n/s, FQ Oct/2026) | 2026-11-19 | (E) | $50B | Nasdaq calendar |
-| A | Agilent Technologies, Inc. | Earnings (n/s, FQ Oct/2026) | 2026-11-23 | (E) | $51B | Nasdaq calendar; new to the ≥ $50B / detail set this week (cap at the $50B boundary) |
-| DELL | Dell Technologies Inc. [A-queue] | Earnings (n/s, FQ Oct/2026) | 2026-11-24 | (E) | $302B | Nasdaq calendar; searched 2026-11-01, no issuer notice found (calendar sites only) |
-| BABA | Alibaba Group Holding Limited | Earnings (n/s, FQ Sep/2026) | 2026-11-24 | (E) | $241B | Nasdaq calendar; FMP agrees (EPS est 1.61, rev est $40.26B) |
-| ADI | Analog Devices, Inc. | Earnings (BMO, FQ Oct/2026) | 2026-11-24 | (E) | $210B | Nasdaq calendar |
-| ADSK | Autodesk, Inc. | Earnings (n/s, FQ Oct/2026) | 2026-11-24 | (E) | $51B | Nasdaq calendar |
-| DE | Deere & Company | Earnings (BMO, FQ Oct/2026) | 2026-11-25 | (E) | $178B | Nasdaq calendar |
-| CRWD | CrowdStrike Holdings, Inc. [A-queue] | Earnings (n/s, FQ Oct/2026) | 2026-12-01 | (E) | $267B | Nasdaq calendar |
-| MRVL | Marvell Technology, Inc. [A-queue] | Earnings (n/s, FQ Oct/2026) | 2026-12-01 | (E) | $191B | Nasdaq calendar |
-| BNS | Bank of Nova Scotia (The) | Earnings (n/s, FQ Oct/2026) | 2026-12-01 | (E) | $117B | Nasdaq calendar |
-| NTAP | NetApp, Inc. [A-queue] | Earnings (AMC, FQ Oct/2026) | 2026-12-01 | (E) | $43B | Nasdaq calendar; **Δ vs W43 2026-11-24** |
-| OKTA | Okta, Inc. [A-queue] | Earnings (n/s, FQ Oct/2026) | 2026-12-01 | (E) | $39B | Nasdaq calendar |
-| RY | Royal Bank Of Canada | Earnings (n/s, FQ Oct/2026) | 2026-12-02 | (E) | $285B | Nasdaq calendar |
-| CRM | Salesforce, Inc. [A-queue] | Earnings (n/s, FQ Oct/2026) | 2026-12-02 | (E) | $190B | Nasdaq calendar |
-| SNOW | Snowflake Inc. [A-queue] | Earnings (n/s, FQ Oct/2026) | 2026-12-02 | (E) | $117B | Nasdaq calendar |
-| TD | Toronto Dominion Bank (The) | Earnings (n/s, FQ Oct/2026) | 2026-12-03 | (E) | $208B | Nasdaq calendar |
-| BMO | Bank Of Montreal | Earnings (n/s, FQ Oct/2026) | 2026-12-03 | (E) | $122B | Nasdaq calendar |
-| CM | Canadian Imperial Bank of Commerce | Earnings (n/s, FQ Oct/2026) | 2026-12-03 | (E) | $108B | Nasdaq calendar |
-| HPE | Hewlett Packard Enterprise Company [A-queue] | Earnings (n/s, FQ Oct/2026) | 2026-12-03 | (E) | $78B | Nasdaq calendar |
-| AZO | AutoZone, Inc. | Earnings (n/s, FQ Nov/2026) | 2026-12-08 | (E) | $50B | Nasdaq calendar |
-| ORCL | Oracle Corporation [A-queue] | Earnings (n/s, FQ Nov/2026) | 2026-12-09 | (E) | $422B | Nasdaq calendar |
-| ADBE | Adobe Inc. [A-queue] | Earnings (n/s, FQ Nov/2026) | 2026-12-09 | (E) | $97B | Nasdaq calendar; FMP agrees (EPS est 6.32, rev est $6.83B) |
-| SNPS | Synopsys, Inc. | Earnings (n/s, FQ Oct/2026) | 2026-12-09 | (E) | $94B | Nasdaq calendar |
-| AVGO | Broadcom Inc. [A-queue] | Earnings (n/s, FQ Oct/2026) | 2026-12-10 | (E) | $1,647B | Nasdaq calendar; **Δ vs W43 aggregator-only 2026-12-09 (E); Nasdaq now lists 12-10** |
-| COST | Costco Wholesale Corporation | Earnings (n/s, FQ Nov/2026) | 2026-12-10 | (E) | $441B | Nasdaq calendar; FMP agrees (EPS est 4.93, rev est $74.25B); window end rolled 12-09 → 12-16 so COST (W43 1A.2 FMP row 12-10) is now inside the C window; date unchanged |
-| MU | Micron Technology, Inc. [A-queue] | Earnings (n/s, FQ Nov/2026) | 2026-12-16 | (E) | $1,057B | Nasdaq calendar; **Δ vs W43 aggregator 2026-12-23 (E); Nasdaq now lists 12-16**; searched 2026-11-01, no issuer notice found (calendar sites only) |
+| HPE | Hewlett Packard Enterprise Company [A-queue] | Earnings (AMC, FQ Oct/2026) | 2026-11-23 | (E) | $59B | Nasdaq calendar; **Δ vs W44 12-03 → 11-23**; WebSearch 2026-11-08 found no HPE date notice (prior-year Q4 print was early December) |
+| BABA | Alibaba Group Holding Limited | Earnings (n/s, FQ Sep/2026) | 2026-11-24 | (E) | $262B | Nasdaq calendar 11-24; **FMP shows 11-19 (EPS est 1.61, rev est $40.25B) - date disagreement, unresolved** |
+| DELL | Dell Technologies Inc. [A-queue] | Earnings (n/s, FQ Oct/2026) | 2026-11-24 | (E) | $201B | Nasdaq calendar; Dell IR page lists "Fiscal Year 2027 Third Quarter Results" upcoming event with no date (Tavily 2026-11-08); prior-year call was 11-25; no issuer date notice found |
+| ADI | Analog Devices, Inc. | Earnings (BMO, FQ Oct/2026) | 2026-11-24 | (E) | $175B | Nasdaq calendar |
+| MDT | Medtronic plc | Earnings (BMO, FQ Oct/2026) | 2026-11-24 | (E) | $134B | Nasdaq calendar; **Δ 11-17→11-24 vs W44** |
+| ADSK | Autodesk, Inc. | Earnings (AMC, FQ Oct/2026) | 2026-11-24 | (E) | $56B | Nasdaq calendar |
+| DE | Deere & Company | Earnings (BMO, FQ Oct/2026) | 2026-11-25 | (E) | $179B | Nasdaq calendar |
+| CRWD | CrowdStrike Holdings, Inc. [A-queue] | Earnings (AMC, FQ Oct/2026) | 2026-12-01 | **(C)** | $222B | NEW (C): CrowdStrike IR notice (ir.crowdstrike.com): results after close Tue 12-01, call 2:00 pm PT (WebSearch 2026-11-08) |
+| MRVL | Marvell Technology, Inc. [A-queue] | Earnings (n/s, FQ Oct/2026) | 2026-12-01 | **(C)** | $117B | NEW (C): Marvell IR release 2026-11-06 "Announces Conference Call to Review Q3 FY2027 Financial Results": Tue 12-01, 1:30 pm PT (investor.marvell.com via WebSearch). Separate: Lumentum merger announced 11-02 (see 1A.7) |
+| NTAP | NetApp, Inc. [A-queue] | Earnings (AMC, FQ Oct/2026) | 2026-12-01 | (E) | $33B | Nasdaq calendar (AMC); NetApp Q1 FY27 release lists "Q2 FY2027 results target date: December 1, 2026" (issuer target, via WebSearch snippet); Q2 webcast notice not yet issued |
+| OKTA | Okta, Inc. [A-queue] | Earnings (AMC, FQ Oct/2026) | 2026-12-01 | **(C)** | $30B | NEW (C): Okta release "to Announce Third Quarter Fiscal Year 2027 Financial Results on December 1, 2026": after close, webcast 2:00 pm PT (finviz copy via WebSearch 2026-11-08) |
+| CRM | Salesforce, Inc. [A-queue] | Earnings (n/s, FQ Oct/2026) | 2026-12-02 | (E) | $183B | Nasdaq calendar; WebSearch + Tavily 2026-11-08 found no Salesforce timing notice (prior-year notice came 11-05 for 12-03); calendar sites say 12-01 or 12-02 |
+| BMO | Bank Of Montreal | Earnings (BMO, FQ Oct/2026) | 2026-12-02 | (E) | $120B | Nasdaq calendar; **Δ 12-03→12-02 vs W44** |
+| BNS | Bank of Nova Scotia (The) | Earnings (BMO, FQ Oct/2026) | 2026-12-02 | (E) | $113B | Nasdaq calendar; **Δ 12-01→12-02 vs W44** |
+| SNOW | Snowflake Inc. [A-queue] | Earnings (AMC, FQ Oct/2026) | 2026-12-02 | **(C)** | $95B | NEW (C): Snowflake release dated 2026-11-02 "to Announce Financial Results for the Third Quarter of Fiscal 2027 on December 2, 2026": after close, call 2:00 pm PT (snowflake.com via WebSearch) |
+| RY | Royal Bank Of Canada | Earnings (BMO, FQ Oct/2026) | 2026-12-03 | (E) | $282B | Nasdaq calendar; **Δ 12-02→12-03 vs W44** |
+| TD | Toronto Dominion Bank (The) | Earnings (n/s, FQ Oct/2026) | 2026-12-03 | (E) | $201B | Nasdaq calendar |
+| CM | Canadian Imperial Bank of Commerce | Earnings (BMO, FQ Oct/2026) | 2026-12-03 | (E) | $105B | Nasdaq calendar |
+| AZO | AutoZone, Inc. | Earnings (n/s, FQ Nov/2026) | 2026-12-08 | (E) | $53B | Nasdaq calendar |
+| ORCL | Oracle Corporation [A-queue] | Earnings (n/s, FQ Nov/2026) | 2026-12-09 | (E) | $348B | Nasdaq calendar 12-09; calendar sites project 12-09 or 12-10; no Oracle date notice found (last year's came ~8 days ahead) |
+| ADBE | Adobe Inc. [A-queue] | Earnings (n/s, FQ Nov/2026) | 2026-12-09 | (E) | $96B | Nasdaq calendar; FMP agrees (EPS est 6.32, rev est $6.83B); WebSearch 2026-11-08: no Adobe notice, calendar sites project 12-09 |
+| SNPS | Synopsys, Inc. | Earnings (n/s, FQ Oct/2026) | 2026-12-09 | (E) | $84B | Nasdaq calendar |
+| AVGO | Broadcom Inc. [A-queue] | Earnings (n/s, FQ Oct/2026) | 2026-12-10 | (E) | $1,392B | Nasdaq calendar 12-10; WebSearch 2026-11-08: no Broadcom notice; one calendar site expects 12-10 |
+| COST | Costco Wholesale Corporation | Earnings (n/s, FQ Nov/2026) | 2026-12-10 | (E) | $472B | Nasdaq calendar; FMP agrees (EPS est 4.93, rev est $74.28B) |
+| MU | Micron Technology, Inc. [A-queue] | Earnings (n/s, FQ Nov/2026) | 2026-12-16 | (E) | $743B | Nasdaq calendar 12-16; WebSearch 2026-11-08: no Micron notice; one countdown site 12-16 4:30 pm ET (unconfirmed) |
+| ACN | Accenture plc | Earnings (n/s, FQ Nov/2026) | 2026-12-17 | (E) | $177B | Nasdaq calendar |
+| CTAS | Cintas Corporation | Earnings (n/s, FQ Nov/2026) | 2026-12-17 | (E) | $90B | Nasdaq calendar |
+| NKE | Nike, Inc. | Earnings (n/s, FQ Nov/2026) | 2026-12-17 | (E) | $59B | Nasdaq calendar; FMP agrees (EPS est 0.34, rev est $11.13B) |
 
-Aggregator-only A-queue rows: none left outside Nasdaq (AVGO, MU and ORCL are now on the Nasdaq calendar inside the window: AVGO 12-10 Δ vs aggregator 12-09; MU 12-16 Δ vs aggregator 12-23; ORCL 12-09 unchanged).
-
-**A-queue names with NO forward date in this window:** IBM, META, JPM (printed/outside; next print in 1A.3).
+Aggregator-only A-queue rows outside Nasdaq: none (every forward A-queue name is on the Nasdaq calendar).
 
 **Full enumeration of the remainder, by session** — Nasdaq ≥ $2B reporters NOT in the detail table, ordered by market cap within the day; ᵇ = before open, ᵃ = after close, no mark = time not supplied. All (E).
 
-- **2026-11-02** (77): IDXXᵇ ELᵇ PEGᵇ ONᵃ RYAAYᵇ FOXᵇ FOXAᵇ ROKUᵃ Lᵇ TSEMᵇ PSᵃ SBACᵃ VNOMᵃ PKX CRBGᵃ CHKPᵇ EQHᵃ NBIXᵃ LSCCᵃ TEMᵇ JAZZᵃ CNAᵇ DOCᵃ SMMT BWXTᵃ FNᵃ UDRᵃ GRABᵃ BMRNᵃ CLXᵃ AMG MTCHᵃ KRYSᵇ AEISᵃ HNGEᵃ RHPᵃ ALSNᵃ VOYAᵃ TGTX JANᵃ AXSMᵇ RIGᵃ VALᵃ MSAᵃ TBBBᵃ VNOᵃ WAYᵃ CEᵃ CHHᵇ SBRAᵃ OGSᵃ CRCᵃ TVTXᵃ CRGYᵃ KTB PAMᵃ PAYᵃ LQDA CBTᵃ OTTRᵃ TGS CIFRᵇ XENE IRTᵃ EROᵃ BSMᵃ LIFEᵃ BCCᵃ ALM PPLIᵃ AKRᵇ VVXᵃ RNWᵃ ADEAᵃ CALXᵃ UFPT INSPᵃ
-- **2026-11-03** (138): TEVAᵇ KDPᵇ WATᵇ XYZᵃ AIGᵃ YUMᵇ SYYᵇ PRUᵃ ADMᵇ FTSᵇ PHGᵇ CPNGᵃ EXPDᵇ FISVᵇ IFFᵃ BNTXᵇ OVVᵃ BRᵇ DDᵇ RVTYᵇ TOSTᵃ ZBRAᵇ LDOSᵇ DTᵇ BALLᵇ TLNᵇ YUMCᵇ ULSᵇ UNMᵃ AIZᵃ ITᵇ OHIᵃ EMBJ SWKSᵃ PNWᵇ FMSᵇ AFGᵃ WTRGᵃ DOCNᵇ JKHYᵃ RRXᵇ AES TXᵃ SYRE MDGLᵇ PCVX PAYPᵃ HLᵃ HSICᵇ ENLTᵇ SMᵃ CORTᵃ PCORᵃ IBRX APTVᵇ JXNᵃ PACSᵃ ALKSᵇ AMRXᵇ SLAB MTDRᵃ MODᵃ ADTᵇ RYTMᵇ DUOLᵃ PJTᵇ NPOᵇ TFPMᵃ MOSᵃ XMTRᵇ SSRMᵃ JBTMᵇ GXOᵃ CVIᵇ MCYᵃ AROCᵇ MIRMᵃ VRNSᵃ HGTYᵇ STVNᵇ ECGᵃ SGHCᵃ SHCᵇ FBINᵃ RRRᵃ LPXᵇ BETAᵇ HLNEᵇ CNKᵇ BWIN SKYᵃ VSNTᵇ TACᵇ CRVL PRIMᵃ SPHR VACᵃ FRSHᵃ CARᵃ SRADᵇ TNGX GEFᵃ GEF.Bᵃ IEPᵇ SEB PARRᵃ TARS HNIᵇ ASHᵃ KNFᵇ SDRLᵃ IPGPᵇ KAI ATRCᵃ IDYA DNLIᵃ HURNᵃ BEAM MZTIᵇ TALOᵃ DRHᵃ MARA EROKᵃ GPKᵇ LBTYAᵇ LBTYBᵇ LBTYKᵇ IOSPᵃ LINDᵇ UPSTᵇ NVTSᵃ LTCᵃ ALMRᵃ FLYWᵃ ADUSᵃ OUSTᵃ AUPH ANDEᵃ
-- **2026-11-04** (223): VMRKᵃ COHRᵃ SLFᵃ MDLNᵇ RVMDᵃ MLMᵇ RPRXᵇ TKOᵃ NTRᵃ TSᵃ EXPEᵃ SNᵇ ATOᵃ KHCᵇ CPAYᵃ Qᵇ ESᵃ GFSᵇ UTHRᵇ STEᵃ TPLᵃ AMCRᵃ PRᵃ PTCᵃ CDWᵇ CRCLᵇ RGLDᵃ BEPᵇ FISᵇ WESᵃ ZBHᵇ CWᵃ ITTᵃ APAᵃ CRLᵇ CFᵃ HSTᵃ NWSᵃ NWSAᵃ PAASᵃ Wᵇ SWKᵇ PFGCᵇ FICOᵃ TRMBᵇ SITMᵃ MKSIᵃ CDEᵃ COKEᵃ FLUTᵇ HUBSᵃ FIGᵃ PAYCᵃ WTSᵃ TECH AMHᵃ NYTᵇ UHALᵃ UHAL.Bᵃ ALBᵃ CHYMᵃ PODDᵇ QGENᵃ BIOᵃ BIO.Bᵃ BEPCᵇ CAIᵃ SOLSᵇ CGNXᵃ OCᵇ SNAPᵃ BRKRᵇ KNTKᵃ LLYVA LLYVK CYTKᵃ PRIᵃ WLKᵇ CHRDᵃ VIAVᵃ HUTᵇ NNNᵇ TKRᵇ RALᵇ BROSᵃ AVTᵇ NFGᵃ SOBOᵃ IONS Zᵃ ZGᵃ TRNOᵃ GRALᵃ MGYᵃ VCTRᵃ CAVAᵃ MACᵃ NICEᵇ MATXᵃ SWXᵇ ELFᵃ ACTᵃ BTGᵃ LBᵃ YOUᵇ BKHᵃ MURᵃ MTGᵃ CAMTᵇ KVYOᵃ NXE CRUSᵃ RYNᵃ ORAᵃ OGCᵃ EXPᵇ BLLNᵃ SEIᵃ RELYᵃ TREXᵇ OBDCᵃ RIOTᵇ JOBYᵃ GOLFᵇ MTRNᵇ REYNᵇ LUMNᵃ CIGIᵇ NWEᵃ OPCHᵇ OPLNᵇ RDNᵃ DNTH ESABᵇ SEZLᵃ HCCᵃ VSHᵇ BXSLᵇ ADPTᵃ LIVNᵇ TRMDᵇ OTFᵃ VSECᵃ TPCᵃ CRKᵃ DAVEᵃ SKTᵃ BCOᵇ VCYTᵃ FSLYᵃ LOPEᵃ ARQTᵃ EEᵃ NVSTᵃ AVNTᵇ MSGEᵇ WBIᵃ IPARᵃ PLMRᵃ SMGᵇ ACADᵃ MWAᵃ TNK BATRAᵇ BATRKᵇ CXTᵃ GNWᵃ PKᵃ AWRᵃ NATLᵇ ARISᵃ USLM MGNIᵃ DYN FRPTᵇ AVAᵇ IONDᵃ CWKᵇ CXWᵃ KDᵇ VGNTᵇ PTRNᵃ COTYᵃ GPORᵃ FSMᵃ ARCBᵇ VRDNᵇ MGEE AMCᵃ SII ACHCᵃ AAUC POWIᵃ BTUᵇ ADMAᵃ VECOᵃ NGVTᵃ TTAMᵃ RXRX NAMS HCIᵃ CLOVᵃ VERXᵃ UWMCᵇ PGENᵃ RCUSᵃ ATHMᵇ RAMP KMTᵇ RDW HRMYᵇ SDGRᵃ PRGOᵇ MRVIᵃ LEUᵃ PGNYᵃ BCRXᵇ XNCR ECPGᵃ AMPLᵃ VETᵇ UUUUᵃ VIRᵃ
-- **2026-11-05** (214): MTᵇ MCHPᵃ AUᵇ EDᵃ ONCᵇ LYVᵃ CHT KMBᵇ AXONᵃ GMABᵇ IRMᵇ MTDᵃ ZTSᵇ AEEᵃ PBAᵃ ECHO DTEᵇ AFRMᵃ GHᵃ VRSKᵇ RLᵇ TPRᵇ GPNᵇ CIB USFDᵇ VTRSᵇ FWONAᵇ FWONKᵇ EVRGᵇ MTSIᵇ BCEᵇ Uᵇ RGAᵃ SBSᵃ LAMRᵇ JHXᵃ HALOᵃ CGᵇ SOLVᵃ REGᵃ TIGOᵇ IONQᵃ AHRᵃ MAIRᵇ FROGᵃ TXRHᵃ BSYᵇ QXO SUZᵃ ARWᵇ GMEDᵃ GSAT FNFᵃ NVMIᵇ TXGᵃ IRENᵃ WMSᵇ DKNGᵃ CPTᵃ QNTᵃ IAGᵃ OSCRᵇ PTGX PCTYᵃ CTREᵃ VIRTᵇ DBXᵃ LNCᵇ SAROᵃ WYNNᵃ AGᵇ GILᵇ MPᵃ TAPᵇ TAP.Aᵇ CELH COMPᵃ PRMBᵇ EPAMᵇ OTEXᵇ AAOIᵃ AUGOᵃ LNTH Gᵃ LYFTᵃ AAON LOARᵇ INGRᵇ FTDRᵇ DOCSᵃ TFXᵇ BBUCᵇ INSWᵇ OUTᵃ IBPᵇ ACIWᵇ KRMNᵃ HAEᵇ STEPᵃ WTM BGCᵇ MIDDᵇ CONᵃ NSITᵇ NXSTᵇ MAINᵃ LFSTᵇ DFTX VNTᵇ MRXᵇ HASIᵃ MDAᵇ MCᵃ SYNA PRMᵇ CORZᵇ HHHᵃ WKᵃ APLEᵃ MATᵃ NNIᵃ IOVAᵇ CNRᵇ RLAY EWTX ICUIᵃ IRTCᵃ COLDᵇ BILLᵃ MDUᵇ TKC DIODᵃ PLNTᵇ PLSEᵃ USAR LIONᵃ BTEᵃ GEOᵇ IRON AVPTᵃ APPNᵇ FAᵇ AMLX FIGSᵃ LMNDᵇ ACLSᵇ ACMRᵇ CENXᵃ PURRᵃ CELCᵃ WSCᵃ GPGIᵇ SHOOᵇ CPKᵃ ALRMᵃ NMIHᵃ TDCᵃ AGOᵃ FOURᵇ FSKᵇ WRBYᵇ SHAKᵇ SPNTᵃ DNOWᵇ NOGᵃ CARGᵃ NTCTᵇ IMAXᵇ PRVAᵇ FIVNᵃ AAPᵇ FGᵃ DXPE CALY MHᵇ MBX SKWDᵃ LCLNᵇ GRDNᵃ SMRᵃ DCOᵇ ZLABᵇ PLUS BHF PAYOᵇ LCIIᵇ PTONᵇ LPG TMDXᵃ PBHᵇ BKVᵇ TICᵇ HLIOᵃ LASRᵃ GRNDᵃ AGIOᵇ AGMᵃ VERAᵃ VCELᵇ PVLAᵇ CTRIᵇ GCTᵇ IMNM BOBSᵇ DNN NWNᵇ SOUNᵃ NGLᵃ PENNᵇ TRLVᵇ HIMXᵇ SRPTᵃ GENB ZYME
-- **2026-11-06** (41): VSTᵇ HMC UI PPLᵇ PAAᵇ BIPᵇ BENᵇ EMAᵇ TU CHTRᵇ FRHC ELANᵇ VSAT KT WULFᵇ FLRᵇ VEONᵇ ESNTᵇ PAGPᵇ COGT OKLOᵇ STWDᵇ BH BH.A DKᵇ CLMTᵇ AQN TDS ATMUᵇ NHC DKLᵇ KYIVᵇ AD BKDᵇ SHOᵇ UAᵇ UAAᵇ TILEᵇ DV UTZᵇ AMRᵇ
-- **2026-11-09** (52): FERGᵇ IXᵇ SKYDᵃ RKLBᵃ BAPᵃ ROIVᵇ NRGᵇ BEKE KSPIᵇ ASTSᵃ RBAᵇ SGIᵇ CNHᵇ JBSᵃ EQXᵃ ONTOᵃ SANMᵃ TIMBᵃ LINEᵃ ZETAᵃ PRAXᵇ QLYSᵃ HIMSᵃ TTDᵃ IMVTᵇ HRBᵃ BLTE RDNTᵇ CWSTᵃ NOVTᵃ IFSᵃ CWENᵃ CRSP KGSᵇ TEO EQPTᵃ TDW ABCLᵃ MNDYᵇ DHTᵃ OGN ACHRᵃ NHIᵃ ASST SGRY VIAᵇ WTTRᵇ GCMGᵇ CSQRᵃ CLDX WGSᵃ SEPN
-- **2026-11-10** (29): SEᵇ VGᵇ VODᵇ ALCᵃ ECᵃ CRWVᵃ ONONᵇ VIVᵃ DOX MANE SRRKᵇ MRCYᵃ ALHᵇ ATATᵇ QBTSᵇ LEGNᵇ RGTIᵃ PHI FLYᵃ WIXᵇ REZIᵃ ATROᵃ EXKᵇ STUBᵃ IMOS SONOᵃ BTDRᵇ NNᵃ HSAIᵇ
-- **2026-11-11** (29): VYLRᵃ FNVᵃ GIBᵇ ASND TTEKᵃ CAEᵃ CTVAᵃ UGP ORKA ORᵃ ENSᵃ ICLᵇ ERAS ARX ECOᵃ AYAᵇ ELVN DGIIᵃ TGB IHS SA RUMᵇ FRVO PHVS BGSIᵇ PLGOᵃ INFQ SLS AADXᵇ
-- **2026-11-12** (34): JD BSP CBRSᵃ BNT TWSTᵇ HBMᵇ FPSᵇ STNᵃ ELPCᵃ ANDGᵃ KOD NIQᵇ OCTVᵇ MBGLᵇ AVAL BILI FIGRᵇ HTFLᵃ ENHA MWHᵇ XE LGNᵇ DPCᵇ DLOᵃ ONDSᵇ SKE PBLS YETIᵇ CLBTᵇ AVAHᵇ LFTOᵃ LUNR NESR ABSIᵇ
-- **2026-11-13** (9): KB WF LTM CGON CIG NORD XXI LPL PPTA
-- **2026-11-16** (11): BIDUᵇ TCOM TSNᵇ ARMKᵇ HTHT XPEV ACMᵃ XP BRC DAC PAGSᵃ
-- **2026-11-17** (14): ESLTᵇ ASᵇ SQM ZTOᵃ FUTU TMEᵇ KLARᵇ BZ POWL DLBᵃ SRᵇ GBDCᵃ SBLK NMM
-- **2026-11-18** (17): Pᵃ VIK WSM WWDᵃ UGIᵃ DY GLBE CPAᵃ NJRᵃ GLNGᵇ GFF GDS BLSHᵇ KLIC HPᵃ JOYY PONYᵇ
-- **2026-11-19** (17): CPRT WMGᵇ ESTC YMMᵇ GAP ESEᵃ VIPS ROAD BBWI VVVᵇ POSTᵃ ZIM MMSᵇ MNSO BULL CDLR DAO
-- **2026-11-20** (7): BJᵇ FRO MOG.A MOG.B IESC VFS BKE
-- **2026-11-23** (10): ZM SYM Jᵃ SMTC SNEX AMTMᵃ BWLPᵇ CAAP CENT CENTA
-- **2026-11-24** (18): WDAY ZS HPQ BBYᵇ NTNX BURL SJM DKS ARWR NIO URBN ANF GGAL AMBA KSSᵇ KCᵇ BBAR CLSK
-- **2026-11-25** (4): LI CMBT BMA STDN
+- **2026-11-09** (62): FERGᵇ SKYDᵃ IXᵇ RKLBᵃ BAPᵃ ROIVᵇ CIBᵃ KSPIᵇ RBAᵇ NRGᵇ SGIᵇ CNHᵇ JBSᵃ EQXᵃ ASTSᵃ AMGᵇ LINEᵃ TGTXᵇ TIMBᵃ ONTOᵃ ZETAᵃ PRAXᵇ SANMᵃ QLYSᵃ HRBᵃ IONSᵇ CWSTᵃ RDNTᵇ TTDᵃ IMVTᵇ CWENᵃ HIMSᵃ NXEᵃ IFSᵃ NOVTᵃ AAONᵃ TEO DFTXᵃ TKCᵇ MNDYᵇ KGSᵇ XENEᵃ ABCLᵃ NHIᵃ EQPTᵃ TDWᵃ DHTᵃ VIAᵇ SGRY ACHRᵃ USARᵃ ASST GCMGᵇ FRVOᵇ ALM CSQRᵃ MARAᵃ WTTRᵇ SEPN KMPRᵃ ZYMEᵃ GSHDᵃ
+- **2026-11-10** (31): SEᵇ ALCᵃ VODᵇ ECᵃ VGᵇ CRWVᵃ ONONᵇ VIVᵃ EMBJ IBRX SLAB SRRKᵇ MANE ATATᵇ ALHᵇ BWIN LEGNᵇ MRCYᵃ LQDAᵇ PHI TNGX QBTSᵇ RGTIᵃ WIXᵇ REZIᵃ FLYᵃ STUBᵃ ATROᵃ EXKᵇ COAGᵇ HSAIᵇ
+- **2026-11-11** (24): FNVᵃ VYLRᵃ GIBᵇ ASND TTEKᵃ CAEᵃ CTVAᵃ ORᵃ ORKA UGP ICLᵇ ENSᵃ ERAS AYAᵇ ECOᵃ TR TNKᵃ IHS SA BGSIᵇ PLGOᵃ DGIIᵃ RUMᵇ PHVS
+- **2026-11-12** (34): BSP CBRSᵃ BNT HBMᵇ STNᵃ ARWRᵃ TWSTᵇ ELPCᵃ ANDGᵃ NIQᵇ MBGLᵇ BLTEᵃ KOD OCTVᵇ FPSᵇ AVAL MWHᵇ FIGRᵇ HTFLᵃ ARXᵇ DPCᵇ DLOᵃ SKE XEᵇ YETIᵇ PBLS ENHA CLBTᵇ AVAHᵇ LFTOᵃ LGNᵇ ONDSᵇ GLOB SPBᵇ
+- **2026-11-13** (7): KB WF CGON CIG XXI LPL PPTA
+- **2026-11-16** (13): TCOM BIDUᵇ BEKEᵇ TSNᵇ HTHTᵇ ARMKᵇ XPEVᵇ ACMᵃ XP POWLᵃ BRC DAC PAGSᵃ
+- **2026-11-17** (14): JDᵇ VIKᵇ ESLTᵇ ASᵇ SQM ZTOᵃ TMEᵇ KLARᵇ BZ DLBᵃ SRᵇ MNSOᵇ GBDCᵃ SBLK
+- **2026-11-18** (16): Pᵃ WSM WWDᵃ UGIᵃ GLBEᵇ CPAᵃ DY NJRᵃ GFF GDS GLNGᵇ JOYY HPᵃ BLSHᵇ ZIMᵇ KLIC
+- **2026-11-19** (16): KEYSᵃ CPRT WMGᵇ FUTUᵇ YMMᵇ ESTC GAPᵃ ESEᵃ VIPS VVVᵇ BBWIᵇ ROAD POSTᵃ MMSᵇ BULLᵃ DAOᵇ
+- **2026-11-20** (7): BJᵇ FRO MOG.A MOG.B VFS IESC BKE
+- **2026-11-23** (11): Aᵃ ZMᵃ SYMᵃ Jᵃ SMTC SNEX AMTMᵃ CAAP BWLPᵇ CENT CENTA
+- **2026-11-24** (18): WDAYᵃ HPQᵃ DLTRᵇ BBYᵇ NTNX BURL SJMᵇ DKSᵇ NIO URBN ANFᵇ BILIᵇ MMEDᵇ GGAL KSSᵇ KCᵇ AMBA BBAR
+- **2026-11-25** (3): LI CMBT BMA
 - **2026-11-27** (1): CHA
-- **2026-12-01** (6): GTLB BOX SIG AEO UNFI ASAN
-- **2026-12-02** (11): DLTR FIVE GWRE HQY DSGX PATH M PVH THO KEN NCNO
-- **2026-12-03** (19): KR DG ULTAᵃ RBRK IOT DOCU BF.A BF.B HRL COO DCI S TTAN SAIC AGX DOO WLY WLYB IDT
+- **2026-12-01** (7): MDBᵃ HQYᵃ GTLB BOXᵃ AEO UNFI ASANᵃ
+- **2026-12-02** (13): ZSᵃ GWRE FIVE DCIᵇ NTSKᵃ DSGXᵃ PATH M SIGᵇ THO PVH KEN NCNO
+- **2026-12-03** (18): KR DGᵇ ULTAᵃ IOTᵃ RBRK DOCU BF.Aᵇ BF.Bᵇ HRLᵇ COO TTANᵃ S SAIC DOO AGX WLY WLYB IDT
 - **2026-12-04** (1): VSXY
-- **2026-12-07** (4): CRDO MDB HAFN VSTS
-- **2026-12-08** (10): CASY SAIL GME CNM AVAV CPB OLLI BRZE KFY ASO
+- **2026-12-07** (2): CRDO HAFN
+- **2026-12-08** (10): CASY GME SAIL CNM CPB OLLI BRZEᵃ AVAV KFY ASO
 - **2026-12-09** (5): NDSN CHWY MTN PL UEC
 - **2026-12-10** (5): CIEN LULU MANU FIZZ RH
 - **2026-12-14** (1): TOL
 - **2026-12-15** (3): LEN LEN.B WOR
-- **2026-12-16** (6): JBL GIS TTC ABM WS EPAC
+- **2026-12-16** (5): JBL GIS TTC ABM EPAC
+- **2026-12-17** (9): HEI HEI.A DRI KEP FDS KMX BIRK BB KBH
+- **2026-12-18** (4): PAYX CCL LW CAG
+- **2026-12-21** (1): ABVX
 
-Check: detail 135 + remainder 1016 = 1151 forward rows (Nasdaq forward 1151).
+Check: detail 58 + remainder 341 = 399 forward rows (Nasdaq forward 399).
 
-### 1A.2 — Earnings, 2026-12-17 → dense horizon 2026-12-18
+### 1A.2 — Earnings, after the C window up to the dense horizon (2026-12-24 → 2026-12-18): empty
 
-| Ticker | Name | Type | Date | Tag | Source |
-|---|---|---|---|---|---|
-| NKE | Nike (FQ2) | Earnings | 2026-12-17 | (E) | FMP (EPS est 0.34, rev est $11.13B); not in Nasdaq pull (window ends 12-16). Unchanged vs W43 |
-| CCL | Carnival (Q4) | Earnings | 2026-12-18 | (E) | FMP (EPS est 0.22, rev est $6.47B) — terminal row of the dense horizon, unchanged for a FIFTH week |
+Empty by construction: the C window (to 12-23) now extends past the FMP dense horizon (12-18), so the 12-17/12-18 rows (NKE 12-17, CCL 12-18, both FMP and Nasdaq agree) sit in 1A.1 above. Nasdaq ≥ $2B returned 12-17: 12 rows, 12-18: 4 rows, 12-21: 1 row, 12-22/12-23: none. No FMP row 12-19 → 2027-01-10. Effective confirmed-earnings horizon 2026-12-18 = 40 days from 2026-11-08 (unchanged, sixth week).
 
-The C window end moved 12-09 → 12-16, so COST (12-10; FMP + Nasdaq agree), AVGO (12-10), MU (12-16) moved from 1A.2/1A.3 into 1A.1. This band is now FMP-only for NKE and CCL. 12-17 and 12-18 were not fetched from Nasdaq (outside the pull). Effective confirmed-earnings horizon 2026-12-18 = 47 days from 2026-11-01.
+### 1A.3 — Earnings, 2026-12-24 → 2027-05-08
 
-### 1A.3 — Earnings, 2026-12-19 → 2027-05-01
+Coverage gap, not absence of events: FMP (4 chunked calls, 2026-11-08) returns nothing 12-19 → 2027-01-10, 56 rows 2027-01-11 → 02-18 and only RKT 02-25 / RIOT 03-01 / FDX 03-25 after that. Window end rolled 05-01 → 05-08; no sourced row falls 05-01..05-08 except as noted. Rows below are FMP, all (E) unless marked.
 
-Coverage gap, not absence of events: FMP (4 chunked calls, 2026-11-01) returns nothing 2026-12-19 → 2027-01-10 and only FDX 03-25 / RKT 02-25 after 2027-02-22. Window end rolled 04-25 → 05-01; no vendor or sourced row falls 04-26..05-01 except MRK (below). Dense-horizon terminal row remains CCL 2026-12-18 (unchanged). Rows below are FMP unless stated; all (E) except where marked.
+| Date | Tickers (FMP) |
+|---|---|
+| 2027-01-11 | TLRY |
+| 2027-01-13 | DAL |
+| 2027-01-14 | C · JPM · WFC |
+| 2027-01-15 | BAC |
+| 2027-01-19 | GS · NFLX · UAL |
+| 2027-01-20 | UNH |
+| 2027-01-21 | GE · TSM |
+| 2027-01-26 | AAL · BA · HCA · JNJ · LMT |
+| 2027-01-27 | GM · META · MSFT · SBUX · T · TSLA |
+| 2027-01-28 | INTC · NOK · V |
+| 2027-01-29 | CVX · SOFI · VZ · XOM |
+| 2027-02-01 | PLTR |
+| 2027-02-02 | AMD · FDX · PEP · PFE · PYPL |
+| 2027-02-03 | ABBV · GOOGL · SNAP · UBER |
+| 2027-02-04 | AAPL · AMZN · CARR · MGM · RBLX · SIRI |
+| 2027-02-09 | F · HOOD · KO |
+| 2027-02-10 | SHOP |
+| 2027-02-11 | COIN · PINS · RIVN · ROKU |
+| 2027-02-12 | MRNA |
+| 2027-02-18 | ETSY |
+| 2027-02-25 | RKT |
+| 2027-03-01 | RIOT |
+| 2027-03-25 | FDX |
 
-| Date | Tickers (FMP) | Δ vs W43 |
-|---|---|---|
-| 2027-01-11 | TLRY | unchanged |
-| 2027-01-12 | DAL | unchanged |
-| 2027-01-14 | C · JPM · WFC | unchanged |
-| 2027-01-15 | BAC | unchanged |
-| 2027-01-19 | GS · NFLX · UAL | unchanged |
-| 2027-01-20 | JNJ · UNH | unchanged |
-| 2027-01-21 | GE · TSM | unchanged |
-| 2027-01-26 | AAL · BA · GM · HCA | BA new; HCA new |
-| 2027-01-27 | META · MSFT · SBUX · T · TSLA | SBUX new; MSFT new |
-| 2027-01-28 | INTC · V | INTC new; V new |
-| 2027-01-29 | CVX · SOFI · VZ · XOM | CVX new; XOM new; SOFI new; VZ new |
-| 2027-02-02 | FDX · PEP · PYPL | PYPL new |
-| 2027-02-03 | ABBV · GOOGL | ABBV new |
-| 2027-02-04 | AMZN · CARR · LMT · MGM · NOK · RBLX · SIRI | AMZN new; CARR new; RBLX new; SIRI new; MGM new |
-| 2027-02-09 | F · HOOD | F new; HOOD new |
-| 2027-02-11 | COIN · PINS · RIVN | COIN new; PINS new; RIVN 2027-02-25 → 2027-02-11 |
-| 2027-02-18 | ETSY | ETSY new |
-| 2027-02-25 | RKT | RKT new |
-| 2027-03-25 | FDX | FDX 2027-02-02 → 2027-03-25 |
+Δ vs W44's FMP table (compared table-to-CSV; not re-searched): DAL 01-12 → **01-13**; JNJ 01-20 → **01-26**; LMT 02-04 → **01-26**; GM 01-26 → **01-27**; NOK 02-04 → **01-28**. Newly present (names that printed 11-02..11-06 or added by the vendor): PLTR 02-01, AMD 02-02, PFE 02-02, SNAP 02-03, UBER 02-03, AAPL 02-04, KO 02-09, SHOP 02-10, ROKU 02-11, MRNA 02-12, RIOT 03-01. Unchanged: TLRY, C/JPM/WFC, BAC, GS/NFLX/UAL, UNH, GE/TSM, AAL/BA/HCA, META/MSFT/SBUX/T/TSLA, INTC/V, CVX/SOFI/VZ/XOM, FDX/PEP/PYPL, ABBV/GOOGL, AMZN/CARR/MGM/RBLX/SIRI, F/HOOD, COIN/PINS/RIVN, ETSY, RKT.
 
-Notes: RIVN printed Q3 on 2026-10-29 (FMP actual); the W43 row 'RIVN 2027-02-25' is superseded — FMP now lists RIVN 2027-02-11 and RKT 2027-02-25. The 'new' rows are the names that printed 10-26..10-30 (MSFT, AMZN, GOOGL via FMP, INTC, V, XOM, CVX, ABBV, SBUX, BA, HCA etc.) whose next-quarter date FMP now projects; they are (E). GOOGL 2027-02-03 now FMP-sourced, agreeing with the W43 WSH snippet. FMP chunk 2 header says 45 rows, the row list parses to 46 (header/row-count discrepancy in the shared file; not investigated).
-
-**Per-name (E) tails carried from W43 (not in FMP; not re-sourced this run):**
+**Per-name (E) tails carried from W44 (not in FMP; not re-sourced this run):**
 
 | Ticker | Event | Date | Tag | Source |
 |---|---|---|---|---|
-| MRK | Q4 2026 call | 2027-02-02 | (C) | merck.com (carried from W43, not re-read). NOTE: FMP shows no MRK row; keep as carried only |
-| MRK | Q1 2027 call | 2027-04-29 | (C) | merck.com (carried from W43; now INSIDE the window since the end moved to 05-01); not re-read |
+| MRK | Q4 2026 call | 2027-02-02 | (C) | merck.com (carried from W43/W44, not re-read). FMP shows no MRK row |
+| MRK | Q1 2027 call | 2027-04-29 | (C) | merck.com (carried; inside the window), not re-read |
 | NVDA | FQ4 FY27 | ~2027-02-24 | (E) | days.to / WSH inferred (carried) |
 | AVGO | FQ1 FY27 | ~2027-03-03 | (E) | days.to projection (carried) |
 | ORCL | FQ3 FY27 | ~2027-03-10 | (E) | days.to projection (carried) |
-| MU | FQ2 FY27 | ~2027-03-17 | (E) | days.to + WSH 'INFERRED' (carried); note MU FQ1 now 12-16 on Nasdaq (was 12-23), so the March projection is likely about a week earlier than carried — Δ unverified |
-| FDX | FedEx | 2027-03-25 | (T) | FMP; suspect row (see 1A.9 W43 item 14); not relied on |
+| MU | FQ2 FY27 | ~2027-03-17 | (E) | days.to + WSH 'INFERRED' (carried) |
+| FDX | FedEx | 2027-03-25 (FMP chunk 3) vs 2027-02-02 (FMP chunk 2) | (T) | FMP internal conflict; neither relied on |
 
-**Struck:** MU 2026-12-23 (aggregator) — superseded by Nasdaq 2026-12-16 (E).
+Not established (no reachable source states a date after the next print or the last print): A-queue names with no FMP row and no per-name tail: AKAM, ANET, CAT, COP, DDOG, FSLR, GEV, IBM, LLY, NOW, QCOM, SMCI, VRTX, and every forward A-queue name other than NVDA/AVGO/ORCL/MU above. FMP-projected next prints exist for AAPL 2027-02-04, AMD 02-02, AMZN 02-04, GOOGL 02-03, MSFT 01-27, META 01-27, INTC 01-28, CVX 01-29, XOM 01-29, JPM 01-14. No search for post-print dates was run this cycle.
 
-Not established (no reachable source states a date after the next print): AAPL, CRWD, NTAP, OKTA, SNOW, HPE, DELL, TGT, WMT, HD, ADBE, COST, AMAT, CSCO, QCOM, SMCI, NBIS, DDOG, TTWO, PANW, CAT, GEV, LLY, VRTX, AMD, AKAM, IBM, NOW, PLTR, UBER, CRM, MRVL, INTU, FSLR, COP. (MSFT, AMZN, GOOGL, INTC, XOM, CVX, META, JPM now carry FMP (E) dates and are removed from this list.) Per-name re-sourcing this run searched only the near-window names listed in 1B.2; no search for post-print dates.
+### Printed this week (2026-11-02 → 2026-11-06)
 
-### Printed this week (2026-10-26 → 2026-10-30)
+A-queue and ≥ $50B names whose Nasdaq date fell 11-02 → 11-06 (76 of 737 printed-week rows at ≥ $2B). These drop out of the forward calendar. A Nasdaq date is a schedule, not evidence of a print; the 'D1 record' column is evidence of a print where D1's decision-log records (events.decision_log, sessions through 2026-11-05) carry the name with an IBKR close-to-close move; a blank means D1 surfaced no ≥ 5% move for the name (not that no print occurred). The Friday 2026-11-06 session is outside D1 coverage (structural weekly gap); FMP actuals are not in the shared pull for this week. Outcomes were not researched.
 
-A-queue and ≥ $50B names whose Nasdaq date fell 10-26 → 10-30, with FMP actuals where the FMP subset has them (EPS actual vs est; revenue actual vs est). These drop out of the forward calendar. A calendar date is a schedule, not evidence of a print; 'FMP actual' rows are evidence of a print, 'per Nasdaq calendar' rows are not independently evidenced here (D1 context corroborates: MSFT/GOOGL/AMZN/INTC/NOW/FTNT/LLY/MRK/BMY prints referenced in D1 records 10-28/10-29).
+| Ticker | Name | Nasdaq date | A-queue | Mcap | EPS fcst (Nasdaq, n est) | D1 record (event; move; entry) |
+|---|---|---|---|---|---|---|
+| AAPL | Apple Inc. | 2026-11-02 | A | $5,002B | $1.98 (7) |  |
+| PLTR | Palantir Technologies Inc. | 2026-11-02 |  | $373B | $0.32 (11) |  |
+| WMB | Williams Companies, Inc. (The) | 2026-11-02 |  | $163B | $0.55 (8) |  |
+| VRTX | Vertex Pharmaceuticals Incorporated | 2026-11-02 | A | $138B | $4.36 (5) |  |
+| MAR | Marriott International | 2026-11-02 |  | $107B | $2.86 (8) |  |
+| O | Realty Income Corporation | 2026-11-02 |  | $57B | $1.11 (7) |  |
+| IDXX | IDEXX Laboratories, Inc. | 2026-11-02 |  | $53B | $3.71 (6) | earnings; +21.8%; da7bf33a |
+| ETR | Entergy Corporation | 2026-11-02 |  | $53B | $1.71 (6) |  |
+| FANG | Diamondback Energy, Inc. | 2026-11-02 |  | $50B | $4.92 (8) |  |
+| AMD | Advanced Micro Devices, Inc. | 2026-11-03 | A | $663B | $1.68 (13) |  |
+| AMGN | Amgen Inc. | 2026-11-03 |  | $249B | $5.74 (9) |  |
+| ANET | Arista Networks, Inc. | 2026-11-03 | A | $201B | $0.99 (9) | earnings release (8-K Item 2.02, quarter ending Sep/2026); +5.0%; 7701d3bc |
+| SHOP | Shopify Inc. | 2026-11-03 |  | $185B | $0.33 (13) | Q3 earnings; -8.7%; c51c9632 |
+| PFE | Pfizer, Inc. | 2026-11-03 |  | $170B | $0.72 (5) |  |
+| ETN | Eaton Corporation, PLC | 2026-11-03 |  | $127B | $3.54 (10) | Q3 earnings; +7.0%; c51c9632 |
+| BKNG | Booking Holdings Inc. | 2026-11-03 |  | $125B | $4.48 (11) | earnings release (8-K Item 2.02, quarter ending Sep/2026); +9.8%; 7701d3bc |
+| MPC | Marathon Petroleum Corporation | 2026-11-03 |  | $103B | $25.74 (5) |  |
+| RACE | Ferrari N.V. | 2026-11-03 |  | $99B | $2.66 (1) |  |
+| SU | Suncor Energy  Inc. | 2026-11-03 |  | $81B | $2.35 (2) |  |
+| ITUB | Itau Unibanco Banco Holding SA | 2026-11-03 |  | $80B | $0.22 (3) |  |
+| APO | Apollo Global Management, Inc. | 2026-11-03 |  | $69B | $2.04 (8) |  |
+| MPLX | MPLX LP | 2026-11-03 |  | $57B | $1.11 (6) |  |
+| AME | AMTEK, Inc. | 2026-11-03 |  | $51B | $2.12 (7) |  |
+| TRI | Thomson Reuters Corp | 2026-11-03 |  | $51B | $0.89 (2) | Q3 earnings (6-K); -9.9%; c51c9632 |
+| XYZ | Block, Inc. | 2026-11-03 |  | $51B | $0.68 (9) | earnings release (8-K Item 2.02, quarter ending Sep/2026); +15.3%; 7701d3bc |
+| KDP | Keurig Dr Pepper Inc. | 2026-11-03 |  | $50B | $0.63 (5) | Q3 earnings; -5.6%; c51c9632 |
+| SMCI | Super Micro Computer, Inc. | 2026-11-03 | A | $18B | $1.04 (6) | earnings release (8-K Item 2.02, quarter ending Sep/2026; also Item 8.; -5.7%; 7701d3bc |
+| MCD | McDonald's Corporation | 2026-11-04 |  | $197B | $3.36 (11) | earnings release (8-K Item 2.02, quarter ending Sep/2026); +6.5%; 7701d3bc |
+| NVO | Novo Nordisk A/S | 2026-11-04 |  | $178B | $0.81 (4) |  |
+| ARM | Arm Holdings plc | 2026-11-04 |  | $177B | $0.22 (7) | Q2 FY2027 results (6-K shareholder letter); -13.1%; f5359185 |
+| QCOM | QUALCOMM Incorporated | 2026-11-04 | A | $168B | $1.46 (9) | Earnings release (8-K Item 2.02); -9.5%; f5359185 |
+| UBER | Uber Technologies, Inc. | 2026-11-04 | D-held | $140B | $0.94 (7) |  |
+| MCK | McKesson Corporation | 2026-11-04 |  | $124B | $10.69 (6) |  |
+| APP | Applovin Corporation | 2026-11-04 |  | $118B | $3.94 (9) | Earnings release (8-K Item 2.02); +31.0%; f5359185 |
+| CVS | CVS Health Corporation | 2026-11-04 |  | $104B | $1.62 (9) | earnings release (8-K Item 2.02, quarter ending Sep/2026); -12.5%; 7701d3bc |
+| EMR | Emerson Electric Company | 2026-11-04 |  | $91B | $1.85 (7) |  |
+| MSI | Motorola Solutions, Inc. | 2026-11-04 |  | $85B | $3.99 (5) |  |
+| MELI | MercadoLibre, Inc. | 2026-11-04 |  | $78B | $9.41 (3) | Earnings release (8-K Item 2.02); -12.0%; f5359185 |
+| MFC | Manulife Financial Corp | 2026-11-04 |  | $73B | $0.83 (2) |  |
+| GWW | W.W. Grainger, Inc. | 2026-11-04 |  | $68B | $11.64 (7) | earnings release (8-K Item 2.02, quarter ending Sep/2026); +6.5%; 7701d3bc |
+| ALL | Allstate Corporation (The) | 2026-11-04 |  | $66B | $7.03 (10) |  |
+| COR | Cencora, Inc. | 2026-11-04 |  | $65B | $4.56 (4) |  |
+| MET | MetLife, Inc. | 2026-11-04 |  | $63B | $2.71 (8) |  |
+| AFL | Aflac Incorporated | 2026-11-04 |  | $63B | $1.80 (6) |  |
+| DDOG | Datadog, Inc. | 2026-11-04 | A | $63B | $0.18 (10) | earnings release (8-K Item 2.02, quarter ending Sep/2026); -14.4%; 7701d3bc |
+| EW | Edwards Lifesciences Corporation | 2026-11-04 |  | $58B | $0.73 (9) |  |
+| MDLN | Medline Inc. | 2026-11-04 |  | $52B | $0.32 (6) | earnings release (8-K Item 2.02); +18.4%; 7701d3bc |
+| CVE | Cenovus Energy Inc | 2026-11-04 |  | $50B | $1.21 (2) | Q3 results (6-K); -7.6%; 7701d3bc |
+| TM | Toyota Motor Corp Ltd Ord | 2026-11-05 |  | $284B | — (N/A) |  |
+| COP | ConocoPhillips | 2026-11-05 | A | $163B | $3.06 (8) |  |
+| SONY | Sony Group Corporation | 2026-11-05 |  | $162B | $0.38 (1) | Q2 FY2026 consolidated financial results (6-K); +6.1%; f5359185 |
+| MNST | Monster Beverage Corporation | 2026-11-05 |  | $141B | $0.30 (9) |  |
+| PH | Parker-Hannifin Corporation | 2026-11-05 |  | $113B | $8.23 (6) |  |
+| SO | Southern Company (The) | 2026-11-05 |  | $107B | $1.71 (6) |  |
+| ABNB | Airbnb, Inc. | 2026-11-05 |  | $102B | $2.86 (11) |  |
+| DUK | Duke Energy Corporation | 2026-11-05 |  | $101B | $1.87 (6) |  |
+| CNQ | Canadian Natural Resources Limited | 2026-11-05 |  | $101B | $1.05 (2) |  |
+| NET | Cloudflare, Inc. | 2026-11-05 |  | $87B | $0.02 (9) |  |
+| CI | The Cigna Group | 2026-11-05 |  | $80B | $7.46 (7) |  |
+| EOG | EOG Resources, Inc. | 2026-11-05 |  | $76B | $4.45 (8) |  |
+| SPG | Simon Property Group, Inc. | 2026-11-05 |  | $73B | $3.32 (6) |  |
+| APD | Air Products and Chemicals, Inc. | 2026-11-05 |  | $69B | $3.60 (7) |  |
+| KMB | Kimberly-Clark Corporation | 2026-11-05 |  | $68B | $1.69 (6) |  |
+| TRP | TC Energy Corporation | 2026-11-05 |  | $63B | $0.64 (4) |  |
+| CAH | Cardinal Health, Inc. | 2026-11-05 |  | $62B | $2.92 (5) |  |
+| CMI | Cummins Inc. | 2026-11-05 |  | $62B | $8.38 (7) |  |
+| WPM | Wheaton Precious Metals Corp. | 2026-11-05 |  | $60B | $0.91 (5) |  |
+| TRGP | Targa Resources, Inc. | 2026-11-05 |  | $58B | $2.81 (7) |  |
+| BDX | Becton, Dickinson and Company | 2026-11-05 |  | $58B | $4.06 (7) |  |
+| NTRA | Natera, Inc. | 2026-11-05 |  | $52B | ($0.17) (4) |  |
+| SRE | Sempra | 2026-11-05 |  | $52B | $1.20 (4) |  |
+| VMRK | Vivmark Residential | 2026-11-05 |  | $51B | $0.97 (5) |  |
+| AKAM | Akamai Technologies, Inc. | 2026-11-05 | A | $11B | $0.92 (9) |  |
+| ENB | Enbridge Inc | 2026-11-06 |  | $105B | $0.36 (5) |  |
+| MRNA | Moderna, Inc. | 2026-11-06 |  | $96B | ($1.10) (7) |  |
+| BAM | Brookfield Asset Management | 2026-11-06 |  | $84B | $0.44 (5) |  |
 
-| Ticker | Name | Nasdaq date | A-queue | Mcap | EPS act / est | Rev act / est | Evidence |
-|---|---|---|---|---|---|---|---|
-| KOF | Coca Cola Femsa S.A.B. de C.V. | 2026-10-26 |  | $194B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| VZ | Verizon Communications Inc. | 2026-10-26 (FMP 2026-10-26) |  | $181B | 1.31 / 1.27 (beat) | $34.31B / $34.77B | FMP actuals row |
-| WELL | Welltower Inc. | 2026-10-26 |  | $171B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| CDNS | Cadence Design Systems, Inc. | 2026-10-26 |  | $94B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| NUE | Nucor Corporation | 2026-10-26 |  | $62B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| PSA | Public Storage | 2026-10-26 |  | $59B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| V | Visa Inc. | 2026-10-27 (FMP 2026-10-27) |  | $734B | 3.48 / 3.44 (beat) | $12.14B / $12.09B | FMP actuals row |
-| KO | Coca-Cola Company (The) | 2026-10-27 (FMP 2026-10-27) |  | $399B | 0.91 / 0.881 (beat) | $13.40B / $12.92B | FMP actuals row |
-| NVS | Novartis AG | 2026-10-27 |  | $307B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| HSBC | HSBC Holdings plc | 2026-10-27 |  | $297B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| STX | Seagate Technology Holdings PLC | 2026-10-27 |  | $160B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| BA | Boeing Company (The) | 2026-10-27 (FMP 2026-10-27) |  | $137B | -0.34 / -0.25495 (miss) | $24.19B / $23.95B | FMP actuals row |
-| SPGI | S&P Global Inc. | 2026-10-27 |  | $134B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| GLW | Corning Incorporated | 2026-10-27 |  | $111B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| HCA | HCA Healthcare, Inc. | 2026-10-27 (FMP 2026-10-27) |  | $104B | 7.22 / 6.65 (beat) | $19.85B / $19.33B | FMP actuals row |
-| JCI | Johnson Controls International plc | 2026-10-27 |  | $96B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| FCX | Freeport-McMoran, Inc. | 2026-10-27 |  | $95B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| WM | Waste Management, Inc. | 2026-10-27 |  | $92B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| UPS | United Parcel Service, Inc. | 2026-10-27 |  | $91B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| AMT | American Tower Corporation (REIT) | 2026-10-27 |  | $86B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| ECL | Ecolab Inc. | 2026-10-27 |  | $84B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| RCL | Royal Caribbean Cruises Ltd. | 2026-10-27 |  | $83B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| HOOD | Robinhood Markets, Inc. | 2026-10-27 (FMP 2026-10-27) |  | $82B | 0.6 / 0.558 (beat) | $1.42B / $1.44B | FMP actuals row |
-| ITW | Illinois Tool Works Inc. | 2026-10-27 |  | $80B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| SHW | Sherwin-Williams Company (The) | 2026-10-27 |  | $80B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| HLT | Hilton Worldwide Holdings Inc. | 2026-10-27 |  | $79B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| NXPI | NXP Semiconductors N.V. | 2026-10-27 |  | $67B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| OKE | ONEOK, Inc. | 2026-10-27 |  | $60B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| BKR | Baker Hughes Company | 2026-10-27 |  | $54B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| PCAR | PACCAR Inc. | 2026-10-27 |  | $54B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| MSFT | Microsoft Corporation | 2026-10-28 (FMP 2026-10-28) | Y | $3,937B | 4.89 / 4.72 (beat) | $92.28B / $90.62B | FMP actuals row |
-| GOOG | Alphabet Inc. | 2026-10-28 |  | $3,489B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| GOOGL | Alphabet Inc. | 2026-10-28 (FMP 2026-10-28) | Y | $3,489B | 2.12 / 3.02 (miss) | $127.58B / $127.96B | FMP actuals row |
-| SKHY | SK hynix Inc. | 2026-10-28 |  | $1,181B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| GEV | GE Vernova Inc. | 2026-10-28 | Y | $235B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| KLAC | KLA Corporation  | 2026-10-28 |  | $218B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| APH | Amphenol Corporation | 2026-10-28 |  | $202B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| SAN | Banco Santander, S.A. | 2026-10-28 |  | $167B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| TMUS | T-Mobile US, Inc. | 2026-10-28 |  | $156B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| UBS | UBS AG | 2026-10-28 |  | $149B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| EQNR | Equinor ASA | 2026-10-28 |  | $119B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| NOW | ServiceNow, Inc. | 2026-10-28 | Y | $114B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| ADP | Automatic Data Processing, Inc. | 2026-10-28 |  | $113B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| PSX | Phillips 66 | 2026-10-28 |  | $107B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| EQIX | Equinix, Inc. | 2026-10-28 |  | $103B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| FTNT | Fortinet, Inc. | 2026-10-28 |  | $102B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| GSK | GSK plc | 2026-10-28 |  | $99B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| VRT | Vertiv Holdings, LLC | 2026-10-28 |  | $95B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| AEM | Agnico Eagle Mines Limited | 2026-10-28 |  | $89B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| CP | Canadian Pacific Kansas City Limited | 2026-10-28 |  | $77B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| CVNA | Carvana Co. | 2026-10-28 |  | $75B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| FDX | FedEx Corporation | 2026-10-28 (FMP 2026-10-28) |  | $72B | 3.74 / 3.34 (beat) | $22.86B / $22.73B | FMP actuals row |
-| ORLY | O'Reilly Automotive, Inc. | 2026-10-28 |  | $71B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| AEP | American Electric Power Company, Inc. | 2026-10-28 |  | $70B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| AON | Aon plc | 2026-10-28 |  | $68B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| DB | Deutsche Bank AG | 2026-10-28 |  | $66B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| TEL | TE Connectivity plc | 2026-10-28 |  | $64B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| BSX | Boston Scientific Corporation | 2026-10-28 |  | $62B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| GRMN | Garmin Ltd. | 2026-10-28 |  | $54B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| EBAY | eBay Inc. | 2026-10-28 |  | $54B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| HONA | Honeywell Aerospace Inc. | 2026-10-28 |  | $51B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| AMZN | Amazon.com, Inc. | 2026-10-29 (FMP 2026-10-29) | Y | $2,630B | 1.89 / 1.97 (miss) | $201.94B / $202.22B | FMP actuals row |
-| LLY | Eli Lilly and Company | 2026-10-29 | Y | $1,293B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| MA | Mastercard Incorporated | 2026-10-29 |  | $557B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| INTC | Intel Corporation | 2026-10-29 (FMP 2026-10-29) | Y | $487B | 0.52 / 0.4066 (beat) | $16.51B / $16.56B | FMP actuals row |
-| MRK | Merck & Company, Inc. | 2026-10-29 | Y | $361B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| CAT | Caterpillar, Inc. | 2026-10-29 | Y | $298B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| SHEL | Shell PLC | 2026-10-29 |  | $292B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| LIN | Linde plc | 2026-10-29 |  | $232B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| TTE | TotalEnergies SE | 2026-10-29 |  | $214B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| GILD | Gilead Sciences, Inc. | 2026-10-29 |  | $205B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| SNDK | Sandisk Corporation | 2026-10-29 |  | $193B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| BUD | Anheuser-Busch Inbev SA | 2026-10-29 |  | $157B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| BBVA | Banco Bilbao Vizcaya Argentaria S.A. | 2026-10-29 |  | $139B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| MO | Altria Group | 2026-10-29 |  | $128B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| BMY | Bristol-Myers Squibb Company | 2026-10-29 |  | $125B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| SBUX | Starbucks Corporation | 2026-10-29 (FMP 2026-10-29) |  | $120B | 0.8 / 0.719 (beat) | $9.14B / $9.22B | FMP actuals row |
-| SYK | Stryker Corporation | 2026-10-29 |  | $120B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| ASX | ASE Technology Holding Co., Ltd. | 2026-10-29 |  | $99B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| TT | Trane Technologies plc | 2026-10-29 |  | $95B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| PWR | Quanta Services, Inc. | 2026-10-29 |  | $94B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| ING | ING Group, N.V. | 2026-10-29 |  | $94B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| ICE | Intercontinental Exchange Inc. | 2026-10-29 |  | $92B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| EPD | Enterprise Products Partners L.P. | 2026-10-29 |  | $84B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| HWM | Howmet Aerospace Inc. | 2026-10-29 |  | $82B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| LYG | Lloyds Banking Group Plc | 2026-10-29 |  | $82B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| MDLZ | Mondelez International, Inc. | 2026-10-29 |  | $80B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| DASH | DoorDash, Inc. | 2026-10-29 |  | $78B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| RSG | Republic Services, Inc. | 2026-10-29 |  | $72B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| AJG | Arthur J. Gallagher & Co. | 2026-10-29 |  | $69B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| DLR | Digital Realty Trust, Inc. | 2026-10-29 |  | $68B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| LNG | Cheniere Energy, Inc. | 2026-10-29 |  | $66B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| TAK | Takeda Pharmaceutical Company Limited | 2026-10-29 |  | $63B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| CRH | CRH PLC | 2026-10-29 |  | $60B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| MSTR | Strategy Inc | 2026-10-29 |  | $60B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| MPWR | Monolithic Power Systems, Inc. | 2026-10-29 |  | $59B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| LHX | L3Harris Technologies, Inc. | 2026-10-29 |  | $52B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| FSLR | First Solar, Inc. | 2026-10-29 | Y | $19B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| XOM | ExxonMobil Holdings Corporation | 2026-10-30 (FMP 2026-10-30) | Y | $754B | 4.23 / 4.12 (beat) | $113.16B / $104.89B | FMP actuals row |
-| ABBV | AbbVie Inc. | 2026-10-30 (FMP 2026-10-30) |  | $514B | 3.82 / 3.73 (beat) | $17.40B / $17.32B | FMP actuals row |
-| CVX | Chevron Corporation | 2026-10-30 (FMP 2026-10-30) | Y | $457B | 5.28 / 4.87 (beat) | $67.80B / $61.82B | FMP actuals row |
-| AZN | AstraZeneca PLC | 2026-10-30 |  | $264B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| BP | BP p.l.c. | 2026-10-30 |  | $130B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| SNY | Sanofi | 2026-10-30 |  | $105B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| GD | General Dynamics Corporation | 2026-10-30 |  | $100B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| REGN | Regeneron Pharmaceuticals, Inc. | 2026-10-30 |  | $84B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| CNI | Canadian National Railway Company | 2026-10-30 |  | $75B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| CL | Colgate-Palmolive Company | 2026-10-30 |  | $74B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| NWG | NatWest Group plc | 2026-10-30 |  | $69B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| IMO | Imperial Oil Limited | 2026-10-30 |  | $63B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
-| D | Dominion Energy, Inc. | 2026-10-30 |  | $57B | — | — | printed per Nasdaq calendar; actuals not in FMP subset |
+A-queue names printed in the week: AAPL 11-02, VRTX 11-02, AMD 11-03, ANET 11-03, SMCI 11-03, DDOG 11-04, QCOM 11-04, AKAM 11-05, COP 11-05 (9 of 46); of these ANET (+5.0%), SMCI (-5.7%), DDOG (-14.4%) and QCOM (-9.5%) have D1 earnings-move records (table); AAPL, VRTX, AMD, AKAM and COP have none in the pull. Market context recorded by D1 (not ticker catalysts): 2026-11-05 AI/semis rout, SPY -4.41%, SMH -11.21%, VIX 16.61 → 28.18 (entry 23dea2da); 2026-11-04 SPX +1.58%, VIX 20.83 → 16.61 with the midterm result cited as backdrop (entry a4e2f628; driver inferred by D1).
 
-111 names listed; 15 have FMP actuals. FMP also returned actuals for non-listed names (e.g. CARR, COIN, PINS, RBLX, RIVN, RKT, SBUX, SIRI, ETSY, F, FDX, MGM, BA, HOOD, KO, PYPL, SOFI, VZ). FMP EPS 'estimated' is FMP's own consensus and can differ from the vendor consensus the market uses (e.g. GOOGL FMP est 3.02 vs actual 2.12 should be read with caution; D1 records a -12.6% reaction on 10-29, MEASURED in d1_context).
+### 1A.4 — Product launches, keynotes, developer events (window 2026-11-08 → 2027-05-08)
 
-### 1A.4 — Product launches, keynotes, developer events (window 2026-11-01 → 2027-05-01)
-
-Passed/resolved this week (dropped): NVDA GTC Berlin (held 10-20..22); ORCL Oracle AI World 10-25..28 (held; D1 72e9607d: ORCL +10.7% on 10-28 on own events).
+Passed/resolved since W44 (dropped): none of the W44 rows in this table fell before 2026-11-08. Adobe MAX preconference days 11-08/09 precede the main event (below).
 
 | Ticker/Event | Name | Type | Date | Tag | Source |
 |---|---|---|---|---|---|
-| ADBE | Adobe | Adobe MAX, Miami Beach | 2026-11-10 → 11-12 | (E) carried | not re-verified |
-| MSFT | Microsoft | Ignite, Moscone Center, SF (badge/pre-day 11-16) | 2026-11-17 → 11-20 | (E) Δ firmer: Moscone Center event page + 5 listings agree | moscone.com/events/microsoft-ignite-2026 (search 2026-11-01); Microsoft page not fetched |
-| TTWO | Take-Two | GTA VI launch | 2026-11-19 | (C) carried | not re-verified this run |
-| AMZN | Amazon | AWS re:Invent, Las Vegas (kickoff 11-29) | 2026-11-30 → 12-04 | (E) | govevents/founderpath/xbow/reworked agree (search 2026-11-01); AWS page not fetched |
-| NVDA | NVIDIA | GTC Washington DC (Huang keynote 12-01) | 2026-11-30 → 12-03 | (C) carried | nvidia.com/en-us/gtc/dc (W43) |
+| ADBE | Adobe | Adobe MAX, Miami Beach Convention Center (preconference 11-08/09) | 2026-11-10 → 11-12 | (C-secondary) Δ firmer than W44 (E) | max.adobe.com listing text returned by WebSearch 2026-11-08 ("Conference Nov 10-12, preconference Nov 8-9"); Miami Beach Convention Center; page not opened |
+| MSFT | Microsoft | Ignite, Moscone Center, San Francisco (pre-day 11-16) | 2026-11-17 → 11-20 | (E) | moscone.com/events/microsoft-ignite-2026 + ≥ 5 listings agree (WebSearch 2026-11-08); Microsoft page not opened |
+| TTWO | Take-Two | Grand Theft Auto VI launch (PS5, Xbox Series X\|S; PC later) | 2026-11-19 | (C-secondary) | Take-Two reaffirmed 11-19 in its 2026-02-04 earnings release and a 2026-07-17 shareholder letter, per press summaries (WebSearch 2026-11-08); Take-Two release not opened. TTWO reports earnings 11-09 (1A.1) |
+| AMZN | Amazon | AWS re:Invent, Las Vegas (badge/kickoff 11-29) | 2026-11-30 → 12-04 | (C) Δ upgraded from (E) | aws.amazon.com/events/reinvent (WebFetch 2026-11-08): "Nov. 30 to Dec. 4", Las Vegas; page gave no keynote timing |
+| NVDA | NVIDIA | GTC Washington, D.C. (Ronald Reagan Building; workshops 11-30, conference 12-01 → 12-03; Huang keynote Tue 12-01 2:00 pm ET) | 2026-11-30 → 12-03 | (C) | nvidia.com/gtc/dc "November 30–December 3, 2026" (search result titles, 2026-11-08); keynote day/time from Baxtel + Eleven Forum listings (secondary) |
 | GOOGL | Alphabet | Waymo multi-city robotaxi launches | 2026 (year only) | (T) | carried |
-| — | broad | CES 2027, Las Vegas Convention Center | 2027-01-06 → 01-09 | (E) | majority of listings (gophotonics, trade.gov, unmannedsystems); CTA page not reached; minority listings say 01-05..08 (press days) |
-| — | healthcare broad | J.P. Morgan Healthcare Conference, San Francisco | 2027-01-11 → 01-14 (Δ NEW row) | (E) | event-listing sites (vision life sciences etc.); organizer notes dates unconfirmed; JPM page not reached |
-| NVDA | NVIDIA | GTC 2027 San Jose | 2027-03-14 → 03-18 | (C) carried | nvidia.com GTC FAQ (W43) |
+| — | broad | CES 2027, Las Vegas Convention Center | 2027-01-06 → 01-09 | (E) | majority of listings (audioXpress, gophotonics, tradeshowz, opencurious); CTA page not reached; one listing says 01-05..08; CES Unveiled 01-04 |
+| — | healthcare broad | J.P. Morgan Healthcare Conference, San Francisco | 2027-01-11 → 01-14 | (E) carried | event-listing sites; organizer notes dates unconfirmed; not re-verified |
+| NVDA | NVIDIA | GTC 2027 San Jose | 2027-03-14 → 03-18 | (C) carried | nvidia.com GTC FAQ (W43/W44), not re-read |
 
 ### 1A.5 — Analyst and investor days
 
-Passed/resolved (dropped): MRK ESMO oncology event 10-26; CLS Investor Day 10-27 (D1 3b0ca8cf: CLS +12.12% on 10-27 on its print). Marvell investor day was 2026-10-06 (past; not a row).
+Passed/resolved since W44 (dropped from the forward table): EPAC Investor Day 2026-11-04 (scheduled date; occurrence not verified); KMX "Strategic Update" investor event 2026-11-03 8:00 ET (D1 c51c9632: 8-K Item 7.01, KMX -5.4%); EL "Capital Markets Experience China" event 2026-11-04 announcing a fiscal-2030 ambition (D1 7701d3bc: 8-K Item 7.01, EL +6.3%). Marvell investor day was 2026-10-06 (past).
 
 | Ticker/Event | Name | Type | Date | Tag | Source |
 |---|---|---|---|---|---|
-| EPAC | Enerpac Tool Group | Investor Day, NYSE | 2026-11-04 | (C) carried | company release 2026-07-27 |
-| ENTG | Entegris | Investor Day, NYC 1pm ET | 2026-11-09 | (C) carried | Entegris release 2026-08-26 |
+| ENTG | Entegris | Investor Day, NYC 1pm ET | 2026-11-09 | (C) carried | Entegris release 2026-08-26, not re-read |
 | MH | McGraw Hill | Investor Day, NYC | 2026-11-18 | (E) carried | briefglance only |
 | SHC | Sotera Health | Investor Day, NYC | 2026-11-20 | (T) carried | year not shown; unverified |
-| NTR | Nutrien | Investor Day, Toronto | 2026-11-30 | (C) carried | Nutrien release 2026-09-23 |
-| NU | Nu Holdings | First Investor Day, NYC | 2026-12-08 | (C) re-verified | Nu Holdings release dated 2026-09-02 (international.nubank.com.br), search 2026-11-01 |
+| NTR | Nutrien | Investor Day, Toronto | 2026-11-30 | (C) carried | Nutrien release 2026-09-23, not re-read |
+| NU | Nu Holdings | First Investor Day, NYC | 2026-12-08 | (C) carried | Nu Holdings release 2026-09-02, W44 re-verified; not re-read |
 | NKE | Nike | Investor day "Fall 2026" | — | (T) carried | |
 | UNH | UnitedHealth | Investor conference | ~2026-12 early | (E) carried | |
 | JPM | JPMorganChase | Investor Day | 2027-02-22 | (C) carried | not re-fetched |
 
-Δ One sweep search ("investor day Dec 2026 / Jan / Feb 2027") found no NEW announcement in that span beyond NU; a sample, not an enumeration. GlobalFoundries "2026 Investor Day" and L3Harris 2026 Investor Day pages surfaced but their dates were not read: unresolved, not asserted.
+Intuit hosted an Investor Day on 2026-09-17 (past; guidance reiterated per Intuit release text in search results). No new investor-day sweep was run this cycle (budget spent on date confirmation).
 
 ### 1A.6 — Regulatory, legal, trade and macro
 
-PDUFA rows mirrored in 1B.3 (window to 12-16 there; this table runs to 2027-05-01). Macro dates marked (C) from bls.gov / federalreserve.gov unless noted.
+PDUFA rows are mirrored in 1B.3 by another sub-agent (window to 12-23 there; this table runs to 2027-05-08). Macro dates marked (C) from bls.gov / federalreserve.gov unless noted; BLS rows are carried, not re-read.
 
-**Passed/resolved this week (dropped):**
-- GSK bepirovirsen (Hibsago): **APPROVED 2026-10-20**, ahead of the 10-26 aggregator date (GSK release via eatg.org copy; HCPLive 2026-10-20; ajmc 10-21). (C-secondary; FDA page not fetched.)
-- INO INO-3107 (PDUFA 10-30): **outcome UNRESOLVED**. Two searches and the Inovio IR page (did not render) returned no approval/CRL. Do not assert an outcome.
-- FOMC 10-28: HELD, target range 3-3/4 to 4%, IORB 3.90%, vote 10-2 (Cook, Hammack dissented preferring a +25bp hike). Source: federalreserve.gov/newsevents/pressreleases/monetary20261028a.htm (search snippet 2026-11-01; dissent names via secondary summary, admiralmarkets).
-- GDP advance Q3 and Sept personal income/PCE: BEA schedule showed 10-29 (one snippet showed 11-04); release not confirmed either way. D1 10-29 session did not cite them. Unresolved.
-- MRK Q3 call 10-29: held (D1 014b69e9: XLV +2.40 on LLY/MRK/BMY beats).
-- Sun Pharma ILUMYA 10-29: not re-verified, not US-listed; dropped.
+**Passed/resolved since W44 (dropped, outcomes not researched here):**
+- AGIO mitapivat sNDA PDUFA 2026-11-01: outcome UNRESOLVED as of W44; not re-searched.
+- Midterm elections 2026-11-03: held; D1 (a4e2f628) cites a Democratic midterm sweep as backdrop for the 11-04 rally (D1's inference).
+- Employment Situation (Oct) 2026-11-06 and Personal income & outlays (Sept) ~11-04: dates passed; releases not verified here.
+- OPEC+ monthly meeting 2026-11-01: passed. BTAI IGALMI 11-14 row (struck in W44) not carried.
+- Brent (FMP BZUSD via D1): 113.43 (10-30), 104.22 (11-02), 94.60 (11-04), 99.18 (11-05) - context.
 
 | Ticker/Event | Name | Type | Date | Tag | Source |
 |---|---|---|---|---|---|
-| AGIO | Agios | Mitapivat sNDA PDUFA, sickle cell (priority; accelerated approval; primary pain-crisis endpoint missed significance) | 2026-11-01 (Sun) | (C) goal date; **outcome UNRESOLVED** | Agios release (investor.agios.com/node/19051); no approval/CRL found by search; Agios IR page returned 403 |
-| — | OPEC+ (7 members) | Monthly meeting | 2026-11-01 | (C) carried | opec.org 2026-10-04 |
-| — | broad | US midterm elections | 2026-11-03 | (C) | statutory |
-| — | broad | Personal income & outlays (Sept) | 2026-11-04? | (T) | BEA conflicting snippets (10-29 vs 11-04); see Macro list |
-| — | broad | Employment Situation (Oct) | 2026-11-06 | (C) | bls.gov schedule + calendars agree |
-| — | broad | CPI (Oct) | 2026-11-10 | (C carried) | bls.gov (W43); financecalendar.com agrees; bls page not re-read |
-| — | broad | US-China truce / rare-earth export-control suspension | was 2026-11-10; reported extended to **2027-01-10** | (E) Δ | investinglive "extend Busan trade truce to January 10" + a report dated 2026-09-23; no official USTR/WH/MOFCOM confirmation. W43 row "USTR Sec 301 exclusions expire 11-10" carried, not re-verified |
-| BTAI | BioXcel | IGALMI sNDA | 2026-11-14 | struck: BTAIQ PINK, no options (see 1B.3) | |
-| CYTK | Cytokinetics | Aficamten label expansion | 2026-11-14 | (E) unverified | Assyro |
+| — | broad | CPI (Oct) | 2026-11-10 | (C carried) | bls.gov (W43/W44); not re-read |
+| — | US-China | Busan one-year truce: reciprocal tariff cuts and suspension of the 2025-10-09 rare-earth export controls (one-year suspensions from late Nov 2025, i.e. lapse ~2026-11-10) | ~2026-11-10; W44 reported extension to **2027-01-10** | (E) Δ unchanged | WebSearch 2026-11-08 found NO official extension notice (USTR/WH/MOFCOM) and only 2025 coverage of the one-year terms; W44's "extended to 2027-01-10" came from one secondary report and remains uncorroborated. W43 row "USTR Sec 301 exclusions expire 11-10" carried, not re-verified |
 | SMMT | Summit | Ivonescimab BLA PDUFA | 2026-11-14 | (C) | Summit release 2026-01-29 (carried) |
-| Beren | Beren Therapeutics | Adrabetadex NDA | 2026-11-17 | (E) | Assyro; not listed |
-| UNP·NSC | Union Pacific / Norfolk Southern | STB comments due | 2026-11-18 | (C) carried | |
+| CYTK | Cytokinetics | Aficamten label expansion | 2026-11-14 | (E) unverified | Assyro (carried) |
+| Beren | Beren Therapeutics | Adrabetadex NDA | 2026-11-17 | (E) | Assyro; not listed (carried) |
+| UNP·NSC | Union Pacific / Norfolk Southern | STB comments due | 2026-11-18 | (C) carried, **possibly superseded** | W44 row; see STB schedule note below |
 | CAPR | Capricor | Deramiocel BLA (extended) | 2026-11-22 | (C) carried | 8-K 2026-08-24 |
-| SVRA | Savara | Molgramostim BLA (extended) | 2026-11-22 | (E) | Assyro + Checkrare |
+| SVRA | Savara | Molgramostim BLA (extended) | 2026-11-22 | (E) | Assyro + Checkrare (carried) |
 | — | broad | PCE (Oct) | ~2026-11-25 | (E) carried | single source |
 | — | broad | GDP 2nd est. Q3 | 2026-11-25 | (E) carried | BEA per W43 |
 | SAN | Sanofi (ADR) | Venglustat NDA PDUFA | 2026-11-25 | (C) carried | Sanofi release 2026-05-28 |
-| BBIO | BridgeBio | BBP-418 NDA | 2026-11-27 | (E) | Assyro |
-| GSK | GSK (ADR) | Neladalkib NDA (ex-NUVL; GSK closed Nuvalent 2026-07-15) | 2026-11-27 | (C) carried | Nuvalent release 2026-05-27; GSK release |
-| ZYD | Zydus (not US-listed) | Saroglitazar | 2026-11-27 | (E) | |
-| PYPD | PolyPid | D-PLEX100 NDA | 2026-11-28 | (C) carried | cap likely <$2B |
+| BBIO | BridgeBio | BBP-418 NDA | 2026-11-27 | (E) | Assyro (carried) |
+| GSK | GSK (ADR) | Neladalkib NDA | 2026-11-27 | (C) carried | Nuvalent release 2026-05-27; GSK release |
+| ZYD | Zydus (not US-listed) | Saroglitazar | 2026-11-27 | (E) carried | |
+| PYPD | PolyPid | D-PLEX100 NDA | 2026-11-28 | (C) carried | cap likely < $2B |
 | VRTX | Vertex | Povetacicept BLA (accelerated, IgAN) | 2026-11-30 | (C) | Vertex release 2026-06-01 (carried) |
-| COGT | Cogent | Bezuclastinib + sunitinib GIST NDA (priority) | 2026-11-30 | (C) Δ re-confirmed | Cogent acceptance release (investors.cogentbio.com) + OncLive 2026-05-28; no adcom planned |
-| COGT | Cogent | Bezuclastinib NonAdvSM NDA | 2026-12-30 | (C) | Cogent release (per search) |
-| RHHBY | Roche (ADR) | Giredestrant adjuvant NDA | 2026-11-30 | (E) | Assyro |
-| EQT·RRC | EQT / Range Resources | **Δ NEW** all-stock merger (0.987 EQT per RRC; ~$13B; unanimous boards; close targeted Q1 2027; shareholder votes + regulatory pending, vote dates not yet set) | announced 2026-10-26; close ~Q1 2027 | (C) | Range 8-K/425 and 10-Q (sec.gov, search 2026-11-01); D1 7d029722 (10-26 RRC +17.66) |
-| UNP·NSC | Union Pacific / Norfolk Southern | DOJ/USDOT comments | 2026-12-03 | (C) carried | |
+| COGT | Cogent | Bezuclastinib + sunitinib GIST NDA (priority) | 2026-11-30 | (C) carried | Cogent acceptance release |
+| COGT | Cogent | Bezuclastinib NonAdvSM NDA | 2026-12-30 | (C) carried | Cogent release (per search) |
+| RHHBY | Roche (ADR) | Giredestrant adjuvant NDA | 2026-11-30 | (E) | Assyro (carried) |
+| EQT·RRC | EQT / Range Resources | All-stock merger (0.987 EQT per RRC; ~$13B); close targeted Q1 2027; shareholder votes + regulatory pending | announced 2026-10-26 | (C) carried | Range 8-K/425 and 10-Q; D1 7d029722; not re-read |
+| UNP·NSC | Union Pacific / Norfolk Southern | DOJ/USDOT comments | 2026-12-03 | (C) carried, **possibly superseded** | W44 row |
 | FSLR | First Solar + solar | Sec 232 tariff regime effective | 2026-12-04 | (C) carried, not re-verified | |
-| — | broad | Employment Situation (Nov) | 2026-12-04 | (C) | bls.gov / calendars |
+| — | broad | Employment Situation (Nov) | 2026-12-04 | (C) carried | bls.gov / calendars |
 | VRTX | Vertex | Journavx sNDA | 2026-12-05 | (T) carried | |
-| NU | see 1A.5 | | 2026-12-08 | | |
-| — | broad | **FOMC decision + SEP/dot plot** | 2026-12-09 (meeting 12-08/09) | (C) | federalreserve.gov/monetarypolicy/fomccalendars.htm fetched 2026-11-01; "Scheduled", SEP = Yes |
-| — | broad | CPI (Nov) | 2026-12-10 | (C) | calendars; bls page not re-read |
-| — | broad | US government funding: CR (H.R. 6500) runs to **2026-12-11** | 2026-12-11 | (C-secondary) Δ upgraded from (E) | signed 2026-09-02 per political.org; AACOM; twelve approps bills still unpassed; 2025 had a 43-day lapse |
-| VNDA·ANAB | Vanda / AnaptysBio | Imsidolimab BLA | 2026-12-12 | (E) | Assyro (indication not stated on page) |
-| CORT | Corcept | Relacorilant NDA | 2026-12-17 | (E) | Assyro |
-| — | Deciphera (Ono; not listed) | Tirabrutinib NDA | 2026-12-18 | (E) | Assyro |
-| RHHBY | Roche (ADR) | Giredestrant + everolimus NDA | 2026-12-18 | (E) | Assyro |
-| — | Camurus (not US-listed) | Oclaiz NDA | 2026-12-18 | (E) | Assyro |
-| — | Hansa (not US-listed) | Imlifidase BLA | 2026-12-19 | (E) | Assyro |
-| MLYS | Mineralys | Lorundrostat NDA | 2026-12-22 | (C) carried | release 2026-05-06; also listed on Dec aggregator |
+| — | broad | **FOMC decision + SEP/dot plot** | 2026-12-09 (meeting 12-08/09) | (C) | federalreserve.gov/monetarypolicy/fomccalendars.htm fetched 2026-11-08 (curl, HTTP 200): "December 8-9, 2026 * (SEP)"; last 2026 meeting |
+| — | broad | CPI (Nov) | 2026-12-10 | (C) carried | calendars; bls page not re-read |
+| — | broad | US government funding: CR (P.L. 119-103) runs to **2026-12-11**; full-year FY27 appropriations unfinished | 2026-12-11 | (C-secondary) re-verified | signed 2026-09-02, Senate 90-6, House 370-48 (Fox News / Al Jazeera / Akin Gump via WebSearch 2026-11-08); no reporting found after early September on negotiation status |
+| VNDA·ANAB | Vanda / AnaptysBio | Imsidolimab BLA | 2026-12-12 | (E) | Assyro (carried) |
+| CORT | Corcept | Relacorilant NDA | 2026-12-17 | (E) | Assyro (carried) |
+| — | Deciphera (Ono; not listed) | Tirabrutinib NDA | 2026-12-18 | (E) | Assyro (carried) |
+| RHHBY | Roche (ADR) | Giredestrant + everolimus NDA | 2026-12-18 | (E) | Assyro (carried) |
+| — | Camurus (not US-listed) | Oclaiz NDA | 2026-12-18 | (E) | Assyro (carried) |
+| — | Hansa (not US-listed) | Imlifidase BLA | 2026-12-19 | (E) | Assyro (carried) |
+| MLYS | Mineralys | Lorundrostat NDA | 2026-12-22 | (C) carried | release 2026-05-06 |
 | — | broad | GDP 3rd est. Q3 | 2026-12-23 | (E) carried | |
-| ACLX·GILD | Arcellx / Gilead | Anito-cel BLA | 2026-12-23 | (E) | Assyro; "announcement of 2026-02-23" per search |
-| VTRS | Viatris | MR-107A-02 NDA | 2026-12-27 | (E) | Assyro |
+| ACLX·GILD | Arcellx / Gilead | Anito-cel BLA | 2026-12-23 | (E) | Assyro (carried) |
+| VTRS | Viatris | MR-107A-02 NDA | 2026-12-27 | (E) | Assyro (carried) |
 | PRAX | Praxis | Relutrigine PDUFA (extended) | 2026-12-27 | (C) carried | 8-K 2026-06-29 |
-| — | Saol (not listed) | SL1009 NDA | 2026-12-30 | (E) | |
+| — | Saol (not listed) | SL1009 NDA | 2026-12-30 | (E) carried | |
 | BA | Boeing | FAA 737 MAX 10 cert "by year-end" | — | (T) carried | |
 | — | broad | Employment Situation (Dec) / CPI (Dec) | 2027-01-08 / 2027-01-13 | (C) carried | bls.gov |
 | DYN | Dyne | Z-rostudirsen BLA (priority) | 2027-01-21 | (C) carried | |
-| — | broad | **FOMC decision** (no SEP) | 2027-01-27 (meeting 01-26/27) | (C-tentative) | federalreserve.gov: 2027 dates "tentative until confirmed at the preceding meeting" |
+| — | broad | **FOMC decision** (no SEP) | 2027-01-27 (meeting 01-26/27) | (C-tentative) | federalreserve.gov fetched 2026-11-08; page: "Each meeting date is tentative until confirmed at the meeting immediately preceding it" |
 | V | Visa | DOJ debit case fact-discovery deadline | 2027-01-29 | (E) carried | |
-| PHAR | Pharming | Joenja lower-dose sNDA | 2027-01-30 | (C) carried | Assyro "Decided" unresolved |
+| PHAR | Pharming | Joenja lower-dose sNDA | 2027-01-30 | (C) carried | |
 | — | broad | Employment (Jan) / CPI (Jan) | 2027-02-05 / 02-11 | (C) carried | |
-| UNP·NSC | UNP / NSC | STB responses due | 2027-02-16 | (C) carried | |
+| UNP·NSC | UNP / NSC | STB responses due | 2027-02-16 | (C) carried, **possibly superseded** | W44 row |
 | BMRN | BioMarin | VOXZOGO full approval | 2027-02-28 | (C) carried | |
 | SRPT | Sarepta | AMONDYS 45 / VYONDYS 53 sNDAs | 2027-02-28 | (C) carried | |
 | LYV | Live Nation | DOJ/states remedies | ~2027-02 | (E) carried | |
-| WBD | Warner Bros Discovery | Antitrust trial begins | 2027-03-02 | (C) carried | |
-| EXEL | Exelixis | Zanzalintinib + atezolizumab mCRC PDUFA (extended from 12-03; an aggregator still shows 12-03) | 2027-03-03 | (C) carried | OncLive/Exelixis (W43) |
+| WBD | Warner Bros Discovery | Antitrust trial begins | 2027-03-02 | (C) carried (note: D1 context line records WBD acquired by Skydance and delisted 2026-10-06; row likely moot) | |
+| EXEL | Exelixis | Zanzalintinib + atezolizumab mCRC PDUFA (extended) | 2027-03-03 | (C) carried | OncLive/Exelixis (W43) |
 | — | broad | Employment (Feb) / CPI (Feb) | 2027-03-05 / 03-10 | (C) carried | |
-| — | broad | **FOMC decision + SEP** | 2027-03-17 (meeting 03-16/17) | (C-tentative) | federalreserve.gov |
+| — | broad | **FOMC decision + SEP** | 2027-03-17 (meeting 03-16/17) | (C-tentative) | federalreserve.gov fetched 2026-11-08 |
 | — | broad | FTC v. Amazon trial | ~2027-03-29 | (E) carried | |
 | HRMY | Harmony | Pitolisant GR PDUFA | 2027-04-01 | (E) carried | |
 | — | broad | Employment (Mar) / CPI (Mar) | 2027-04-02 / 04-13 | (C) carried | |
-| — | broad | **FOMC decision** (no SEP) | 2027-04-28 (meeting 04-27/28) | (C-tentative) Δ now INSIDE the A window (ends 05-01) | federalreserve.gov |
-| KMB·KVUE | Kimberly-Clark / Kenvue | Merger outside date extended to 2027-05-03 (W43 note) | 2027-05-03 | (E) carried | just outside window |
+| — | broad | **FOMC decision** (no SEP) | 2027-04-28 (meeting 04-27/28) | (C-tentative) | federalreserve.gov fetched 2026-11-08 |
+| KMB·KVUE | Kimberly-Clark / Kenvue | Merger outside date extended to 2027-05-03 (W43 note) | 2027-05-03 | (E) carried | inside the window since the end rolled to 05-08 |
 
-Tariff / legal note (Δ): Supreme Court struck down IEEPA tariffs (Learning Resources v. Trump, Feb 2026); Section 122 10% surcharge (effective 2026-02-24, 150 days to ~07-24) was itself held unauthorized (May 2026 per gtlaw) and has lapsed; CBP IEEPA refund phase for finally-liquidated entries opened 2026-10-06 (477 declarations, >425k entries, ~$11.4B capacity, per one Oct-8 guide, beancount.io, secondary). Section 232 semiconductor tariff 25% (effective 2026-01-15) stands; Commerce review was due 2026-07-01 (outcome not confirmed); Section 301 tariffs on Chinese semiconductors scheduled 2027-06-23 (outside window). No dated Nov/Dec 2026 Section 232 deadline found (searches are samples, not proof of absence). The FSLR 12-04 Sec 232 row remains unverified.
+**UNP·NSC STB schedule note (new information, 2026-11-08 WebSearch):** FreightWaves/Trains summaries of the STB's 2026-08-18 decision report final briefs due 2027-05-28, a final decision within 90 days after the record closes (record-close date not yet set), i.e. second half of 2027 at the earliest; the STB had rejected the original application on 2026-01-16. The three W44 UNP·NSC rows above (11-18, 12-03, 2027-02-16) were not reconciled with that schedule; STB document itself not opened.
+
+**Tariff / legal note (carried from W44, not re-verified):** Supreme Court struck down IEEPA tariffs (Learning Resources v. Trump, Feb 2026); Section 122 surcharge lapsed; CBP IEEPA refund phase for finally-liquidated entries opened 2026-10-06 (secondary); Section 232 semiconductor tariff 25% (effective 2026-01-15) stands; Section 301 tariffs on Chinese semiconductors scheduled 2027-06-23 (outside window). No dated Nov/Dec 2026 Section 232 deadline found (a sample, not proof of absence).
 
 ### 1A.7 — Restructuring, M&A and structural
 
-D1 development titles since 10-26 (reused, not re-searched): SGRY take-private (10-26, +47.62%); RRC/EQT merger (10-26, +17.66%); ADT deal (10-29, +33.2%); Anthropic S-1 (cb06c3e0/56a602d2: AI/semis rally 10-26..27); SpaceX wireless (XLC -1.57% 10-26); UNF FTC suit report (10-27); BHC +28.8, PRCH +28.2 (10-29, drivers not read here).
+D1 developments since 2026-11-01 (reused, not re-searched; entry ids from `events.decision_log`): MRVL–LITE merger (da7bf33a); CVI $4.2B Marathon Petroleum refinery-assets acquisition (CVI acquirer; c51c9632); MMM PFAS/AFFF MDL personal-injury settlement 11-03 (8-K Items 1.01/8.01; 7701d3bc); NEOG: Zoetis purchase of the Genomics business, regulatory review now expected to conclude early 2027 (8-K Item 8.01, 11-04; f5359185); ORCL issuance of $10B common stock, 86,206,897 shares (8-K Item 8.01, 11-04; f5359185; ORCL -6.9%); FCX board approval of $4.5B Bagdad expansion (11-04; f5359185); LBTYK Q3 earnings with spin-off plan discussed, no signed deal (11-03; c51c9632); FWONA/FWONK Exchange Agreement acquiring high-vote Series B from Malone-related entities (11-05; f5359185); PENG sale of Optimized LED business (11-03/04; 7701d3bc); INGM secondary offering of 11,000,000 shares by selling stockholder (11-04; f5359185); DT new $1B buyback (11-03; c51c9632); PTCT $500M buyback (11-03; c51c9632); SYY CFO appointment (11-03; c51c9632); UEC long-term uranium sales agreements (11-05; f5359185). M2 note (entry 67f68f9a, 2026-11-01): Skyworks–Qorvo closed 2026-10-05; WBD acquired by Skydance and delisted 2026-10-06; WDAY take-private unconfirmed; Kenvue pending (KMB/PG); DS Smith EMEA separation.
 
 | Ticker/Event | Name | Type | Date | Tag | Source |
 |---|---|---|---|---|---|
-| EQT·RRC | EQT / Range | All-stock merger; close Q1 2027 | ann. 2026-10-26 | (C) | see 1A.6 |
-| SGRY | Surgery Partners | Take-private (D1) | ann. ~2026-10-26 | (C per D1; terms not read) | D1 7d029722 |
-| ADT | ADT | Deal (D1) | ~2026-10-29 | terms not read | D1 b1e61b9c |
-| — | Anthropic | IPO: confidential draft S-1 (2026-06-01); one source (tech-insider.org) claims public S-1 filed 2026-10-26, Nasdaq "ANT"; **uncorroborated**. D1 cites an "Anthropic S-1" as sector driver 10-26/27. Pricing date unknown. | TBD | (T) Δ | futuresearch/engadget/WUNC (June); D1 cb06c3e0; check EDGAR |
-| PCRX·VTRS | Pacira / Viatris | $36.50 cash tender, ~$1.65B; closing "by end of 2026" | ann. 2026-10-08; close by ~2026-12-31 | (C) Δ close timing | Viatris 8-K (sec.gov) via search |
-| PTC·Schneider; OPCH·CD&R/McKesson | | close undated | | carried, not re-verified (search returned only VTRS) | |
-| (other W43 carried items) | ON·SYNA; UBER/ezCater; CMG·SBUX (T); ORCL/OpenAI (T); CVX·HESM; WDAY (T); CAT Fabick; SWKS·QRVO; KMB·KVUE; TECK; CTVA Vylor spin (Q4); Nasdaq-100 recon mid-Dec (E); S&P Q4 rebalance 2026-12-18 (E); DG CEO transition 2027-01-01; S&P Q1 rebalance 2027-03-19 (E) | | | carried unchanged | W43 |
-| IONQ, CCC, T/VZ/TMUS spectrum, CRWV, CIFR, FRMI·AMD, DELL/HPE/NTAP downgrades | | | Oct 9-14 | carried (past events, context only; may be dropped) | W43 |
+| MRVL·LITE | Marvell / Lumentum | **Δ NEW** all-stock merger: 4.500 MRVL shares per LITE share; agreement dated 2026-11-01; implied LITE enterprise value stated as $115B in the press release (a CEO email cited ~$100B); closing expected 1H calendar 2028 subject to MRVL and LITE stockholder votes (MRVL: share issuance + authorized-share charter amendment), regulatory approvals; MRVL termination fee $5.8B in certain cases + $3.2B regulatory termination fee; no meeting dates set | announced 2026-11-02; close 1H 2028 | (C) | Marvell IR PR 1040 "Marvell and Lumentum to Combine..." and LITE 8-K acc 0001193125-26-442758 / Form 425 (sec.gov) via WebSearch 2026-11-08, filings not opened; D1 da7bf33a (MRVL -12.7%, LITE -18.6% on 11-02) |
+| EQT·RRC | EQT / Range | All-stock merger; close Q1 2027 | ann. 2026-10-26 | (C) carried | see 1A.6 |
+| SGRY | Surgery Partners | Take-private (D1) | ann. ~2026-10-26 | (C per D1; terms not read) carried | D1 7d029722 |
+| ADT | ADT | Deal (D1) | ~2026-10-29 | terms not read, carried | D1 b1e61b9c |
+| — | Anthropic | IPO: confidential draft S-1 submitted 2026-06-01; **public Form S-1 reported filed 2026-10-26**, proposed Nasdaq Global Select listing, ticker "ANT"; offering size and price range not set; filing not effective. A WSJ-sourced report (via secondary outlets) says listing could come as early as the week of 2026-11-16 | pricing/listing date unknown | (T) Δ now reported by multiple outlets (letsdatascience, thepaypers, freepressjournal, futurumgroup, runtimewire); EDGAR not opened | WebSearch 2026-11-08; D1 cb06c3e0 cites an "Anthropic S-1" as sector driver 10-26/27 |
+| PCRX·VTRS | Pacira / Viatris | $36.50 cash tender, ~$1.65B; closing "by end of 2026" | ann. 2026-10-08; close by ~2026-12-31 | (C) carried | Viatris 8-K; not re-read |
+| NEOG·ZTS | Neogen / Zoetis | Genomics business sale; regulatory review to conclude early 2027 | early 2027 | (C per D1 8-K) | D1 f5359185 |
+| PTC·Schneider; OPCH·CD&R/McKesson | | close undated | | carried, not re-verified | |
+| (other W44 carried items) | ON·SYNA; UBER/ezCater; CMG·SBUX (T); ORCL/OpenAI (T); CVX·HESM; WDAY (T); CAT Fabick; KMB·KVUE; TECK; CTVA Vylor spin (Q4); Nasdaq-100 recon mid-Dec (E); S&P Q4 rebalance 2026-12-18 (E); DG CEO transition 2027-01-01; S&P Q1 rebalance 2027-03-19 (E) | | | carried unchanged | W44 (SWKS·QRVO dropped: closed 2026-10-05 per M2) |
 
 ### 1A.8 — Universe rails (carried, dated)
 
-**Market-cap rail (>= $2B).** Inside the C window the rail is Nasdaq's own `marketCap` field (every one of the 1,151 forward rows is ≥ $2B by construction; smallest A-queue name in window AKAM $14B, FSLR $19B printed). Prior direct measurements are CARRIED, not re-measured: 2026-10-04 (61 names, 0 FAIL, smallest AAL $8.57B, AKAM $15.84B, FSLR $18.77B) and 2026-10-09 (50 vendor-calendar names via `company/batch-market-cap`, 0 FAIL, smallest RIOT $6.39B). Data is now 28 and 23 days old; single-digit to low-double-digit cap moves are far from any 2x floor gap. **FAIL the cap floor, A-ineligible (carried):** TLRY, LCID, FUBO. **ADR rail (carried):** TSM, NOK, SONY, BILI, BIDU, BABA, NIO, GSK, SAN, RHHBY are A-ineligible. **New/unmeasured names this cycle:** EPAC (12-16, Nasdaq cap ~$2B boundary), RKT and other FMP rows beyond the window — cap UNMEASURED.
+**Market-cap rail (≥ $2B).** Inside the C window the rail is Nasdaq's own `marketCap` field (every one of the 399 forward rows is ≥ $2B by construction; the smallest forward A-queue names by that field are OKTA $29.9B, NBIS $32.7B, NTAP $33.3B, TTWO $39.9B, all far above the floor; MEASURED from the CSV). Prior direct measurements are CARRIED, not re-measured: 2026-10-04 (61 names, 0 FAIL, smallest AAL $8.57B, AKAM $15.84B, FSLR $18.77B) and 2026-10-09 (50 vendor-calendar names via `company/batch-market-cap`, 0 FAIL, smallest RIOT $6.39B). Data is now 35 and 30 days old. **FAIL the cap floor, A-ineligible:** LCID ($1.17B) and FUBO ($0.84B) re-measured today from the Nasdaq all-caps file (MEASURED); TLRY carried. **ADR rail (carried):** TSM, NOK, SONY, BILI, BIDU, BABA, NIO, GSK, SAN, RHHBY are A-ineligible. **New/unmeasured this cycle:** the FMP 2027 rows (e.g. RKT, RIOT, SOFI, HOOD, COIN, PINS, ETSY, SNAP, ROKU, SIRI, RBLX, MGM) are cap UNMEASURED beyond the 12-23 Nasdaq pull; RIOT, SNAP, ROKU, SHOP, MRNA and UBER do appear in the Nasdaq ≥ $2B printed-week rows.
 
 ### 1A.9 — Rows struck, rejected or corrected this cycle (earnings only)
 
-1. ~~All 2026-10-26 → 10-30 rows~~ — elapsed; moved to 'Printed this week'.
-2. **Δ NVDA 2026-11-18 (E) → 2026-11-17 (C)** — NVIDIA release 'Sets Conference Call for Third-Quarter Financial Results' (call Tue 11-17 2:00 pm PT); FMP and Nasdaq now agree on 11-17.
-3. **Δ NTAP 2026-11-24 → 2026-12-01 (E)** — Nasdaq flip-flop (W42 12-01, W43 11-24, now 12-01 with AMC time supplied); no issuer notice searched.
-4. **Δ MU 2026-12-23 (aggregator) → 2026-12-16 (Nasdaq, E)**; **Δ AVGO 2026-12-09 (aggregator) → 2026-12-10 (Nasdaq, E)**; both enter the C window as the window end rolled to 12-16.
-5. **Δ other date moves vs W43 (Nasdaq):** BIDU 11-17 → 11-16; CEG 11-06 → 11-09; KEYS 11-23 → 11-19; DASH 11-04 → 10-29, DB 11-04 → 10-28, EQNR 11-04 → 10-28 (these three now in the printed week, early vs W43 projections).
-6. **A-queue date confirmations upgraded (E) → (C) this run:** NVDA, ANET, QCOM, TTWO, SMCI, AMAT, COP (see 1B.2).
-7. **Searched, still NOT issuer-confirmed:** CSCO 11-11, PANW 11-18, HD 11-17, NBIS 11-10 (Nasdaq; calendar sites say 11-10/11-11), DELL 11-24, INTU 11-19, MU 12-16. HD: calendar sites list 11-17 as expected, not formally confirmed.
-8. Disney's date: calendar sites list 11-11/11-12 (estimates); the issuer's own 2026-10-12 notice says Tue 11-17 (matches Nasdaq/FMP).
-9. FMP-only names absent from Nasdaq inside the window (carried shape): FUBO 11-17, LCID 11-09, ET 11-03. FMP names beyond the Nasdaq pull (CCL, NKE, and the 2027 rows) are not 'absent' — outside the pull. No FMP in-window date disagrees with Nasdaq.
+1. ~~All 2026-11-02 → 11-06 rows~~ - elapsed; moved to 'Printed this week'. The 11-02/11-03 Nasdaq rows that W44 tagged (C) were not independently checked for occurrence except through the D1 move records.
+2. **Δ NBIS 2026-11-10 (E) → 2026-11-12 (C, BMO)** - Nebius notice dated 2026-10-30 (WebFetch); Nasdaq now also 11-12.
+3. **Δ CSCO 2026-11-11 (E) → 2026-11-12 (C, AMC)** - Cisco release 2026-11-03 (call 1:30 pm PT).
+4. **Δ HPE 2026-12-03 (E) → 2026-11-23 (Nasdaq, E)** - 10-day move on Nasdaq; no HPE notice found (WebSearch 2026-11-08).
+5. **Δ other Nasdaq date moves vs W44:** TDG 11-11 → 11-10; MDT 11-17 → 11-24; BNS 12-01 → 12-02; RY 12-02 → 12-03; BMO 12-03 → 12-02; TM 11-04 → 11-05 and LITE 11-05 → 11-02 (both now printed week).
+6. **A-queue date confirmations upgraded (E) → (C) this run:** CSCO, NBIS, HD, PANW (secondary), INTU (secondary), CRWD, MRVL, OKTA, SNOW. NTAP: issuer target 12-01 from the Q1 FY27 release (webcast notice pending).
+7. **Searched, still NOT issuer-confirmed:** DELL 11-24 (IR page lists the event without a date; Tavily), HPE 11-23, CRM 12-02 (WebSearch + Tavily), ORCL 12-09 (calendar sites 12-09/12-10), ADBE 12-09, AVGO 12-10, MU 12-16.
+8. **FMP/Nasdaq date disagreement (new):** BABA FMP 11-19 vs Nasdaq 11-24; unresolved, not searched.
+9. FMP-only names absent from Nasdaq ≥ $2B inside the window: LCID 11-09, FUBO 11-17 (both below $2B). No other FMP in-window date disagrees with Nasdaq.
+10. FMP lists FDX on both 2027-02-02 (chunk 2) and 2027-03-25 (chunk 3); both (T).
 
 ### 1A.10 — Names with NO firm forward earnings date
 
-**Newly (C) this run:** NVDA 11-17, ANET 11-03, QCOM 11-04, TTWO 11-09, SMCI 11-03, AMAT 11-12, COP 11-05, PFE 11-03, DIS 11-17, SHOP 11-03.
+**Newly (C) this run (A-queue):** CSCO 11-12, NBIS 11-12, HD 11-17, PANW 11-18 (secondary), INTU 11-19 (secondary), CRWD 12-01, MRVL 12-01, OKTA 12-01, SNOW 12-02. Carried (C): TTWO 11-09, AMAT 11-12, NVDA 11-17, TGT 11-18, WMT 11-19.
 
-**STILL NO ISSUER NOTICE (searched 2026-11-01):** CSCO (FQ1; last year's notice came 11-03 for 11-12; Nasdaq 11-11 n/s), PANW (last year's notice 11-04 for 11-19; Nasdaq 11-18 n/s), HD (Nasdaq 11-17 BMO; calendar sites only), NBIS (Nasdaq 11-10; calendar sites 11-10/11-11; last year's notice came 10-22), DELL (Nasdaq 11-24; calendar site projection), INTU (last year's notice late Oct for 11-20; Nasdaq 11-19), MU (Nasdaq/WSH/days.to 12-16, inferred). Not searched this run (carried as (E), no notice found W43): CRWD, SNOW, HPE, OKTA, MRVL, CRM, ORCL, AVGO, ADBE, COST, NTAP, DOCU.
-CRM, INTU, MRVL: as in W43 — no notice; early-Dec (CRM, MRVL) and late-Nov (INTU) INFERRED from history; Nasdaq now says CRM 12-02, MRVL 12-01, INTU 11-19 (all n/s).
-AAPL/MSFT/AMZN/GOOGL Q4 CY2026: no issuer dates; FMP (E) gives MSFT 2027-01-27, AMZN 2027-02-04, GOOGL 2027-02-03; AAPL none.
+**Forward A-queue names with an issuer target or only an (E) date (7 + 1):** NTAP 12-01 (issuer target), DELL 11-24, HPE 11-23, CRM 12-02, ORCL 12-09, ADBE 12-09, AVGO 12-10, MU 12-16 (all Nasdaq-sourced (E); searches in 1A.9 item 7).
 
-### 1A.11 — Liquidity rail (30-day ADV >= $10M), carried
+**A-queue names with NO forward date in the Nasdaq pull (24):** the 15 with none (AMZN, CAT, CVX, FSLR, GEV, GOOGL, IBM, INTC, JPM, LLY, META, MRK, MSFT, NOW, XOM) and the 9 that printed 11-02 → 11-06 (AAPL, AKAM, AMD, ANET, COP, DDOG, QCOM, SMCI, VRTX). Of these, FMP (E) carries a next print for AAPL 2027-02-04, AMD 2027-02-02, AMZN 2027-02-04, GOOGL 2027-02-03, MSFT 2027-01-27, META 2027-01-27, INTC 2027-01-28, CVX 2027-01-29, XOM 2027-01-29, JPM 2027-01-14; MRK carried (C) 2027-02-02 (merck.com). **No date at all found:** AKAM, ANET, CAT, COP, DDOG, FSLR, GEV, IBM, LLY, NOW, QCOM, SMCI, VRTX. (CAT, GEV, NOW, LLY, FSLR printed 10-26 → 10-30 per W44; IBM printed in October, not in the pull.)
 
-CARRIED from the 2026-10-04 measurement (IBKR regular-session daily bars, 2026-08-21 → 2026-10-02): 61 of 61 cleared; lowest VRTX $222.0M (~22x floor). NOT re-measured by this sub-agent (now 28 days old). Names beyond that list (UAL, NFLX, GE, GM, LMT, CLS, NU, ENTG, EPAC, SHC, MH, NTR, ALAB, ROK, A, RKT) are UNMEASURED for ADV; ≥ $10M is INFERRED for large caps, unknown for EPAC/SHC/MH.
+### 1A.11 — Liquidity rail (30-day ADV ≥ $10M), carried
 
-## PART 1B — Strategy C universe, 45-day window (2026-11-01 → 2026-12-16)
+CARRIED from the 2026-10-04 measurement (IBKR regular-session daily bars, 2026-08-21 → 2026-10-02): 61 of 61 cleared; lowest VRTX $222.0M (~22x floor). NOT re-measured by this sub-agent (now 35 days old). Names beyond that list (UAL, NFLX, GE, GM, LMT, CLS, NU, ENTG, EPAC, SHC, MH, NTR, ALAB, ROK, A, RKT, LITE) are UNMEASURED for ADV; ≥ $10M is INFERRED for large caps, unknown for EPAC/SHC/MH.
 
-C qualifying types only: earnings (company IR), FDA PDUFA, FOMC. No interpretation. The C window is 2026-11-01 → 2026-12-16 (run date + 45 days, same convention as W43); the 12-08/09 FOMC sits inside. Tags: (C) confirmed by issuer/authority, (E) estimated, (T) tentative. 'carried' = read last cycle and not re-read this run.
+## PART 1B — Strategy C universe, 45-day window (2026-11-08 → 2026-12-23)
+
+C qualifying types only: earnings (company IR), FDA PDUFA, FOMC. No interpretation. The C window is 2026-11-08 → 2026-12-23 (run date + 45 days, same convention as W44); the 12-08/09 FOMC sits inside. Tags: (C) confirmed by issuer/authority, (E) estimated, (T) tentative. 'carried' = read last cycle and not re-read this run. 'Search extract' = the issuer release was named and dated in a WebSearch/Tavily result; the issuer page itself was not opened first-hand unless stated. Metered calls this part: 33 WebSearch, 4 WebFetch (BLS CPI, BLS Employment Situation, BEA schedule, Nebius IR), 4 Tavily basic (4 credits); log at calls_1B.jsonl.
 
 ### 1B.1 — FOMC
 
-| Event | Meeting | Decision date | In C window (11-01 → 12-16) | Tag | Source |
+| Event | Meeting | Decision date | In C window (11-08 → 12-23) | Tag | Source |
 |---|---|---|---|---|---|
-| FOMC | 2026-10-27/28 (no SEP) | 2026-10-28 — **HELD**, 3-3/4 to 4%, IORB 3.90%, 10-2 vote (Cook, Hammack preferring +25bp) | NO — passed | (C) | federalreserve.gov/newsevents/pressreleases/monetary20261028a.htm; fomccalendars.htm fetched 2026-11-01 |
-| FOMC | 2026-12-08/09, **SEP/dot plot meeting** | **2026-12-09** (2:00 pm ET statement; presser) | **YES** (day 39 of 2026-11-01 → 12-16 window) | (C) status "Scheduled" | fomccalendars.htm fetched 2026-11-01 |
-| FOMC | 2027-01-26/27 (no SEP) | 2027-01-27 | No | (C-tentative) | same |
+| FOMC | 2026-10-27/28 (no SEP) | 2026-10-28 — HELD, 3-3/4 to 4%, IORB 3.90%, 10-2 vote (Cook, Hammack preferring +25bp) — **carried from W44 row** (not re-read; D1 records since 11-01 contain no FOMC item; the fomccalendars page fetched today lists the meeting with statement links but states no outcome and no minutes yet) | NO — passed | (C) carried | federalreserve.gov/newsevents/pressreleases/monetary20261028a.htm (per W44); fomccalendars.htm fetched 2026-11-08T08:43Z |
+| FOMC | 2026-12-08/09, **SEP/dot plot meeting** | **2026-12-09** (statement 2:00 pm ET and presser per W44; the page lists only the meeting dates) | **YES** (day 32 of the 2026-11-08 → 12-23 window, counting 11-08 as day 1) | (C) "Scheduled" | federalreserve.gov/monetarypolicy/fomccalendars.htm fetched 2026-11-08 |
+| FOMC | 2027-01-26/27 (no SEP) | 2027-01-27 | No | tentative | same |
 | FOMC | 2027-03-16/17 (SEP) | 2027-03-17 | No | tentative | same |
-| FOMC | 2027-04-27/28 | 2027-04-28 | No (A window only) | tentative | same |
+| FOMC | 2027-04-27/28 | 2027-04-28 | No | tentative | same |
+| FOMC | 2027-06-08/09 (SEP) | 2027-06-09 | No | tentative | same |
+| FOMC | 2027-07-27/28 | 2027-07-28 | No | tentative | same |
+| FOMC | 2027-09-14/15 (SEP) | 2027-09-15 | No | tentative | same |
+| FOMC | 2027-10-26/27 | 2027-10-27 | No | tentative | same |
+| FOMC | 2027-12-07/08 (SEP) | 2027-12-08 | No | tentative | same |
 
-Δ vs W43: Dec meeting is now comfortably inside C window (was day 45 boundary). Context (secondary, unverified for C thesis): Admiral Markets headline "markets price a December hike"; two hawkish dissents. First 2027 meeting: 01-26/27. Per the page, no 2026 date is flagged tentative.
+Page note (verbatim in substance): "Each meeting date is tentative until confirmed at the meeting immediately preceding it"; the page also lists a two-day meeting January 25-26, 2028. Δ vs W44: C window end moved 12-16 → 12-23; Dec meeting day 39 → day 32 of the window (window start moved). C queue holds thesis-FOMC-C-20261130 (state.open_queue, orchestrator-MEASURED this run).
 
 ### 1B.2 — Earnings inside the C window: company-IR-confirmed subset
 
-Window 2026-11-01 → 2026-12-16. **Struck (printed before the window, 10-26 → 10-30):** V, MSFT, GOOGL, GEV, NOW, AMZN, LLY, MRK, INTC, CAT, FSLR, XOM, CVX, ABBV (all W43 (C) rows, dates elapsed; see 'Printed this week' in 1A). 'NEW' = confirmed this run by WebSearch result citing the issuer's own release (the issuer page itself was not opened first-hand; the quoted release dates/times are from the search extract). 18 web searches in total; the ten NEW confirmations are all from search extracts, each naming an issuer notice with a date.
+Window 2026-11-08 → 2026-12-23. Forward Nasdaq rows (≥ $2B) 11-09 → 12-21 = 399 rows; 11-26 and 12-23 returned zero rows. **Struck (printed 11-02 → 11-06, before the window):** AAPL, PLTR, VRTX, AMD, ANET, SHOP, PFE, SMCI, QCOM, UBER, DDOG, COP, AKAM (all W44 (C) rows, dates elapsed). Market caps below are the Nasdaq mcap_usd field in the 11-08 pull ($B, rounded). Names ≥ ~$50B plus every A-queue name in the window were checked; December names with no notice yet are expected only (E).
 
 **Company-IR confirmed (C)**
 
 | Date | Ticker | Timing | Mcap ($B) | Confirmation |
 |---|---|---|---|---|
-| 2026-11-02 | AAPL | after close; 2:00 pm PT | 5,092 | Apple IR notice relayed by secondary sites (carried from W43, held at (C-secondary); apple.com / investor.apple.com not first-hand read) |
-| 2026-11-02 | PLTR | after close | 472 | Palantir Business Wire release; webcast 5:00 pm ET (carried from W43, not re-read; investors.palantir.com not fetched) |
-| 2026-11-02 | VRTX | after close | 137 | Vertex release 2026-10-07 (carried from W43, not re-read) |
-| 2026-11-03 | AMD | after close | 925 | ir.amd.com 2026-10-06 (carried from W43, not re-read) |
-| 2026-11-03 | ANET | after close | 232 | **NEW** arista.com release 2026-10-06; call 1:30 pm PT |
-| 2026-11-03 | SHOP | pre-market | 217 | **NEW** Shopify release 2026-10-06 (search result); call 8:30 am ET |
-| 2026-11-03 | PFE | pre-market | 171 | **NEW** Pfizer release 2026-09-22; webcast/call 10:00 am ET |
-| 2026-11-03 | SMCI | after close | 23 | **NEW** Supermicro IR call notice (5:00 pm ET); preliminary FQ1 update 2026-10-20 (rev $18.5-19.5B) already out |
-| 2026-11-04 | QCOM | after close | 195 | **NEW** Qualcomm release 2026-10-22 (qualcomm.com/news/releases/2026/10) |
-| 2026-11-04 | UBER | pre-market | 134 | investor.uber.com release 2026-10-05; call 8:00 am ET (carried from W43, not re-read) |
-| 2026-11-04 | DDOG | pre-market | 95 | Datadog date release (carried from W43, not re-read) |
-| 2026-11-05 | COP | pre-market | 180 | **NEW** ConocoPhillips Business Wire release 2026-09-24; call 12:00 pm ET |
-| 2026-11-05 | AKAM | after close | 14 | Akamai release 2026-10-08 (carried from W43, not re-read) |
-| 2026-11-09 | TTWO | after close | 36 | **NEW** Take-Two release; 4:30 pm ET |
-| 2026-11-12 | AMAT | after close | 335 | **NEW** Applied Materials release 2026-10-22; call 4:30 pm ET |
-| 2026-11-17 | NVDA | after close | 5,149 | **NEW** NVIDIA newsroom release "Sets Conference Call for Third-Quarter Financial Results"; call 2:00 pm PT. Δ vs W43 (E) 11-18 |
-| 2026-11-17 | DIS | pre-market | 192 | **NEW** Disney release 2026-10-12; webcast 8:30 am ET |
-| 2026-11-18 | TGT | pre-market | 69 | corporate.target.com (carried from W43, not re-read) |
-| 2026-11-19 | WMT | pre-market | 962 | corporate.walmart.com (carried from W43, not re-read) |
+| 2026-11-09 | KKR | pre-market; call 10:00 am ET | 88 | **NEW** Business Wire "KKR & Co. Inc. to Announce Third Quarter 2026 Results" 2026-09-29 (search extract) |
+| 2026-11-09 | B (Barrick) | pre-market (release 6:00 am ET; webcast 11:00 am ET) | 66 | **NEW** barrick.com Q3 2026 event page (search extract) |
+| 2026-11-09 | TTWO | after close; 4:30 pm ET | 40 | carried (Take-Two release, W44) |
+| 2026-11-12 | CSCO | after close; call 1:30 pm PT / 4:30 pm ET | 377 | **NEW** investor.cisco.com "Cisco Schedules Conference Call for Q1 Fiscal Year 2027 Financial Results" (announced 2026-11-03; search extract). Δ vs W44 Nasdaq/FMP 11-11 → 11-12 (E→C) |
+| 2026-11-12 | NBIS | pre-market; call 8:00 am ET | 33 | **NEW** nebius.com newsroom "Nebius Group announces date of third quarter 2026 results and conference call" dated 2026-10-30 — **first-hand WebFetch**. Δ vs W44 Nasdaq 11-10 → 11-12 (E→C) |
+| 2026-11-12 | AMAT | after close; 4:30 pm ET | 253 | carried (Applied Materials release 2026-10-22, W44) |
+| 2026-11-17 | NVDA | after close; call 2:00 pm PT | 4,377 | carried (NVIDIA newsroom, W44) |
+| 2026-11-17 | DIS | pre-market; webcast 8:30 am ET | 202 | carried (Disney release 2026-10-12, W44) |
+| 2026-11-18 | PANW | after close (Nasdaq) | 258 | **NEW** Palo Alto Networks release dated 2026-11-03 "to Announce Fiscal First Quarter 2027 Financial Results on Wednesday, November 18, 2026" (search extract; webcast time not shown). Δ (E→C) |
+| 2026-11-18 | TGT | pre-market | 72 | carried (corporate.target.com, W44) |
+| 2026-11-19 | WMT | pre-market | 1,013 | carried (corporate.walmart.com, W44) |
+| 2026-11-19 | INTU | after close; call 1:30 pm PT | 95 | **NEW** Intuit release 2026-10-29 "Intuit to Announce First-Quarter Fiscal Year 2027 Results on Nov. 19" (investors.intuit.com press release page returned by Tavily with text; investors.intuit.com home banner "November 19, 2026 - 4:30 PM EST Q1 2027 Conference Call"). Δ (E→C) |
+| 2026-11-24 | DELL | after close; call 3:30 pm CST | 201 | **NEW** investors.delltechnologies.com "Upcoming Events: Nov 24, 2026 • 3:30 pm CST Dell Technologies Fiscal Year 2027 Third Quarter Results" (Tavily result of the IR page; a dated "to hold conference call" press release not located). Δ (E→C, IR event listing) |
+| 2026-11-24 | WDAY | after close; call same afternoon | 48 | **NEW** Workday release "Workday to Announce Fiscal 2027 Third Quarter Financial Results on November 24, 2026" (search extract; relay site stockhub.kr/PRN) |
+| 2026-12-01 | CRWD | after close; call 2:00 pm PT | 222 | **NEW** ir.crowdstrike.com "CrowdStrike Announces Date of Fiscal Third Quarter 2027 Financial Results Conference Call" 2026-11-04 (search extract). Δ (E→C) |
+| 2026-12-01 | MRVL | call 1:30 pm PT after release (release time not stated in extract; Nasdaq: not supplied) | 117 | **NEW** investor.marvell.com "Marvell Technology, Inc. Announces Conference Call to Review Third Quarter of Fiscal Year 2027 Financial Results" 2026-11-06 (search extract). Δ (E→C). D1 recorded a Marvell all-stock merger announcement with Lumentum on 2026-11-02 (D1 entry da7bf33a) |
+| 2026-12-01 | MDB | after close (Nasdaq) | 25 | MongoDB "announces date of third quarter fiscal 2027 earnings call" (finviz relay in search result; date 12-01) — secondary relay of issuer release, (C-secondary) |
+| 2026-12-02 | SNOW | after close; call 2:00 pm PT | 95 | **NEW** snowflake.com "Snowflake to Announce Financial Results for the Third Quarter of Fiscal 2027 on December 2, 2026" (announced 2026-11-02; search extract). Δ (E→C) |
 
-**Vendor-only (E) — no issuer notice found**
+**Vendor-only (E) — no issuer notice found this run**
 
 | Date | Ticker | Timing (Nasdaq) | Mcap ($B) | Source / check |
 |---|---|---|---|---|
-| 2026-11-10 | NBIS | not supplied | 47 | Nasdaq; calendar sites 11-10/11-11 (AJ Bell/EarningsWhispers); no issuer notice found |
-| 2026-11-11 | CSCO | not supplied | 428 | Nasdaq + FMP (EPS est 1.32). Searched 2026-11-01: no FQ1 FY27 notice (last year: notice 11-03 for 11-12) |
-| 2026-11-17 | HD | pre-market | 328 | Nasdaq; calendar sites expect 11-17; no formal confirmation found |
-| 2026-11-18 | PANW | not supplied | 311 | Nasdaq; no FQ1 FY27 notice found (last year: notice 11-04 for 11-19) |
-| 2026-11-19 | INTU | not supplied | 89 | Nasdaq; no notice found (last year: late-Oct notice for 11-20) |
-| 2026-11-24 | DELL | not supplied | 302 | Nasdaq; calendar-site projection only |
-| 2026-12-01 | CRWD | not supplied | 267 | Nasdaq; not searched (no notice in W43) |
-| 2026-12-01 | MRVL | not supplied | 191 | Nasdaq; not searched (no notice in W43) |
-| 2026-12-01 | NTAP | after close | 43 | Nasdaq; Δ vs W43 11-24 → 12-01; not searched |
-| 2026-12-01 | OKTA | not supplied | 39 | Nasdaq; not searched |
-| 2026-12-02 | CRM | not supplied | 190 | Nasdaq; not searched; prior-year notice came 11-05 |
-| 2026-12-02 | SNOW | not supplied | 117 | Nasdaq; not searched |
-| 2026-12-03 | HPE | not supplied | 78 | Nasdaq; not searched |
-| 2026-12-09 | ORCL | not supplied | 422 | Nasdaq; not searched |
-| 2026-12-09 | ADBE | not supplied | 97 | Nasdaq + FMP (EPS est 6.32); not searched |
-| 2026-12-10 | AVGO | not supplied | 1,647 | Nasdaq; not searched |
-| 2026-12-10 | COST | not supplied | 441 | Nasdaq + FMP (EPS est 4.93); not searched |
-| 2026-12-16 | MU | not supplied | 1,057 | Nasdaq/days.to/WSH 12-16; searched: inferred only |
-| 2026-12-03 | DOCU | not supplied | 16 | FMP + Nasdaq; not searched |
+| 2026-11-09 | CEG | pre-market | 85 | Nasdaq; MarketBeat "estimated... may change once the company confirms"; Tavily search no issuer notice (Δ vs W44 CEG 11-06 → 11-09 was Nasdaq) |
+| 2026-11-17 | HD | pre-market | 349 | Nasdaq; two WebSearch + one Tavily (ir.homedepot.com domain) found no Q3 notice; the ir.homedepot.com 2026 news-release index returned lists items only through 2026-09-29; last year's call notice was 11-04 for 11-18 |
+| 2026-11-18 | LOW | pre-market | 127 | Nasdaq; Lowe's IR events page lists "Q3 2026 Earnings Conference Call (tentative)" 11/18/2026 (search extract); no notice (last year's came 11-12) |
+| 2026-11-18 | TJX | pre-market | 152 | Nasdaq; a German outlet (boerse-express.com) reports TJX "confirmed" 11-18, 9:30 am ET release/11:00 am call; TJX release not seen — secondary only |
+| 2026-11-23 | HPE | after close | 59 | Nasdaq (Δ vs W44 12-03 → 11-23; time supplied); search found no FQ4 FY26 notice (last year's call 12-04) |
+| 2026-12-01 | NTAP | after close | 33 | Nasdaq; not searched |
+| 2026-12-01 | OKTA | after close | 30 | Nasdaq; not searched |
+| 2026-12-02 | CRM | not supplied | 183 | Nasdaq; two searches (one combined, one Salesforce-specific) found no notice; calendar sites show 12-02, unconfirmed (last year's timing notice 11-05) |
+| 2026-12-02 | ZS | after close | 33 | Nasdaq; not searched |
+| 2026-12-09 | ORCL | not supplied | 348 | Nasdaq 12-09; financecalendar.com lists 12-10 12:00 pm ET (conflict, both unconfirmed) |
+| 2026-12-09 | ADBE | not supplied | 96 | Nasdaq + FMP 12-09 (EPS est 6.32); financecalendar 12-09 "to be confirmed" |
+| 2026-12-10 | AVGO | not supplied | 1,392 | Nasdaq 12-10; financecalendar 12-10 "to be confirmed" |
+| 2026-12-10 | COST | not supplied | 472 | Nasdaq + FMP 12-10 (EPS est 4.93); no date found |
+| 2026-12-16 | MU | not supplied | 743 | Nasdaq 12-16; financecalendar lists 12-15 4:05 pm ET (conflict) |
+| 2026-12-03 | DOCU | not supplied | 15 | Nasdaq + FMP 12-03; not searched |
 
-Outside the window (FMP only): NKE 12-17, CCL 12-18.
+**Other ≥ $50B names on the Nasdaq forward list, date vendor-only (E), not searched (no A-queue or carried status):** PBR 11-10 (121), TDG 11-10 (66), OXY 11-09 (56), BN 11-12 (102), NU 11-12 (57), MUFG 11-13 (251), SMFG 11-13 (150), MFG 11-13 (117), BHP 11-17 (203), PDD 11-17 (119), NTES 11-19 (81), ROST 11-19 (75), BABA 11-24 (262), ADI 11-24 (175), MDT 11-24 (134), ADSK 11-24 (56), DE 11-25 (179), BMO 12-02 (120), BNS 12-02 (113), RY 12-03 (282), TD 12-03 (201), CM 12-03 (105), AZO 12-08 (53), SNPS 12-09 (84), ACN 12-17 (177), CTAS 12-17 (90), NKE 12-17 (59; FMP 12-17), plus CCL 12-18 (40; FMP 12-18). Foreign-private issuers (PBR, BN, MUFG, SMFG, MFG, BHP, PDD, NTES, BABA, BMO, BNS, RY, TD, CM, NU) file 6-K/40-F; instrument eligibility not assessed here.
 
-**Dropped / changed vs W43:** passed rows struck (14 names above); GOOGL/PLTR/UBER already (C). Moved to (C) this run: NVDA, ANET, QCOM, TTWO, SMCI, AMAT, COP, PFE, DIS, SHOP. Still unconfirmed: CSCO, PANW, HD, NBIS, INTU, DELL, and the December names. Δ dates: NVDA 11-18 → 11-17; NTAP 11-24 → 12-01.
+**Dropped / changed vs W44:** 13 passed rows struck (above). Moved to (C) this run: CSCO, NBIS, PANW, INTU, DELL, CRWD, MRVL, SNOW; new (C) rows KKR, B, WDAY, MDB (secondary). Still unconfirmed: HD, CEG, LOW, TJX, HPE, CRM, NTAP, OKTA, ORCL, ADBE, AVGO, COST, MU, DOCU. Δ dates: CSCO 11-11 → 11-12 (issuer); NBIS 11-10 → 11-12 (issuer); HPE 12-03 → 11-23 (Nasdaq, unconfirmed); CEG 11-06 → 11-09 (Nasdaq, carried). Marketcap changes since W44 are price-driven (e.g., MRVL 191 → 117, ORCL 422 → 348, AVGO 1,647 → 1,392, MU 1,057 → 743, NVDA 5,149 → 4,377); no filter applied.
 
-### 1B.3 — FDA PDUFA dates in window (2026-11-01 → 2026-12-16)
+### 1B.3 — FDA PDUFA dates in window (2026-11-08 → 2026-12-23)
 
-Rule: sponsor/status resolved against FDA/sponsor release where reachable; otherwise "unresolved". Cap/ADV not measured.
+Rule: sponsor/status resolved against the sponsor's own release or the FDA before naming either; a source that is only an aggregator or trade-press headline is tagged (E) and the row is "unresolved", not a dated forward action. Cap/ADV not measured. 'Release in extract' = the sponsor press release was named in a search result; the sponsor page itself was not opened first-hand.
 
-| Date | Ticker | Drug / indication | Tag | C-eligible instrument | Resolution / note |
-|---|---|---|---|---|---|
-| 2026-11-01 (Sun) | AGIO | Mitapivat sNDA / sickle cell (priority, accelerated) | (C) | yes | Goal date today. **Unresolved**: no FDA action or Agios release found (IR page 403). Pain-crisis primary endpoint missed significance |
-| 2026-11-14 | SMMT | Ivonescimab + chemo BLA / EGFRm NSCLC | (C) | yes | Summit release 2026-01-29 (carried); no decision/extension found |
-| 2026-11-14 | CYTK | Aficamten label expansion | (E) unverified | yes | oHCM NDA was approved Dec 2025; 11-14 only on aggregators |
-| 2026-11-17 | Beren | Adrabetadex | (E) | NO not listed | |
-| 2026-11-22 | CAPR | Deramiocel / DMD | (C) | yes | 8-K 2026-08-24 (carried) |
-| 2026-11-22 | SVRA | Molgramostim / aPAP (extended) | (E) | yes | aggregators; no sponsor release read |
-| 2026-11-25 | SAN | Venglustat / Gaucher type 3 | (C) | NO ADR | |
-| 2026-11-27 | BBIO | BBP-418 / LGMD2I | (E) | yes | |
-| 2026-11-27 | GSK (ADR) | Neladalkib / ALK+ NSCLC | (C) | NO ADR; sponsor GSK (acquired Nuvalent 2026-07-15) | |
-| 2026-11-27 | Zydus | Saroglitazar | (E) | NO | |
-| 2026-11-28 | PYPD | D-PLEX100 | (C) | yes; cap likely <$2B | |
-| 2026-11-30 | VRTX | Povetacicept BLA / IgAN | (C) | yes | Vertex release 2026-06-01 |
-| 2026-11-30 | COGT | Bezuclastinib + sunitinib / GIST (priority; no adcom) | (C) Δ re-confirmed | yes | Cogent acceptance release; OncLive 2026-05-28 |
-| 2026-11-30 | RHHBY | Giredestrant adjuvant | (E) | NO ADR | |
-| 2026-12-05 | VRTX | Journavx sNDA | (T) | yes | not re-verified |
-| **Δ 2026-12-12** | VNDA·ANAB | Imsidolimab BLA | (E) | yes (both small/mid cap; not measured) | Assyro only; indication not stated; **newly in window** (12-10 → 12-16 range). No other PDUFA found for 12-10 → 12-16 (two searches; floor, not census) |
-| Nov (undated) | REGN | Cemdisiran / gMG | undated | yes | |
-| Q4 (undated) | PFE | Talzenna + Xtandi label expansion | undated | yes | |
+| Date | Ticker | Sponsor / drug / indication | Tag | Resolution / source |
+|---|---|---|---|---|
+| 2026-11-14 (Sat) | SMMT | Summit Therapeutics — ivonescimab + chemo BLA / EGFRm non-squamous NSCLC post-TKI | (C) | Summit release 2026-01-29 (BusinessWire, release in extract; target action date Nov. 14, 2026). No FDA action or extension found (search 2026-11-08). Status: pending |
+| 2026-11-14 | CYTK | Cytokinetics — aficamten (Myqorzo) label expansion | (E) UNRESOLVED | A date-specific search found no 2026 Cytokinetics release; only the earlier oHCM NDA (PDUFA 2025-09-26, extended 2025-12-26). The 11-14 entry stays on aggregators only; **recorded unresolved, not a dated action** |
+| 2026-11-17 | — | Beren Therapeutics — adrabetadex NDA / infantile-onset NPC (review extended, trade headline) | (E) | not US-listed; trade press only |
+| 2026-11-22 (Sun) | CAPR | Capricor — deramiocel BLA / DMD (PDUFA moved from 2026-08-22 after major amendment; narrowed to upper-limb indication per Aug-13 company update) | (C) carried | 8-K 2026-08-24 (W44, carried); this run's search could not re-confirm 11-22 from a post-August source (latest source found: PPMD 2026-08-13). 2026-07-29 adcom vote 9-3 against, per trade press (biopharminternational/pharmanow), not re-read |
+| 2026-11-22 | SVRA | Savara — molgramostim (MOLBREEVI) BLA / autoimmune PAP | (C) | Savara release 2026-04-15 (BusinessWire, release in extract): 3-month extension, new target date Nov. 22, 2026 (original 2026-08-22, priority review) |
+| 2026-11-25 | SAN (ADR) | Sanofi — venglustat / Gaucher disease type 3 | (C) carried | ADR; not C-eligible per W44; Pharmacy Times (2026-08-21) lists Nov 25 |
+| 2026-11-27 | GSK (ADR) | Neladalkib / ALK+ NSCLC (Nuvalent asset; sponsor GSK after 2026-07-15 acquisition per W44) | (C) carried | ADR; Pharmacy Times lists "Nuvalent's neladalkib" Nov 27 — sponsor attribution in that listing differs from W44 and was not re-resolved this run |
+| 2026-11-27 | BBIO | BridgeBio — BBP-418 / LGMD2I | (E) carried | aggregators, not re-read |
+| 2026-11-27 | Zydus | Saroglitazar | (E) carried | not US-listed |
+| 2026-11-28 | PYPD | PolyPid — D-PLEX100 | (C) carried | cap likely < $2B |
+| 2026-11-30 | VRTX | Vertex — povetacicept BLA / IgAN | (C) | RTTNews headline "Vertex: FDA Accepts BLA Submission For Povetacicept, Assigns PDUFA Target Action Date Of Nov 30" (search extract); Vertex release 2026-06-01 per W44 |
+| 2026-11-30 | COGT | Cogent — bezuclastinib + sunitinib / GIST (priority) | (C) carried | Cogent acceptance release; OncLive 2026-05-28 (W44) |
+| 2026-11-30 | RHHBY | Roche — giredestrant adjuvant / early breast cancer | (E) carried | ADR; Pharmacy Times lists Nov 30 |
+| Nov (undated) | RHHBY | Roche — obinutuzumab / primary membranous nephropathy | undated | ADR; trade press |
+| Nov (undated) | REGN | Cemdisiran / gMG | undated carried | — |
+| 2026-12-05 | VRTX | Journavx sNDA | (T) carried | not re-verified |
+| 2026-12-12 (Sat) | VNDA | Vanda — imsidolimab BLA / generalized pustular psoriasis (W44 listed "VNDA·ANAB") | (E) | Dermatology Times headline "FDA Accepts Vanda Pharmaceuticals' BLA for Imsidolimab in GPP"; date 12-12 from search extract; Vanda release not opened; ANAB (AnaptysBio) role not resolved. **Unresolved** |
+| 2026-12-17 | CORT | Corcept — relacorilant NDA resubmission / hypercortisolism (Cushing's) | (E) UNRESOLVED | Date 12-17 only on an aggregator (simianx.ai); Corcept's own resubmission release (June 2026) and FDA filing release name a 6-month clock but not the date in the extract. **Recorded unresolved, not a dated action** |
+| 2026-12-18 | — | Camurus — CAM2029 resubmitted NDA / acromegaly | (E) | allsci/trade headline "FDA accepts Camurus resubmitted CAM2029"; extract gives 12-18; not US-listed |
+| 2026-12-18 | RHHBY | Roche / Deciphera item | (E) carried | W44 listed "Roche/Deciphera 12-18"; not re-read |
+| 2026-12-19 (Sat) | — | Hansa Biopharma — imlifidase BLA / kidney transplant | (E) | American Pharmaceutical Review headline "Hansa... Receives December 2026 PDUFA Date"; MarketScreener headline gives December 19; not US-listed |
+| 2026-12-22 | MLYS | Mineralys — lorundrostat NDA / hypertension (with other antihypertensives) | (C) | Mineralys release 2026-03-09 (FDA acceptance; target date December 22, 2026) and Q1 release 2026-05-06 (both in extract); no later update found |
+| 2026-12-23 | GILD | Gilead (Arcellx acquired; ACLX being delisted) — anito-cel BLA / 4L+ RRMM | (C) | Gilead/Arcellx release 2026-02-23 (BusinessWire in extract): FDA-accepted BLA, PDUFA target action date Dec. 23, 2026; Gilead release 2026-04-27 (acquisition completed, 77.2% by tender 04-28, remainder by merger) |
 
-**Resolved/struck this week (do not re-import):**
-- ~~2026-10-26 GSK bepirovirsen~~ — APPROVED 2026-10-20 as Hibsago (GSK release copy at eatg.org, HCPLive 10-20, ajmc 10-21); ADR anyway.
-- ~~2026-10-30 INO INO-3107~~ — outcome UNRESOLVED (no approval/CRL surfaced); past; do not assert.
-- ~~2026-10-29 Sun Pharma ILUMYA~~ — not US-listed, not verified.
-- ~~BTAI IGALMI 11-14~~ — BTAIQ PINK, no options (carried).
-- ~~EXEL zanzalintinib~~ — moved to 2027-03-03; Dec Assyro aggregator still shows 12-03 (stale).
-- Out of window by date (kept in 1A.6): CORT 12-17; Roche/Deciphera/Camurus 12-18; Hansa 12-19; MLYS 12-22; Arcellx/Gilead 12-23; Praxis/Viatris 12-27; COGT NonAdvSM + Saol 12-30.
+**Resolved / unresolved since last week (W44 rows whose date has passed or moved):**
+- ~~2026-11-01 AGIO mitapivat sNDA / sickle cell~~ — **MOVED, not decided:** FDA extended the PDUFA goal date by 3 months to **2027-02-01** (HCPLive 2026-10-30 and GEN headlines, citing Agios; FDA information request 2026-10-09 re a possible REMS; Agios response 2026-10-19). Out of window. Source is trade press quoting the company; Agios release not opened.
+- ~~2026-10-30 INO INO-3107~~ — outcome **UNRESOLVED**: one search this run found no approval or CRL item (results all predate 10-30). Not chased further.
+- Carried strikes from W44 (do not re-import): GSK bepirovirsen APPROVED 2026-10-20 (Hibsago); Sun Pharma ILUMYA (not US-listed); BTAI IGALMI (BTAIQ PINK); EXEL zanzalintinib moved to 2027-03-03.
+- D1 (records since 2026-11-01): REGN 2026-10-30 8-K (entry e2dfa715) records "FDA approval of Pasatru for FOP" alongside Q3 earnings and a Sanofi collaboration; this is a REGN approval record, not an item in the table above.
+- Out of window by date: Praxis relutrigine 12-27 (review extended to Dec 27 per extract), Viatris 12-27, COGT NonAdvSM 12-30 (Cogent: PDUFA December 30, 2026).
+- Coverage: two generic date-range searches (Nov, Dec 2026) plus nine sponsor-specific searches; this is a floor, not a census of PDUFA dates. No 12-10 → 12-16 PDUFA date surfaced beyond the rows above.
 
-### Macro calendar in C window (2026-11-01 → 2026-12-16)
+### Macro calendar in C window (2026-11-08 → 2026-12-23)
+
+Context only; times 8:30 am ET unless noted.
 
 | Date | Release | Tag | Source / note |
 |---|---|---|---|
-| 11-03 | US midterm elections | (C) | statutory |
-| 11-04 (?) | Personal income & outlays (Sept) incl. PCE | (T) | BEA snippets conflict (10-29 vs 11-04); verify at bea.gov/news/schedule |
-| 11-06 | Employment Situation (Oct) | (C) | bls.gov schedule; calendars agree |
-| 11-10 | CPI (Oct) | (C) carried | bls.gov W43; financecalendar agrees |
-| ~11-25 | PCE (Oct) + GDP 2nd est. Q3 | (E) | single-source / BEA per W43 |
-| 12-04 | Employment Situation (Nov) | (C) | financecalendar/bls |
-| 12-08/09 | FOMC + SEP (decision 12-09) | (C) | federalreserve.gov |
-| 12-10 | CPI (Nov) | (C) | calendarx + financecalendar |
-| 12-11 | Government funding CR expires | (C-secondary) | political.org/AACOM |
-| ~12-23 | GDP 3rd est. (outside window) | (E) | |
+| 11-10 | CPI (Oct 2026), 8:30 am | (C) | bls.gov/schedule/news_release/cpi.htm fetched 2026-11-08 |
+| 11-25 | Personal Income and Outlays (Oct 2026) incl. PCE, 8:30 am | (C) | bea.gov/news/schedule fetched 2026-11-08 (page last modified 11/8/26) |
+| 11-25 | GDP (Second Estimate) and Corporate Profits, 3rd Quarter 2026, 8:30 am | (C) | same BEA page |
+| 12-04 | Employment Situation (Nov 2026), 8:30 am | (C) | bls.gov/schedule/news_release/empsit.htm fetched 2026-11-08 (the 11-06 Oct report has already printed) |
+| 12-08/09 | FOMC + SEP (decision 12-09) | (C) | federalreserve.gov (see 1B.1) |
+| 12-10 | CPI (Nov 2026), 8:30 am | (C) | bls.gov CPI schedule page fetched 2026-11-08 |
+| 12-23 | GDP (Third Estimate), Industries, Corporate Profits, 3rd Quarter 2026, 8:30 am | (C) | bea.gov schedule (last day of window) |
+| 12-23 | Personal Income and Outlays (Nov 2026) incl. PCE, 8:30 am | (C) | bea.gov schedule (last day of window) |
 
-No 2026 shutdown-related BLS/BEA delay found (only 2025's cancelled Oct-2025 releases). BEA page shows no confirmed lapse notice this run; risk reappears if the CR lapses 12-11 (inside the C window, after 12-09 FOMC, before 12-10 CPI would be unaffected but 12-11+ releases at risk).
+Also on the BEA page in the window: International Trade in Goods and Services (Oct) 12-08; U.S. International Transactions (Q3) 12-18. W44 items not re-verified this run: government funding CR expiry 12-11 ((C-secondary), political.org/AACOM per W44) and 11-03 midterms (passed). Δ vs W44: PCE/GDP-2nd moved from "~11-25 (E)" to (C) 11-25; Oct PCE date conflict (10-29 vs 11-04) is moot (passed); GDP-3rd and Nov PCE both 12-23 (in window on its last day; W44 had GDP-3rd ~12-23 outside its window).
 
 ## PART 2A — Strategy A ranked shortlist
 
 ### The A-queue census — the PINNED query, run verbatim
 
-`SELECT * FROM state.open_queue WHERE strategy = 'A'` → **46 rows** (MEASURED 2026-11-01; 44 on 2026-10-25, +2 from W4's 2026-W43 intake of ANET and COP): AMZN, INTC, HPE, MSFT, ADBE, PANW, IBM, AMAT, TTWO, CVX, LLY, CRWD, NTAP, GEV, HD, SMCI, SNOW, AMD, DDOG, META, CRM, OKTA, NOW, XOM, QCOM, JPM, MU, MRVL, NVDA, WMT, CSCO, NBIS, FSLR, VRTX, INTU, ORCL, TGT, COP, MRK, GOOGL, AKAM, CAT, AVGO, ANET, AAPL, DELL. The enumeration is the query's own 46 rows, not a hand list, so there is no discrepancy to reconcile. Every "already queued" / "NEW" mark below is tested against it.
+`SELECT * FROM state.open_queue WHERE strategy = 'A'` → **46 rows** (MEASURED by the orchestrator 2026-11-08; same 46 as 2026-W44): AAPL, ADBE, AKAM, AMAT, AMD, AMZN, ANET, AVGO, CAT, COP, CRM, CRWD, CSCO, CVX, DDOG, DELL, FSLR, GEV, GOOGL, HD, HPE, IBM, INTC, INTU, JPM, LLY, META, MRK, MRVL, MSFT, MU, NBIS, NOW, NTAP, NVDA, OKTA, ORCL, PANW, QCOM, SMCI, SNOW, TGT, TTWO, VRTX, WMT, XOM (all item_type 'Strategy A queue', status pending). My hand enumeration of the list matches the query's 46 rows, so there is no discrepancy to reconcile; the query wins in any case. Every "QUEUED" / "NEW" mark below is tested against this list. Reconciliation: of the 59 names carried in this file, 39 admissible are QUEUED, 11 admissible are NEW, and 5 inadmissible are QUEUED (AMAT, WMT, ADBE, HD, AKAM); the two remaining census members, IBM and MRK, are not ranked (no forward catalyst; see Handoff).
 
 ### STEP 1 — the GATE DATE, re-derived from scratch, with the arithmetic shown
 
-**DERIVED GATE DATE = 2026-11-01** (today, the run date). Derived under the Rev 52 STEP 1: the earliest of inputs (a), (b), (c). The pre-Rev 52 derivation (quiet clock, retracement, `state.rerisking_limb_status`) is retired and was not run.
+**DERIVED GATE DATE = 2026-11-08** (today, the run date; orchestrator-measured this run). Rev 52 STEP 1: earliest of (a), (b), (c). The retired pre-Rev 52 derivation was not run.
 
-**Router state read first.** A's `STRATEGY_ACTIVATION` reads **DO-NOT-ACTIVATE** (`state.current_regime`, as_of 2026-10-22, `div-A-202610-1` resolved). A is not ACTIVATE, so CATALYST-GATE MODE is live, not inert.
+**Router state read first.** A's `STRATEGY_ACTIVATION` reads **DO-NOT-ACTIVATE** (`state.current_regime`). A is not ACTIVATE, so CATALYST-GATE MODE is live, not inert. A is LONG-ONLY (`strategy/03_strategy_a.md`: "Long-only (no short positions in A — short is B's territory)").
 
-- **(a) Next scheduled M1a/M1b re-score.** `SELECT COUNTIF(routine='M1a') m1a, COUNTIF(routine='M1b') m1b FROM ops.run_log WHERE routine IN ('M1a','M1b') AND status='completed' AND run_date >= DATE_TRUNC(2026-11-01, MONTH)` → **m1a = 0, m1b = 0**. `m1b = 0` and today (11-01) is before this month's first trading day per `state.market_calendar` (**2026-11-02**, Monday), so (a) = **2026-11-02**.
-- **(b) Open `PENDING_REGIME_REFRESH` `regime-refresh` items** (`state.open_queue_detail`): **none** → does not apply.
-- **(c) A refresh D2a is already due to queue.** D2a Step 0 REFRESH REQUEST detection query, run verbatim → **1 row**: `measured_trigger = shock_price_leg_exit`, `trigger_run_start = 2026-10-29`, `logged_ts = 2026-10-29T23:19:12Z` (D2's refresh-only router review `c13f9996`), with no `regime-refresh` row counting at or after it. (b) found no open item, so (c) = D2a's next run = **2026-11-01** (D2a fires Sunday–Thursday 16:40 MT; for W1's Sunday slot that is the same day).
-- **Earliest of (a) 2026-11-02, (b) n/a, (c) 2026-11-01 = 2026-11-01.**
+- **(a) Next scheduled M1a/M1b re-score.** Completed `M1a` = **1**, `M1b` = **1** this month (both 2026-11-01). `m1b >= 1`, so (a) = next month's first trading day = **2026-12-01**.
+- **(b) Open `PENDING_REGIME_REFRESH` `regime-refresh` items:** **none** → does not apply.
+- **(c) REFRESH REQUEST (D2a Step 0, verbatim query)** returned 1 row: `measured_trigger = vix_regime_high`, `trigger_run_start = 2026-11-05`, logged 2026-11-05 23:19:56 UTC (after D2a's 11-05 run finished 22:50 UTC). (b) found no open item, so (c) = D2a's next run = **2026-11-08** (D2a fires Sunday–Thursday at 16:40 MT; today is Sunday).
+- **GATE DATE = earliest(2026-12-01, n/a, 2026-11-08) = 2026-11-08.** A candidate is SPENT-BY-GATE only if its dated catalyst falls strictly before 2026-11-08 with nothing dated on or after it; undated and forward-dated candidates are GATE-SURVIVING and get full (a)-(e). No input was unavailable, so FAIL-OPEN did not trigger (full depth was nevertheless applied to every candidate, because nothing is spent).
 
-**Consequence, stated plainly.** With the gate on the run date, SPENT-BY-GATE requires a dated catalyst strictly before today — i.e. one already in the past. Every candidate is classified on its NEXT dated catalyst on or after 2026-11-01, so this cycle has **zero SPENT-BY-GATE** names by construction, and every candidate receives full (a)-(e). This is the mode working as specified (an out-of-cycle re-score is reachable today), not a fail-open.
+### STEP 2 — the DIRECTION ADMISSIBILITY rail (run before ranking and before gate classification)
 
-**FAIL-OPEN status: not triggered.** All three inputs read cleanly.
+Evidence read this week: D1 records 11-01..11-05 (`d1_catalysts.md`, entries a4e2f628, 23dea2da, da7bf33a, 514a7707, f5359185, e2dfa715/0b27dc01), IBKR regular-session daily bars through 11-06 (price only, not narrative), issuer/EDGAR releases cited per row, and secondary press where labelled. The Friday 11-06 narrative was not researched (structural weekly gap; price half closed below).
 
-### STEP 2 — direction rail
-
-Strategy A is long-only; the rail ran before ranking and before gate classification. Evidence read this week: D1 records 10-26..10-29 (`d1_context.md`, `Daily.md`), FMP actuals 10-26..10-30, IBKR RTH daily bars through 10-30. The 10-30 narrative is NOT covered by D1; one WebSearch and one Tavily search for a 10-30 chip-selloff explanation returned nothing usable, so the 10-30 price moves below are MEASURED but their cause is unestablished.
-
-- **Nine names stay in the DIRECTION-INADMISSIBLE tier** (AMAT, WMT, ADBE, HD, AKAM, DAL, CCL, UAL, AAL). None is reversed to bullish; two marks are flagged weaker (AMAT, fuel cluster), one stronger (ADBE).
-- **AMAT: bearish mark WEAKENED, not reversed.** Against the "China WFE cliff" framing: Lam's record quarter (10-21) and July WFE raise; SK hynix +13.3% on 10-28 as a memory read-through (D1 10-28, which rejected AMAT/LRCX/MU/SNDK as a common driver); AMAT closed 390.09 on 10-30, +3.4% on the week (377.24 on 10-23), although it fell 7.5% on Friday (421.66 to 390.09, cause unestablished). No bullish thesis is established either, so AMAT is effectively direction-unresolved; D2 should re-test before any thesis run. Stays inadmissible and out of the top-10.
-- **Fuel-shock cluster (DAL, CCL, UAL, AAL): mark kept, slightly weaker.** Brent 116.72 peak 10-23, 115.32 on 10-28, 111.57 on 10-29 (D1/FMP BZUSD, provisional). Still about 111, far above the pre-shock level; Hormuz still closed per the IRGC on 10-29 (unverified claims). Falling Brent is a mitigant, not a reversal. Airlines' next prints are 2027-01 (E, FMP); CCL 2026-12-18 (E).
-- **WMT: kept, thinner** (no new evidence this week; staples/defensive rotation on 10-29 with XLV +2.40 and RSP +1.20 is a contrary datapoint). **HD: kept** (no new evidence; 10Y level not re-read). **AKAM: kept.** **ADBE: kept, stronger** (software sell-off: NOW -26.95%, FTNT -20.09% on 10-28 prints, XLK -1.18 on 10-29).
-- **TGT stays DIRECTION UNRESOLVED** (carried; refuted bearish thesis, no replacement). Ranked last of the admissible list, ineligible for the top-10.
-- **No new bearish names added to this file.** FTNT (-20%) and NOW-type software prints are B territory.
+- **Nine names stay DIRECTION-INADMISSIBLE** (AMAT, WMT, ADBE, HD, AKAM, DAL, CCL, UAL, AAL). None is reversed to bullish. Two marks are WEAKER, one STRONGER:
+  - **Fuel-shock cluster (DAL, CCL, UAL, AAL): bearish mark WEAKER.** Brent (FMP BZUSD via D1, provisional): 113.43 (10-30), 104.22 (11-02), ~103.60 (11-03), 94.60 (11-04), 99.18 (11-05). Press (Khaleej Times / Nation Thailand, 11-03) attributes the slide to US-Iran and Russia-Ukraine peace-talk hopes and Gulf crude exports returning toward pre-war levels (secondary). The fuel-cost thesis is eroding, but no bullish airline thesis is documented and no airline price was read, so they stay in the inadmissible tier as direction-unresolved. D2 should re-test before any B or A use.
+  - **AMAT: bearish mark WEAKER, unresolved** (China-WFE-cliff framing contested by LRCX's record quarter and SK hynix on 10-28; the 11-05 sector rout hit the whole group). Not bullish-established either. Stays inadmissible.
+  - **ADBE: mark STRONGER** (software kept falling: DDOG -14.4% on 11-04 on a flat Q4 guide; NOW -26.95% last week). **WMT, HD, AKAM: kept, no new evidence.**
+- **TGT stays DIRECTION UNRESOLVED** (carried: prior bearish thesis refuted by a beat-and-raise, no replacement). Ranked last of the admissible list, ineligible for the top-10.
+- **No new bearish names added.** The 11-05 rout (SPY -4.41%, SMH -11.21%) is a bullish-gap candidate generator for A only where fundamentals/prints are intact; names whose thesis it contradicts (COP, see row 17) are down-ranked, not flipped.
 
 ### STEP 3 — classification and counts
 
-Gate date **2026-11-01** (orchestrator-derived). SPENT-BY-GATE iff the dated catalyst is strictly before 2026-11-01 and there is no dated catalyst on/after it; undated is GATE-SURVIVING (fail-open).
+Gate date **2026-11-08**. SPENT-BY-GATE iff the dated catalyst is strictly before 2026-11-08 and there is nothing dated on/after it.
 
-**59 carried: 50 ranked admissible (one, TGT, direction-unresolved) + 9 DIRECTION-INADMISSIBLE. 0 SPENT-BY-GATE, 59 GATE-SURVIVING.** Reason: the gate equals the run date, so the only way to be spent is a catalyst dated 2026-10-31 or earlier with nothing later; every 10-26..10-30 printer was re-dated to its NEXT dated catalyst (FMP/Nasdaq) or is undated (fail-open). Last week's 7 SPENT names move as follows:
+**59 carried: 50 ranked admissible (one, TGT, direction-unresolved) + 9 DIRECTION-INADMISSIBLE. 0 SPENT-BY-GATE, 59 GATE-SURVIVING.** Every name that printed 2026-11-02..11-06 was re-dated to its NEXT dated catalyst (FMP/Nasdaq, or the WebSearch fallback tagged (E)) or is `undated` (fail-open).
 
-- XOM and CVX: printed 10-30 (FMP actuals: XOM EPS 4.23 vs 4.12, revenue $113.2B vs $104.9B; CVX EPS 5.28 vs 4.87, revenue $67.8B vs $61.8B). Next **2027-01-29 (E)** (FMP). SURVIVING.
-- INTC: printed 10-29 (EPS 0.52 vs 0.4066, revenue $16.51B vs $16.56B est; FMP; Daily: Q4 guide $15.0-16.0B). Next **2027-01-28 (E)** (FMP). SURVIVING.
-- LLY (10-29), CAT (10-29), GEV (10-28), NOW (10-28): no next date in the FMP/Nasdaq pulls (Nasdaq pull ends 12-16; FMP lists none). Dates are late-Jan/early-Feb by pattern, INFERRED and unsourced, so **undated, SURVIVING on fail-open**.
-- Other re-dated prints: MSFT 10-28 (EPS 4.89 vs 4.72, revenue $92.28B vs $90.62B) next **2027-01-27 (E)**; AMZN 10-29 (EPS 1.89 vs 1.97, revenue $201.9B vs $202.2B; AWS +39.3% per Daily) next **2027-02-04 (E)**, re:Invent 11-30..12-04 (E); GOOGL 10-28 (EPS 2.12 vs 3.02, revenue $127.6B vs $128.0B; -12.64% on 10-29) next **2027-02-03 (E)**; META (printed 10-21) next **2027-01-27 (E)**; MRK 10-29 dropped (below); FSLR 10-29 (Daily: EPS $5.30 vs $4.64, $500M buyback) keeps **Sec 232 effective 2026-12-04 (C)**; V 10-27 dropped (below); GE keeps **2027-01-21 (E)**.
-- **Date moves vs last week (Nasdaq per-day, MEASURED; time `not-supplied` = (E))**: CEG 11-06 to **11-09** (pre-market); NTAP 11-24 to **12-01** (after hours); AVGO 12-09 to **12-10**; MU 12-23 to **12-16**; AAPL, PLTR, VRTX 11-02 now carry a stated time (after-hours); QCOM 11-04 after-hours and COP 11-05 pre-market confirmed on the calendar; TTWO 11-09 after-hours; others unchanged.
-- **Fragile (one day past the gate):** AAPL, VRTX, PLTR (11-02); AMD, ANET, SHOP, SMCI, ETN (11-03). Gate = 11-01 is the run date, so they survive by one session; they are consumed by the first post-gate trading days.
-- **Dropped from the ranked set with reasons (stay on the queue census where queued):** MRK (conviction 1 last week; near-term PDUFAs gone; beat on 10-29 EPS 2.49 vs 2.12 consumed the print; next 2027-02-02 (C carried) offers no differentiated thesis); V (thin litigation-date catalyst; 10-27 print EPS 3.48 vs 3.44 consumed). Both remain GATE-SURVIVING on their dates and are listed only here.
-- **New intake (2):** SNDK, RDDT (preliminary, see rows 49-50).
+- **Printed this week, re-dated (MEASURED from FMP/Nasdaq unless noted):** AAPL 11-02 (next 2027-02-04 E FMP); PLTR 11-02 (2027-02-01 E FMP); VRTX 11-02 (keeps PDUFA 2026-11-30 C); SHOP 11-03 (2027-02-10 E FMP); AMD 11-03 (2027-02-02 E FMP); UBER 11-04 (2027-02-03 E FMP); MRNA 11-06 slot (2027-02-12 E FMP; whether the 11-06 print occurred is unverified, Friday gap); ANET 11-03 (2027-02-10/14 E, WebSearch fallback, MarketScreener/FXEmpire projections); SMCI 11-03 (2027-02-02 E, days.to projection); COP 11-05 (early February, MarketScreener projects 2027-02-10 E); ETN 11-03, QCOM 11-04, DDOG 11-04, AKAM 11-05: **no next date in FMP/Nasdaq; fallback found only "early February" patterns → `undated`** (INFERRED early Feb/late Jan, unsourced).
+- **Date moves vs last week:** CSCO 11-11 (E) → **11-12 (C)** (Cisco IR notice); NBIS 11-10 → **11-12** pre-market (Nasdaq); HPE 12-03 → **11-23** after hours (Nasdaq); NVDA 11-17 stays (C, issuer notice reconfirmed); CEG 11-09 pre-market (E, no issuer notice found); TTWO 11-09 after hours (Nasdaq; no new issuer notice found by search); AVGO 12-10 (E, third-party calendar; Broadcom had not announced it in the sources searched).
+- **Fragile (within one session of the gate):** TTWO and CEG (11-09). They are consumed by the first post-gate trading day.
+- **Dropped from the ranked set (stay on the census where queued):** none this week (IBM and MRK were already dropped last week).
+- **New intake:** none this week (the 50-name cap is full; all 11 NEW rows are carried intake).
 
-### Price context (IBKR regular-session daily bars, MEASURED; 10-23 and 10-30 closes)
+### Price context (IBKR regular-session daily bars, MEASURED via `get_price_history`; 10-30 and 11-06 closes)
 
-| Ticker | 10-23 | 10-30 | Week change | Note |
+| Ticker | 10-30 | 11-06 | Wk chg | Note |
 |---|---|---|---|---|
-| VRTX | 523.93 | 558.88 | +6.7% | +3.6% on 10-30 into the 11-02 print; 10-30 high 563.80 |
-| TTWO | 203.69 | 190.17 | -6.6% | 10-28 195.29, 10-30 -1.7%; no cause found |
-| FSLR | 171.99 | 174.40 | +1.4% | 10-29 close 176.89 before the after-close print; 10-30 -1.4% |
-| COP | 150.80 | 154.03 | +2.1% | XOM/CVX beats read-through; +2.7% on 10-30 |
-| ANET | 172.37 | 168.86 | -2.0% | 10-30 -9.6% (186.72 on 10-28 to 168.86; 184.22 on 10-29) |
-| AAPL | 347.73 | 344.63 | -0.9% | 10-30 low 334.35, close 344.63 |
-| AMD | 516.79 | 504.80 | -2.3% | 578.44 on 10-28, 566.42 on 10-29; -10.9% on 10-30 |
-| NVDA | 210.96 | 204.64 | -3.0% | 10-30 -4.2% (213.66 to 204.64) |
-| AVGO | 321.68 | 326.08 | +1.4% | 351.81 on 10-28; -5.5% on 10-30 |
-| CSCO | 106.50 | 104.51 | -1.9% | 10-30 -3.8% |
-| QCOM | 175.91 | 164.79 | -6.3% | 185.41 on 10-29; -11.1% on 10-30 on 10.8M shares (about 3x normal) |
-| LRCX | 230.10 | 239.11 | +3.9% | 254.39 on 10-29; -6.0% on 10-30 |
-| MSFT | 524.51 | 521.91 | -0.5% | 10-29 530.14, flat after a beat |
-| AMZN | 248.00 | 240.35 | -3.1% | 254.60 on 10-28, 243.79 on 10-29 (-4.25%), 240.35 on 10-30 |
-| CEG | 253.45 | 262.38 | +3.5% | |
-| PLTR | 196.75 | 184.11 | -6.4% | 10-30 -6.3% (196.42 to 184.11), the day before its print |
-| ORCL | 126.16 | 130.67 | +3.6% | 144.54 on 10-28 (+10.7% on own event per D1), -6.4% on 10-30 |
-| SMCI | 32.94 | 32.95 | 0.0% | |
-| ETN | 366.11 | 369.97 | +1.1% | 393.72 on 10-29, -6.0% on 10-30 |
-| AMAT (inadmissible) | 377.24 | 390.09 | +3.4% | 421.66 on 10-29, -7.5% on 10-30 |
+| SPY | 755.72 | 735.29 | -2.7% | 11-05 733.00 (-4.4% on the day), 11-04 766.81 (relief rally) |
+| VRTX | 558.88 | 547.09 | -2.1% | peak 553.15 on 11-02 print day close; 11-03 530.76 |
+| FSLR | 174.40 | 201.14 | +15.3% | 11-04 194.51 (high 214.87), +4.6% on 11-06 |
+| TTWO | 190.17 | 214.87 | +13.0% | 11-04 +7.1%, 11-05 +2.1%, 11-06 +0.7%; new highs vs a 190 low |
+| NVDA | 204.64 | 186.64 | -8.8% | 11-05 181.60 (-9.3%), volume 181M |
+| AVGO | 326.08 | 293.69 | -9.9% | 11-05 291.53 (-10.4%) |
+| CSCO | 104.51 | 93.85 | -10.2% | 11-05 95.72 (-7.6%); cause not established |
+| CEG | 262.38 | 249.95 | -4.7% | 11-04 -6.7% (245.72) |
+| MU | 884.74 | 690.00 | -22.0% | 11-05 656.39 (-17.5%) |
+| MRVL | 196.40 | 141.20 | -28.1% | 11-02 -12.7% on the Lumentum deal, 11-05 133.55 |
+| DELL | 424.30 | 328.53 | -22.6% | 11-05 316.91 (-14.9%) |
+| AMD | 504.80 | 449.04 | -11.0% | 11-04 488.78, 11-05 404.40 (-17.3%) |
+| ANET | 168.86 | 170.80 | +1.1% | 11-04 178.48, 11-05 159.16 (-10.8%) |
+| ETN | 369.97 | 341.72 | -7.6% | 11-03 391.70 (+7.0% on print), 11-05 327.02 |
+| SMCI | 32.95 | 28.76 | -12.7% | 11-04 -5.7% after the 11-03 print; 11-05 27.08 |
+| QCOM | 164.79 | 165.41 | +0.4% | 11-04 173.19, 11-05 156.75 |
+| LRCX | 239.11 | 200.44 | -16.2% | 11-05 185.20 (-16.4%) |
+| COP | 154.03 | 136.27 | -11.5% | 11-04 136.94 (-5.2% on Brent), flat on the print |
+| AAPL | 344.63 | 342.37 | -0.7% | 11-03 331.90 low, 11-04 349.51 |
+| GOOGL | 279.84 | 284.78 | +1.8% | 11-04 288.93 |
+| ORCL | 130.67 | 116.10 | -11.2% | 11-04 123.73 (-6.9% on the $10B stock issuance), 11-05 115.16 |
+| PLTR | 184.11 | 160.38 | -12.9% | printed 11-02 AH; 11-05 154.99 |
+| UBER | 65.25 | 68.59 | +5.1% | 11-04 +4.9% on print day |
 
-**Friday 10-30 (MEASURED price only):** AI-hardware and semis fell together: AMD -10.9%, QCOM -11.1%, ANET -9.6%, AMAT -7.5%, ORCL -6.4%, PLTR -6.3%, LRCX -6.0%, ETN -6.0%, AVGO -5.5%, SMCI -4.3%, NVDA -4.2%. Cause not established (no D1 coverage, two searches empty). INFERRED only: a Friday de-risking in the AI-capex complex after a week that mixed strong prints with the GOOGL EPS miss and software collapse; no issuer event is claimed. This widens the prices going into the 11-02/11-03/11-04 prints for AAPL-adjacent hardware, AMD, ANET, SMCI, QCOM, and it is the new counter-evidence every AI-complex row must carry.
+**MEASURED vs INFERRED.** All closes are MEASURED (IBKR). Cause attributions: the 11-05 rout (SPY -4.41%, SMH -11.21%, VIX 16.61 → 28.18) is attributed by D1 (23dea2da) and press to fears that a Democratic congressional sweep slows the AI data-centre buildout and raises AI regulation (press: Nasdaq -5.5%, Nvidia about -9%, AMD about -17%; UBS estimate that construction pauses could put about 30% of expected 2028 US capacity additions at risk; secondary, figures approximate). That attribution is D1-recorded or secondary press, so it is a D1/INFERRED cause, not an issuer fact. The 10-30 chip selloff that last week's file left unexplained is now explained by D1 (0b27dc01): INTC's 10-29 after-close print (INTC -28.6%) triggered an AI/semis liquidation (SMH -6.98%), D1-recorded.
 
-### Week narrative driving the revisions (MEASURED from FMP actuals, Daily.md/D1 and IBKR; inferences labelled)
+### Week narrative driving the revisions (MEASURED from issuer releases cited in rows, D1 and IBKR; inferences labelled)
 
-- **Hyperscaler prints (10-28/29).** MSFT beat (EPS 4.89 vs 4.72; revenue $92.3B vs $90.6B; FMP) and closed flat (521.91, -0.5% week). AMZN: EPS 1.89 vs 1.97, revenue $201.9B vs $202.2B (FMP), but AWS +39.3% and a 38.65% margin (Daily); stock -4.25% on 10-29 and -1.4% on 10-30. GOOGL: EPS 2.12 vs 3.02 est (FMP), revenue $127.6B vs $128.0B; -12.64% on 10-29 (324.89 to 283.82); 10-Q backlog $567.7B and an ad-tech structural-divestiture denial (Daily). The reason for the EPS gap (charge vs operating) is not established here. META printed 10-21 (carried). Reading for A: hyperscaler capex and cloud demand strong (positive for suppliers), but the market is rewarding returns, not spend; GOOGL's reaction shows an EPS miss is punished hard.
-- **Semis/memory.** INTC beat (EPS 0.52 vs 0.4066; Q4 guide $15.0-16.0B). SK hynix +13.3% on 10-28 (memory read-through). MRVL -13.2% on a Bloomberg report of advanced talks to buy Lumentum (not an issuer release). SNDK fiscal-Q1 EPS $49.51 vs $46.19 on $11.0B revenue (Daily, EDGAR). Then the 10-30 chip selloff above.
-- **Software.** NOW -26.95% (150.13 to 109.67) and FTNT -20.09% on 10-28 after-close prints; XLK -1.18% on 10-29. Thesis for NOW ("agentic attach under-credited") was the print and the print contradicted it.
-- **Energy.** XOM and CVX both beat (FMP, above). Brent 115.32 (10-28) to 111.57 (10-29); Hormuz still closed per IRGC (unverified). COP's 11-05 print inherits a positive peer read-through.
-- **Health care.** LLY non-GAAP EPS $7.48 vs $5.38 (includes $4.57 acquired IPR&D), revenue $24.4B, 2026 revenue guide raised $5.5B to $91-92B; MRK $2.49 vs $2.12; BMY beat; XLV +2.40% (Daily). VRTX +6.7% on the week into its print.
-- **Macro.** FOMC held at 3.75-4.00% on 10-28, 10-2 with two dissents for a hike (hawkish); Q3 GDP +3.4%; Sept core PCE +3.1% y/y; SPY -0.38%, QQQ -1.42% on 10-29; VIX about 17.
-- **FSLR** printed 10-29 (EPS $5.30 vs $4.64, $500M buyback; Daily/EDGAR). The policy catalyst (Sec 232, 12-04) is untouched.
+- **Prints were strong, prices fell on policy.** Arista (Q3 revenue $3.66B +58.5%, Q4 guide $3.9-4.0B), AMD (Q3 revenue about $13.4B, Q4 guide about $17B ±3%), Eaton (record orders, 2026 EPS guide $13.70-13.80), Super Micro (FY27 revenue guide raised to $72-82B), Palantir (revenue about $2.31B +96%, FY guide $8.53B), Uber (gross bookings $59.8B +20%) all beat or raised. The 11-05 rout then took AI-hardware names 10-20% lower regardless. Reading for A: where fundamentals printed intact and the move was policy/beta, the gap hypothesis is bullish; the counter is that the policy risk (state-level data-centre halts, regulation) is a genuine change in the demand path that no print refutes, and SPY's 11-05 close shows the market repriced the whole complex, not individual issuers.
+- **Counter-datapoints.** Datadog fell 14.4% on a flat Q4 revenue guide that assumes its largest customer at minimum commitment; Qualcomm printed a 26% handset-revenue drop on memory constraints and guided FQ1 EPS $2.15-2.35 against about $2.27 expected (marketbeat/webull secondary), -9.5% on 11-05 in D1's single-name screen; Oracle issued $10B of common stock (8-K Item 8.01, 11-04, -6.9%).
+- **M&A.** Marvell agreed to acquire Lumentum in an all-stock deal (4.500 MRVL shares per LITE share; implied EV about $115B per press; close expected H1 2028; D1 da7bf33a, 8-K Item 1.01 pre-open 11-02). MRVL -12.7% (acquirer); Bank of America sees dilution through 2030 (Benzinga via search, secondary).
+- **Energy.** Brent fell from 113.43 to 94.60 (11-04) before 99.18 (11-05) on peace-talk hopes and returning Gulf exports (secondary); XLE -4.74% on 11-04. COP beat (adjusted EPS $3.27 vs $3.06; Q4 production guide 2.32-2.36 MMBOED; dividend +11% to $0.93; 8-K Ex-99.1 11-05) but the stock is -11.5% on the week.
+- **Policy.** The 11-03 midterm results (Democratic sweep per D1) are the common driver: positive for solar (FSLR +15.3%), negative for AI data-centre build-out.
 
 ### TOP-10 — the actionable tier
 
-**Selection rule (stated for W4).** The top-10 contains only ADMISSIBLE, GATE-SURVIVING names with a dated post-gate catalyst that is NOT merely a re-dated print already consumed. A name whose thesis was a print that has now occurred (MSFT, AMZN, GOOGL, META, INTC, XOM, CVX, LLY, CAT, GEV, NOW) cannot be top-10 unless a new dated forward catalyst exists; they sit at 11+ or lower. A name whose catalyst falls within one session of the gate (AAPL, VRTX, AMD, ANET) stays eligible but is flagged fragile. When a surviving admissible name of comparable conviction exists, a name with an undated catalyst is excluded. All ten rows are long. Zero SPENT names in the tier.
+**Selection rule (stated for W4).** Only ADMISSIBLE, GATE-SURVIVING names with a DATED post-gate catalyst that is not merely a consumed print. Undated names are excluded from the tier. All ten rows are long. Zero SPENT names. TTWO and CEG are fragile (11-09, one session after the gate).
 
-**1. VRTX - Vertex Pharmaceuticals.** (a) Bullish. (b) Povetacicept (IgAN) accelerated-approval BLA, PDUFA **2026-11-30 (C)** per Vertex's own 2026-06-01 release (carried, not re-read this run); Crinetics acquisition closed 2026-09-01; an ~$8.8B IPR&D charge lands in the 11-02 print (known, non-cash; carried). Documents for construction: 10-Q, the 11-02 release, the BLA acceptance notice. Counter-evidence (MEASURED): the stock is +6.7% on the week to 558.88 (10-30 high 563.80), so part of the regulatory optimism is priced into the run-up; XLV +2.40 on 10-29 rotation helped. (c) Earnings **2026-11-02 (C)** after hours (Nasdaq; company-issued date carried), ON the day after the gate; PDUFA 2026-11-30 (C). (d) Queued (already queued); no open position. (e) Top-10, conviction **4** (held; the PDUFA is the post-gate anchor). GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-02)
+**1. VRTX - Vertex Pharmaceuticals.** (a) Bullish. (b) Povetacicept (IgAN) FDA decision, PDUFA **2026-11-30**, restated in Vertex's own Q3 release (re-checked this week): https://investors.vrtx.com/news-releases/news-release-details/vertex-reports-third-quarter-2026-financial-results (2026-11-02; via search snippet): revenue $3.44B (+12%), 2026 revenue guide raised to $13.15-13.25B, RAINIER Phase III fully enrolled, GAAP net income $654M on the Crinetics charge. Documents for construction: the 10-Q, BLA acceptance notice. Counter-evidence (MEASURED): 547.09, -2.1% on the week, so the approval is partly priced after a run from 517 on 10-26; Q3 launch metrics drew criticism in one BioSpace piece (that piece's revenue figure conflicts with the release and is disregarded). (c) PDUFA **2026-11-30 (C)**. (d) QUEUED; no open position. (e) Top-10, conviction **4**. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-11-30)
 
-**2. TTWO - Take-Two Interactive.** (a) Bullish. (b) GTA VI launch 2026-11-19 reaffirmed in the fiscal-Q4 2026 release; FY27 net bookings $8.0-8.2B reaffirmed 2026-08-07 (press reports; carried, not re-read). Documents for construction: last two 10-Qs (deferred revenue, preload), the fiscal-Q2 release. The stock fell 6.6% on the week to 190.17 (195.29 on 10-28, 190.17 on 10-30, a new 4-week low) with no cause found in D1 or my searches; absence of evidence, not evidence of a delay. Counter-evidence: a launch slip would be thesis-invalidating, and no October company update was found. (c) **GTA VI launch 2026-11-19 (C)**; fiscal-Q2 earnings **2026-11-09 (C)** after hours (issuer notice per 1B.2; Nasdaq, EPS forecast $0.49, 6 estimates). (d) Already queued; no open position. (e) Top-10, conviction **4** (price gap widened; verify no delay report before construction). GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-09)
+**2. FSLR - First Solar.** (a) Bullish. (b) Section 232 polysilicon-and-derivatives regime, signed 2026-08-06, effective **2026-12-04**: 15% duty on covered ingots/wafers/cells/modules plus minimum import prices (modules $0.38/W, cells $0.22/W, wafers/ingots $100/kg, polysilicon $21/kg) per BDO / Thomson Reuters summaries (https://www.bdo.com/insights/tax/new-tariffs-and-minimum-import-prices-on-polysilicon-derivatives-and-solar-products; https://www.thomsonreuters.com/en-us/help/onesource-global-trade/regulatory-insights/2026/august-12th/us-section-232-polysilicon-import-prices-tariffs.html; both re-checked via search this week). New: Democratic sweep read as positive for solar (press: FSLR +9% on 11-04, Mizuho PT $328 from $324, Outperform; secondary). FSLR makes CdTe thin film, so the polysilicon floor lifts its competitors' cost, not its own (INFERRED from a prior-week read; this week's sources did not address FSLR's exposure). Counter-evidence (MEASURED): +15.3% on the week to 201.14, so part of the gap has closed; the 10-29 beat (EPS $5.30 vs $4.64) is carried. Documents for construction: proclamation text, 10-Q. (c) **Sec 232 effective 2026-12-04 (C)**. (d) QUEUED; no open position. (e) Top-10, conviction **4** (held; gap narrower after the rally). GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-12-04)
 
-**3. FSLR - First Solar.** (a) Bullish. (b) Sec 232 polysilicon-and-derivatives regime (proclamation signed 2026-08-06; effective 12:01 am ET 2026-12-04; minimum import prices on polysilicon, wafers, cells and modules; secondary coverage about a $0.38/W module floor); CdTe contains no polysilicon. New: the 10-29 print beat (EPS $5.30 vs $4.64, guidance updated, $500M buyback; Daily/EDGAR 8-K, details of the guide not read). Documents for construction: proclamation text, the 10-29 8-K and 10-Q. Counter-evidence: stock ended 174.40 (-1.4% on 10-30, so the beat did not extend). (c) **Sec 232 regime effective 2026-12-04 (C)**. (d) Already queued; no open position. (e) Top-10, conviction **4**; the most policy-anchored, least AI-capex-exposed name. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-12-04)
+**3. NVDA - NVIDIA.** (a) Bullish. (b) Issuer notice re-checked this week: https://nvidianews.nvidia.com/news/nvidia-sets-conference-call-for-third-quarter-financial-results-6928873 - call **Tuesday 2026-11-17**, 2 pm PT, quarter ended 10-25, CFO commentary at about 1:20 pm PT. Nasdaq consensus EPS $2.49 (13 estimates). Gap hypothesis (INFERRED): price 186.64 (-8.8% week, 181.60 low on 11-05 on 181M shares) reflects a policy-driven demand-path discount applied before a print; if the print and guide hold supply-constrained demand, the gap closes. Counter-evidence: the policy risk is real (state-level data-centre pauses; UBS 30% 2028 capacity-at-risk estimate, secondary), and circular-financing/CoreWeave credit objections (carried). Documents for construction: FQ2 10-Q, last four transcripts, hyperscaler capex disclosures. (c) Earnings **2026-11-17 (C)** after hours. (d) QUEUED; no open position. (e) Top-10, conviction **3**. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-11-17)
 
-**4. COP - ConocoPhillips.** (a) Bullish. (b) XOM and CVX beat on 10-30 (EPS 4.23 vs 4.12; 5.28 vs 4.87; revenue +8% and +10% above estimates; FMP) which is a positive read-through for an upstream pure-play; Nasdaq consensus EPS $2.97 (8 estimates). Brent 111.57 on 10-29, down from 116.72. Gap hypothesis (INFERRED, preliminary): consensus models a transient shock; physical flows (Hormuz closed per IRGC 10-29, unverified) point to a structural one. Documents for construction: Q2 10-Q (realized prices, hedging), Q3 release. Counter-evidence: falling Brent (-3.25% on 10-29) and de-escalation risk. (c) Earnings **2026-11-05 (C)** pre-market (ConocoPhillips release of 2026-09-24, carried; Nasdaq pre-market). (d) Already queued (W4 intake 2026-W43 per D1). No open position. Concentration note: the XOM/CVX seam is now post-print, so COP is the lone energy name in the tier. (e) Top-10, conviction **3**, raised in rank by peer beats. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-05)
+**4. TTWO - Take-Two Interactive.** (a) Bullish. (b) GTA VI launch **2026-11-19**, FY27 net bookings guide $8.0-8.2B reaffirmed, fiscal-Q2 net bookings guide $1.62-1.67B (MarketPulse preview dated 2026-11-05: https://www.marketpulse.com/markets/take-two-interactive-ttwo-q3-earnings-preview-gta-vi-launch-is-the-critical-catalyst-for-ttwo/; secondary, re-checked this week). The same preview cites an options-implied move of about ±10.2% on the print and a bear case of any new timetable doubt. Counter-evidence (MEASURED): the stock has rallied +13.0% in a week to 214.87 (190.17 on 10-30), so the pre-print gap has partly closed; a slip would be thesis-invalidating. This agent's search found no fresh issuer notice, but PART 1B.2 carries the 11-09 after-close date as issuer-confirmed from Take-Two's own release read in W44 (orchestrator reconciliation at assembly; Nasdaq EPS forecast $0.49, 6 estimates). (c) Earnings **2026-11-09 (C, carried)**; GTA VI **2026-11-19 (C)**. (d) QUEUED; no open position. (e) Top-10, conviction **3** (down from 4: price gap narrowed, date unconfirmed this week). Fragile. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-11-09)
 
-**5. ANET - Arista Networks.** (a) Bullish. (b) AI back-end and front-end switching share; Q3 guide revenue about $3.3B, non-GAAP operating margin 48-49%, EPS $1.06-1.08 (Q2 release exhibit, carried); Nasdaq consensus EPS $0.99 (9 estimates). New support: AMZN AWS +39.3%, MSFT beat, META capex floor $135-145B (carried) all point to hyperscaler spending continuing. Counter-evidence (MEASURED): ANET -9.6% on 10-30 to 168.86, customer concentration (Meta, Microsoft), and the market is rewarding capex restraint. Documents for construction: Q2 10-Q, last four transcripts, Q3 release. (c) Earnings **2026-11-03 (C)** after hours, call 1:30 pm PT (Arista press release 2026-10-06, carried). (d) Already queued (W4 intake 2026-W43 per D1); no open position. (e) Top-10, conviction **3**. Fragile (11-03). GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-03)
+**5. AVGO - Broadcom.** (a) Bullish. (b) Q3 FY2026 release (https://investors.broadcom.com/news-releases/news-release-details/broadcom-inc-announces-third-quarter-fiscal-year-2026-financial; via search, re-checked this week): Q4 revenue guide about $34.8B, non-GAAP operating margin about 66%. Price 293.69 (-9.9% week; 291.53 on 11-05, -10.4%): the policy rout, not an issuer event. Counter-evidence: AI-debt vehicle/OpenAI financing reports and CoreWeave credit (carried); the policy risk applies equally. Nasdaq consensus EPS $3.45 (10 estimates). (c) Earnings **2026-12-10 (E)** after hours (third-party calendars; not announced by Broadcom in the searched sources). (d) QUEUED; no open position. (e) Top-10, conviction **3**. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-12-10)
 
-**6. AAPL - Apple.** (a) Bullish. (b) FQ4 results 2026-11-02; FQ3 guide September-quarter revenue growth 9-11% (about $111.7-113.7B), iPhone growth mid-teens; FMP consensus revenue $113.4B, EPS $1.99; Nasdaq EPS $1.98 (7 estimates). Defensive mega-cap with a quantified guide; -0.9% on the week, held near 345 through the chip selloff (10-30 intraday low 334.35, close 344.63). Watch items: memory pricing and supply (SK hynix +13.3% on 10-28 raises memory cost risk). (c) Earnings **2026-11-02 (C)** after hours (Apple notice via press, carried; Apple IR page not reached). (d) Already queued; no open position. (e) Top-10, conviction **3**. Fragile. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-02)
+**6. CSCO - Cisco.** (a) Bullish. (b) Issuer notice re-checked this week (newly dated): https://investor.cisco.com/news/news-details/2026/Cisco-Schedules-Conference-Call-for-Q1-Fiscal-Year-2027-Financial-Results/default.aspx - Q1 FY27 call **Thursday 2026-11-12**, 1:30 pm PT, quarter ended 2026-10-24. Fiscal-2027 guide revenue $72.2-73.4B (Q4 FY26 release 2026-08-12; https://investor.cisco.com/news/news-details/2026/CISCO-REPORTS-FOURTH-QUARTER-AND-FISCAL-YEAR-2026-EARNINGS/default.aspx). Carried: hyperscaler AI orders about $9B in FY26 and some possible pull-forward (secondary). Nasdaq EPS $1.15 (8 est.), FMP $1.32 (consensus figures disagree). Price 93.85 (-10.2% week, 11-05 -7.6%; cause not established beyond the sector tape, INFERRED). (c) Earnings **2026-11-12 (C)**. (d) QUEUED; no open position. (e) Top-10, conviction **3**. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-11-12)
 
-**7. AMD - AMD.** (a) Bullish, contested on competitive position. (b) Lost the exclusive SpaceX AI-compute socket to NVDA (2026-08-05, carried); FMP consensus EPS $1.95, revenue $13.09B; Nasdaq EPS $1.68 (13 estimates; the two consensus figures disagree, so the beat bar is unclear). Price: 578.44 on 10-28, 504.80 on 10-30 (-10.9% on Friday, cause unestablished). Gap is wider than last week, but so is the risk that Friday's move reflects information not captured here. (c) Earnings **2026-11-03 (C)** after hours, call 5:00 pm ET (ir.amd.com 2026-10-06, carried). (d) Already queued; no open position. (e) Top-10, conviction **3**. Fragile. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-03)
+**7. CEG - Constellation Energy. NEW.** (a) Bullish. (b) Power for AI load and nuclear contracting; 2026 adjusted-operating-earnings guide $11.50-12.50 (carried secondary). Nasdaq EPS $3.90 (5 est.). Earnings Whispers lists 2026-11-09 before the open; no Constellation release found (https://www.earningswhispers.com/article/CEG/22555). Price 249.95 (-4.7% week; -6.7% on 11-04 as the AI-power complex sold). Gap hypothesis (INFERRED): contracted baseload is less exposed to a build-out slowdown than merchant capex names, yet sold off with them; a policy slowdown is the counter. Documents for construction: Q3 release, 10-Q. (c) Earnings **2026-11-09 (E)** pre-market. (d) **NEW** (not on the census). (e) Top-10, conviction **2**. Fragile. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-11-09)
 
-**8. NVDA - NVIDIA.** (a) Bullish. (b) FQ2 10-Q, last four transcripts; supply side: TSMC Q3 beat and AI demand exceeds supply (carried). New: hyperscaler capex confirmed by the AWS +39.3% and MSFT prints. Counter-evidence: CoreWeave credit stress and circular-financing objections (carried); price 204.64 (-3.0% week, -4.2% on 10-30). (c) Earnings **2026-11-17 (C)** after hours (issuer notice per 1B.2, Δ from 11-18; Nasdaq: 11-17, EPS $2.49 est, 13 estimates; FMP says 11-17 too, EPS 2.47); GTC DC 11-30 (E, conflicting listings). (d) Already queued; no open position. (e) Top-10, conviction **3**. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-17)
+**8. MU - Micron.** (a) Bullish. (b) FQ4 call 2026-09-30 (marketbeat transcript summary; re-checked via search): FQ1 guide revenue $61.5B ±$1.5B, non-GAAP EPS $38.15 ±$1, gross margin about 86.25% ("low point for fiscal 2027" per management), supply "much tighter" through 2027-28; QCOM's 11-04 call independently cites industry memory constraints and higher prices (secondary), consistent with pricing power. Price 690.00 (-22.0% week, 11-05 -17.5%) is the biggest percentage gap among large caps in the tier. Counter-evidence: strategic long-term agreements cover about 20% of DRAM volume and one third of NAND (cap capture of spot spikes); the rout is policy-driven but memory is AI-capex-geared; CXMT supply (carried). (c) FQ1 **2026-12-16 (E)** (Nasdaq; days.to projects 12-16 4:30 pm ET; Micron had not announced it). (d) QUEUED (the queue row cites the consumed 09-30 print; stale). No open position. (e) Top-10, conviction **3** (new to the tier). GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-12-16)
 
-**9. AVGO - Broadcom.** (a) Bullish. (b) Custom silicon and AI networking attach; Nasdaq consensus EPS $3.45 (10 estimates). Counter-evidence: AI-debt vehicle and OpenAI financing reports, CoreWeave credit, the capex-restraint reaction; price 326.08 (+1.4% week; 351.81 on 10-28, -5.5% on 10-30). (c) Earnings **2026-12-10 (E)** (Nasdaq; moved from 12-09; absent from FMP). (d) Already queued; no open position. (e) Top-10, conviction **3**. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-12-10)
+**9. MRVL - Marvell Technology.** (a) Bullish (merger-reaction overshoot). (b) D1 8-K record: Item 1.01 pre-open 2026-11-02 (https://www.sec.gov/Archives/edgar/data/1835632/000119312526442717/d352474d8k.htm; D1 da7bf33a): all-stock acquisition of Lumentum at 4.500 MRVL per LITE share (the 8-K is the merger announcement; Marvell's FQ3 FY27 results are scheduled separately for 12-01 per its own IR notice, PART 1B.2 — orchestrator correction at assembly); MRVL -12.7% on the day after two earlier double-digit declines (10-29, 10-30). Press: management targets $550B AI-connectivity TAM and more than $1B annual cost savings, expects first-year EPS accretion; Bank of America sees dilution through 2030; 25 of 27 analysts rate Buy (secondary). Price 141.20 (-28.1% week). Gap hypothesis (INFERRED): the market priced the worst case on dilution and AI demand together. Counter-evidence: overpay/dilution is a genuine thesis break for one analyst; customer-conflict risk (buyer owns a competitor's supplier); lasting H1 2028 close timeline. (c) FQ3 **2026-12-01 (C)** (Marvell IR notice 2026-11-06, PART 1B.2; orchestrator reconciliation at assembly). (d) QUEUED; no open position. (e) Top-10, conviction **2**. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-12-01)
 
-**10. CSCO - Cisco.** (a) Bullish. (b) Fiscal-2026 hyperscaler AI orders raised to about $9B (from $5B), FY27 AI-infrastructure revenue about $7.5B flagged, some orders possibly pulled forward; non-GAAP gross margin 66.3% (secondary, carried); Nasdaq EPS $1.15 (8 estimates), FMP EPS $1.32 (the two consensus figures disagree). Price 104.51 (-1.9% week; -3.8% on 10-30). (c) Earnings **2026-11-11 (E)** (FMP and Nasdaq; time not supplied; no Cisco notice found). (d) Already queued; no open position. (e) Top-10, conviction **3**. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-11)
+**10. DELL - Dell Technologies.** (a) Bullish. (b) Q2 FY27 baseline (secondary, pulse2/niftytrader): AI-server backlog $95B (from $51.3B), FY27 AI-server revenue outlook about $74B, Q3 guide about $49B and EPS about $6.50. This week's read-through: Super Micro's 11-03 release (https://www.sec.gov/Archives/edgar/data/0001375365/000137536526000026/exhibit991_20260930.htm) raised FY27 revenue to $72-82B from $65-72B (non-GAAP EPS $1.81 vs $1.01-1.10 guide), supporting server demand. Price 328.53 (-22.6% week; 11-05 -14.9%). Counter-evidence: memory cost pressure on server margins (Barclays downgrade 10-14, note not read; SMCI GAAP gross margin 12.7% with a lower H2 margin guide); policy risk. Nasdaq EPS $6.41 (8 est.). (c) FQ3 **2026-11-24 (C)** (Dell IR events page, PART 1B.2; this agent's own search had not found it — orchestrator reconciliation at assembly). (d) QUEUED; no open position. (e) Top-10, conviction **2**. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-11-24)
 
 ### 11-20
 
-Research-cost note: every row in 11-50 carries the full (a)-(e); carry-forward rows keep (b) terse where the evidence is unchanged.
+Research-cost note: carry-forward rows keep (b) terse where unchanged; every row carries (a)-(e).
 
-**11. QCOM - Qualcomm.** (a) Bullish. (b) Stellantis Snapdragon expansion, auto/IoT diversification (carried; no fresh document). New: -11.1% on 10-30 (185.41 to 164.79) on about 3x normal volume, cause unestablished; Nasdaq EPS $1.46 (9 estimates). A drop of that size into a print widens the gap if the drop was sector, not issuer, news; INFERRED. (c) FQ4 **2026-11-04 (C)** after hours (issuer notice per 1B.2; Nasdaq). (d) Already queued. (e) 11-20, conviction **3** (up from 3, rank up: the 10-30 move creates the gap, but the unknown cause caps conviction). GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-04)
+**11. AMD - AMD.** (a) Bullish. (b) Q3 beat and Q4 guide (finviz/letsdatascience summaries of the AMD release, via search): revenue about $13.4B (+45%), data centre $8.5B (+97%), non-GAAP EPS $2.09 vs about $1.94; Q4 guide about $17B ±3% (about 4% above consensus per one source). Stock closed 488.78 on 11-04 then 404.40 on 11-05 (-17.3%); 449.04 on 11-06. Counter-evidence: lost the exclusive SpaceX compute socket to NVDA (carried, 2026-08-05); expectations were high going in (+140% YTD per one source). Reaction reports conflict on 11-03/11-04 and are not relied on. (c) Next print **2027-02-02 (E)** (FMP). (d) QUEUED. (e) 11-20, conviction **3**; no dated near catalyst of its own (NVDA 11-17 is a read-through). GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2027-02-02)
 
-**12. LRCX - Lam Research.** (a) Bullish. (b) Printed 10-21: record revenue $8.22B (+54% y/y), operating margin above 40% (secondary); July WFE view raised to the low $150B range; SK hynix +13.3% on 10-28 supports memory capex (D1). Price 239.11 (+3.9% week; 254.39 on 10-29, -6.0% on 10-30). Documents for construction: 10-Q, shipment-vs-revenue disclosures, transcript. Counter-evidence: AI-capex restraint; supply constraints. (c) Next print **undated** (late January INFERRED from the fiscal pattern). (d) **NOT on the A queue; new intake** (carried new intake from W43). (e) 11-20, conviction **2**. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst undated)
+**12. ANET - Arista Networks.** (a) Bullish. (b) Q3 release (https://www.sec.gov/Archives/edgar/data/0001596532/000159653226000252/ex991q326-earningsrelease.htm; re-checked): revenue $3.66B (+58.5% y/y), non-GAAP operating margin 49.1%, non-GAAP EPS $1.20; Q4 guide revenue $3.9-4.0B, EPS $1.26-1.30; 2026 revenue guide raised to about $13.3B (+48%). Price 170.80 (+1.1% week) is the only AI-hardware name not lower, so the gap is narrower. Counter-evidence: customer concentration, tariffs, component supply; 11-05 -10.8% on the sector tape. (c) Next print **2027-02-10 (E)** (WebSearch fallback: FXEmpire projects 02-10, MarketScreener 02-14; not issuer-confirmed). (d) QUEUED. (e) 11-20, conviction **3**. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2027-02-10)
 
-**13. CEG - Constellation Energy.** (a) Bullish. (b) Power for AI load and nuclear contracting; Q2 2026 adjusted operating earnings $2.55/share, full-year guidance raised to $11.50-12.50 (secondary, carried); Nasdaq EPS $3.90 (4 estimates). +3.5% on the week (253.45 to 262.38), contract-backed, less capex-cycle exposed. Documents for construction: Q3 release, 10-Q. (c) Earnings **2026-11-09 (E)** pre-market (Nasdaq; moved from 11-06). (d) **NOT on the A queue; new intake.** (e) 11-20, conviction **2**. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-09)
+**13. ETN - Eaton. NEW.** (a) Bullish. (b) Q3 (8-K Ex-99: https://www.sec.gov/Archives/edgar/data/0001551182/000155118226000037/etn09302026exhibit99.htm; re-checked via search): sales $8.9B (+28%), adjusted EPS $3.68 vs $3.54, data-centre revenue about +65%, rolling-12-month orders +39%, backlog about $16B, 2026 EPS guide raised to $13.70-13.80, Q4 EPS guide $4.05-4.15. Price 341.72 (-7.6% week; +7.0% on the print, then -10% on 11-05 on the policy rout). Gap hypothesis (INFERRED): the print gains were given back on a policy shock the order book contradicts for the near term. Counter: data-centre pause risk concentrated in exactly Eaton's end market. (c) Next print **undated** (early February by pattern, INFERRED; fallback search found no date). (d) **NEW**. (e) 11-20, conviction **3**. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst undated)
 
-**14. GOOGL - Alphabet.** (a) Bullish. (b) The 10-28 print: EPS 2.12 vs 3.02 est, revenue $127.6B vs $128.0B (FMP), stock -12.64% to 283.82 (Daily); 10-Q backlog $567.7B and an ad-tech divestiture denial (Daily). Gap hypothesis (INFERRED, preliminary): the market priced an EPS miss as a structural issue; if the gap is a charge, not operating, the move overshoots. Documents to pull: the 10-28 8-K and 10-Q (to split charge vs operating). Counter-evidence: miss may be operating margin; capex. (c) Next print **2027-02-03 (E)** (FMP); Waymo multi-city launches "2026" undated. (d) Already queued; **two open Strategy D lots** (D2 to confirm sleeves are distinct). (e) 11-20, conviction **2**. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2027-02-03)
+**14. SMCI - Super Micro.** (a) Bullish. (b) FQ1 FY27 (8-K Ex-99.1, 11-03; via search): net sales about $19.9B, non-GAAP EPS $1.81 vs the $1.01-1.10 guide, FY27 revenue guide raised to $72-82B, FQ2 guide $19.5-21.5B and EPS $1.66-1.90; operating cash outflow $434M; figures marked preliminary/unaudited. Price 28.76 (-12.7% week; -5.7% on 11-04 despite the beat). Counter: low and falling margins (12.7% GAAP), cash burn, preliminary numbers. (c) Next print **2027-02-02 (E)** (WebSearch fallback, days.to projection). (d) QUEUED. (e) 11-20, conviction **2**. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2027-02-02)
 
-**15. MSFT - Microsoft.** (a) Bullish. (b) 10-28 beat (EPS 4.89 vs 4.72; revenue $92.3B vs $90.6B; FMP); flat (-0.5% week), so the market did not reward the beat. The print thesis is consumed; no new document. (c) Next print **2027-01-27 (E)** (FMP); Ignite 2026-11-17..20 (E, third-party listing). (d) Already queued. (e) 11-20, conviction **2** (down from 3: thesis consumed). GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-17)
+**15. QCOM - Qualcomm.** (a) Bullish, reduced. (b) FQ4 (11-04; marketbeat/webull secondary): handset revenue -26.2% to about $5.1B on industry memory constraints, automotive +89% to $1.99B, FY27 data-centre target $5B reiterated, FQ1 guide revenue $10.4-11.2B and EPS $2.15-2.35 vs about $2.27 expected; D1 shows -9.5% on the print. Price 165.41 (+0.4% week). The 10-30 -11% cut that created last week's gap is now explained by the INTC-driven liquidation; the print then added a handset-revenue problem. Gap largely closed or reversed. (c) Next print **undated**. (d) QUEUED. (e) 11-20, conviction **2**. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst undated)
 
-**16. AMZN - Amazon.** (a) Bullish. (b) AWS +39.3%, margin 38.65% (Daily) against a small consensus miss on EPS (1.89 vs 1.97); stock 240.35 (-3.1% week). Counter-evidence: capex financing. (c) re:Invent **2026-11-30..12-04 (E)**; next print **2027-02-04 (E)** (FMP). (d) Already queued; **two open Strategy D lots**. (e) 11-20, conviction **2**. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-30)
+**16. LRCX - Lam Research.** (a) Bullish. (b) Printed 10-21: December-quarter guide revenue $8.6B ±$0.4B, EPS $2.33 ±$0.15, operating margin 40.5% (marketbeat/247wallst summaries); WFE view raised in July (carried). Price 200.44 (-16.2% week; 11-05 -16.4%). Counter: AI-capex policy risk; supply timing. (c) Next print **undated**: the WebSearch fallback found only last year's 2026-01-28 call; a late-January 2027 call is INFERRED. (d) **NEW**. (e) 11-20, conviction **2**. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst undated)
 
-**17. ETN - Eaton.** (a) Bullish. (b) Data-centre electrical equipment and grid demand; Nasdaq EPS $3.54 (10 estimates). Gap hypothesis (INFERRED, preliminary, no documents read this run). Price 369.97 (+1.1% week; 393.72 on 10-29, -6.0% on 10-30). Documents for construction: Q2 10-Q backlog and orders. (c) Earnings **2026-11-03 (E)** pre-market (Nasdaq). (d) **NOT on the A queue; new intake.** (e) 11-20, conviction **2**. Fragile. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-03)
+**17. COP - ConocoPhillips.** (a) Bullish, thesis weakened. (b) Q3 8-K (https://www.sec.gov/Archives/edgar/data/0001163165/000116316526000043/cop-20261105x8kexx991.htm, 11-05): adjusted EPS $3.27 vs $3.06 consensus, production 2,302 MBOED (-2% adjusted y/y), Q4 guide 2.32-2.36 MMBOED, dividend +11% to $0.93. Last week's gap hypothesis (consensus models a transient shock; Hormuz flows point to a structural one) is contradicted by the week's evidence: Brent fell to 94.60-99.18 and press reports Gulf exports resuming (secondary). Price 136.27 (-11.5% week). Remaining case: stock may overshoot Brent. (c) Next print **2027-02-10 (E)** (WebSearch fallback, MarketScreener projection; early-February pattern). (d) QUEUED. (e) 11-20, conviction **2** (down from 3). GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2027-02-10)
 
-**18. SMCI - Super Micro.** (a) Bullish. (b) Raised fiscal-Q1 outlook 10-21 (D1; carried); AI-server demand resilient against the Barclays DELL/HPE/NTAP downgrade thesis; Nasdaq EPS $1.04 (6 estimates). Price 32.95 (flat on the week). (c) Earnings **2026-11-03 (C)** after hours (issuer notice per 1B.2; Nasdaq; absent from FMP). (d) Already queued. (e) 11-20, conviction **2**. Fragile. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-03)
+**18. AAPL - Apple.** (a) Bullish. (b) FQ4 2026 (reported 11-02; secondary summaries of the Apple release, re-checked): revenue about $114.5B (+12%), iPhone about $57.6B (+17.5%), EPS $2.10, gross margin 47.9% including about one point of tariff refunds; December-quarter guide revenue growth 7-10% and gross margin 45-46%. Price 342.37 (-0.7% week), defensive through the rout. Counter: memory cost and Siri AI cost in margins; the guide's gross-margin step-down. Print consumed. (c) Next print **2027-02-04 (E)** (FMP). (d) QUEUED. (e) 11-20, conviction **2** (down from 3: print consumed, no dated near catalyst). GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2027-02-04)
 
-**19. PLTR - Palantir.** (a) Bullish. (b) Government and commercial bookings; Nasdaq EPS $0.33 (10 estimates), FMP EPS $0.41. -6.3% on 10-30 (196.42 to 184.11), the session before the print. (c) Earnings **2026-11-02 (E)** after hours (Nasdaq, FMP). (d) **NOT on the A queue.** (e) 11-20, conviction **2**. Fragile. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-02)
+**19. GOOGL - Alphabet.** (a) Bullish. (b) The 10-28 EPS miss ($2.12 vs about $3.02) is largely an $8.7B equity-investment loss (about 55 cents per share), per press (newsquawk/247wallst summaries; the 10-Q was not read in full this run, so INFERRED from secondary); one analysis still shows an operating-income shortfall (about $40.6B vs $43.2B, unverified). Price 284.78 (+1.8% week), the best performer among the large caps here. The "charge vs operating" question flagged last week is therefore partly answered: a mark-to-market loss, not a recurring cost. Documents to pull: 10-Q other-income note. (c) Next print **2027-02-03 (E)** (FMP). (d) QUEUED; **two open Strategy D lots** (D2 to confirm sleeves are distinct). (e) 11-20, conviction **2**. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2027-02-03)
 
-**20. UBER - Uber.** (a) Bullish. (b) ~3,300-role restructuring margin effect lands in this print; ezCater $2.3B acquisition (10-06); Nasdaq EPS $0.94 (7 estimates), FMP $0.864. (c) Earnings **2026-11-04 (E)** pre-market (Nasdaq, FMP). (d) **NOT on the A queue**; open Strategy D lot. (e) 11-20, conviction **2**. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-04)
+**20. ORCL - Oracle.** (a) Bullish. (b) $10B common-stock issuance, 86,206,897 shares (8-K Item 8.01, 11-04; D1 f5359185; https://www.sec.gov/Archives/edgar/data/1341439/000119312526447507/d131790d8k.htm), -6.9% on the day; funding structure (record CDS, OpenAI financing reports, carried) is the live question. Price 116.10 (-11.2% week). Equity rather than debt funding may reduce credit risk; dilution is the counter. (c) FQ2 **2026-12-09 (E)** (Nasdaq; EPS $1.56). (d) QUEUED. (e) 11-20, conviction **2**. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-12-09)
 
 ### 21-30
 
-- **21. ORCL - Oracle.** (a) Bullish. (b) +10.7% on 10-28 on own events (D1); price 130.67 (+3.6% week; -6.4% on 10-30). Adverse: record CDS for Oracle and CoreWeave, WSJ OpenAI-financing report; funding structure is the live question. (c) FQ2 **2026-12-09 (E)** (Nasdaq; EPS $1.57). (d) Already queued. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-12-09)
-- **22. SHOP - Shopify.** (a) Bullish; GMV take-rate. (b) Nasdaq EPS $0.33 (13 estimates), FMP $0.46. (c) **2026-11-03 (C)** pre-market (issuer notice per 1B.2). (d) NOT on the A queue. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-03)
-- **23. DDOG - Datadog.** (a) Bullish. (b) Bernstein upgrade 10-19 (D1); Nasdaq EPS $0.18 (10 estimates); software sell-off (NOW, FTNT) is counter-evidence for the group. (c) **2026-11-04 (C)** pre-market (company release carried). (d) Already queued. (e) conviction 2 (down from 3: peer-print contagion). GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-04)
-- **24. DIS - Disney.** (a) Bullish; SVOD margin. (b) Nasdaq EPS $1.67 (9 estimates), FMP $1.69. (c) **2026-11-17 (C)** pre-market (issuer notice per 1B.2). (d) NOT on the A queue; two open Strategy D lots. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-17)
-- **25. MRVL - Marvell.** (a) Bullish. (b) Custom silicon; -13.2% on 10-28/29 on a Bloomberg report of advanced talks to buy Lumentum (D1; not an issuer release), an acquisition-dilution/overpay risk, a different thesis from last week's. (c) FQ3 **2026-12-01 (E)** (Nasdaq). (d) Already queued. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-12-01)
-- **26. DELL - Dell Technologies.** (a) Bullish. (b) AI-server capex; Barclays downgrade 10-14 (note not read); SMCI's raised outlook is a counter-datapoint; Nasdaq EPS $6.41. (c) **2026-11-24 (E)** (Nasdaq). (d) Already queued. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-24)
-- **27. HPE - Hewlett Packard Enterprise.** (a) Bullish; as DELL. (c) **2026-12-03 (E)** (Nasdaq). (d) Already queued. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-12-03)
-- **28. NTAP - NetApp.** (a) Bullish. Barclays downgrade 10-14. (c) **2026-12-01 (E)** after hours (Nasdaq; moved from 11-24). (d) Already queued. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-12-01)
-- **29. CRWD - CrowdStrike.** (a) Bullish; module attach. (c) **2026-12-01 (E)** (Nasdaq). (d) Already queued. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-12-01)
-- **30. CRM - Salesforce.** (a) Bullish; agentic-AI attach vs compressed multiple. Software-group risk: NOW -26.95% on an agentic-attach thesis is direct counter-evidence for CRM's same framing. (c) **2026-12-02 (E)** (Nasdaq). (d) Already queued. (e) conviction 2 (watch). GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-12-02)
+- **21. PLTR - Palantir. NEW.** (a) Bullish. (b) Q3 (secondary, benzinga/stocktwits summaries): revenue about $2.31B (+96%), adjusted EPS $0.44 vs about $0.41, US commercial $984M above US government $953M for the first time, FY revenue guide raised to about $8.53B, Q4 guide about $2.65B vs about $2.46B expected; shares -3% after hours then 160.38 (-12.9% week). (c) Next print **2027-02-01 (E)** (FMP). (d) NEW. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2027-02-01)
+- **22. UBER - Uber. NEW.** (a) Bullish. (b) Q3 8-K (https://www.sec.gov/Archives/edgar/data/0001543151/000154315126000039/uberq326earningspressrelea.htm): gross bookings $59.8B (+20%), adjusted EBITDA $3.0B (+31%), non-GAAP EPS $0.88, Q4 guide gross bookings $63.25-65.25B and EBITDA $3.13-3.23B; Zacks notes a GAAP EPS miss on an investment loss. +5.1% on the week to 68.59 (best of the group). (c) Next print **2027-02-03 (E)** (FMP). (d) NEW; open Strategy D lot. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2027-02-03)
+- **23. DDOG - Datadog.** (a) Bullish, reduced. (b) Q3 (finviz release summary): revenue about $1.20B (+35%), RPO $3.85B (+38%), but Q4 revenue guide $1.19-1.20B flat vs Q3 on a largest-customer minimum-commitment assumption; -14.4% on 11-04 (D1). Gap hypothesis (INFERRED, weak): the guide embeds a single-customer worst case. Counter: billings +30% below revenue; fewer large wins. (c) Next print **undated** (early/mid February INFERRED). (d) QUEUED. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst undated)
+- **24. HPE - Hewlett Packard Enterprise.** (a) Bullish; as DELL. (b) SMCI read-through; Nasdaq EPS $1.17 (7 est.). (c) **2026-11-23 (E)** after hours (Nasdaq; moved from 12-03). (d) QUEUED. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-11-23)
+- **25. NTAP - NetApp.** (a) Bullish. Barclays downgrade 10-14 (carried). (c) **2026-12-01 (E)** after hours (Nasdaq; EPS $2.13). (d) QUEUED. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-12-01)
+- **26. CRWD - CrowdStrike.** (a) Bullish; module attach. Software-group contagion (DDOG -14.4%) is the counter. (c) **2026-12-01 (E)** after hours (Nasdaq). (d) QUEUED. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-12-01)
+- **27. PANW - Palo Alto Networks.** (a) Bullish; platformisation. (c) FQ1 FY27 **2026-11-18 (E)** after hours (Nasdaq; EPS $0.52, 15 est.). (d) QUEUED. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-11-18)
+- **28. CRM - Salesforce.** (a) Bullish; agentic-AI attach vs compressed multiple; NOW's -26.95% and DDOG's -14.4% are direct counter-evidence for the same framing. (c) **2026-12-02 (E)** (Nasdaq; EPS $2.41). (d) QUEUED. (e) conviction 2 (watch). GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-12-02)
+- **29. SNOW - Snowflake.** (a) Bullish; Cortex AI monetisation; dilution carried ($3.5B convertible 09-28). (c) **2026-12-02 (E)** after hours (Nasdaq). (d) QUEUED. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-12-02)
+- **30. OKTA - Okta.** (a) Bullish. (c) **2026-12-01 (E)** after hours (Nasdaq; EPS $0.43). (d) QUEUED. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-12-01)
 
 ### 31-40
 
-- **31. PANW - Palo Alto Networks.** (a) Bullish; platformisation; FTNT -20% is a peer-security counter-datapoint. (c) FQ1 FY27 **2026-11-18 (E)** (Nasdaq). (d) Already queued. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-18)
-- **32. OKTA - Okta.** (a) Bullish. (c) **2026-12-01 (E)** (Nasdaq). (d) Already queued. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-12-01)
-- **33. SNOW - Snowflake.** (a) Bullish; Cortex AI monetisation; dilution evidence carried ($3.5B convertible 09-28). (c) **2026-12-02 (E)** (Nasdaq). (d) Already queued. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-12-02)
-- **34. INTU - Intuit.** (a) Bullish. (c) **2026-11-19 (E)** (Nasdaq, EPS $2.47). (d) Already queued. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-19)
-- **35. MU - Micron.** (a) Bullish; new thesis is guidance durability after the 09-30 print; SK hynix +13.3% 10-28 supports memory pricing; adverse: CXMT server-DRAM push. (c) FQ1 **2026-12-16 (E)** (Nasdaq; moved from 12-23). (d) Already queued; the queue row cites the consumed 09-30 print and is stale. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-12-16)
-- **36. NBIS - Nebius.** (a) Bullish; neocloud capacity; NBIS -5.68% in the 10-29 AI-infra cluster; CoreWeave credit stress and the OpenAI training pause are counter-evidence. (c) **2026-11-10 (E)** (Nasdaq). (d) Already queued. (e) conviction 1-2. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-10)
-- **37. MRNA - Moderna.** (a) Bullish; NYT vaccine report (D1 10-09) carried as adverse. (c) **2026-11-06 (E)** pre-market (Nasdaq, FMP). (d) NOT on the A queue. (e) conviction 1-2. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-06)
-- **38. JPM - JPMorganChase.** (a) Bullish. 10-13 print missed (EPS 5.75 vs 5.93). (c) **2027-01-14 (E)** (FMP); Investor Day 2027-02-22 (C, carried). (d) Already queued; the `spent_by_gate_likely` payload is stale. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2027-01-14)
-- **39. META - Meta Platforms.** (a) Bullish, reduced. Printed 10-21 (capex floor $135B+, negative FCF, $9.89B legal charge, Class C shares from January 2027); the 10-29 hyperscaler prints (AWS +39.3%, MSFT beat) are mild support for the spend-returns debate. (c) **2027-01-27 (E)** (FMP). (d) Already queued. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2027-01-27)
-- **40. GE - GE Aerospace.** (a) Bullish. Printed 10-20 (EPS 2.25 vs 2.01; revenue $14.12B vs $12.88B); fuel-shock exposure the counter. (c) **2027-01-21 (E)** (FMP). (d) NOT on the A queue. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2027-01-21)
+- **31. INTU - Intuit.** (a) Bullish. (c) **2026-11-19 (E)** after hours (Nasdaq; EPS $2.47). (d) QUEUED. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-11-19)
+- **32. NBIS - Nebius.** (a) Bullish; neocloud capacity. Counter: Nebius -15.2% on 11-05 (press, secondary), CoreWeave -12%, the policy rout hits neoclouds hardest; credit stress carried. (c) **2026-11-12 (E)** pre-market (Nasdaq; moved from 11-10; EPS -$0.61, 4 est.). (d) QUEUED. (e) conviction 1-2. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-11-12)
+- **33. DIS - Disney.** (a) Bullish; SVOD margin. Nasdaq EPS $1.67 (9 est.), FMP $1.69. (c) **2026-11-17 (E)** pre-market (Nasdaq, FMP; a 1B.2 issuer notice was carried last week). (d) NEW; two open Strategy D lots. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-11-17)
+- **34. MSFT - Microsoft.** (a) Bullish. 10-28 beat consumed; 530.61 (+1.7% week), one of few names up. No new document. (c) Ignite 2026-11-17..20 (E, third-party listing); next print 2027-01-27 (E, FMP). (d) QUEUED. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-11-17)
+- **35. AMZN - Amazon.** (a) Bullish. AWS +39.3% (carried); 259.30 (+7.9% week, best of the large caps). Gap narrowed by the rally. (c) re:Invent 2026-11-30..12-04 (E); next print 2027-02-04 (E, FMP). (d) QUEUED; two open Strategy D lots. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-11-30)
+- **36. SHOP - Shopify. NEW.** (a) Bullish. Printed 11-03 (D1: -8.7%); no release read. (c) Next **2027-02-10 (E)** (FMP). (d) NEW. (e) conviction 1-2. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2027-02-10)
+- **37. JPM - JPMorganChase.** (a) Bullish. 10-13 print missed (EPS 5.75 vs 5.93; carried). (c) **2027-01-14 (E)** (FMP); Investor Day 2027-02-22 (carried). (d) QUEUED (the queue row's `spent_by_gate_likely` payload is stale). (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2027-01-14)
+- **38. META - Meta Platforms.** (a) Bullish, reduced. Capex floor $135B+ and negative FCF (carried). (c) **2027-01-27 (E)** (FMP). (d) QUEUED. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2027-01-27)
+- **39. GE - GE Aerospace.** (a) Bullish. Printed 10-20; fuel-shock exposure weakens as Brent falls (a mitigant for the counter-evidence). (c) **2027-01-21 (E)** (FMP). (d) NEW. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2027-01-21)
+- **40. MRNA - Moderna. NEW.** (a) Bullish; NYT vaccine report (D1 10-09) carried as adverse. The Nasdaq/FMP 11-06 slot was not verified (Friday gap). (c) Next **2027-02-12 (E)** (FMP). (d) NEW. (e) conviction 1-2. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2027-02-12)
 
 ### 41-50
 
-- **41. LLY - Eli Lilly.** (a) Bullish. Printed 10-29: non-GAAP EPS $7.48 vs $5.38 (includes $4.57 IPR&D), revenue $24.4B, 2026 revenue guide raised $5.5B to $91-92B; +6.63% on 10-29 (1288.3 to 1373.7, Daily). Print consumed; no new dated catalyst. (c) Next print **undated** (early February INFERRED). (d) Already queued. (e) conviction 2 (down: the market already re-rated). GATE: GATE-SURVIVING (gate 2026-11-01; catalyst undated)
-- **42. XOM - ExxonMobil.** (a) Bullish. Printed 10-30: beat (above). Print consumed. (c) Next **2027-01-29 (E)** (FMP). (d) Already queued. (e) conviction 2 (down from 2: the shock thesis is the same, but the 10-30 beat is priced; COP carries the seam). GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2027-01-29)
-- **43. CVX - Chevron.** (a) Bullish. Printed 10-30: EPS 5.28 vs 4.87. Print consumed; same seam as XOM/COP. (c) Next **2027-01-29 (E)** (FMP). (d) Already queued. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2027-01-29)
-- **44. INTC - Intel.** (a) Bullish. Printed 10-29: EPS 0.52 vs 0.4066, revenue $16.5B (+21%), Q4 guide $15.0-16.0B; foundry-turnaround optionality. Print consumed. (c) Next **2027-01-28 (E)** (FMP). (d) Already queued. (e) conviction 1-2. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2027-01-28)
-- **45. CAT - Caterpillar.** (a) Bullish. Printed 10-29: adj EPS $7.20 vs $7.12, revenue $20.7B; -9.25% (713.38 to 647.39, Daily) on an in-line beat. Gap hypothesis (INFERRED): the drop reflects guidance or margin items not read here. FTC/USDA farm-equipment RFI (10-07) overhang. (c) Next print **undated** (late January/early February INFERRED). (d) Already queued. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst undated)
-- **46. GEV - GE Vernova.** (a) Bullish. Printed 10-28; D1 10-28 read it as strengthened conviction for the D lot (878.03 to 887.85 on 10-29, +1.12%). Print consumed; GLJ Sell ($470) carried. (c) Next print **undated** (late January INFERRED). (d) Already queued; **open Strategy D lot**. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst undated)
-- **47. NOW - ServiceNow.** (a) Bullish, **thesis contradicted by the print**: -26.95% (150.13 to 109.67) on the 10-28 after-close results; FTNT -20.09% the same night; the "agentic attach under-credited" thesis was the print. Kept only because a post-crash entry could be a gap thesis if documents show a one-time cause; otherwise drop at next refresh. (c) Next print **undated** (late January INFERRED). (d) Already queued. (e) conviction **1**. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst undated)
-- **48. SNDK - Sandisk. NEW (preliminary).** (a) Bullish. (b) Fiscal-Q1 FY2027 non-GAAP EPS $49.51 vs $46.19 on $11.0B revenue (EDGAR 8-K via Daily.md, 10-29 after close); SK hynix +13.3% on 10-28 as a memory read-through (D1). Gap hypothesis (INFERRED, weak): NAND pricing durability under-credited; the 10-29/30 reaction was -5.3% per Daily's "A29" list (ambiguous timing). Documents to pull: 8-K Ex-99.1 guide, 10-Q. Counter-evidence: memory-cycle peak risk (MU -4.98% on 10-29 in the AI-infra complex). (c) Next print **undated** (late January INFERRED). (d) **NOT on the A queue; new intake.** (e) conviction **1**. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst undated)
-- **49. RDDT - Reddit. NEW (preliminary).** (a) Bullish. (b) Q3 diluted EPS $1.40 vs $1.31, revenue $895M (+53%) (EDGAR 8-K via Daily.md). Gap hypothesis (INFERRED, weak): ad-revenue growth and AI-licensing durability under-credited. No price read taken; documents to pull: the 8-K, last four transcripts. (c) Next print **undated** (early February INFERRED). (d) **NOT on the A queue; new intake.** (e) conviction **1**. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst undated)
-- **50. TGT - Target.** (a) **DIRECTION UNRESOLVED**: prior bearish thesis refuted by a beat-and-raise, no replacement; ineligible for the top-10 until a direction is set. (c) Earnings **2026-11-18 (C)** (corporate.target.com, carried; Nasdaq pre-market, EPS $2.08, 12 estimates). (d) Already queued. (e) conviction 1. GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-18)
+- **41. LLY - Eli Lilly.** (a) Bullish. Printed 10-29 (carried); print consumed. (c) Next **undated** (early February INFERRED; no Nasdaq/FMP row). (d) QUEUED. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst undated)
+- **42. XOM - ExxonMobil.** (a) Bullish. Printed 10-30; the shock thesis is weaker with Brent near 99. (c) **2027-01-29 (E)** (FMP). (d) QUEUED. (e) conviction 1-2. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2027-01-29)
+- **43. CVX - Chevron.** (a) Bullish. Same seam as XOM/COP. (c) **2027-01-29 (E)** (FMP). (d) QUEUED. (e) conviction 1-2. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2027-01-29)
+- **44. INTC - Intel.** (a) Bullish. The 10-29 print (EPS 0.52 vs 0.4066, Q4 guide $15.0-16.0B) was followed by -28.6% (D1 e2dfa715), which triggered the 10-30 AI/semis liquidation; thesis is whether the guide or the market's read of it was the issue. (c) **2027-01-28 (E)** (FMP). (d) QUEUED. (e) conviction 1-2. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2027-01-28)
+- **45. CAT - Caterpillar.** (a) Bullish. Printed 10-29 (-9.25% on an in-line beat; carried); FTC/USDA farm-equipment RFI overhang. (c) Next **undated**. (d) QUEUED. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst undated)
+- **46. GEV - GE Vernova.** (a) Bullish. Printed 10-28; -7.48% on 11-05 (D1 XLI note) with the AI-power complex. (c) Next **undated**. (d) QUEUED; **open Strategy D lot**. (e) conviction 2. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst undated)
+- **47. NOW - ServiceNow.** (a) Bullish, **thesis contradicted by the print** (-26.95% on 10-28; carried); kept only for a possible post-crash gap; drop at next refresh if no one-time cause emerges. (c) Next **undated**. (d) QUEUED. (e) conviction **1**. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst undated)
+- **48. SNDK - Sandisk. NEW.** (a) Bullish. FQ1 EPS $49.51 vs $46.19 (carried, 8-K via Daily); -13.5% on 10-29 per D1; QCOM's memory-constraint commentary is mildly supportive (secondary). (c) Next **undated**. (d) NEW. (e) conviction 1. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst undated)
+- **49. RDDT - Reddit. NEW.** (a) Bullish. Q3 EPS $1.40 vs $1.31, revenue $895M (+53%; carried 8-K); -29.2% on 10-30 per D1. (c) Next **undated**. (d) NEW. (e) conviction 1. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst undated)
+- **50. TGT - Target.** (a) **DIRECTION UNRESOLVED** (prior bearish thesis refuted; no replacement); ineligible for the top-10. (c) Earnings **2026-11-18 (C)** pre-market (corporate.target.com notice carried; Nasdaq EPS $2.04, 12 est.). (d) QUEUED. (e) conviction 1. GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-11-18)
 
 ### DIRECTION-INADMISSIBLE tier
 
@@ -854,165 +725,174 @@ Belong to Strategy B. The rail governs only admission to the actionable tier. No
 
 | # | Ticker | (a) Direction | (b) Documents / this week's re-test | (c) Catalyst | (d) Queue | (e) Tier / conviction | Gate literal |
 |---|---|---|---|---|---|---|---|
-| I-1 | **UAL** | Bearish | Fuel-shock channel; Brent 116.72 peak to ~111.6 weakens, does not reverse | Printed 10-20; next **2027-01-19 (E)** (FMP) | Not queued | Inadmissible, 2 | GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2027-01-19) |
-| I-2 | **AAL** | Bearish | Thinnest balance sheet; same fuel seam | Printed 10-22; next **2027-01-26 (E)** (FMP) | Not queued | Inadmissible, 2 | GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2027-01-26) |
-| I-3 | **DAL** | Bearish | First airline to report; same seam | Printed 10-09; next **2027-01-12 (E)** (FMP) | Not queued | Inadmissible, 2 | GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2027-01-12) |
-| I-4 | **CCL** | Bearish | Bunker-fuel channel | Earnings **2026-12-18 (E)** (FMP) | Not queued | Inadmissible, 2 | GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-12-18) |
-| I-5 | **AMAT** | Bearish, **weakened/unresolved** | China WFE cliff after the 10-13 Investor Day (-6.69%) now contested: LRCX record quarter, SK hynix +13.3% on 10-28, AMAT +3.4% on the week; -7.5% on 10-30 unexplained; D2 re-test before any thesis | Earnings **2026-11-12 (C)** after hours (issuer notice per 1B.2; Nasdaq EPS $4.06, 10 estimates) | On queue | Inadmissible, 1-2 | GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-12) |
-| I-6 | **WMT** | Bearish, thinner | Low-income consumer; staples bid is contrary; no new evidence this week | Earnings **2026-11-19 (C)** pre-market (Nasdaq EPS $0.64, 12 est.; FMP 11-19) | On queue | Inadmissible, 1-2 | GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-19) |
-| I-7 | **ADBE** | Bearish, stronger | Vindicated on tape; software sell-off (NOW -26.95%, FTNT -20.09%) on AI-disruption fears | Earnings **2026-12-09 (E)** (Nasdaq, FMP); MAX 11-10..12 (E) | On queue | Inadmissible, 2 | GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-10) |
-| I-8 | **HD** | Bearish / neutral | Housing turnover starved; no new evidence this week | Earnings **2026-11-17 (E)** pre-market (Nasdaq EPS $3.86, 11 est.) | On queue | Inadmissible, 1-2 | GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-17) |
-| I-9 | **AKAM** | Bearish / contested | Smallest cap in the file | Earnings **2026-11-05 (C)** after hours (Nasdaq EPS $0.92, 9 est.) | On queue | Inadmissible, 1 | GATE: GATE-SURVIVING (gate 2026-11-01; catalyst 2026-11-05) |
+| I-1 | **UAL** | Bearish, weaker | Fuel-shock channel; Brent 113.43 → 99.18, peace-talk and Gulf-export press (secondary) weakens, does not reverse | Printed 10-20; next **2027-01-19 (E)** (FMP) | Not queued | Inadmissible, 1-2 | GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2027-01-19) |
+| I-2 | **AAL** | Bearish, weaker | Thinnest balance sheet; same fuel seam | Printed 10-22; next **2027-01-26 (E)** (FMP) | Not queued | Inadmissible, 1-2 | GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2027-01-26) |
+| I-3 | **DAL** | Bearish, weaker | First airline to report; same seam | Printed 10-09; next **2027-01-13 (E)** (FMP) | Not queued | Inadmissible, 1-2 | GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2027-01-13) |
+| I-4 | **CCL** | Bearish, weaker | Bunker-fuel channel | Earnings **2026-12-18 (E)** (FMP) | Not queued | Inadmissible, 1-2 | GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-12-18) |
+| I-5 | **AMAT** | Bearish, **weaker/unresolved** | China WFE cliff contested (LRCX record quarter, memory strength); sector -11% on 11-05; no price read taken; D2 re-test before any thesis | Earnings **2026-11-12 (C)** after hours (issuer notice carried; Nasdaq EPS $4.06, 10 est.) | On queue | Inadmissible, 1-2 | GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-11-12) |
+| I-6 | **WMT** | Bearish, thin | Low-income consumer; staples relative strength (XLP -0.75% on the 11-05 rout) is contrary; no new evidence | Earnings **2026-11-19 (C)** pre-market (Nasdaq EPS $0.64, 12 est.) | On queue | Inadmissible, 1 | GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-11-19) |
+| I-7 | **ADBE** | Bearish, **stronger** | Software kept falling (DDOG -14.4%, NOW -26.95%) on AI-disruption and guide worries | Earnings **2026-12-09 (E)** (Nasdaq EPS $5.11); MAX 11-10..12 (E) | On queue | Inadmissible, 2 | GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-11-10) |
+| I-8 | **HD** | Bearish / neutral | Housing turnover starved; no new evidence | Earnings **2026-11-17 (E)** pre-market (Nasdaq EPS $3.86, 11 est.) | On queue | Inadmissible, 1 | GATE: GATE-SURVIVING (gate 2026-11-08; catalyst 2026-11-17) |
+| I-9 | **AKAM** | Bearish / contested | Smallest cap in the file; printed 11-05 (Nasdaq (C) after hours); result not read | Next print **undated** (no FMP/Nasdaq row; early/mid February INFERRED) | On queue | Inadmissible, 1 | GATE: GATE-SURVIVING (gate 2026-11-08; catalyst undated) |
 
-**W4 side, restated because it binds:** no `DIRECTION-INADMISSIBLE` candidate may be converted into an A `PENDING_ANALYSIS` row; a vacated slot is filled from the next admissible candidate. AMAT, WMT, ADBE, HD, AKAM are already on the A queue; D2 applies the rail to any thesis run on them.
+**W4 side, restated because it binds:** no `DIRECTION-INADMISSIBLE` candidate may be converted into an A `PENDING_ANALYSIS` row; a vacated slot is filled from the next admissible candidate. AMAT, WMT, ADBE, HD, AKAM are already on the A queue; D2 applies the rail to any thesis run on them. TGT (direction-unresolved) is also ineligible for the top-10.
 
 ### Handoff notes for W4
 
-- **Top-10 versus the 46-row census (brief):** ALREADY QUEUED: VRTX, TTWO, FSLR, COP, ANET, AAPL, AMD, NVDA, AVGO, CSCO (all ten; COP and ANET were the 2026-W43 intakes). NOT queued, new intake only if W4's limb reaches past tier 1: LRCX, CEG, ETN, PLTR, UBER, SHOP, DIS, MRNA, GE, SNDK, RDDT; plus inadmissible UAL, AAL, DAL, CCL.
-- **Already queued but outside the top-10:** QCOM, GOOGL, MSFT, AMZN, SMCI, ORCL, DDOG, MRVL, DELL, HPE, NTAP, CRWD, CRM, PANW, OKTA, SNOW, INTU, MU, NBIS, JPM, META, LLY, XOM, CVX, INTC, CAT, GEV, NOW, TGT, MRK. Census members not ranked in this file: IBM (dropped, no forward catalyst), MRK (dropped), plus the inadmissible AMAT, WMT, ADBE, HD, AKAM.
-- **SPENT in the top-10: zero; SPENT overall: zero** (gate = run date 2026-11-01). Names ON or one session after the gate (VRTX, AAPL, PLTR; AMD, ANET, SHOP, SMCI, ETN) survive by one session; the gate may move.
-- **Tier changes versus 2026-W43:** MSFT 11 to 15, AMZN 12 to 16 (thesis consumed, no new catalyst); GOOGL 41 to 14 (print occurred; 10-29 -12.6% creates a gap hypothesis; two D lots); XOM 46 to 42, CVX 47 to 43, INTC 50 to 44, CAT 48 to 45, GEV 44 to 46, LLY 49 to 41 (all re-dated from spent to surviving on next print/undated); NOW 45 to 47 conviction 1 (thesis contradicted); COP 6 to 4 and ANET 5 stay 5 (COP up on peer beats); NVDA 4 to 8 and AMD 9 to 7 (reordered after the lower-conviction names moved; both still 3); QCOM 13 to 11; CEG 18 to 13; MRK 42 and V 38 dropped (reasons in STEP 3); SNDK, RDDT new at 48, 49; PLTR 15 to 19, UBER 17 to 20, ORCL 16 to 21, SMCI 19 to 18, ETN 20 to 17. IBM remains dropped (printed 10-21; no forward catalyst; still on the A queue).
-- **Stale queue-row payloads to overwrite:** JPM `spent_by_gate_likely` (stale); MU row cites the consumed 09-30 print (live catalyst 2026-12-16 (E)); TTWO row's FQ2 date should read 11-09 (E); NTAP now 12-01, CEG 11-09, AVGO 12-10; MRK and V rows (not ranked) carry a spent print.
-- **Cross-strategy overlap:** only Strategy D is open (AMZN, DIS, ISRG, TSM, RTX, GOOGL, GEV, UBER); no A or C position, so no A/C conflict. A-candidate tickers with open D lots: AMZN (#16), GOOGL (#14), GEV (#46), DIS (#24), UBER (#20).
-- **Re-check next cycle:** whether the 10-30 chip selloff (AMD, QCOM, ANET, AVGO, NVDA) has an issuer or macro cause; AAPL/VRTX/PLTR prints (11-02) and AMD/ANET/SMCI/ETN/SHOP (11-03) as the first reads; Take-Two notice of the 11-09 date and any GTA VI date statement; GOOGL charge vs operating split; NOW post-crash documents; Brent versus COP's 11-05 print; Nasdaq next-print dates for LLY, CAT, GEV, NOW, LRCX, SNDK, RDDT.
+- **TOP-10 (all admissible, long):** 1 VRTX, 2 FSLR, 3 NVDA, 4 TTWO, 5 AVGO, 6 CSCO, 7 CEG, 8 MU, 9 MRVL, 10 DELL. **QUEUED: nine** (VRTX, FSLR, NVDA, TTWO, AVGO, CSCO, MU, MRVL, DELL). **NEW: one** (CEG, not on the 46-row census; enqueue only if W4's limb reaches it). Zero direction-inadmissible names in the tier.
+- **Tier changes vs 2026-W44:** COP 4 → 17 (thesis contradicted by Brent/Gulf-export evidence), ANET 5 → 12, AAPL 6 → 18, AMD 7 → 11 (prints consumed; their next prints are 2027 and undated for ANET), so the tier is refilled by dated post-gate catalysts: MU 35 → 8, MRVL 25 → 9, DELL 26 → 10, CEG 13 → 7, AVGO 9 → 5, CSCO 10 → 6, NVDA 8 → 3, TTWO 2 → 4, FSLR 3 → 2.
+- **NEW (not on the census), admissible:** CEG, ETN, LRCX, PLTR, UBER, SHOP, DIS, MRNA, GE, SNDK, RDDT (11 of 50). Inadmissible and not queued: UAL, AAL, DAL, CCL.
+- **Already QUEUED but outside the top-10:** AMD, ANET, QCOM, AAPL, GOOGL, ORCL, DDOG, HPE, NTAP, CRWD, PANW, CRM, SNOW, OKTA, INTU, NBIS, MSFT, AMZN, JPM, META, LLY, XOM, CVX, INTC, CAT, GEV, NOW, TGT, COP (29). Census members not ranked: IBM, MRK.
+- **SPENT in the top-10: zero; SPENT overall: zero.** TTWO and CEG (11-09) survive by one session; the gate may move (a VIX-regime refresh is already in input (c)).
+- **Stale queue-row payloads to overwrite:** JPM `spent_by_gate_likely`; MU row cites the consumed 09-30 print (live catalyst 2026-12-16 (E)); TTWO row date 11-09; HPE now 11-23; NBIS now 11-12; CSCO now 11-12 (C); NTAP 12-01; AVGO 12-10; CEG 11-09; COP, ANET, AAPL, AMD, QCOM, SMCI, DDOG rows cite consumed prints (live catalysts 2027, mostly (E)).
+- **Cross-strategy overlap:** only Strategy D is open (AMZN, DIS, GEV, GOOGL, ISRG, RTX, TSM, UBER); no A or C position, so no A/C conflict. Candidates with open D lots: AMZN (#35), GOOGL (#19), GEV (#46), DIS (#33), UBER (#22).
+- **Re-check next cycle:** whether the data-centre policy shock (state-level pauses/regulation) is a lasting demand change; TTWO/CEG prints (11-09), CSCO/NBIS/AMAT (11-12); NVDA 11-17; Cisco's cause for -10%; the INTC post-print guide read; Brent versus COP; Nasdaq/FMP next-print dates for ETN, QCOM, LRCX, DDOG, LLY, CAT, GEV, NOW, SNDK, RDDT, AKAM.
 
 ### REPORT IT — CATALYST-GATE MODE
 
-- **Gate date: 2026-11-01.** Inputs: (a) next scheduled re-score 2026-11-02 (completed `M1a` = 0, `M1b` = 0 this month); (b) no open `regime-refresh` item; (c) REFRESH REQUEST returned `shock_price_leg_exit` (trigger_run_start 2026-10-29) → D2a run 2026-11-01. A reads DO-NOT-ACTIVATE; mode live.
-- **Counts:** 59 carried (50 ranked admissible incl. direction-unresolved TGT + 9 DIRECTION-INADMISSIBLE); **0 SPENT-BY-GATE, 59 GATE-SURVIVING.** Zero SPENT because the gate equals the run date and no candidate has a dated catalyst before 2026-11-01 without a later one after re-dating the 10-26..10-30 printers to their next print.
-- **Undated survivors (fail-open): 7** (LRCX, LLY, CAT, GEV, NOW, SNDK, RDDT). Next dates are late-January/early-February by pattern, INFERRED and unsourced; they should be re-dated when Nasdaq/FMP publish them.
-- **Re-dated from spent to dated-surviving:** XOM, CVX (2027-01-29 E), INTC (2027-01-28 E), MSFT (2027-01-27 E / Ignite 11-17), AMZN (re:Invent 11-30 / 2027-02-04), GOOGL (2027-02-03 E), META (2027-01-27 E).
-- **Narrowest survivors:** VRTX, AAPL, PLTR (11-02); AMD, ANET, SHOP, SMCI, ETN (11-03).
-- **Research-cost:** tiers 11-50 carry full (a)-(e) with terse carry-forward (b).
+- **Gate date: 2026-11-08.** Inputs: (a) next scheduled re-score 2026-12-01 (completed `M1a` = 1, `M1b` = 1 this month); (b) no open `regime-refresh` item; (c) REFRESH REQUEST returned `vix_regime_high` (trigger_run_start 2026-11-05) → D2a run 2026-11-08. A reads DO-NOT-ACTIVATE; mode live.
+- **Counts:** 59 carried (50 ranked admissible incl. direction-unresolved TGT + 9 DIRECTION-INADMISSIBLE); **0 SPENT-BY-GATE, 59 GATE-SURVIVING.** Zero SPENT because every name whose only dated catalyst was a 11-02..11-06 print was re-dated to its next dated catalyst or left `undated` (fail-open); no candidate has a dated catalyst before 2026-11-08 without a later one.
+- **Undated survivors (fail-open): 11** (ETN, QCOM, LRCX, DDOG, LLY, CAT, GEV, NOW, SNDK, RDDT, plus inadmissible AKAM). Next dates are late-January/early-February by pattern, INFERRED and unsourced; the WebSearch fallback was run for ANET, COP, ETN, SMCI and LRCX and dated only ANET (2027-02-10), COP (2027-02-10) and SMCI (2027-02-02) as (E) projections.
+- **Re-dated from the printed-this-week set:** AAPL, PLTR, AMD, UBER, SHOP, MRNA (FMP, (E)); ANET, COP, SMCI (fallback, (E)); VRTX keeps PDUFA 2026-11-30 (C).
+- **Narrowest survivors:** TTWO and CEG (2026-11-09); CSCO, AMAT (inadmissible), NBIS (2026-11-12); NVDA, DIS, HD (2026-11-17).
+- **Research-cost:** top-10 rows carry full (a)-(e) with at least one document re-checked or newly cited this week; 11-50 tiers carry terse carry-forward (b) where evidence is unchanged.
 
 ## PART 2C — Strategy C ranked shortlist
 
 ### Router state, and what it admits
 
-C reads **HYBRID ACTIVATE (FOMC-only)** (`state.current_regime` STRATEGY_ACTIVATION, as_of 2026-10-06; per the run context). Under it **only an FOMC-type event is router-admissible** (FOMC event class affirmative; the corporate-earnings and FDA PDUFA classes are DNA). Earnings and PDUFA candidates stay **router-PARKED / DNA-blocked** and must not be enqueued; they are ranked for the divergence record and for the day C is widened. A, B, D and E all read DO-NOT-ACTIVATE.
+C reads **HYBRID ACTIVATE (FOMC-only)** (`state.current_regime` STRATEGY_ACTIVATION, MEASURED by the orchestrator this run; A, B, D, E all DO-NOT-ACTIVATE). Under it **only an FOMC-type event is router-admissible**; the corporate-earnings and FDA PDUFA classes are DNA. Earnings and PDUFA candidates below are ranked for the divergence record and for the day C is widened, and stay **router-PARKED, not to be enqueued**.
 
-`state.open_queue` strategy C returns **one row** (MEASURED 2026-11-01): `thesis-FOMC-C-20261130` (thesis-construction, ticker FOMC, status PENDING_ANALYSIS, due **2026-11-30**), queued by W4 2026-W43. Its conservative default is "decline, no entry" unless an affirmative, sourced, quantified divergence is established; last permitted entry day is 2026-12-08 (criterion 5). Δ vs last week: the 10-28 meeting has passed (held, funds 3.75-4.00%) and the 12-09 meeting now has its queued thesis. **W4 should not create a duplicate FOMC row** ("one FOMC row per meeting").
+`state.open_queue` strategy C returns **one row** (orchestrator-MEASURED): `thesis-FOMC-C-20261130` (thesis-construction, ticker FOMC, pending, due **2026-11-30**), for the 2026-12-09 FOMC. **W4 must not create a duplicate FOMC row.** Its conservative default is "decline, no entry" unless an affirmative, sourced, quantified divergence is established; last permitted entry day is **Tuesday 2026-12-08** (criterion 5: entry at least 1 trading day before the event). Delta vs last week: no change in queue; the 12-09 meeting is now 31 days out (day 32 of the window counting 11-08 as day 1).
 
-One router-eligible event sits in the window: **FOMC 2026-12-09** (day 39 of the window counting 11-01 as day 1; no longer at the inclusive edge as it was last week).
+### The capital position (MEASURED 2026-11-08, read-only BigQuery)
 
-### The capital position (MEASURED 2026-11-01)
-
-Same query path as last week (`analytics.strategy_nav`, `state.nomadic_borrow_capacity_watch`, `state.open_queue`):
+Same sources as last week (`analytics.strategy_nav`, `state.nomadic_borrow_capacity_watch`, `events.cash_flows`):
 
 | Field | Value |
 |---|---|
-| `analytics.strategy_nav` C: deposits / NAV / available_funds | **$18.56 / $18.56 / $18.56** |
-| realized P&L, unrealized P&L, deployed_mv, dividends | $0 each |
+| `analytics.strategy_nav` C: deposits / NAV / available_funds | **$18.55 / $18.55 / $18.55** |
+| realized P&L, unrealized P&L, deployed_mv, dividends_held | $0 each |
 | `sizing_base_2pct` | $0.37 |
 | `state.nomadic_borrow_capacity_watch` C | donor_capacity_total 0, donor_count 0, `borrow_blocked` TRUE |
 | `state.open_queue` strategy C | 1 row (`thesis-FOMC-C-20261130`) |
-| Open C positions | none (open positions are Strategy D only, per run context) |
+| Open C positions | none (open positions are Strategy D only) |
 
-**Δ vs 2026-10-25: NAV and deposits $19.48 → $18.56 (−$0.92) with realized, unrealized and deployed all $0.** MEASURED and RECONCILED by the orchestrator: `events.cash_flows` `6cc95cbc` (flow_date 2026-10-23, `external_withdrawal`, −0.92) is C's pro-rata share of the 600.00 external withdrawal `wd-2026-10-23` (confirmed by D2a 2026-10-26). Ledger movement, not trading P&L.
+**Delta vs 2026-11-01: NAV and deposits $18.56 to $18.55 (-$0.01) with realized, unrealized and deployed all $0.** MEASURED and RECONCILED: `events.cash_flows` `373a1eef-2d54-452b-9067-acdf1bec8783` (flow_date 2026-11-04, WITHDRAWAL, -0.01, source `account_fee`) is C's pro-rata share (0.01 of nav_basis 18.56) of the 4.68 November month-start IBKR account fee that D2a recorded on 2026-11-04. Ledger expense, not trading P&L. (The earlier -0.92 external-withdrawal share, flow `6cc95cbc`, 2026-10-23, is already in last week's base.)
 
-**Per-thesis no-ceiling sizing discipline (Rev 43/19):** no numeric ceiling, but max loss (including the cascade term) must not exceed the thesis's stated risk budget; a long debit structure's max loss equals its debit. With a whole portfolio of $18.56, no budget above $18.56 is fundable, so the test is whether the cheapest defined-risk structure debits at or below $18.56. Credit spreads, iron condors and butterflies need collateral of width less credit (≥ ~$100 per 1-wide SPY spread) and are unfundable; borrow is blocked. **Every candidate below is a deferral at current NAV.**
+**Per-thesis no-ceiling sizing discipline (Rev 43/19):** no numeric ceiling, but max loss (including the cascade term) must not exceed the thesis's stated risk budget; a long debit structure's max loss equals its debit. With a whole portfolio of $18.55, no budget above $18.55 is fundable, so the test is whether the cheapest defined-risk structure debits at or below $18.55. Credit spreads, iron condors and butterflies need collateral of width less credit (at least ~$100 per 1-wide spread) and are unfundable; borrow is blocked. **Every candidate below is a deferral at current NAV.**
 
 ### Criterion 1 (a qualifying event within 45 days)
 
-- **FOMC 2026-12-09 (C)** — federalreserve.gov calendar, re-fetched this run by the PART 1B.1 sub-agent (meeting 12-08/09 "Scheduled", SEP meeting). Clear.
-- **Earnings (router-PARKED):** window 11-01 → 12-16. Source of dates this run: the Nasdaq per-day calendar (`time-after-hours` / `time-pre-market` = announced; `time-not-supplied` = projected, tagged (E)). Issuer-IR confirmation was NOT re-done this run for any name; last week's IR confirmations (AMD, VRTX, UBER, PLTR) are carried, AAPL stays secondary-relay, NVDA vendor-only.
-- **PDUFAs (router-PARKED):** SMMT ivonescimab 11-14 (C, carried), VRTX povetacicept 11-30 (C, carried); neither re-verified this run. INO 10-30 has passed (outcome not checked).
+Window 2026-11-08 to 2026-12-23.
 
-### The tenor rail — CLEAR, seventh cycle running
+- **FOMC 2026-12-09 (C)** — `S/fomc.txt`, federalreserve.gov calendar fetched 2026-11-08 08:43Z: "December 8-9, 2026 * (SEP / Summary of Economic Projections meeting). Last 2026 meeting." Clear. (The 10-27/28 meeting page states no outcome text and minutes not yet released as of that fetch.)
+- **Earnings (router-PARKED):** dates from the Nasdaq per-day calendar (`S/nasdaq/nasdaq_ge2b.csv`, 11-09 to 12-21; `time-after-hours` / `time-pre-market` = announced, `time-not-supplied` = projected, tagged (E)) with FMP consensus-detail cross-check for CSCO 11-12, NVDA 11-17, WMT 11-19, COST 12-10 (dates agree). Issuer-IR confirmation was NOT re-done this run for any earnings name.
+- **PDUFAs (router-PARKED), carried from 2026-W44 PART 1B.3:** SMMT ivonescimab 11-14 (C), CAPR deramiocel 11-22 (C), VRTX povetacicept 11-30 (C), COGT bezuclastinib 11-30 (C). SMMT re-checked by one WebSearch this run: "November 14, 2026" is consistent across sources (Summit release, Yahoo/TradingView, OncoDaily), BLA accepted January 2026; no decision and no extension report found; survival-data adequacy is disputed between sources and an FDA statement on OS is unverified. Others not re-verified.
+- **Passed since last week (struck):** AAPL, AMD, PLTR, VRTX (earnings) 11-02/03, UBER 11-04. MRVL is NOT a passed print: D1 entry `da7bf33a` (2026-11-02, -12.7%) records the Lumentum all-stock merger 8-K, not a quarterly report (the "merger+earnings" tag in the shared extract was a keyword heuristic). MRVL's FQ3 FY27 report is issuer-confirmed for **2026-12-01** (C) (PART 1B.2, Marvell IR notice 2026-11-06) and IS in the window; it was not measured or ranked here (orchestrator correction at assembly; INFERRED parked, earnings class DNA under FOMC-only). Outcomes of the struck prints were not researched here.
 
-C requires structure expiration within 1-45 days of entry. MEASURED from the live SPY option parameters (IBKR underlying 756733): listed expiries are 11-02, 11-03, 11-04, 11-05, 11-06 (SPY and B1SPY), **11-09, 11-10, 11-11, 11-12, 11-13, 11-16 (new daily/weekly fill)**, 11-20 (regular, 2SPY, B1SPY), 11-27, 11-30, 12-04, **12-11 (new; SPY, 2SPY, B1SPY)**, 12-18 (regular), 12-31, then monthlies into 2027.
+### The tenor rail — CLEAR, eighth cycle running
 
-- **FOMC 12-09:** 12-09 is the event day (statement 2 pm ET) and an expiry on it would not be strictly after the event; no 12-10 expiry lists yet. **First listed expiry strictly after the event is now 12-11** (2 calendar days after; was 12-18 last week). From a 12-01 entry that is 10 days, from the last permitted entry day 12-08 it is 3 days — inside 1-45 either way. Criterion 5 (entry ≥ 1 trading day before) is met by any entry through Tuesday 12-08. A 12-10 expiry may list later and would shorten it further.
+C requires structure expiration within 1-45 days of entry. MEASURED from the live SPY option parameters (IBKR underlying 756733): listed expiries are 11-09, 11-10, 11-11, 11-12, 11-13, 11-16, 11-17, 11-18, 11-19, 11-20 (regular, 2SPY), 11-23, 11-27, 11-30, 12-04, **12-11 (SPY, 2SPY)**, 12-18 (regular), **12-24 (new)**, 12-31, then monthlies into 2027.
+
+- **FOMC 12-09:** 12-09 is the event day (statement 2 pm ET) and an expiry on it would not be strictly after the event; no 12-10 expiry lists. **First listed expiry strictly after the event remains 12-11** (2 calendar days after). From a 11-09 entry that is 32 days, from the last permitted entry day 12-08 it is 3 days — inside 1-45 either way. A 12-24 expiry (45 days from 11-09) is the outer edge of the rail.
 
 ### Criterion 2 (implied vs realized) — MEASURED on the spec window (trailing 30 days)
 
-Headline is **IV/HV30** per `strategy/05_strategy_c.md`; HV10 and HV20 are context. Realized vol = annualized close-to-close, log returns, sample stdev × √252, from **IBKR regular-session daily bars** (`outside_rth` false, THREE_MONTHS), last close **Friday 2026-10-30**. HV30 = 30 returns over 31 closes (09-17 → 10-30); HV20 = 21 closes; HV10 = 11 closes. This run closes the Friday price half that D1 does not cover. Option quotes: IBKR, last trades/book 2026-10-30 (market closed; Friday close book). `implied_vol` on contracts was `is_valid` TRUE on every contract used.
+Headline is **IV/HV30** per `strategy/05_strategy_c.md` (the trailing 30 days); HV10 and HV20 are context only. Realized vol = annualized close-to-close, log returns, sample stdev x sqrt(252), from **IBKR regular-session daily bars** (`outside_rth` false), last close **Friday 2026-11-06**. HV30 = 30 returns over 31 closes (09-24 to 11-06 for SPY); HV20 = 21 closes; HV10 = 11 closes. Option quotes: IBKR snapshot, books as of the Friday 11-06 close (market closed; ts ~20:55Z). Implied move = ATM straddle mid / spot; realized-equivalent = 0.8 x HV30 x sqrt(T/365), T calendar days from 11-06 to expiry. "Contract IV" is IBKR's `implied_vol` where `is_valid` TRUE.
 
-**FOMC instrument: SPY (as last week).** Contract: SPY 2026-12-11 756 call; IV **15.917%** (valid); `implied_vol_underlying` (30-day constant maturity) 15.698%; IBKR broker `historical_vol` 10.81% (context, method undisclosed). SPY closed 755.72 on 10-30 (−1.77% on the day, −0.56% on five sessions; 10-23 close was 759.97).
+**FOMC instrument: SPY (as prior weeks).** SPY closed **735.29** on 11-06. Contract: SPY 2026-12-11 735 call 20.31/20.44 (last 19.90) and put 16.64/16.81 (last 16.84); straddle mid **$37.10** ($3,710 per straddle), spreads ~1% of the straddle (tight). **IBKR contract `implied_vol` returned `is_valid` FALSE on both legs** (and `option_midpoint_iv` invalid), so no valid contract IV exists this week; IV is therefore DERIVED from the measured straddle mid: 37.10 / (0.8 x 735.29 x sqrt(35/365)) = **20.4%** (INFERRED from MEASURED mids; SPY `implied_vol_underlying`, the 30-day constant-maturity measure, is valid at **18.97%**; IBKR broker `historical_vol` 12.41%, method undisclosed, context only).
 
-| SPY window | Closes (returns) | Realized vol | IV/HV (contract 15.917%) | IV/HV (underlying 15.698%) |
+| SPY window | Closes (returns) | Realized vol | IV/HV (derived straddle IV 20.4%) | IV/HV (30d underlying IV 18.97%) |
 |---|---|---|---|---|
-| **HV30 (spec)** | 31 (30) | **11.32%** | **1.41** | 1.39 |
-| HV20 | 21 (20) | 11.64% | 1.37 | 1.35 |
-| HV10 | 11 (10) | 13.42% | 1.19 | 1.17 |
+| **HV30 (spec)** | 31 (30) | **17.25%** | **1.18** | 1.10 |
+| HV20 | 21 (20) | 20.22% | 1.01 | 0.94 |
+| HV10 | 11 (10) | 27.30% | 0.75 | 0.69 |
 
-Δ vs last week (10-23 basis): HV30 10.37 → 11.32, contract IV 16.36 → 15.92 (different expiry), headline ratio **1.58 → 1.41**. Implied is still rich to HV30 but the premium **narrowed**; HV10 (13.42%) above HV30 shows realized accelerating into Friday's −1.77%. Caveats. (1) The 12-11 expiry spans ~42 days, only two of them after the event, so its IV is mostly non-event time and the ratio is NOT event-isolated; the implied-move comparison (≈4.3% vs realized-equivalent ≈3.1% over 42 days, 0.8·σ·√(T/365)) is derived, not a quoted straddle. (2) SPY option bid/ask returned empty (closed market) and the 756 call/put `last` values (25.82 / 8.87) are stale closes that fail put-call parity, so **no SPY debit-spread or straddle price is claimed for 12-11**; a live in-session read is required before any trade. (3) HV is close-to-close and excludes overnight gaps. (4) The 12-09 thesis is queued (`thesis-FOMC-C-20261130`) and D2 judges criterion 2 on 11-30; nothing here is a GO path.
+Delta vs last week (10-30 basis): HV30 11.32 to **17.25**, headline ratio **1.41 to 1.18** (richness narrowed; the contract-IV basis changed from a valid quoted IV to a straddle-derived one, so the comparison is approximate). **Realized vol has overtaken implied at the short end** (HV10 27.3% vs IV 20.4%): SPY fell **-4.41% on Thursday 11-05** (766.81 to 733.00, 82.6M shares, the heaviest volume of the 64-bar span) after +1.65% on 11-04, closed 735.29 on 11-06 (+0.31%), and is -2.70% on five sessions (755.72 on 10-30). The 11-05 session was a broad risk-off day (see the panel: NVDA -9.3%, AMAT -13.6%, MU -17.5%, AVGO -10.4%, PANW -9.6%, CRWD -9.9%, CSCO -7.6%); its driver was NOT researched this run (the Friday/Thursday price half only, per brief), and D1's coverage runs through 11-05 only. INFERRED: the HV30 window now contains one outsized day, which lifts HV30 and HV20 materially; the ratios will fall further if realized stays elevated.
 
-**Cheapest defined-risk SPY structure for 12-09:** NOT MEASURED this run (no tradable quotes). Last week's measured 1-wide 10-30-expiry debit spreads cost $47 (put) / $65 (call) at the natural; a 12-11 expiry holds more time value and would debit more. Against NAV $18.56 every such structure is a shortfall of at least ~$28 (INFERRED from last week's lower-bound cost). **Deferral stands.**
+Implied move for the 12-11 expiry: straddle mid 5.05% of spot (35 days; not event-isolated, only 2 of 35 days follow the event) vs realized-equivalent 4.27%. Caveats. (1) The 12-11 expiry is mostly non-event time, so the ratio is NOT event-isolated. (2) Option `last` prices are after-hours prints and the spot used (735.29) is the regular-session close; SPY's last print was 736.53, so put-call parity is only approximate. (3) HV is close-to-close and excludes overnight gaps. (4) The 12-09 thesis is queued (`thesis-FOMC-C-20261130`) and D2 judges criterion 2 on 11-30; nothing here is a GO path.
 
-**Panel — ATM straddle on the first expiry spanning each event** (IBKR Friday 10-30 close book; straddle mid = call mid + put mid; implied move = straddle mid / spot; realized-equivalent = 0.8 × HV30 × √(T/365), T calendar days from 10-30). All router-PARKED; pricing measurement only, not a divergence finding.
+**Cheapest defined-risk SPY structure for 12-09 — MEASURED this run:** 1-wide 12-11 call debit spread 735/736: buy 735 call at ask 20.44, sell 736 call at bid 19.65 = **$0.79 per share = $79 per spread** at the natural ($65 at mids; 736 call 19.65/19.80). The 734 put quote was empty (no book), so no put-spread price is claimed. Against NAV $18.55 the cheapest measured structure is a shortfall of **at least ~$46 at mids and $60 at the natural**. **Deferral stands.**
 
-| Name | Event (tag) | Expiry (T) | Spot | Strike | Straddle mid ($/contract) | Contract IV | HV30 / HV20 / HV10 | IV/HV30 | Implied move vs realized-equiv. | Quote quality |
+**Panel — ATM straddle on the first listed expiry spanning each event** (IBKR Friday 11-06 close book). All earnings rows are router-PARKED; pricing measurement only, not a divergence finding. "Spr" = bid/ask spread of the two legs as a share of the straddle mid (quote quality); where Spr is above ~40% the straddle mid is unreliable and IV (valid, IBKR-modelled) is the better guide.
+
+| Name | Event (tag) | Expiry (T) | Spot | Strike | Straddle mid ($/contract) | Spr | Contract IV | HV30 / HV20 / HV10 | IV/HV30 | Implied move vs realized-equiv. |
 |---|---|---|---|---|---|---|---|---|---|---|
-| SPY | FOMC 12-09 (C) | 12-11 (42) | 755.72 | 756 | not quoted (derived ≈4.3% over 42 d) | 15.92% | 11.3 / 11.6 / 13.4 | **1.41** | ≈4.3% vs 3.1% (derived) | no bid/ask (closed) |
-| AAPL | earnings 11-02 AMC (C-secondary) | 11-04 (5) | 344.63 | 345 | 14.95 ($1,495) | 46.09% | 16.4 / 14.5 / 17.5 | **2.81** | 4.34% vs 1.53% | tight (7.30/7.65 put; call 7.40 last) |
-| AMD | earnings 11-03 AMC (C) | 11-04 (5) | 504.80 | 505 | 44.98 ($4,498) | 94.57% | 66.1 / 68.9 / 86.9 | 1.43 | 8.91% vs 6.19% | moderate (call 22.05/22.85, put 22.10/22.95) |
-| PLTR | earnings 11-02 AMC (C) | 11-06 (7) | 184.11 | 185 | 24.475 ($2,448) | 120.55% | 44.4 / 51.0 / 50.8 | **2.72** | 13.29% vs 4.91% | tight |
-| NVDA | earnings 11-17 AMC (Nasdaq; NVIDIA unconfirmed) | 11-20 (21) | 204.64 | 205 | 19.00 ($1,900) | 48.45% | 29.6 / 32.5 / 38.8 | 1.64 | 9.28% vs 5.68% | tight; 21-day expiry also holds ~2 weeks of non-event time |
-| UBER | earnings 11-04 pre (C) | 11-06 (7) | 65.25 | 65 | 5.255 ($526) | 71.69% | 24.6 / 27.7 / 23.6 | **2.92** | 8.05% vs 2.72% | tight |
-| VRTX | earnings 11-02 AMC (C) | 11-06 (7) | 558.88 | 560 | not reliable (call 12.10/18.00, put 12.50/20.10) | 50.83% | 27.4 / 30.6 / 27.2 | 1.86 | ≈5.6% vs 3.0% (derived from IV) | **wide**, stale last prints |
-| WMT | earnings 11-19 pre (Nasdaq; not IR-checked) | 11-20 (21) | 123.51 | 124 | 9.00 ($900) | 37.58% | 23.6 / 20.5 / 21.5 | 1.59 | 7.29% vs 4.53% | tight |
+| SPY | FOMC 12-09 (C) | 12-11 (35) | 735.29 | 735 | 37.10 ($3,710) | 1% | 20.4% (derived; contract IV invalid) | 17.3 / 20.2 / 27.3 | **1.18** | 5.05% vs 4.27% |
+| CSCO | earnings 11-12 AMC (Nasdaq, FMP) | 11-13 (7) | 93.85 | 94 | 9.03 ($903) | 12% | 87.2% | 39.6 / 38.9 / 50.7 | **2.20** | 9.6% vs 4.4% |
+| AMAT | earnings 11-12 AMC (Nasdaq) | 11-13 (7) | 332.71 | 332.5 | 36.35 ($3,635) | 4% | 98.5% | 69.2 / 77.7 / 98.2 | 1.42 | 10.9% vs 7.7% |
+| NVDA | earnings 11-17 AMC (Nasdaq, FMP; issuer notice per last week's 1B.2) | 11-18 (12) | 186.64 | 187.5 | ~18.75 (call 8.00/14.00, put 2.75/12.75) | 85% | 72.9% | 41.9 / 47.8 / 60.6 | 1.74 | 10.6% (from IV) vs 6.1% |
+| HD | earnings 11-17 pre (Nasdaq) | 11-20 (14) | 343.47 | 345 | 22.80 ($2,280) | 12% | 40.3% | 34.4 / 38.0 / 44.6 | 1.17 | 6.6% vs 5.4% |
+| PANW | earnings 11-18 AMC (Nasdaq) | 11-20 (14) | 313.84 | 315 | 41.83 ($4,183) | 11% | 85.8% | 59.7 / 63.0 / 59.6 | 1.44 | 13.3% vs 9.4% |
+| WMT | earnings 11-19 pre (Nasdaq, FMP; not IR-checked) | 11-20 (14) | 125.52 | 125 | 9.00 ($900) | 7% | 45.3% | 26.6 / 28.2 / 32.8 | **1.70** | 7.2% vs 4.2% |
+| CRWD | earnings 12-01 AMC (Nasdaq) | 12-04 (28) | 216.90 | 215 | 35.12 ($3,512) | 23% | 75.7% | 58.9 / 64.6 / 59.1 | 1.28 | 16.2% vs 13.1% |
+| CRM | earnings 12-02 (E, time not supplied) | 12-04 (28) | 213.65 | 215 | 24.95 ($2,495) | 17% | 53.6% | 34.9 / 37.5 / 32.7 | 1.54 | 11.7% vs 7.7% |
+| ORCL | earnings 12-09 (E), same day as FOMC | 12-11 (35) | 116.10 | 116 | ~18.25 (call 6.85/11.85, put 6.40/11.40) | 55% | 63.1% | 70.9 / 79.8 / 97.2 | **0.89** | 15.6% (from IV) vs 17.6% |
+| AVGO | earnings 12-10 (E) | 12-11 (35) | 293.69 | 295 | ~44.08 (call 17.05/27.00, put 17.05/27.05) | 45% | 60.0% | 51.6 / 56.2 / 73.3 | 1.16 | 14.9% (from IV) vs 12.8% |
+| COST | earnings 12-10 (E; FMP agrees) | 12-11 (35) | 1,053.56 | 1055 | 67.22 ($6,722) | 14% | 24.6% | 20.5 / 23.8 / 28.0 | 1.20 | 6.4% vs 5.1% |
+| MU | earnings 12-16 (E) | 12-18 (42) | 690.00 | 690 | ~138.88 (call 64.00/81.10, put 58.55/74.10) | 24% | 74.5% | 79.9 / 93.3 / 122.3 | **0.93** | 20.2% (from IV) vs 21.7% |
 
-Reads. Implied is rich to HV30 across the panel, richest on UBER (2.92), AAPL (2.81) and PLTR (2.72); leanest on AMD (1.43) and SPY (1.41). AMD's HV30 is already 66% and HV10 87% after a **−10.88% Friday** (504.80); PLTR −6.27%, NVDA −4.22% and SPY −1.77% on the same day (an AI/semis risk-off Friday; the 10-30 narrative driver was NOT researched this run, INFERRED only). Ratios for the mega-caps (AAPL HV30 16%) are inflated versus an ordinary quarter by calm windows. These ratios are "richness", not a statement that the market is wrong about direction. Straddle mids here match the 0.8·IV·√T approximation within ~0.1 pp where both exist.
-
-Δ vs last week's panel: AAPL 2.07 → 2.81, AMD 1.18 → 1.43, NVDA 1.51 → 1.64 (all richer: IV rose into the prints while HV30 fell or held), SPY 1.58 → 1.41.
+Reads. (1) Implied is rich to HV30 on the near-dated, announced earnings names — richest CSCO (2.20), NVDA (1.74), WMT (1.70) — but **implied is below HV30 on ORCL (0.89) and MU (0.93)**, the two names whose HV30 is inflated by 11-05 (-6.9%, -17.5%) and whose HV10 is 97% and 122%; for those two the market is pricing LESS vol than they have just realized. (2) Every ratio is measured against an HV30 that now contains the 11-05 shock, so the "richness" of the near-dated names is partly a window artefact (HV10 exceeds HV30 on 11 of 13 rows); these ratios describe pricing vs a recent realized baseline, not a statement that the market is wrong about direction. (3) Several IVs for 7-14 day expiries include non-event days; the implied-move columns are therefore upper bounds on the event-only move. (4) Quote quality is poor on NVDA, ORCL, AVGO, MU and CRWD (wide bid/ask on a closed book); trust IV over the straddle mid there. (5) Delta vs last week where the same name was measured: NVDA 1.64 to 1.74 (expiry 11-20 to 11-18), WMT 1.59 to 1.70, SPY 1.41 to 1.18.
 
 ### Ranked shortlist — 15 event candidates
 
-Changes vs last cycle's 15: **struck as passed:** FOMC 10-28, MSFT, GOOGL, AMZN, LLY, XOM (10-28 → 10-30 prints), INO PDUFA (10-30). **Carried:** FOMC 12-09, AAPL, AMD, PLTR, NVDA, UBER, VRTX (earnings and PDUFA), SMMT PDUFA. **Added:** WMT, ANET, CRM, AVGO, MU, ORCL (new window events). **Moved:** FOMC 12-09 to rank 1 (only router-admissible item, thesis queued). Direction in every row is the divergence between the options market and a no-event realized baseline; W1 does not establish a directional view. Ranking is by router admissibility, then event proximity, market cap and measured IV/HV30; not by edge.
+Changes vs last cycle's 15: **struck as passed:** AAPL, AMD, PLTR, UBER, VRTX (earnings 11-02 to 11-04). **Carried:** FOMC 12-09, NVDA, WMT, SMMT PDUFA, VRTX PDUFA, CRM, AVGO, ORCL, MU. **Dropped:** ANET (printed 11-03). **Added:** CSCO, AMAT, HD, PANW, CRWD, COST. **Rank rule:** router admissibility first; then earnings candidates with a measured options market ahead of the unmeasured PDUFA binary events; then event proximity, market cap and measured IV/HV30; not edge. Direction in every row is the divergence between the options market and a no-event realized baseline (HV30-based); W1 does not establish a directional view, and primary documents (transcripts, 10-Q/10-K) were NOT read this run, so column (b) names only what exists and what was actually consulted.
 
 **TOP-5**
 
-**1. FOMC 2026-12-09 (C, SEP meeting) — the only router-admissible candidate** — (a) No directional divergence established by W1. Measurable divergence is volatility: SPY IV/HV30 **1.41** (contract) / 1.39 (underlying), implied rich but narrower than the 1.58 of last week; favors premium selling, which C cannot fund. Context (carried from last cycle, not re-fetched): policy hawkish, Fed held 10-28 at 3.75-4.00%; hike risk was characterized as concentrated at the SEP meeting by secondary sources (INFERRED). (b) federalreserve.gov calendar; the SEP/statement is a primary document published on the day. (c) **2026-12-09 (C).** First listed SPY expiry after it: 12-11. (d) **NOT executable at current capital: DEFERRAL** (NAV $18.56; 12-11 spread cost not measured, ≥ ~$47 inferred; borrow blocked). (e) No open A positions (none). (f) **Top-5, rank 1.** **Disposition:** the thesis row `thesis-FOMC-C-20261130` is already queued (due 11-30); W4 must not duplicate it.
+**1. FOMC 2026-12-09 (C, SEP meeting) — the only router-admissible candidate** — (a) No directional divergence established by W1. Measurable divergence is volatility: SPY IV/HV30 **1.18** (straddle-derived; 1.10 on the 30-day underlying IV), narrower than 1.41 last week, with HV10 27.3% above implied 20.4% after the 11-05 -4.41% day; at the short end realized now exceeds implied. (b) federalreserve.gov calendar (fetched 2026-11-08); the SEP and statement are primary documents published on the day; October minutes not yet released as of the fetch. (c) **2026-12-09 (C).** First listed SPY expiry after it: 12-11. (d) **NOT executable at current capital: DEFERRAL** (NAV $18.55; cheapest measured structure is the $79 natural / $65 mid 735/736 call debit spread, shortfall at least ~$46; borrow blocked). (e) No open A positions (none); not an A-queue name. (f) **Top-5, rank 1.** **Disposition:** thesis row `thesis-FOMC-C-20261130` already queued (due 11-30); W4 must not duplicate it.
 
-**2. AAPL — earnings 2026-11-02 after close (C-secondary)** — (a) Implied rich: 4.34% implied move vs 1.53% realized-equivalent (IV/HV30 **2.81**); calmest HV30 of the panel (16.4%). (b) Apple IR/10-Q not read this run; Nasdaq lists the date with an after-hours time. (c) 2026-11-02 AMC; first expiry after 11-04 (note 11-03 is not listed for AAPL). (d) **Deferral** (straddle $1,495; cheapest single ATM leg ≈ $740). (e) A-queue member; no open A (none open). (f) Top-5. **Router-PARKED.**
+**2. CSCO — earnings 2026-11-12 after close** — (a) Implied rich: 9.6% implied vs 4.4% realized-equivalent (IV/HV30 **2.20**, the richest on the panel); HV10 50.7% after -7.6% on 11-05 and -1.95% on 11-06 (93.85, -10.2% over five sessions). (b) Nasdaq (after-hours, EPS consensus $1.15 from 8 estimates vs $0.81 a year ago) and FMP (EPS 1.32) agree on the date; Cisco IR and 10-Q not read this run. (c) 2026-11-12 AMC; expiry 11-13. (d) **Deferral** (straddle $903; cheapest single ATM leg ~$470; a 1-wide spread INFERRED well above $18.55). (e) CSCO is in the A-queue census; no open A (none). (f) Top-5. **Router-PARKED.**
 
-**3. AMD — earnings 2026-11-03 after close (C)** — (a) Implied 8.91% vs 6.19% realized-equivalent (IV/HV30 1.43); HV10 86.9% after the −10.88% Friday; realized is already extreme. (b) AMD IR (carried); filings not read this run. (c) 2026-11-03 AMC; expiry 11-04. (d) **Deferral** (straddle $4,498). (e) A-queue member; no open A. (f) Top-5. **Router-PARKED.**
+**3. AMAT — earnings 2026-11-12 after close** — (a) Implied 10.9% vs 7.7% realized-equivalent (IV/HV30 1.42); realized already extreme (HV30 69%, HV10 98%; -13.6% on 11-05, +4.2% on 11-06). (b) Nasdaq (after-hours; EPS $4.06 from 10 estimates vs $2.17); issuer IR and filings not read. (c) 2026-11-12 AMC; expiry 11-13. (d) **Deferral** (straddle $3,635; single leg ~$1,850-1,885). (e) AMAT is in the A-queue census; no open A. (f) Top-5. **Router-PARKED.**
 
-**4. PLTR — earnings 2026-11-02 after close (C)** — (a) Implied move 13.29% vs 4.91% realized-equivalent (IV/HV30 **2.72**), the largest implied move on the panel; stock −6.27% Friday (184.11). (b) Palantir IR (carried); filings not read. (c) 2026-11-02 AMC; expiry 11-06. (d) **Deferral** (straddle $2,448). (e) not on the 46-name A-queue census; none open. (f) Top-5. **Router-PARKED.**
+**4. NVDA — earnings 2026-11-17 after close** — (a) Implied ~10.6% (from IV 72.9%) vs 6.1% realized-equivalent (IV/HV30 1.74); stock -9.3% on 11-05 then +2.8% on 11-06 (186.64). Straddle book very wide (85% of mid), so only the IV is reliable. (b) Nasdaq (after-hours; EPS $2.49 from 13 estimates) and FMP (EPS 2.47) agree on 11-17; issuer notice per the PART 1B.2 check of last week (carried, not re-fetched). (c) 2026-11-17 AMC; expiry 11-18 (a daily/weekly listing). (d) **Deferral** (single ATM put ask 12.75, call ask 14.00; $1,275+). (e) NVDA is in the A-queue census; no open A. (f) Top-5. **Router-PARKED.**
 
-**5. NVDA — earnings 2026-11-17 (C) after close (issuer notice per 1B.2; was 11-18 (E) last week)** — (a) Implied 9.28% vs 5.68% (IV/HV30 1.64); stock −4.22% Friday (204.64). (b) NVIDIA date confirmed by the PART 1B.2 issuer check this run; date moved a day versus last week's estimate (Δ). (c) 2026-11-17 AMC (vendor-announced time, issuer unconfirmed); expiry 11-20. (d) **Deferral** (straddle $1,900). (e) A-queue member; no open A. (f) Top-5. **Router-PARKED.**
+**5. HD — earnings 2026-11-17 pre-market** — (a) Implied 6.6% vs 5.4% realized-equivalent (IV/HV30 **1.17**, the leanest earnings ratio on the panel); HV30 34% reflects a +6.5% move on 11-04 (355.44) and -1.85% on 11-06 (343.47). (b) Nasdaq (pre-market; EPS $3.86 from 11 estimates vs $3.74); Home Depot IR not read. (c) 2026-11-17 pre-market; first listed monthly expiry 11-20 (no 11-18/19 listing for HD). (d) **Deferral** (straddle $2,280; single leg ~$1,185-1,235). (e) HD is in the A-queue census; no open A. (f) Top-5. **Router-PARKED.**
 
-**REST (6-15)** — all **router-PARKED**; all deferrals at C NAV $18.56.
+**REST (6-15)** — all **router-PARKED**; all deferrals at C NAV $18.55 (single ATM leg asks of $430 or more; 1-wide spreads on $1-strike names INFERRED to debit tens of dollars, above NAV).
 
-| # | Candidate | (a) Direction of divergence | (c) Date (tag) | (d) Executability at C $18.56 | (e) A overlap | IV/HV30 |
+| # | Candidate | (a) Direction of divergence | (c) Date (tag) | (d) Executability at C $18.55 | (e) A overlap / A-queue | IV/HV30 |
 |---|---|---|---|---|---|---|
-| 6 | **UBER** earnings | Implied rich: 8.05% vs 2.72%; richest ratio measured | 2026-11-04 pre-market (C) | Deferral (straddle $526; single ATM leg ≈ $255-270) | none for A; **open D position (x1)** | **2.92** |
-| 7 | **VRTX** earnings | Implied ≈5.6% vs 3.0% (derived; quotes wide 12.10/18.00) | 2026-11-02 AMC (C) | Deferral (stock $558.88; call ask 18.00 alone ≈ NAV) | A-queue member; no open A | 1.86 |
-| 8 | **VRTX** PDUFA povetacicept / IgAN | Binary regulatory outcome (accelerated approval) | 2026-11-30 (C, carried) | Deferral (chain beyond 11-06 not measured) | A-queue member; no open A | not measured |
-| 9 | **SMMT** PDUFA ivonescimab BLA | Binary; company states FDA wants an OS benefit | 2026-11-14 (C, carried) | Deferral (chain not measured; Saturday date, decision may land earlier) | none | not measured |
-| 10 | **WMT** earnings | Implied 7.29% vs 4.53% | 2026-11-19 pre-market (Nasdaq; not IR-checked) | Deferral (straddle $900; single ATM leg ≈ $430-460) | WMT in A-queue; no open A | 1.59 |
-| 11 | **ANET** earnings | Not measured | 2026-11-03 AMC (Nasdaq) | Deferral (not measured; large cap) | A-queue member (ANET); no open A | not measured |
-| 12 | **CRM** earnings | Not measured | 2026-12-02 (E, time-not-supplied) | Deferral (not measured) | A-queue member; no open A | not measured |
-| 13 | **AVGO** earnings | Not measured | 2026-12-10 (E) | Deferral (not measured); falls the day after the FOMC | A-queue member; no open A | not measured |
-| 14 | **MU** earnings | Not measured | 2026-12-16 (E), last day of window | Deferral (not measured); edge of the window, expiry would be after 12-16 | A-queue member; no open A | not measured |
-| 15 | **ORCL** earnings | Not measured | 2026-12-09 (E), **same day as the FOMC (confounded)** | Deferral (not measured) | A-queue member; no open A | not measured |
+| 6 | **SMMT** PDUFA ivonescimab + chemo BLA / EGFRm NSCLC | Binary regulatory outcome; sources disagree on survival-data strength (OS trend, not significant); no extension or decision found | 2026-11-14 (C; WebSearch 2026-11-08, Saturday date, action may land earlier) | Deferral (chain not measured; stock fell -12.2% on 11-04 earnings per D1 `f5359185`) | not in A-queue; none open | not measured |
+| 7 | **PANW** earnings | Implied rich: 13.3% vs 9.4%; stock -9.6% on 11-05, -14.2% over five sessions | 2026-11-18 AMC (Nasdaq; EPS $0.52, 15 estimates) | Deferral (straddle $4,183; single leg ~$2,160) | PANW in A-queue; no open A | 1.44 |
+| 8 | **WMT** earnings | Implied rich: 7.2% vs 4.2% | 2026-11-19 pre-market (Nasdaq, FMP; not IR-checked) | Deferral (straddle $900; single leg ~$430-500) | WMT in A-queue; no open A | **1.70** |
+| 9 | **VRTX** PDUFA povetacicept / IgAN | Binary regulatory outcome (accelerated approval) | 2026-11-30 (C, carried; Vertex release 2026-06-01; not re-verified) | Deferral (chain not measured) | VRTX in A-queue; no open A | not measured |
+| 10 | **CRWD** earnings | Implied modestly rich: 16.2% vs 13.1% | 2026-12-01 AMC (Nasdaq; consensus EPS shown as $0 with 13 estimates, unreliable) | Deferral (straddle $3,512; single leg ~$1,890) | CRWD in A-queue; no open A | 1.28 |
+| 11 | **CRM** earnings | Implied rich: 11.7% vs 7.7% | 2026-12-02 (E, time not supplied; carried) | Deferral (straddle $2,495; single leg ~$1,330) | CRM in A-queue; no open A | 1.54 |
+| 12 | **ORCL** earnings | Implied LEAN: IV 63% below HV30 71% (HV10 97%); 15.6% vs 17.6% | 2026-12-09 (E), **same day as the FOMC (confounded)** | Deferral (book 55% wide; single leg ~$1,140) | ORCL in A-queue; no open A | **0.89** |
+| 13 | **AVGO** earnings | Implied modestly rich: 14.9% vs 12.8%; falls the day after the FOMC | 2026-12-10 (E) | Deferral (book 45% wide; single leg ~$2,700) | AVGO in A-queue; no open A | 1.16 |
+| 14 | **COST** earnings | Implied modestly rich: 6.4% vs 5.1%; calmest HV30 (20.5%) on the panel | 2026-12-10 (E; FMP agrees; EPS $4.87, 10 estimates) | Deferral (straddle $6,722; single leg ~$3,100-3,265) | COST not in the A-queue census; none open | 1.20 |
+| 15 | **MU** earnings | Implied LEAN: IV 74.5% below HV30 79.9% (HV10 122%); 20.2% vs 21.7%; stock -17.5% on 11-05, +5.1% on 11-06 | 2026-12-16 (E), last week of the window; expiry 12-18 | Deferral (book 24% wide; single leg ~$6,400-7,400) | MU in A-queue; no open A | **0.93** |
 
-Also in window but not ranked (still in PART 1B): CSCO 11-11 (E), HD 11-17, PANW 11-18 (E), LOW/TGT 11-18, INTU 11-19 (E), DELL/ADSK 11-24 (E), DE 11-25, MRVL 12-01 (E), SNOW 12-02 (E), ADBE 12-09 (E), COST 12-10 (E), LULU 12-10 (E).
+Also in window but not ranked (still in PART 1B): KKR/CEG 11-09, TDG 11-10, DIS 11-17, TJX/LOW/TGT 11-18, INTU 11-19, DELL/ADI/MDT/ADSK/WDAY 11-24, DE 11-25, AZO 12-08, ADBE/SNPS 12-09 (E), ACN/NKE/CTAS 12-17 (E); PDUFAs CAPR 11-22 (C), COGT 11-30 (C), SVRA 11-22 (E), BBIO 11-27 (E), CYTK 11-14 (E, unverified).
 
-**(e) A-vs-C exclusivity is vacuous this cycle.** `state.current_positions` holds Strategy D only (AMZN, DIS, ISRG, TSM, RTX, GOOGL, GEV, UBER); zero open A or C rows (per run context). A-queue membership above is from the run context's 46-name census.
+**(e) A-vs-C exclusivity is vacuous this cycle.** `state.current_positions` holds Strategy D only (AMZN, DIS, GEV, GOOGL, ISRG, RTX, TSM, UBER); zero open A or C rows (orchestrator-MEASURED). A-queue membership above is from the run context's 46-name census (CSCO, AMAT, NVDA, HD, PANW, WMT, VRTX, CRWD, CRM, ORCL, AVGO, MU are members; SMMT, COST are not).
 
-**Price half of Friday 2026-10-30 (IBKR regular-session bars).** SPY 755.72, AAPL 344.63, AMD 504.80, PLTR 184.11, NVDA 204.64, UBER 65.25, VRTX 558.88, WMT 123.51.
+**Price half of Friday 2026-11-06 (IBKR regular-session daily bars, MEASURED).** SPY 735.29 (+0.31%; Thu 11-05 -4.41%), CSCO 93.85 (-1.95%), AMAT 332.71 (+4.22%), NVDA 186.64 (+2.78%), HD 343.47 (-1.85%), PANW 313.84 (-0.26%), WMT 125.52 (-1.72%), CRWD 216.90 (-0.14%), CRM 213.65 (-3.94%), ORCL 116.10 (+0.82%), AVGO 293.69 (+0.74%), COST 1,053.56 (-1.13%), MU 690.00 (+5.12%). Not measured (no bars pulled): SMMT, VRTX (the two PDUFA names; both carried unmeasured).
 
-**Shortlists only.** Full thesis construction per Strategy.md happens in sessions W4 schedules. Nothing here authorizes an enqueue for any parked name. Measurement coverage: IV/HV30 measured for 8 names (SPY plus AAPL, AMD, PLTR, NVDA, UBER, VRTX, WMT), including all top-5; ANET, CRM, AVGO, MU, ORCL and the two PDUFAs are unmeasured. Metered calls this run: 0 (IBKR and BigQuery only; `calls_C2.jsonl` is empty by design).
+**Shortlists only.** Full thesis construction per Strategy.md happens in sessions W4 schedules. Nothing here authorizes an enqueue for any parked name. **Measurement coverage:** IV/HV30 measured for **13 names** (SPY plus CSCO, AMAT, NVDA, HD, PANW, WMT, CRWD, CRM, ORCL, AVGO, COST, MU), including all top-5; unmeasured: SMMT and VRTX PDUFAs (binary, no earnings-style straddle). MEASURED = IBKR bars/snapshots and BigQuery reads; INFERRED = straddle-derived SPY IV, "implied move from IV" where the book was too wide, single-leg and spread cost estimates for names other than SPY, and every statement about why 11-05 happened (not researched). Metered calls this run: 1 (one Anthropic WebSearch on the SMMT PDUFA); `calls_2C.jsonl` holds that one row.
 
 ## Coverage, provenance and what this cycle changed
 
-**Read scope.** Weekly cadence. MEASURED or INFERRED is labelled wherever it matters.
-- **BigQuery (read-only):** `state.trading_day_today`, `state.current_regime`, `state.current_positions`, `state.open_queue`, `state.open_queue_detail`, `state.market_calendar`, `state.routine_catchup_window`, `state.nomadic_borrow_capacity_watch`, `analytics.strategy_nav`, `events.cash_flows`, `events.decision_log`, `events.queue_events`, `ops.run_log`, `ops.alerts`.
-- **Repo:** `strategy/03_strategy_a.md`, `strategy/05_strategy_c.md`, `strategy/01_shared_regime_vocabulary.md`, the Claude_Task_Plan.md W1 slice and shared rules, `Daily.md` (D1 through session 2026-10-29) and the prior `Weekly_Catalyst_Calendar.md` (2026-W43).
-- **Live sources:** FMP `calendar/earnings-calendar` (4 chunked calls ≤ 60 days, orchestrator only); the Nasdaq key-less earnings calendar (38 per-day fetches 2026-10-26 → 12-16, orchestrator only, unmetered); IBKR daily bars, option parameters, option data and snapshots (free); Anthropic `web_search` (42) / `web_fetch` (4) — federalreserve.gov, issuer IR/press releases, FDA/sponsor releases; Tavily basic search (1 call, 1 credit). 51 `ops.web_calls` rows in total.
+**Read scope.** Weekly cadence. MEASURED vs INFERRED is labelled wherever it matters.
+- **BigQuery (read-only):** `state.trading_day_today`, `state.current_regime`, `state.current_positions`, `state.open_queue`, `state.open_queue_detail`, `state.market_calendar`, `state.routine_catchup_window`, `state.nomadic_borrow_capacity_watch`, `analytics.strategy_nav`, `events.cash_flows`, `events.decision_log`, `events.queue_events`, `ops.run_log`, `ops.alerts`, `ops.web_calls` (schema/prior-run token check).
+- **Repo:** `strategy/03_strategy_a.md`, `strategy/05_strategy_c.md`, `strategy/01_shared_regime_vocabulary.md`, the Claude_Task_Plan.md W1 section and shared rules, `Daily.md` (first line 2026-11-05, D1 scan through 2026-11-05T22:42:50Z) and the prior `Weekly_Catalyst_Calendar.md` (2026-W44).
+- **Live sources:** FMP `calendar/earnings-calendar` (4 chunked calls ≤ 60 days, one shared pull); the Nasdaq key-less earnings calendar (38 per-day fetches, every weekday 2026-11-02 → 2026-12-23, one shared pull, unmetered); federalreserve.gov FOMC calendar (one shared curl fetch, unmetered); IBKR daily bars, option parameters, option data and snapshots (free); Anthropic `web_search` (95) / `web_fetch` (8) — issuer IR/press releases, FDA/sponsor releases, BLS/BEA schedules; Tavily basic search (6 calls, 6 credits). 113 `ops.web_calls` rows in total.
 
-**Orchestration.** Four Sonnet sub-agents did the grunt work: (1) the PART 1A/1B.2 earnings tables, (2) the PART 1A non-earnings catalysts plus 1B.1 FOMC, 1B.3 PDUFA and the macro list, (3) the PART 2A synthesis, (4) PART 2C including the Strategy C IV/HV30 measurements. The orchestrator did itself: both shared pulls (FMP and Nasdaq), passed to the sub-agents as files they did not re-fetch; every BigQuery state read; the STEP 1 gate derivation and the census; and assembly and validation, including all 59 GATE literals checked for format and SURVIVING consistency against the gate. **Corrections applied on review:** (i) the PART 2A and 2C drafts carried seven earnings dates as (E) that the earnings sub-agent upgraded to (C) this run from issuer notices (NVDA 11-17, TTWO 11-09, QCOM 11-04, SMCI 11-03, AMAT 11-12, SHOP 11-03, DIS 11-17); they now agree with 1B.2. (ii) The 2C draft left C's −$0.92 NAV move unexplained; the orchestrator reconciled it to `events.cash_flows` `6cc95cbc` (C's pro-rata share of the 600.00 external withdrawal `wd-2026-10-23`). (iii) The 2C draft's FOMC row said "not re-fetched"; the 1B.1 sub-agent did re-fetch federalreserve.gov this run. (iv) A sub-agent questioned the "45-day" label (11-01 → 12-16 is 46 calendar days inclusive); the label keeps W43's convention (run date + 45 days), stated in the header.
+**Orchestration.** A Sonnet sub-agent ran the single shared FMP pull (4 chunks) plus the Fed-calendar fetch and the D1-record export; the orchestrator ran the Nasdaq pull. Four Sonnet sub-agents then did the grunt work from those shared files, none re-fetching them: (1) the header and PART 1A, (2) PART 1B (FOMC, IR-confirmed earnings, PDUFA under the FDA-limb rule, macro), (3) PART 2A, (4) PART 2C including the Strategy C IV/HV30 measurements. The orchestrator did itself: every gate-input BigQuery read (STEP 1 arithmetic and the A-queue census), assembly, and cross-part reconciliation. **Corrections made at assembly (orchestrator):** MRVL — PART 2C had struck MRVL as "printed 11-02" from a keyword-heuristic label on D1 entry `da7bf33a`; that record is the Lumentum merger 8-K, and Marvell's own IR notice (2026-11-06) schedules FQ3 FY27 results for **2026-12-01 (C)**, so MRVL is reinstated as in-window and PART 2A's MRVL row was corrected to (C) with the "plus Q3 results" wording removed. TTWO (11-09) and DELL (11-24) in PART 2A were re-tagged (C) to agree with PART 1B.2's issuer sources. All 59 PART 2A GATE literals were checked for format and against the gate date (59 GATE-SURVIVING, 0 SPENT-BY-GATE). HD's 11-17 date is (C) in PART 1A (IR page fetched) and (E) in PART 1B.2 (not re-read there); the IR page governs.
 
-**Catch-up window.** `state.routine_catchup_window` gives `window_days` **6.99** against a weekly 1.5× threshold of 10.5: cadence-normal, no `CATCHUP` token owed.
+**Catch-up window.** `state.routine_catchup_window` gives `window_days` **7.03** against a weekly 1.5× threshold of 10.5: cadence-normal, no `CATCHUP` token owed.
 
-**The daily-to-weekly boundary, honoured.** Catalysts newly announced 10-26..10-29 were reused from D1's `research-screen` records and `Daily.md`, not re-searched: the EQT/RRC all-stock merger (10-26), the SGRY take-private, ADT deal, the 10-26/27 AI-semis bid on the Anthropic S-1 report, the 10-28 FOMC hold, and the 10-27..10-29 earnings reactions (BA, SOFI, XYL, FFIV, VRT, ORCL, NOW, FTNT, GOOGL, IOVA, ALNY). No second broad news scan was run; web effort went to forward-calendar acquisition, date confirmation and per-candidate documents.
+**The daily-to-weekly boundary, honoured.** Catalysts newly announced 11-02..11-05 were reused from D1's 15 decision-log records since the last W1 completion (9 `research-screen`, 5 `add-candidate-review`, 1 `ops-note`), not re-searched: the MRVL–LITE all-stock merger (11-02), the 11-05 AI/semis rout (SPY −4.41%) and its midterm-sweep attribution, NRIX/Sanofi program discontinuation, CVI's refinery-asset acquisition, DRVN's Item 4.02 non-reliance, and the week's earnings reactions. The 10-30 chip selloff W44 could not explain is now attributed by D1 entry `0b27dc01` to INTC's 10-29 print. No second broad news scan was run; web effort went to forward-date confirmation and per-candidate documents.
 
-**The FRIDAY-SESSION GAP, closed from IBKR.** D1 has not yet covered Friday 2026-10-30 (structural, by trigger ordering, not a D1 outage). The price half was closed at zero cost from IBKR regular-session bars for the PART 2A priority names and the PART 2C panel. MEASURED: 10-30 was a sharp AI-hardware down day (AMD −10.9%, QCOM −11.1%, ANET −9.6%, AMAT −7.5%, AVGO −5.5%, NVDA −4.2%, PLTR −6.3%; SPY −1.8%). Its cause is NOT established here (one free search and one Tavily basic search found nothing usable); the narrative half is D1's to record on its next fire and is not chased.
+**The FRIDAY-SESSION GAP, closed from IBKR.** D1 has not yet covered Friday 2026-11-06 (structural, by trigger ordering, not a D1 outage). The price half was closed at zero cost from IBKR regular-session bars for the PART 2A priority names and the PART 2C panel (SPY 735.29, +0.31% on the day, −2.7% on the week). The narrative half is D1's to record on its next fire and is not chased.
 
-**Standing constraints NOT re-alerted:** the FMP earnings-horizon plan cap (`FMP-earn-horizon`); the FMP 90-day span clamp (chunking applied, all chunks ≤ 60 days); the bulk-enumeration plan gate (`6c4004e3`); C's blocked nomadic borrow (`borrow_blocked` TRUE); the Friday boundary gap (`b4e4e563`).
+**CATALYST-GATE MODE.** Gate date **2026-11-08** = earliest of (a) 2026-12-01 (completed `M1a` = 1, `M1b` = 1 this month, both 2026-11-01), (b) no open `regime-refresh` item, (c) REFRESH REQUEST returned `vix_regime_high` (trigger_run_start 2026-11-05, logged 2026-11-05 23:19:56 UTC, after D2a's 11-05 run) → D2a run 2026-11-08. Counts: 0 SPENT-BY-GATE, 59 GATE-SURVIVING; full (a)-(e) on every candidate.
 
-**Open W1 referrals re-checked.** `ops.alerts` holds no unresolved row sourced from or naming W1 (MEASURED 2026-11-01); no referral status line is carried.
+**Standing constraints NOT re-alerted:** the FMP earnings-horizon plan cap (`FMP-earn-horizon`; terminal 2026-12-18 unchanged for a sixth week); the FMP 90-day span clamp (chunking applied, all chunks ≤ 60 days); the bulk-enumeration plan gate (`6c4004e3`); C's blocked nomadic borrow; the Friday boundary gap (`b4e4e563`).
 
-**Known residual gaps (carried in the rows):** INO-3107 (PDUFA 10-30) and AGIO mitapivat (goal 11-01) outcomes not found and left unresolved; BEA September personal income/outlays date (10-29 vs 11-04) unconfirmed; the US–China truce extension to 2027-01-10 rests on secondary reporting; the Anthropic S-1 filing is not EDGAR-verified; issuer notices still not found for CSCO, PANW, HD, NBIS, INTU, DELL, MU (all (E)); next-print dates for LLY, CAT, GEV, NOW, LRCX, SNDK, RDDT are unpublished in either vendor pull (GATE literals say `undated`); PART 2A (b) documents for carry-forward names were not re-read this cycle and the two new intakes (SNDK, RDDT) are preliminary; the SPY 12-11 spread cost for the C FOMC structure was not measured (market closed, empty quotes); the investor-day and product-event sweeps are samples, not enumerations.
+**Open W1 referrals re-checked.** `ops.alerts` holds no unresolved row sourced from or naming W1 (MEASURED 2026-11-08); no referral status line is carried.
+
+**Known residual gaps (carried in the rows):** INO-3107 (PDUFA 10-30) outcome still unresolved; AGIO mitapivat goal date reported extended to 2027-02-01 (trade press citing Agios; out of window); neladalkib sponsor conflict (Nuvalent per a Pharmacy Times listing vs GSK per W44) unresolved; CYTK, CORT, VNDA PDUFA rows recorded unresolved (no sponsor/FDA source); CAPR 11-22 carried from W44's 8-K, not re-read; US–China truce extension to 2027-01-10 still uncorroborated (Busan suspensions lapse ~11-10); the UNP·NSC rows may be superseded by the STB's 2026-08-18 schedule and the WBD antitrust row is likely moot after the 10-06 delisting — both carried, flagged for re-verification next cycle; the Anthropic S-1 is still not EDGAR-verified (T); issuer notices still not found for CEG, AVGO, HPE (Nasdaq moved 12-03 → 11-23), CRM, ORCL, ADBE, COST, MU (all (E)); 11 PART 2A survivors are undated; MRNA's 11-06 and AKAM's 11-05 prints are unverified because of the Friday gap; FMP lists FDX twice (2027-02-02 and 2027-03-25) and BABA disagrees FMP 11-19 vs Nasdaq 11-24; Nasdaq shows CRWD's EPS consensus as $0 (13 estimates), not credible; SPY ATM contract IV was invalid on both legs, so the 20.4% straddle-derived IV (IV/HV30 1.18) is INFERRED and the 30-day underlying IV gives 1.10. Several PART 2A print figures are secondary press. Sub-agent `ops.web_calls` timestamps are batch-approximate (stamped when each batch was logged).
