@@ -446,7 +446,7 @@ C qualifying types only: earnings (company IR), FDA PDUFA, FOMC. No interpretati
 | FOMC | 2027-10-26/27 | 2027-10-27 | No | tentative | same |
 | FOMC | 2027-12-07/08 (SEP) | 2027-12-08 | No | tentative | same |
 
-Page note (verbatim in substance): "Each meeting date is tentative until confirmed at the meeting immediately preceding it"; the page also lists a two-day meeting January 25-26, 2028. Δ vs W44: C window end moved 12-16 → 12-23; Dec meeting day 39 → day 32 of the window (window start moved). C queue holds thesis-FOMC-C-20261130 (per state_context).
+Page note (verbatim in substance): "Each meeting date is tentative until confirmed at the meeting immediately preceding it"; the page also lists a two-day meeting January 25-26, 2028. Δ vs W44: C window end moved 12-16 → 12-23; Dec meeting day 39 → day 32 of the window (window start moved). C queue holds thesis-FOMC-C-20261130 (state.open_queue, orchestrator-MEASURED this run).
 
 ### 1B.2 — Earnings inside the C window: company-IR-confirmed subset
 
