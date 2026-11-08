@@ -328,7 +328,7 @@ Route the 15 ranked names to `Watchlist.md`'s **"Strategy B watch overflow"** se
 **Referral status — every W2 referral is now closed:**
 - `dfb0f575` (deal-pinned routing, owner D1): **FIX**, resolved 11-02. The §19 Deal-pinned rail landed (PR #139), and this run applied it.
 - `143c2aaf` (two shock midpoints, owner W5): **REJECT (superseded)**, resolved 11-02. W5 declared the two baselines by design under Rev 52.
-- `0a40c378` (M1R blinding via commit subjects): **FIX**, resolved 11-02 by a read-scope rule. This run's commit subject carries no regime, router or price substance.
+- `0a40c378` (M1R blinding via commit subjects): **FIX**, resolved 11-02 by a read-scope rule that bars M1a and M1R from reading other routines' commit subjects.
 
 **Observed and explained, so nothing was filed:** D1's own 11-04 and 11-05 run notes say their single-name rows were NOT landed, and yet both rows exist. They were landed by interactive triage under RUNBOOK §57 on 11-05. The in-run alerts `2c1417f8` and `4ad2f90c` are resolved, with the landing recorded in their `resolved_note`.
 
