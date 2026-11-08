@@ -278,13 +278,14 @@ def fetch_raw(ticker, fromdate=FROM_DATE, todate=TO_DATE):
     return None, err
 
 
-def load_ticker(ticker, raw_dir=RAW_DIR, sleep=SLEEP_SECONDS):
+def load_ticker(ticker, raw_dir=RAW_DIR, sleep=SLEEP_SECONDS, todate=TO_DATE):
     """Cached fetch. Returns (closes, error). Network skipped if cache exists."""
-    cache = Path(raw_dir) / f"{ticker}.json"
+    name = f"{ticker}.json" if todate == TO_DATE else f"{ticker}_{todate}.json"
+    cache = Path(raw_dir) / name
     if cache.exists():
         return parse_nasdaq_payload(json.loads(cache.read_text())), None
     time.sleep(sleep)
-    payload, err = fetch_raw(ticker)
+    payload, err = fetch_raw(ticker, todate=todate)
     if payload is None:
         return [], err
     Path(raw_dir).mkdir(parents=True, exist_ok=True)
@@ -307,11 +308,12 @@ def main(argv=None):
     ap.add_argument("--raw-dir", default=str(RAW_DIR))
     ap.add_argument("--series-dir", default=str(SERIES_DIR))
     ap.add_argument("--sleep", type=float, default=SLEEP_SECONDS)
+    ap.add_argument("--to-date", default=TO_DATE)
     args = ap.parse_args(argv)
 
     closes, errors = {}, {}
     for t in distinct_tickers():
-        closes[t], err = load_ticker(t, args.raw_dir, args.sleep)
+        closes[t], err = load_ticker(t, args.raw_dir, args.sleep, args.to_date)
         if err:
             errors[t] = err
             print(f"{t}: FAILED {err}", flush=True)

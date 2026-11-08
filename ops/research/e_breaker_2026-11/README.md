@@ -68,3 +68,30 @@ group of 3+ tickers with half its pairs blowing out), so 47 of 57 held-out month
 criteria 3 and 4 cannot both hold at that rate. This does not rescue the gate, because criteria 1 and 2 fail
 independently of it. Any successor design needs a new pre-registration and held-out data it has not seen;
 2017-2026 has now been seen.
+
+## v2 (spread divergence), 2026-11-07: CLOSED at the in-sample check
+
+`PREREGISTRATION_v2.md` added per-industry and population legs on 4-week spread widening
+(`|z252(t)| - |z252(t-4)|`) and set its thresholds by a fixed 95th-percentile rule over 2017-11 to 2026-11
+(`results_v2/thresholds.json`: T_D 1.96, S_DP 0.18, T_H 0.93, S_L 0.07, B90 0.153). It required two in-sample
+non-vacuity checks before any forward test could matter.
+
+| Check | Result | Evidence (`results_v2/insample.json`) |
+|---|---|---|
+| S1 COVID window trips on D or DP | PASS | Tripped every week from 2020-03-06 to 2020-04-03 |
+| S2 Banks (401010) trips on D in the 2023 bank run | FAIL | Banks median widening peaked at 0.59 (week of 2023-03-17) against T_D 1.96 |
+| S3 in-sample bound share and outcomes (no pass mark) | — | Bound 19% of weeks; mean later blowout 0.080 when bound vs 0.092 when clear |
+
+S2 failing closes v2: the pre-registration makes S1 and S2 a precondition for proposing the gate, so the
+forward test (first score 2027-06-07) has nothing to decide and is not scheduled. The thresholds stay frozen
+as recorded.
+
+What it shows:
+- In the bank run, the five bank pairs' spreads moved in both directions, so a group median of widening
+  cancels out. The divergence was real, but no per-industry median sees a shock that moves pairs both ways.
+- In-sample, weeks where spreads had just widened were followed by LESS further widening than other weeks.
+  Widened spreads tend to come back, which is E's own thesis, and the opposite of what a divergence breaker
+  needs.
+
+Both correlation (v1) and median spread widening (v2) fail to isolate the group-local shock Rev 53 is written
+around. Any v3 would be a third design fitted after seeing the same 2017-2026 data, so it is not attempted here.
