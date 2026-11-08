@@ -1,0 +1,99 @@
+{
+  "S1": {
+    "pass": true,
+    "weeks_tripped": [
+      "2020-03-06",
+      "2020-03-13",
+      "2020-03-20",
+      "2020-03-27",
+      "2020-04-03"
+    ],
+    "window": [
+      "2020-02-15",
+      "2020-04-30"
+    ]
+  },
+  "S2": {
+    "banks_code": "401010",
+    "pass": false,
+    "weekly_banks_d_medians": [
+      {
+        "banks_d_median": 0.12370000000000003,
+        "date": "2023-03-03",
+        "trips": false
+      },
+      {
+        "banks_d_median": 0.11260000000000003,
+        "date": "2023-03-10",
+        "trips": false
+      },
+      {
+        "banks_d_median": 0.5923,
+        "date": "2023-03-17",
+        "trips": false
+      },
+      {
+        "banks_d_median": -0.061799999999999966,
+        "date": "2023-03-24",
+        "trips": false
+      },
+      {
+        "banks_d_median": -0.10839999999999994,
+        "date": "2023-03-31",
+        "trips": false
+      },
+      {
+        "banks_d_median": -0.1624,
+        "date": "2023-04-06",
+        "trips": false
+      },
+      {
+        "banks_d_median": -0.7507999999999999,
+        "date": "2023-04-14",
+        "trips": false
+      },
+      {
+        "banks_d_median": -0.05520000000000014,
+        "date": "2023-04-21",
+        "trips": false
+      },
+      {
+        "banks_d_median": 0.22809999999999997,
+        "date": "2023-04-28",
+        "trips": false
+      },
+      {
+        "banks_d_median": 0.024699999999999722,
+        "date": "2023-05-05",
+        "trips": false
+      },
+      {
+        "banks_d_median": 0.3409,
+        "date": "2023-05-12",
+        "trips": false
+      },
+      {
+        "banks_d_median": -0.18339999999999979,
+        "date": "2023-05-19",
+        "trips": false
+      },
+      {
+        "banks_d_median": -0.0047000000000001485,
+        "date": "2023-05-26",
+        "trips": false
+      }
+    ],
+    "window": [
+      "2023-03-01",
+      "2023-05-31"
+    ]
+  },
+  "S3": {
+    "bound_share": 0.19361702127659575,
+    "bound_weeks": 91,
+    "mean_blowout_bound": 0.08009624550122738,
+    "mean_blowout_clear": 0.09206442809353536,
+    "n_weeks": 470,
+    "note": "in-sample; no pass mark; not evidence of power"
+  }
+}
