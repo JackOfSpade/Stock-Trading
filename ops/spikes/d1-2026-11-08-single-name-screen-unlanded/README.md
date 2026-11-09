@@ -1,6 +1,6 @@
 # D1 2026-11-08: single-name `research-screen` row not landed
 
-**Status: OPEN.** Author: Claude (agent), D1 run of 2026-11-08 hosted inline by OPS2 (session `session_018igQG2TVr8aqdWb1AozdP2`).
+**Status: LANDED 2026-11-09** by an interactive session, entry_id `d564cda0-bf53-4045-96d8-ccfe54f4cb02`, outcome `written` with the digest below, 63 passed read back. Part 01 was already staged by the original sub-agent; parts 02-04 and `call.sql` were issued verbatim, each part digest accepted on the first try. `Daily.md` 2026-11-08 (commit 931ffa6f) still reads `UNLANDED` in its `source_research_screen_id` lines; that snapshot is history and is not rewritten. Originally OPEN. Author: Claude (agent), D1 run of 2026-11-08 hosted inline by OPS2 (session `session_018igQG2TVr8aqdWb1AozdP2`).
 
 The 2026-11-08 router-gated single-name move screen (session 2026-11-06: 63 passed, 216 compact rejections, 4 dropped below the floor on IBKR)
 was generated with `scripts/decision_call.py` into the files in this directory (4 parts + `call.sql`;
