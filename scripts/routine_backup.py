@@ -119,7 +119,7 @@ NOTIFY_EMAIL = "jacksterwu@gmail.com"
 _GUARD_TEMPLATE = (
     "\n\nSEARCH GUARD. This routine's name is {name}. Parallel Search tools (web_search, web_fetch) "
     "are the only web tools you may use. Treat Parallel as UNAVAILABLE only when a Parallel tool call "
-    "itself fails, any result or error text mentions 429, rate limit, quota, too many requests, "
+    "itself fails, any result or error text mentions 429, 402, rate limit, quota, credits, insufficient, payment, too many requests, "
     "exceeded, usage limit or limit reached, or two web_search calls in a row return zero results for "
     "queries that should have results. A single URL that fails or is blocked inside a web_fetch result "
     "is NOT unavailability. On the first such failure retry that one call once immediately; do not "
@@ -159,8 +159,8 @@ CONNECTORS = [
      "url": "https://huggingface.co/mcp?login&gradio=none"},
     {"connector_uuid": "d9d4ad11-d734-4c05-8302-9fd84698ef46", "name": "Interactive-Brokers--IBKR-",
      "url": "https://api.ibkr.com/v1/api/mcp"},
-    {"connector_uuid": "03c6bfd8-c61d-4e7c-8cfb-6bb592914205", "name": "Parallel-Search",
-     "url": "https://search.parallel.ai/mcp"},
+    {"connector_uuid": "87a85592-79c6-46e4-a862-412fcfee1439", "name": "Parallel-Search-Paid",
+     "url": "https://search.parallel.ai/mcp-oauth"},
 ]
 CONNECTORS_BY_NAME = {c["name"]: c for c in CONNECTORS}
 
@@ -199,7 +199,7 @@ DEFAULT_PROFILES = {
         "allowed_tools": list(_PERSONAL_TOOLS),
         "sources": [{"git_repository": {
             "url": "https://github.com/JackOfSpade/Image-and-Video-Generation-Pipeline"}}],
-        "mcp_connections": _conns("Google-Calendar", "Hugging-Face", "Parallel-Search"),
+        "mcp_connections": _conns("Google-Calendar", "Hugging-Face", "Parallel-Search-Paid"),
     },
 }
 

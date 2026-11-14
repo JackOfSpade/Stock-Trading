@@ -889,27 +889,24 @@ connectors:
           unexplained drift.
     absent: []
 
-  - name: Parallel-Search
-    connector_uuid: 03c6bfd8-c61d-4e7c-8cfb-6bb592914205
+  - name: Parallel-Search-Paid
+    connector_uuid: 87a85592-79c6-46e4-a862-412fcfee1439
     # settings_prefix FOLLOWS THE REPO CONVENTION (display name, hyphens -> underscores, cf.
     # mcp__Google_Cloud_BigQuery__). UNVERIFIED against a live routine session: confirm the real
     # namespace with the first OPS1 tool enumeration after the connector is attached, and fix this
     # prefix plus the two .claude/settings.json allow entries together if it differs.
-    settings_prefix: mcp__Parallel_Search__
-    # Free, keyless, streamable-HTTP MCP server (https://search.parallel.ai/mcp) that REPLACED the
-    # metered Tavily connector (2026-11-14). It publishes NO rate limit or quota and reports no
-    # remaining usage, and the real text of an exhausted-quota error is UNKNOWN. So there is no
+    settings_prefix: mcp__Parallel_Search_Paid__
+    # CUSTOM claude.ai connector "Parallel Search Paid" (https://search.parallel.ai/mcp-oauth, signed in
+    # with the owner's Parallel account; replaced the anonymous directory connector 03c6bfd8-..., which
+    # was removed 2026-11-14) that REPLACED the metered Tavily connector. Paid tier: Parallel documents
+    # HTTP 429 for rate limits and 402 for insufficient credits; the exact MCP error text is UNKNOWN,
+    # and no remaining-usage figure is reported. So there is no
     # spend to track: exhaustion is detected by FAILURE SIGNALS only, via the SEARCH GUARD paragraph
     # appended to every fleet routine's instruction (scripts/routine_backup.py GUARD_ADDENDUM).
     # Search QUALITY versus Tavily has NOT been measured. NAME COLLISION: Parallel's tools are
     # called `web_search` and `web_fetch`, the same bare words as Anthropic's built-in WebSearch /
     # WebFetch tools that the plan also names; only this connector's tools appear in this manifest.
     tools:
-      - name: send_feedback
-        use: unused
-        note: >-
-          Parallel's feedback tool. Nothing in this fleet calls it; recorded so OPS1 does not
-          raise it as unexplained added-tool drift.
       - name: web_fetch
         use: required
         note: >-
