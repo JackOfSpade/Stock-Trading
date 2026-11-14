@@ -276,7 +276,7 @@ connectors:
           live call returning "ACCESS DENIED: requires the Ultimate or Enterprise plan", and
           independently recorded by M3 on 2026-08-03 (Monthly_D_Position_Deep_Dive.md:83,
           which found `earningsTranscript`/`statements`/`analyst` all access-denied). Transcript
-          CONTENT remains reachable via Tavily search/extract, which is what M2/M3 routine text
+          CONTENT remains reachable via Parallel Search `web_search`/`web_fetch`, which is what M2/M3 routine text
           now points at. Do NOT promote this to `use: required` or add `prose_ambiguous: true`
           to re-admit the token into routine text unless the FMP subscription is actually
           upgraded — the routines cannot call it.
@@ -344,7 +344,7 @@ connectors:
           re-measured 2026-08-26). Stays `use: required` because routine text names the token and CHECK2
           must keep it allowlisted — an unattended run that hits an un-allowlisted token stalls on a
           permission prompt, which is worse than a clean ACCESS DENIED. Route every news-shaped need to
-          WebSearch/Tavily; do not write routine text that depends on this returning data, and do not
+          Parallel Search; do not write routine text that depends on this returning data, and do not
           re-alert its absence — it is a standing vendor limit, not a regression.
       - name: quote
         use: required
@@ -889,94 +889,43 @@ connectors:
           unexplained drift.
     absent: []
 
-  - name: Tavily
-    connector_uuid: 715856f0-b776-4037-b2a3-a0c9531d965f
-    settings_prefix: mcp__Tavily__
-    # CREDIT COSTS are recorded per tool below because this connector is the one metered,
-    # pay-as-you-go external surface the fleet has, and this file is where a session reading the
-    # allowlist will look. Rates verified against docs.tavily.com/documentation/api-credits on
-    # 2026-08-17; PAYG was $0.008/credit with 1,000 free credits/month resetting on the 1st.
-    # The binding usage discipline is Claude_Task_Plan.md's shared rule "Metered external calls:
-    # cheapest ADEQUATE source, explicit parameters, reported spend" (referenced BY NAME, not by
-    # line number -- the previous notes here pointed at Claude_Task_Plan.md:345, which had already
-    # drifted to :357 by the time anyone re-read it).
+  - name: Parallel-Search
+    connector_uuid: 03c6bfd8-c61d-4e7c-8cfb-6bb592914205
+    # settings_prefix FOLLOWS THE REPO CONVENTION (display name, hyphens -> underscores, cf.
+    # mcp__Google_Cloud_BigQuery__). UNVERIFIED against a live routine session: confirm the real
+    # namespace with the first OPS1 tool enumeration after the connector is attached, and fix this
+    # prefix plus the two .claude/settings.json allow entries together if it differs.
+    settings_prefix: mcp__Parallel_Search__
+    # Free, keyless, streamable-HTTP MCP server (https://search.parallel.ai/mcp) that REPLACED the
+    # metered Tavily connector (2026-11-14). It publishes NO rate limit or quota and reports no
+    # remaining usage, and the real text of an exhausted-quota error is UNKNOWN. So there is no
+    # spend to track: exhaustion is detected by FAILURE SIGNALS only, via the SEARCH GUARD paragraph
+    # appended to every fleet routine's instruction (scripts/routine_backup.py GUARD_ADDENDUM).
+    # Search QUALITY versus Tavily has NOT been measured. NAME COLLISION: Parallel's tools are
+    # called `web_search` and `web_fetch`, the same bare words as Anthropic's built-in WebSearch /
+    # WebFetch tools that the plan also names; only this connector's tools appear in this manifest.
     tools:
-      - name: tavily_crawl
-        use: optional
+      - name: send_feedback
+        use: unused
         note: >-
-          COST: map leg + extract leg (docs example, 10 pages basic = 3 credits; advanced = 5).
-          Named by NO routine step today. Allowlisted, so an unattended run can fire it with no
-          prompt -- requires an explicit `limit` and a stated reason a targeted extract would not do.
-      - name: tavily_extract
+          Parallel's feedback tool. Nothing in this fleet calls it; recorded so OPS1 does not
+          raise it as unexplained added-tool drift.
+      - name: web_fetch
         use: required
         note: >-
-          COST: 1 credit per 5 successful URLs basic, 2 per 5 advanced (prorated per URL, max 20
-          per call; failures never charged). Dedupe URLs before extracting -- that is the real
-          saving. Batching is NOT a credit saving (prorated), only rate-limit headroom.
-          Claude_Task_Plan.md — external-content extraction discipline.
-      - name: tavily_map
-        use: optional
-        note: >-
-          COST: 1 credit per 10 pages, 2 per 10 with `instructions`. Named by NO routine step
-          today; same allowlist caveat as tavily_crawl.
-      - name: tavily_research
+          Page read (replaces tavily_extract): `urls` (up to 20), `full_content: true` for the whole
+          page as markdown. A page that fails to fetch returns NORMALLY with `results: []` and an
+          `errors` entry -- that is an unreadable PAGE, never Parallel being down. It can also
+          silently return a CACHED page: check each result's `acquired_at` against the as-of date
+          the step needs (measured 2026-11-14: a MacroMicro page acquired 2026-10-15).
+          Claude_Task_Plan.md -- external-content extraction discipline.
+      - name: web_search
         use: required
         note: >-
-          COST: 4-110 credits (model=mini) / 15-250 (model=pro). Allowlisted and UNGATED by owner
-          directive 2026-08-17 -- do not delist it and do not add an approval step. Measured usage
-          is immaterial (Aug 2026: 16 credits, 0.4% of the bill), so this is a tail risk to record,
-          not a cost to engineer around. Best FIT for an open-ended question whose sub-queries
-          cannot be enumerated; a poor fit for a market cap or filing date, which one search
-          answers faster. Claude_Task_Plan.md — external-content extraction discipline.
-      - name: tavily_search
-        use: required
-        note: >-
-          COST: 1 credit basic, 2 advanced -- and 97.6% of the account bill (Aug 2026: 3,661 of
-          3,751 credits), so this tool IS the spend. auto_parameters=true is ENDORSED (owner
-          directive 2026-08-17): the session picks depth per task, paying 2 credits when that is
-          the better answer. max_results / topic / time_range / include_answer /
-          chunks_per_source / include_domains are FREE -- turn them UP; widening one search beats
-          issuing a second. include_usage=true should be ON for every call (free, and it returns
-          real consumption for ops.web_calls.credits_reported).
-          Claude_Task_Plan.md — external-content extraction discipline.
-    absent:
-      - name: tavily_feedback
-        verified: unconfirmed
-        note: >
-          DEMOTED FROM `tools:` TO `absent:` 2026-09-20 by an interactive triage session, resolving the
-          OPS1 `routine_run_warning` [manifest_row_for_vanished_unused_tool] raised the same day. OPS1
-          auto-added it to `tools:` on 2026-09-17 under the added-drift AUTO-ADD rule, on a SINGLE sighting.
-          THE ENTIRE OBSERVATION RECORD IS TWO ROWS. `SELECT run_date, present FROM ops.connector_tool_inventory
-          WHERE tool_name = 'tavily_feedback'` returns exactly: 2026-09-17 present=TRUE, 2026-09-20 present=FALSE.
-          Nothing else, over the table's whole history.
-          **THERE IS NO EVIDENCE OF ABSENCE BEFORE 2026-09-17, and an earlier draft of this note wrongly claimed
-          ~18 runs of it.** That claim confused "OPS1 ran ~18 times in that window" with "OPS1 checked this tool
-          ~18 times". It did not: OPS1 writes the UNION of tools OBSERVED and tools IN THE MANIFEST, so a tool
-          that is in neither produces NO ROW AT ALL. Before the 2026-09-17 auto-add this name was in neither,
-          so its pre-09-17 status is genuinely UNKNOWN - a missing row here means "never checked", never
-          "checked and absent". That is the same inference-from-a-missing-row error that
-          bigquery/151_connector_tool_inventory.sql's STATEMENT 1 comment forbids, made inside the manifest
-          this time; read it as a worked example before trusting any absence argument built on row counts.
-          WHAT IS ACTUALLY ESTABLISHED: on 2026-09-20 the name was not callable, confirmed by THREE independent
-          reads - OPS1's session tool listing, OPS1's targeted ToolSearch probe naming `feedback`, and an
-          interactive session's own ToolSearch probe in the `mcp__claude_ai_Tavily__` namespace, which returned
-          the five real Tavily tools and no sixth. That is one DAY of confirmed absence, not a retirement history.
-          WHY `verified: unconfirmed` AND NOT A DATE. The two-state rule in this file's header is explicit:
-          `unconfirmed` means "not yet proven gone, and reappearing is the expected resolution", while a dated
-          `verified` means a CONFIRMED retirement. A tool observed present exactly once, with no prior history,
-          cannot have a confirmed retirement dated against it - there is nothing established to have retired FROM.
-          Whether the vendor shipped and pulled it inside three days, or the 09-17 sighting was an enumeration
-          artifact, is undetermined and both remain live. This mirrors the four Hugging-Face entries, which sat
-          `unconfirmed` until eight consecutive clean OPS1 enumerations justified dating them 2026-08-19; the
-          same promotion is available here once the runs accumulate, and a future session should make it on
-          evidence rather than on elapsed time.
-          WHY DEMOTED RATHER THAN DELETED. No CI check distinguishes the two (nothing in the repo references this
-          name), but OPS1's union-write rule, pinned 2026-08-27, records a per-run row for every `absent:` entry -
-          so as an `absent:` row this name now starts generating the evidence it never had, every morning. A
-          delete generates nothing, and a reappearance would be auto-added as a brand-new tool with no memory of
-          this episode, reproducing this ticket. Under `unconfirmed`, a reappearance is handled exactly as the
-          header prescribes: OPS1 deletes this entry and re-adds the `tools:` row, which is the correct outcome
-          if 09-17 was real.
+          Search (replaces tavily_search): `objective` plus 2-3 `search_queries` of 3-6 words, no
+          quoted phrases. Responses are large (~27,000 characters for 9 results); cap what is passed
+          on to a sub-agent. Claude_Task_Plan.md -- external-content extraction discipline.
+    absent: []
   - name: Hugging-Face
     connector_uuid: fff8d981-37df-4721-97af-9e0fdf5238e7
     settings_prefix: mcp__Hugging_Face__
@@ -1059,5 +1008,5 @@ connectors:
           hub_repo_search with explicit `author` and `repo_types=["space"]` for known-Space
           lookup (§8.1 recommended it over space_search's semantic search even while the
           tool existed); there is no in-connector discovery path for an UNKNOWN Space — fall
-          back to Tavily / web search. Allowlist token removed from .claude/settings.json in
+          back to Parallel Search web_search. Allowlist token removed from .claude/settings.json in
           the same commit.

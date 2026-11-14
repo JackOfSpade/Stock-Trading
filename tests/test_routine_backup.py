@@ -1664,13 +1664,15 @@ def _good_backup_doc():
                 "trigger_id": "trig_D1AAAA", "name": "D1. Test Routine — deep research",
                 "cron_expression": "0 16 * * *", "enabled": True, "profile": "fleet",
                 "instruction": ("Read Claude_Task_Plan.md. Perform D1. Test Routine — deep research."
-                                + ADDENDUM + SCOPE_ADDENDUM),
+                                + ADDENDUM + SCOPE_ADDENDUM
+                                + rb.guard_addendum("D1. Test Routine — deep research")),
             },
             "OPS2": {
                 "trigger_id": "trig_OPS2AAAA", "name": "OPS2. Catch-up Executor — regular routine",
                 "cron_expression": "0 4 * * *", "enabled": True, "profile": "fleet",
                 "instruction": ("Read Claude_Task_Plan.md. Perform OPS2. Catch-up Executor — regular "
-                                "routine." + SCOPE_ADDENDUM),
+                                "routine." + SCOPE_ADDENDUM
+                                + rb.guard_addendum("OPS2. Catch-up Executor — regular routine")),
             },
         },
         "_unmatched": {},
@@ -2119,3 +2121,24 @@ def test_main_ingest_returns_nonzero_and_prints_conflict(tmp_path, monkeypatch, 
     out = capsys.readouterr().out
     assert "CONFLICT" in out
     assert "trig_D1AAAA" in out and "'D1'" in out and "'OPS2'" in out
+
+
+# ---- SEARCH GUARD (2026-11-14, Tavily -> Parallel Search) --------------------------------------------
+def test_guard_addendum_names_the_routine_and_keeps_the_unfilled_email_placeholder():
+    g = rb.guard_addendum("A1 — deep research")
+    assert g.startswith("\n\nSEARCH GUARD. This routine's name is A1 — deep research.")
+    assert f"Gmail send_message to {rb.NOTIFY_EMAIL} with subject" in g
+    assert "{{" not in g  # no unfilled placeholder
+    assert "[Routine paused] Parallel Search unavailable" in g
+    assert "PARALLEL_UNAVAILABLE" in g
+    assert "A single URL that fails or is blocked inside a web_fetch result is NOT unavailability." in g
+    assert "tavily" not in g.lower()
+
+
+def test_check_fails_when_a_fleet_routine_lacks_the_search_guard(tmp_path, monkeypatch, capsys):
+    doc = _good_backup_doc()
+    doc["routines"]["D1"]["instruction"] = ("Read Claude_Task_Plan.md. Perform D1. Test Routine — "
+                                            "deep research." + ADDENDUM + SCOPE_ADDENDUM)
+    _wire(tmp_path, monkeypatch, backup_doc=doc)
+    assert rb.check() == 1
+    assert "GUARD_ADDENDUM" in capsys.readouterr().out

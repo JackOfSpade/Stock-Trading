@@ -107,6 +107,37 @@ SCOPE_ADDENDUM = ("\n\nDo not give final response until you have resolved every 
                    "events.queue_events row or an ops.alerts info row naming the owning routine or "
                    "surface — and move on.")
 
+# The SEARCH GUARD paragraph (2026-11-14, Tavily -> Parallel Search swap), appended to EVERY fleet
+# routine's instruction after SCOPE_ADDENDUM, INCLUDING OPS2, with the routine's own name written in
+# (see guard_addendum()). Parallel Search is free and keyless and publishes no quota, so exhaustion is
+# detected from failure signals only -- never polled. NOTIFY_EMAIL is the connected Gmail
+# account's own sending address (owner: "just send to me"), so the guard mails the owner from and to
+# the same mailbox.
+# LIVE ROLLOUT IS MANUAL, exactly like SCOPE_ADDENDUM: changing this constant does not change any
+# live trigger's text.
+NOTIFY_EMAIL = "jacksterwu@gmail.com"
+_GUARD_TEMPLATE = (
+    "\n\nSEARCH GUARD. This routine's name is {name}. Parallel Search tools (web_search, web_fetch) "
+    "are the only web tools you may use. Treat Parallel as UNAVAILABLE only when a Parallel tool call "
+    "itself fails, any result or error text mentions 429, rate limit, quota, too many requests, "
+    "exceeded, usage limit or limit reached, or two web_search calls in a row return zero results for "
+    "queries that should have results. A single URL that fails or is blocked inside a web_fetch result "
+    "is NOT unavailability. On the first such failure retry that one call once immediately; do not "
+    "sleep, start background tasks or end your turn while waiting. If it fails again, or the text "
+    "names a rate limit or quota: stop calling every search and fetch tool, use no other web tool and "
+    "invent no results; finish only parts that need no web access and mark the rest not done; send "
+    "exactly one email with Gmail send_message to {email} with subject [Routine paused] Parallel "
+    "Search unavailable and a plain-text body giving the routine name, the UTC time, the exact error "
+    "text, which step stopped and what is unfinished; then make the first line of your final message "
+    "exactly PARALLEL_UNAVAILABLE. Never send any other email and never put page content or secrets "
+    "in the email.")
+
+
+def guard_addendum(routine_name):
+    """The SEARCH GUARD paragraph for one fleet routine, its display name written in."""
+    return _GUARD_TEMPLATE.format(name=routine_name, email=NOTIFY_EMAIL)
+
+
 # Sentinel stored as cron_expression when no trustworthy source could confirm it (an empty/missing
 # cron_expression on ingest, or a bootstrap entry seeded without one). ingest() always reports every
 # routine currently carrying this value so it is never silently mistaken for a real schedule.
@@ -128,8 +159,8 @@ CONNECTORS = [
      "url": "https://huggingface.co/mcp?login&gradio=none"},
     {"connector_uuid": "d9d4ad11-d734-4c05-8302-9fd84698ef46", "name": "Interactive-Brokers--IBKR-",
      "url": "https://api.ibkr.com/v1/api/mcp"},
-    {"connector_uuid": "715856f0-b776-4037-b2a3-a0c9531d965f", "name": "Tavily",
-     "url": "https://mcp.tavily.com/mcp"},
+    {"connector_uuid": "03c6bfd8-c61d-4e7c-8cfb-6bb592914205", "name": "Parallel-Search",
+     "url": "https://search.parallel.ai/mcp"},
 ]
 CONNECTORS_BY_NAME = {c["name"]: c for c in CONNECTORS}
 
@@ -168,7 +199,7 @@ DEFAULT_PROFILES = {
         "allowed_tools": list(_PERSONAL_TOOLS),
         "sources": [{"git_repository": {
             "url": "https://github.com/JackOfSpade/Image-and-Video-Generation-Pipeline"}}],
-        "mcp_connections": _conns("Google-Calendar", "Hugging-Face", "Tavily"),
+        "mcp_connections": _conns("Google-Calendar", "Hugging-Face", "Parallel-Search"),
     },
 }
 
@@ -1256,7 +1287,8 @@ def _model_of_record_errors(rel, cadence_doc, backup_profiles, routines):
 def check():
     """Validate ops/routine_backup.json with NO network: (1) valid JSON, every ops/cadence.yaml
     routine has an entry; (2) each entry's instruction == ops/triggers.json's instruction + ADDENDUM
-    (except OPS2, no ADDENDUM per the documented exception) + SCOPE_ADDENDUM (always, no exception);
+    (except OPS2, no ADDENDUM per the documented exception) + SCOPE_ADDENDUM (always, no exception) + the
+    SEARCH GUARD paragraph (always, routine name written in -- see guard_addendum());
     (3) each cadence routine's trigger_id matches ops/trigger_ids.json -- AND ops/trigger_ids.json
     must actually carry a trigger_id for it (routine-backup#2, 2026-08-31 code-quality pass: a
     missing/incomplete trigger_ids.json entry used to skip the comparison silently instead of
@@ -1351,12 +1383,12 @@ def check():
             errors.append(f"{rid}: no matching entry in ops/triggers.json to check instruction against")
             continue
         want = want_core if rid == OPS2_NO_ADDENDUM_ID else want_core + ADDENDUM
-        want += SCOPE_ADDENDUM
+        want += SCOPE_ADDENDUM + guard_addendum(entry.get("name") or rid)
         have = entry.get("instruction")
         if have != want:
             errors.append(f"{rid}: instruction drift vs ops/triggers.json"
                           f"{' (OPS2 must carry NO addendum)' if rid == OPS2_NO_ADDENDUM_ID else ' + ADDENDUM'}"
-                          f" + SCOPE_ADDENDUM\n"
+                          f" + SCOPE_ADDENDUM + GUARD_ADDENDUM\n"
                           f"     want: {want!r}\n"
                           f"     have: {have!r}")
 

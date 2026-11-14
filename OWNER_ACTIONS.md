@@ -501,10 +501,10 @@ but returns no dates.)
 **Why this is an owner decision, not a bug.** W1's Strategy A catalyst calendar is specified with a
 6-MONTH window (`Claude_Task_Plan.md:2469`), but a bulk, confirmed FMP pull can only reach ~13
 weeks of it. INFERRED from those two figures: roughly Dec 2026 / Jan 2027 / Feb 2027 — about 42% of
-the 6-month window — is reachable only via the already-sanctioned WebSearch→Tavily fallback chain,
-per-name and metered against the Tavily credit budget, rather than from one bulk calendar pull.
+the 6-month window — is reachable only via the already-sanctioned WebSearch→Parallel Search fallback chain,
+per-name and a Parallel Search call, rather than from one bulk calendar pull.
 That is strictly worse throughput, not a correctness gap: names in the uncovered tail still get a
-catalyst date, just at the ESTIMATED/(E) provenance tier and one Tavily/IR lookup at a time instead
+catalyst date, just at the ESTIMATED/(E) provenance tier and one Parallel Search/IR lookup at a time instead
 of one shared FMP call for the whole universe.
 
 **Precedent.** Item **W** above (2026-07-19) already put this exact question to the owner for the
@@ -513,12 +513,12 @@ from IBKR as PRIMARY instead of paying for the tier. This item is the earnings-c
 that same choice: either (a) raise the FMP plan tier — note the probes above establish only where
 the CURRENT tier's `earnings-calendar` window ends, not whether any paid tier widens it, so that
 would need confirming with FMP before paying — or (b) accept the reduced confirmed-earnings horizon
-as a standing constraint and keep filling the tail per-name via Tavily/IR pages at ESTIMATED/(E)
+as a standing constraint and keep filling the tail per-name via Parallel Search/IR pages at ESTIMATED/(E)
 provenance, which is what W1 already does today whenever a name's date isn't in the bulk pull.
 
 **Scope note — this same tier gate blocks bulk enumeration outright, not only the earnings-calendar horizon (added 2026-09-14, W5 SPEC-DEFECT NOTICE INTAKE, closing W1's `fmp_bulk_enumeration_plan_gated`, `ops.alerts` `6c4004e3-c15e-481e-9ee5-b84170cfc045`).** `search/search-company-screener`, every `directory.*` route, and `quote/batch-quote` are each separately tool-level ACCESS DENIED on the current tier. `search` and `quote/batch-quote` were measured directly on 2026-08-26 (`ops/connector_tools.yaml`'s `search` and `quote` entries; the latter also recorded in `Claude_Task_Plan.md`'s shared FMP TIER MATRIX "FOURTH MECHANISM" note). `directory` carries no probe of its own — it is recorded via `Claude_Task_Plan.md`'s D2a EQUITY_BREADTH "ENUMERATION IS THE BLOCKER" bullet, first measured 2026-08-03 and amended 2026-08-19, an earlier and separate measurement session from the other two — do not cite one date for all three. So this item's option (b) — accept the reduced confirmed-earnings horizon — is inseparable from accepting that NO FMP route can enumerate a market-cap/ADV-filtered universe at all; that is not a second open question, it is the same standing plan-tier gate this item already puts to the owner. **This is NOT fully priced into option (a), whatever tier gets bought.** The FMP-tier arithmetic passage's actual recommended purchase, if any, is **Starter** ($264/yr, justified there as reliability, not cost reduction — "the cost case loses at every tier"), and per this plan's own tier matrix Starter unlocks `search-company-screener` and `directory` (both Starter+) but leaves `quote/batch-quote` denied (Premium+ required); Premium appears in that passage only inside a narrower cost comparison against Tavily spend, not as the tier it recommends buying. So the recommended purchase would open two of these three denied surfaces, not all three — accepting option (a) does not by itself close the enumeration gap. Recorded here so a future cycle recognizes the enumeration denial as PART of this one open decision rather than re-discovering and re-filing it as a separate finding — which is what stranded `ops.alerts` `6c4004e3` (raised 2026-09-06, unactioned for >=2 W5 cycles) before this note closed it. The mechanism that actually stops a routine from re-filing this is not this paragraph alone: `Claude_Task_Plan.md`'s W1 "A. Strategy A universe" section carries a matching "do NOT raise a fresh `ops.alerts` row" instruction (added the same date, mirroring its own existing part (c) for the earnings-horizon case) — a discovering routine reads its own instructions there, not this file, before deciding whether to raise a fresh alert.
 
-**If skipped:** no capital is at risk and nothing halts — W1's per-name Tavily fallback already
+**If skipped:** no capital is at risk and nothing halts — W1's per-name Parallel Search fallback already
 covers the uncovered tail today, just at higher per-name cost than a bulk pull would give. The only
 downside of leaving this open is throughput/cost, the same class of tradeoff as `OPS2-headroom`
 above.

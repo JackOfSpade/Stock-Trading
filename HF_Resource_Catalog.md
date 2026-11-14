@@ -1,7 +1,7 @@
 # HF_Resource_Catalog.md
 
 **Catalog of Hugging Face resources mapped to the 32-routine multi-strategy AI-directed trading experiment.**
-Compiled May 2026 (routine count current as of 2026-07-29; catalog content below still dates from the May 2026 compile). Baseline for every verdict: "Could the routine get equivalent value from web_search / Tavily / web_fetch alone?" HF only earns a HIGH or MODERATE label where its index, structure, or invocation capability is materially better than open-web search.
+Compiled May 2026 (routine count current as of 2026-07-29; catalog content below still dates from the May 2026 compile). Baseline for every verdict: "Could the routine get equivalent value from web_search / web_fetch (Parallel Search) alone?" HF only earns a HIGH or MODERATE label where its index, structure, or invocation capability is materially better than open-web search.
 
 Verified May 2026 via direct calls to `paper_search` and `hub_repo_search`. Operational caveat about `space_search` added in §8.
 
@@ -21,7 +21,7 @@ Verified May 2026 via direct calls to `paper_search` and `hub_repo_search`. Oper
 ## 0. Executive summary
 
 - HF is **materially valuable** for exactly two things in this experiment: (a) curated ML research literature on LLM failure modes, calibration, prompt injection, financial reasoning, and adversarial debate (via `hf_fs`), and (b) a small set of durable benchmarks/leaderboards (FinanceBench, FinanceQA, StockBench, BizFinBench, BBEH, Open LLM Leaderboard archive, FinMTEB) accessible as dataset/space repos.
-- HF is **not materially valuable** for: live financial data, real-time news/sentiment, SEC EDGAR access, time-series forecasting, FinBERT-style sentiment scoring of earnings transcripts inside the routines, or anything Anthropic/Claude-specific. For each of these, web_search/Tavily/web_fetch is equal or better.
+- HF is **not materially valuable** for: live financial data, real-time news/sentiment, SEC EDGAR access, time-series forecasting, FinBERT-style sentiment scoring of earnings transcripts inside the routines, or anything Anthropic/Claude-specific. For each of these, web_search/web_fetch (Parallel Search) is equal or better.
 - Connector recommendation: **Add HF only to D1 (light-touch, optional) for AI-capability deltas, in addition to the existing A1 and Q3 designations.** Do not add it to Q2, W2, M2, or M3 — the supposed FinBERT advantage there is illusory once you account for Claude's own zero-shot sentiment quality and the staleness of HF's financial models.
 - The PRIMARY HF use is `hf_fs` for Tier 1 disadvantage citations (recency, base-rate neglect, sycophancy, anchoring, sandbagging, alignment faking, lost-in-the-middle, multi-agent debate). For these, HF's curated `hf.co/papers` index plus its summary cards is faster and more on-point than web_search-then-arxiv.
 
@@ -126,7 +126,7 @@ Verified May 2026 via direct calls to `paper_search` and `hub_repo_search`. Oper
 - **Query used:** "analyst forecast bias optimism herding"
 - **Observation:** HF's curated index does not deeply cover the classical accounting/finance literature on analyst optimism and herding. It does surface *Wisdom of the Silicon Crowd* (hf.co/papers/2402.19379) and *LLM Prediction Capabilities* (hf.co/papers/2310.13014) on LLM-as-forecaster; the actual *human analyst* literature lives in SSRN and accounting journals.
 - **Routines that benefit:** None usefully.
-- **Verdict:** **NO VALUE.** Use web_search/Tavily for analyst-bias literature; this is a known gap in HF's coverage.
+- **Verdict:** **NO VALUE.** Use Parallel Search `web_search` for analyst-bias literature; this is a known gap in HF's coverage.
 
 ### 1.12 Topic: Sycophancy, anchoring, narrative bias
 - **Query used:** "sycophancy LLM anchoring narrative bias"
@@ -278,7 +278,7 @@ Specific durable repo IDs and Space URLs to seed prompts with:
 - All bulk SEC EDGAR / financial-news datasets on HF. Offline-only, stale snapshots, not API-callable.
 - FinBERT / FinancialBERT-Sentiment-Analysis / DistilRoBERTa-financial models. Claude already exceeds them zero-shot per Fatouros et al. 2023 and successors. Adding an Inference API call to one of these *introduces* a sentiment-classification layer with worse recall than the LLM you already have.
 - GIFT-Eval / FinMTEB / Salesforce time-series leaderboards. Not LLM evals; irrelevant to the experiment.
-- Anything Anthropic/Claude-specific. **HF does not host Claude model cards, internal evals, or Anthropic announcements.** For Claude capability deltas use web_search/Tavily on `anthropic.com`, `docs.anthropic.com`, and Anthropic's research blog.
+- Anything Anthropic/Claude-specific. **HF does not host Claude model cards, internal evals, or Anthropic announcements.** For Claude capability deltas use Parallel Search `web_search` on `anthropic.com`, `docs.anthropic.com`, and Anthropic's research blog.
 - Prompt-injection demo Spaces. If injection detection is desired, call `protectai/deberta-v3-base-prompt-injection-v2` (581K downloads) directly via the Inference Providers API rather than via a Space.
 
 ### 6.4 Connector configuration recommendations
@@ -294,10 +294,10 @@ Beyond the existing **A1** and **Q3** designations:
 - **W5 Factbase & Analytics Consolidation — DO NOT add HF.** No use case.
 
 ### 6.5 What HF cannot do for this experiment
-- Cannot provide live financial data, real-time sentiment, or up-to-the-minute earnings transcripts (use IR sites, EDGAR, or licensed feeds via web_fetch/Tavily).
+- Cannot provide live financial data, real-time sentiment, or up-to-the-minute earnings transcripts (use IR sites, EDGAR, or licensed feeds via Parallel Search `web_fetch`).
 - Cannot tell you about Claude's behavior. Anthropic does not publish to HF. For all Anthropic-specific information, web_search is the *only* source — HF is irrelevant.
 - Cannot host a stateful trading service. Spaces are demo-grade.
-- Cannot replace Tavily/web_search for current macroeconomic news, FOMC commentary, or sell-side notes.
+- Cannot replace Parallel Search `web_search` for current macroeconomic news, FOMC commentary, or sell-side notes.
 
 ---
 
@@ -321,7 +321,7 @@ Beyond the existing **A1** and **Q3** designations:
 
 **Pattern for routines that need a known Space:** use `hub_repo_search` with explicit `author=<known-author>` and `repo_types=["space"]`. Verified working (May 2026): `hub_repo_search` with `author="open-llm-leaderboard"`, `repo_types=["space"]` returned the canonical Space as the first result.
 
-**Heuristic:** `space_search` was for *discovery* of unknown Spaces (useful when you don't know what's out there) — with it gone, there is no in-connector discovery path for an unknown Space; fall back to `web_search`/Tavily for that case. `hub_repo_search` with explicit author remains the path for *lookup* of a known Space, which is what every routine in this catalog actually needs — none hard-code a target Space that requires discovery.
+**Heuristic:** `space_search` was for *discovery* of unknown Spaces (useful when you don't know what's out there) — with it gone, there is no in-connector discovery path for an unknown Space; fall back to Parallel Search `web_search` for that case. `hub_repo_search` with explicit author remains the path for *lookup* of a known Space, which is what every routine in this catalog actually needs — none hard-code a target Space that requires discovery.
 
 ### 8.2 `paper_search` (retired) keyword precision mattered — its replacement is `hf_fs`
 

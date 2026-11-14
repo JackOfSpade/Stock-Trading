@@ -686,7 +686,7 @@ stall with it (it ran under the same identity).
 
   **Authority: `ops/connector_tools.yaml` (added 2026-08-08).** The per-tool expected state for ALL
   SEVEN connectors this fleet uses (FMP, Gmail, Google-Calendar, Google-Cloud-BigQuery,
-  Interactive-Brokers-IBKR, Tavily, Hugging-Face — 118 tools total as of 2026-09-13) is now
+  Interactive-Brokers-IBKR, Tavily (replaced by Parallel-Search 2026-11-14), Hugging-Face — 118 tools total as of 2026-09-13) is now
   version-controlled in that
   manifest, each tool marked `required` / `optional` / `unused`. That file is the authority going
   forward. The BigQuery matrix below is RETAINED as the worked example — it predates the manifest and

@@ -227,4 +227,6 @@ def test_ops2_generated_instruction_round_trips_through_routine_backup_json():
     want_core = _real_triggers()["OPS2"]["instruction"]
     with open(ROUTINE_BACKUP_JSON, encoding="utf-8") as f:
         stored = json.load(f)["routines"]["OPS2"]["instruction"]
-    assert want_core + rb.SCOPE_ADDENDUM == stored
+    with open(ROUTINE_BACKUP_JSON, encoding="utf-8") as f:
+        stored_name = json.load(f)["routines"]["OPS2"]["name"]
+    assert want_core + rb.SCOPE_ADDENDUM + rb.guard_addendum(stored_name) == stored

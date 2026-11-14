@@ -244,7 +244,7 @@ required_column_naming:
     - table: ops.user_prefs
       why: "D3's DISPLAY-TIMEZONE DETECTION bullet composes a literal INSERT INTO ops.user_prefs (pref_key, pref_value, source) row on a timezone difference."
     - table: ops.web_calls
-      why: "The shared 'Metered external calls' rule part (d) binds every routine touching Tavily/web_search/web_fetch/FMP to a literal batched INSERT."
+      why: "The shared 'Metered external calls' rule part (d) binds every routine touching Parallel Search/web_search/web_fetch/FMP to a literal batched INSERT."
 
   # Tables written EXCLUSIVELY through a stored procedure that supplies every required column from a
   # literal SP argument -- the routine never composes these columns as free text against the schema,
