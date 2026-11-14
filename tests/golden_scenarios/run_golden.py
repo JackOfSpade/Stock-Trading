@@ -168,6 +168,18 @@ CATEGORY_TOKENS = {
 #                             reached on a full run)
 # Override the whole ladder with the GEMINI_MODEL_LADDER env var (comma-separated).
 #
+# RE-CHOSEN 2026-11-14 (owner directive: always the newest model that has a free tier). The ladder is
+# now gemini-4-hydrogen -> gemini-3.8-flash -> gemini-3.5-flash-lite, still best-first and (unlike the
+# 2026-07-17 list above, which this paragraph supersedes WITHOUT rewriting it) every rung is listed on
+# the Gemini Developer API pricing page's free tier as of 2026-11-14. gemini-4-hydrogen is the newest
+# model and is FREE-TIERED there; gemini-4-carbon and gemini-4-argon are not, so they are excluded.
+# gemini-3.5-flash and gemini-3-flash-preview are NO LONGER LISTED on that pricing page at all, hence
+# dropped from the ladder. Per-model free-tier RPM/RPD FOR THIS KEY'S PROJECT ARE NOT VERIFIED for the
+# new rungs — Google no longer publishes them on the pricing page (the numbers in the bullets above are
+# the 2026-07-17 measurement, not a current source); read the AI Studio rate-limit console for this
+# key's project, and probe generateContent with the project key, BEFORE the next --live run so a dead or
+# quota-zero rung does not burn ladder slots.
+#
 # ---- OBSERVABILITY (2026-08-17) ----
 # CI run 32043614925 (2026-08-17) evaluated only 11 of 33 scenarios in 2987s before the run budget
 # stopped it, and the ONLY visible artifact was that one number — no per-attempt log, no indication of
@@ -205,7 +217,7 @@ CATEGORY_TOKENS = {
 GEMINI_MODEL_LADDER = [
     m.strip() for m in os.environ.get(
         "GEMINI_MODEL_LADDER",
-        "gemini-3.5-flash,gemini-3-flash-preview,gemini-3.1-flash-lite",
+        "gemini-4-hydrogen,gemini-3.8-flash,gemini-3.5-flash-lite",
     ).split(",") if m.strip()
 ]
 GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"

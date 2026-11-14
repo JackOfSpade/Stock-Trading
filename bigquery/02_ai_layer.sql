@@ -12,6 +12,7 @@ CREATE OR REPLACE MODEL `stock-trading-498512.ops.text_embed`
 CREATE OR REPLACE MODEL `stock-trading-498512.ops.gemini`
   REMOTE WITH CONNECTION `stock-trading-498512.us.vertex`
   OPTIONS (ENDPOINT = 'gemini-2.5-flash');
+-- SUPERSEDED (2026-11-14): the ops.gemini ENDPOINT above is replaced by ENDPOINT 'gemini-4-hydrogen' — see bigquery/276_gemini_model_upgrade.sql.
 
 -- decision_log.ticker AI backfill (2026-06-06). The migration left ticker NULL; a regex first caught
 -- the clean "Strategy X — TICKER" / "EXCHANGE: TICKER" / GO traded-ticker formats, then AI.GENERATE_TABLE
