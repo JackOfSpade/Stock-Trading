@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS `stock-trading-498512.analytics.theater_judge` (
   model STRING DEFAULT 'gemini-2.5-flash', scored_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
   PRIMARY KEY (review_id) NOT ENFORCED
 ) OPTIONS(description='Objective adversarial-independence judgement per review (attacker vs orchestrator). Refreshed by ops.sp_score_theater().');
+-- SUPERSEDED (2026-11-14): the model column DEFAULT 'gemini-2.5-flash' above is replaced by DEFAULT 'gemini-4-hydrogen' — see bigquery/276_gemini_model_upgrade.sql.
 
 -- ===== ops.sp_score_theater() — judge every not-yet-scored paired review =====
 -- SUPERSEDED LIVE by bigquery/143_adversarial_review_correction_path.sql — that file is the current
