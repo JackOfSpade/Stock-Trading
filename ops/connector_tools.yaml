@@ -891,11 +891,11 @@ connectors:
 
   - name: Parallel-Search-Paid
     connector_uuid: 87a85592-79c6-46e4-a862-412fcfee1439
-    # settings_prefix FOLLOWS THE REPO CONVENTION (display name, hyphens -> underscores, cf.
-    # mcp__Google_Cloud_BigQuery__). UNVERIFIED against a live routine session: confirm the real
-    # namespace with the first OPS1 tool enumeration after the connector is attached, and fix this
-    # prefix plus the two .claude/settings.json allow entries together if it differs.
-    settings_prefix: mcp__Parallel_Search_Paid__
+    # settings_prefix is the name MEASURED in a real cloud routine run (2026-11-14 smoke test:
+    # `mcp__Parallel-Search-Paid__web_search`, hyphens kept -- unlike the underscore convention the
+    # older connectors below use in .claude/settings.json). The allow-list is not binding for cloud
+    # routines anyway (see NAMESPACE NOTE above); keep both settings.json entries in step with this.
+    settings_prefix: mcp__Parallel-Search-Paid__
     # CUSTOM claude.ai connector "Parallel Search Paid" (https://search.parallel.ai/mcp-oauth, signed in
     # with the owner's Parallel account; replaced the anonymous directory connector 03c6bfd8-..., which
     # was removed 2026-11-14) that REPLACED the metered Tavily connector. Paid tier: Parallel documents
