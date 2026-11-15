@@ -1,363 +1,334 @@
-2026-11-09
-<!-- d1_scan_through_utc: 2026-11-09T22:41:02Z -->
+2026-11-15
+<!-- d1_scan_through_utc: 2026-11-15T22:00:00Z -->
 
-# Daily Market Development Scan — session 2026-11-09 (Mon), run 2026-11-09 (Mon)
+# Daily Market Development Scan — sessions 2026-11-10..11-13 (Tue-Fri), run 2026-11-15 (Sun)
 
-Scan window: 2026-11-08 22:49 MT → 2026-11-09 15:41 MT (~17 hours). The start is the prior `Daily.md` marker `2026-11-09T05:49:33Z`. The window holds one completed US session, Monday 2026-11-09.
+Scan window: 2026-11-09 15:41 MT → 2026-11-15 15:00 MT (~5 days 23 hours; multi-session gap). The start is the prior `Daily.md` marker `2026-11-09T22:41:02Z`. D1 did not run on 11-10, 11-11 or 11-12: `state.fleet_blackout_days` lists all three as fleet blackout days (all eight expected daily routines silent), and D2a has not run since 11-09. This run covers four sessions (11-10, 11-11, 11-12, 11-13) plus the weekend.
 
-SCAN MODE: ROUTER-GATED (A DO-NOT-ACTIVATE; B DO-NOT-ACTIVATE — PENDING div-B-202611-2; D DO-NOT-ACTIVATE; E DO-NOT-ACTIVATE), read live from `state.current_regime`. C is `HYBRID ACTIVATE (FOMC-only)`, so only its carve-out class is evaluated.
+SCAN MODE: ROUTER-GATED (A DO-NOT-ACTIVATE; D DO-NOT-ACTIVATE; E DO-NOT-ACTIVATE — PENDING div-E-202611-2), read live from `state.current_regime`. B reads ACTIVATE (as of 2026-11-09), so the single-name screen runs in FULL mode, with the first-full-run re-check of gated names. C is `HYBRID ACTIVATE (FOMC-only)`, so only its carve-out class is evaluated.
 
-- **Indices (IBKR closes 11-06 → 11-09).** SPY **+2.37%** (735.29 → 752.69), QQQ +3.54%, SMH +5.05%, RSP +2.27%, SPX 7,376.86 → 7,549.01. A broad relief rally: every sector ETF rose, and Reuters called it the S&P's best day since April 8.
-- **Volatility.** VIX 25.64 → **19.92** (−22.3%; IBKR index bar, 15-minute delayed). It is now below the HIGH threshold of 25; D2a's `TECHNICAL_SIGNAL` still reads HIGH as of 11-06.
-- **Rates and dollar.** Morning yields: 2-year 4.53%, 10-year 4.86%, 30-year 5.26% (CNBC). DXY about 101.8 (−0.46%). Hike odds for the December 8–9 FOMC are about 79% (CME FedWatch).
-- **Oil.** Brent (BZUSD, provisional same-evening read) **92.32 on 2026-11-09**, against 98.32 on 2026-11-06 in the same FMP series (**−6.10%**). The move was on de-escalation talk; no resolution took effect.
-- **Breadth.** Up to **63.14** from 55.97 (Barchart `$S5TH`, single settled source; ChartRow still lagged at Nov 6).
+- **Indices (IBKR closes 11-09 → 11-13).** SPY 752.69 → 754.37 (+0.22% over the four sessions: −0.37%, +1.32%, −0.35%, −0.36%); QQQ +0.08%; SMH −0.14% (+4.82% on 11-11, −2.99% on 11-13).
+- **Volatility.** VIX 19.92 → 19.46, 17.49, 18.70, **19.30** (IBKR CBOE index bars, delayed=900s). Out of HIGH all week.
+- **Rates and dollar.** Hot October CPI (11-10). The 10-year yield rose from 4.88% to **5.15%**; DXY at its highest since April 2025. A December Fed hike is about 87% priced (FedWatch, 11-11).
+- **Oil.** Brent (BZUSD, provisional same-evening read) **95.84 on 2026-11-13**, against 95.82 on 2026-11-12 and 92.57 on 2026-11-09 in the same FMP series.
+- **Breadth.** **63.81** for 11-13 (Barchart `$S5TH`, single settled source; ChartRow 63.78% as of Nov 13), against 63.14 stored for 11-09.
+- **Crypto.** Bitcoin about $68.3K on 11-13 and about $64.3K on 11-14, below its 200-week average.
 
 ## TL;DR
 
-- **Exits triggered: none.** No tranche carries a mechanical trigger, and no development meets an invalidation criterion.
-- **New entry candidates: none routed.** 22 names cleared Strategy B's frozen ≥5% floor on their own stamped events, all confirmed on IBKR bars. B is gated, so they go to the new-entry index only; no thesis handoff. No new FOMC-class C candidate.
-- **Add candidates: none (0 of 12).** All 12 D tranches clear the hard gate. Five dip reads (GEV, GOOGL ×2, TSM ×2) are declined because D is DO-NOT-ACTIVATE.
-- **Watchlist: 22 changes.** ADD the 22 names to the Strategy B new-entry index.
-- **Regime review: no review.** There was no qualifying escalation and no qualifying resolution in the window. The unconfirmed Qatari "interim deal" report moved oil but is not a resolution in force.
+- **Exits triggered: none.** No tranche carries a mechanical trigger, and no development meets an invalidation criterion. Disney reports 11-17.
+- **New entry candidates: none routed as thesis handoffs.** 20 names passed the FULL-mode Strategy B screen on IBKR bars and go to the B new-entry index (W2 ranks them): CRWV, CTVA, AAON, HIMS, NOVT, QLYS, YETI, LFTO, NU, TTWO, ONON, SKYD, GFL, HWC, NBIS, DGII, CSCO, MOD, RKLB, STVN. Discovery was DEGRADED (key-less fetches refused this run), so the population is not fully measured.
+- **Add candidates: none (0 of 12).** All 12 D tranches clear the hard gate; dip reads (GEV, GOOGL ×2) and strengthened-conviction reads (TSM ×2) are declined because D is DO-NOT-ACTIVATE.
+- **Watchlist: 20 changes.** ADD the 20 names to the Strategy B new-entry index.
+- **Regime review: one PENDING flag.** The 2026-11-14 Iranian claim of three tankers mined in Hormuz is a dated Gulf-channel event; its two-session oil window (11-16, 11-17) has not closed. No resolution event.
 
 Park: VOO-only pin verified
 
-Paper book (J): 118 calls, 361/30 realized, net_mu -0.85%, ready=FALSE
+Paper book (J): not run (marks and headline fetches refused this run), 0 calls, 361/30 realized, net_mu -0.85%, ready=FALSE, unwritten: all calls / all marks tickers
 
 ## DEVELOPMENTS
 
 ### 1. Market-wide breaking events
 
-#### Iran / Hormuz / Gulf (channel: US blockade of Iranian ports plus Iran's closure of Hormuz)
-- **Trump met Qatar's prime minister** (also foreign minister) Sheikh Mohammed bin Abdulrahman Al Thani in a closed Oval Office session on Monday; VP Vance met him separately. There was no readout, no announced agreement and no strike order. Trump was reported as saying "now we will make a decision" (HNGN; House of Saud, 11-09 15:47Z). The official readout is UNRESOLVED.
-- **Reported, NOT confirmed: an interim deal.** Israel Hayom, citing two unnamed diplomats, said Iran signed off on a Qatari interim framework:
-  - Iran reopens Hormuz, halts tanker attacks and drops its toll/control demand.
-  - The US lifts the blockade and releases $8B of frozen funds held in Qatar.
-  - The nuclear program is off the table.
-  - Neither government confirmed it (OilPrice 13:00Z; Invezz 15:00Z), and a Qatari official told Bloomberg the report was false and negotiations were ongoing (Capital Brief, 14:04Z).
-  - Rubio and Bessent reportedly object (BeInCrypto, 12:58Z).
-- **Positions.** Rubio (Sunday evening, CNBC/CBS/AP): not "at the verge of a breakthrough"; Iran's demands are "outrageous and ridiculous". Iran's foreign-ministry spokesman Baghaei (11-09): sanctions lifted and the war ended on all fronts before talks (CNBC, 11:09Z). Araghchi: Iran is awaiting a US reply. Trump (Sunday, CNN/60 Minutes): renewed strikes "highly unlikely" if talks progress.
-- **Kinetic.** NBC (11:22Z) cites Iranian state media reporting US strikes on Qeshm Island "overnight"; the timing relative to the window start is UNRESOLVED. Iran has attacked tankers "this month". **No new 11-09 attack on supply infrastructure was found.** Hormuz remains functionally closed (Gulf News via House of Saud: 1 transit on 11-01 against a ~85/day baseline).
-- **Oil reaction:**
-  - Brent (BZUSD, provisional same-evening read) closed **92.32 on 11-09**, against 98.32 on 11-06 (−6.10%).
-  - Intraday wires had Brent futures 93.4–94.0 (−4 to −5%) by 14:00Z, and WTI 88.09 (OilPrice, 11:26Z). Drivers: Trump's de-escalation remarks and the disputed Israel Hayom report. JPMorgan flagged a widening global surplus; UBS said the physical market is weak.
-  - EIA STEO comes Tue 11-10, OPEC MOMR Wed, IEA Fri.
+**Nvidia CEO transition (Thu 11-12).** Nvidia's board replaced Jensen Huang as CEO with immediate effect; CFO Colette Kress is interim CEO and Harvey Jones becomes board chair (Nvidia release, nvidianews.nvidia.com "NVIDIA Announces CEO Transition"). Bloomberg reports that the ouster followed reports of affairs, including one with a woman suspected of spying for China. NVDA fell about 14% on the week (IBKR closes: −5.47% 11-10, +2.87% 11-11, −4.34% 11-12, −2.01% 11-13), its worst week since April 2025. Nvidia's Q3 FY27 report stays on Tue 11-17. Bloomberg also reports a bipartisan push for tougher AI-chip curbs on China.
 
-#### US policy after the election
-- **Tariffs.** No new tariff action and no unwind in the window. Democrats take both chambers in January; Wyden is likely Finance chair and is pushing a Congressional Trade Authority Reform Act. A filibuster or veto makes reversal unlikely, and Section 232/301 tariffs stay executive (Seoul Economic Daily 08:58Z; Business Sweden 17:00Z). UBS: Democratic control may raise the odds of lower building-material tariffs. Trump flagged a robot/industrial-machinery import review with six months of trade talks and no immediate tariffs.
-- **Data centers.** No new state moratorium in the window. Stifel says state-level permitting is back in focus, with friction mainly for 2028 projects (TipRanks, 11:24Z).
-- **SoftBank / Stargate credit.** Musk's 11-06 claim that SoftBank is "defaulting on turbine orders" is still **unconfirmed** by SoftBank or GE Vernova. SoftBank's 5-year CDS is 466 bp, the widest since Oct 2022; SoftBank reports Tue 11-10. Its ABB robotics deal is reported "blocked", though ABB says it is working constructively (TNW/Reuters, 12:03Z). OpenAI closed about $11B of a first tranche at a $1.25T valuation (LA Times, 17:38Z). CoreWeave reports Tue; neoclouds are down about 50% in a month (CNBC). The Goldman CEO says AI financing demand is still strong (CNBC, 18:14Z).
-- A debt-ceiling risk was flagged after the midterms (CNBC video, 11-09).
+**Iran / Hormuz / Gulf (channel: US blockade of Iranian ports plus Iran's restriction of Hormuz).** No ceasefire, settlement or blockade lift is in force.
+- The US naval blockade of Iranian ports stays in force; Hormuz transits run about 65% below pre-war (UKMTO via UN News). The June 60-day ceasefire lapsed in August.
+- 11-09: the Qatari PM met Trump and Vance (FT). Talk only.
+- 11-10: Rubio said there is "no need for major combat operations any longer" (NYT, Axios). Iran's security-council secretary said no negotiations are underway (Reuters).
+- 11-12: Trump posted "We don't need a deal with Iran... we've got their Strait!" and told Vance to drop the push (AP, Bloomberg). Iran's military claimed four tankers were hit by explosions in Hormuz (Reuters could not verify). The Houthis claimed strikes on Saudi pipeline, Yanbu and Riyadh oil targets; Saudi air defences report intercepts through 11-15 (Reuters).
+- 11-13: the UN Security Council met on Hormuz at Bahrain's request. The IEA says October supply exceeded demand by about 2 mb/d and Gulf shipments run 26% below pre-war. Axios: the Mossad chief is in Washington pressing for strikes, and Trump has so far declined.
+- 11-14 (Sat): Iran's navy said three tankers hit mines in Hormuz and one is on fire (state media via Reuters). Not independently confirmed.
+- 11-15 (Sun): the IRGC says it launched six drones at a US radar at Al-Rifaa base in Bahrain. Bahrain says it intercepted several attacks; no US or Bahraini confirmation of damage (Reuters via JPost, Guardian live). Reuters: Trump may hold off on strikes absent new provocations; a third carrier is moving to the region.
 
-#### Other unscheduled corporate events
-- **Nvidia.** Its board opened an independent probe (announced Sunday 11-08) into whether CEO Jensen Huang was the target of a Chinese intelligence effort (NYT). NVDA fell about 6% (about −9% at the intraday low per BI), its lowest since 3-31. Trump said Huang should stay (CNBC). Nvidia reports 11-17.
-- **Anthropic** can begin marketing its IPO as early as Tue 11-10 (Bloomberg, 14:20Z). It is also buying about $3.4B of gas generators (FT via TechCrunch).
-- No bankruptcies, disasters or SEC enforcement actions were found in the window.
+**Oil.** Brent (BZUSD, provisional same-evening read; FMP series, D2a has not landed 11-10..11-13): 92.57 (11-09), 91.49 (11-10), 92.76 (11-11), **95.82 (11-12, +3.3%)**, **95.84 (11-13)**. The curated series carries 92.29 for 11-09 (vendor revision). Brent fell about 2.5% on the week, its second weekly decline (EnergyNow).
+
+**Rates and dollar.** The 10-year Treasury yield rose from 4.88% (11-09) to **5.15%** (11-13), its highest since 10-19; the 2-year reached 4.88% (FactIQ, Fed H.15). DXY made its highest level since April 2025 (about 103.2 on 11-12); USD/JPY is near 160.
+
+**Crypto.** Bitcoin fell from about $75.3K (11-09) to about $68.3K (11-13) and about $64.3K on Saturday 11-14, below its 200-week average (economies.com, CoinGlass).
+
+**Other.** SoftBank booked a $3.7B charge on US data-center power equipment (11-10). MSCI will delete Strategy (MSTR) after the 11-30 close. No tariff, bankruptcy or disaster shock surfaced (one widened search; not exhaustive).
 
 ### 2. Scheduled events that resolved in the window
 
-- **Earnings enumeration.** The key-less Nasdaq earnings calendar lists 65 names of $2B or more for 11-09: CEG, KKR, B, IX, ROIV, NRG, KSPI and RBA pre-market; OXY, TTWO, RKLB, BAP and CIB after hours. It also lists BRK.A/BRK.B for 11-07 and RDNT for 11-08. The calendar is a schedule only; printed results come from each issuer's EDGAR 8-K (EVENT-IDENTITY GATE).
-- **Confirmed prints with a ≥5% IBKR reaction** (issuer 8-K accepted in the window; all are in item 3): IONS −21.36%, PRAX +19.94%, QXO +19.20%, IMVT +15.13%, VIA +12.80%, FERG +11.22%, CNH +10.90%, CEG +10.46%, NRG +10.32%, MNDY −9.10%, KGS +7.20%, WTTR −6.86%, GCMG +6.24%, TGTX +5.93%, TNGX +5.77%, AMG +5.56%. FRVO +26.02% and IBRX −17.66% also printed pre-open. ROIV printed (+4.60%, below the floor).
-- **Other confirmed releases:** CEG beat on Q3 (+10%). KKR posted a record profit. Berkshire's Q3 profit was lower (11-07, wires). After-close prints (OXY, TTWO, RKLB and others) fall after this session; their EDGAR filings are coded POST_MOVE_EVENT.
-- **Clinical:** VIR Phase 3 ECLIPSE 1 topline (hepatitis delta, +11.71%). VRDN VRDN-008 phase 1 data (+5.97%). IBRX's QUILT-2.005 met its primary endpoint, but the stock fell 17.66%. **No FDA PDUFA outcome** was found in the window (none resolved against the FDA's own page).
-- **Macro data:** NY Fed October Survey of Consumer Expectations: inflation expectations unchanged but elevated, and expectations of higher unemployment the highest since April 2020 (Reuters/Kitco, 18:56Z). September wholesale inventories (minor).
-- **No FOMC action** in the window. The next FOMC is **December 8–9**; the decision is 12/9 at 2:00 pm ET with an SEP (federalreserve.gov calendar).
-- **Next:**
-  - Tue 11-10: October CPI 08:30 ET (consensus +0.3% m/m, about 3.8–3.9% y/y). Bloomberg (19:05Z) says BLS will not publish the 12-month October figures; the reason is UNRESOLVED.
-  - Tue 11-10 also brings TSM's October sales, SoftBank and CoreWeave earnings, and the Anthropic IPO launch.
-  - 11-12: CSCO and AMAT after hours.
-  - Fri 11-13: PPI.
-  - **DIS FQ4 FY26 on 11-17 before the open** (company announcement); NVDA on 11-17.
+- **October CPI (Tue 11-10, BLS):** headline +0.4% m/m against 0.3% expected; core +0.3% against 0.2%. Waller and Logan then argued for more hikes.
+- **October PPI (Fri 11-13):** final demand +0.3% m/m against 0.4% expected; +6.5% y/y (CNBC).
+- **Jobless claims (Thu 11-12):** initial 200K; continuing 1.697M.
+- **Fed:** funds 3.75-4.00%. The next FOMC is Dec 8-9; CME FedWatch put a December 25 bp hike at about 87% on 11-11. Williams (11-12): "more rate hikes likely".
+- **TSMC October revenue (Tue 11-10, TSMC release / 6-K):** NT$586.89B, +59.7% y/y and +14.7% m/m, a record above the NT$560-570B analyst range.
+- **Earnings that moved stocks ≥5%** are in item 3. Notables: CoreWeave (after the close 11-10, beat and raised its 2026 guide; +24.71% on 11-11), Nebius (−16.84% 11-12 on a capex raise), Corteva (−24.30% 11-12 on a cut 2026 outlook), Cisco (−6.24% 11-13 despite a beat and raise).
+- **Pending, not resolved:** Disney's fiscal Q4 FY26 report is scheduled for **Tue 11-17 before the open** (Disney IR). It has not reported, so no FQ4 figures exist. Nvidia reports 11-17; October retail sales are due 11-17.
+- FDA/PDUFA: no PDUFA outcome on a ≥$2B name was established from the FDA's own pages in this window; none is recorded.
+- Key-less earnings-calendar enumeration (Nasdaq) was not available this run (see item 3 DEGRADED note), so the earnings list comes from web mover lists and is not exhaustive.
 
-### 3. Large single-name moves — AI-significance screen, ROUTER-GATED MODE
 
-- **Population.** US-listed common stocks, market cap ≥$2B, |close-to-close| ≥5% on 11-09 against 11-06 (B's frozen floor; no sub-floor write-ups in this mode).
-- **Discovery.** The Nasdaq screener supplied symbols and caps only. Moves came from per-symbol Nasdaq `quote/info` regular-session closes ("Closed at Nov 9, 2026 4:00 PM ET"): **1,990** names measured, **439** at ≥5% (`rail_tally`). The median discovery move was **+2.27%**, a broad up-tape, so most ≥5% moves are beta. 10 symbols had no derivable prior close, and AMX was dropped in error (both named in `degraded_legs`).
-- **Confirmation and identity.** Release times come only from one scripted EDGAR batch (about 607 requests, no failures; `acceptanceDateTime` verified as UTC), and labels from the key-less earnings calendar. **26** names had an own-event filing in the reaction window and were measured on IBKR regular-session daily bars (`close` array, `outside_rth=false`) in one batch.
-  - **22 passed.**
-  - 2 fell below 5% on IBKR and are dropped: CRL +4.69% and ROIV +4.60%.
-  - 2 are rejected notable: SGRY (deal-pinned) and AUGO.
-  - No metered call was made for this screen.
-- **Passed:** FRVO +26.02%, IONS −21.36%, PRAX +19.94%, QXO +19.20%, IBRX −17.66%, IMVT +15.13%, ASTS +14.10%, VIA +12.80%, VIR +11.71%, AGLT −11.31%, FERG +11.22%, CNH +10.90%, CEG +10.46%, NRG +10.32%, MNDY −9.10%, KGS +7.20%, WTTR −6.86%, GCMG +6.24%, VRDN +5.97%, TGTX +5.93%, TNGX +5.77%, AMG +5.56%.
-  - Anchors: 20 are pre-open 11-09 (anchor and reaction session coincide). ASTS and AGLT carry an after-close 11-06 anchor and react on 11-09.
-- **Close-chain check.** One query over 15 landed rows (2026-10-19 → 11-08), including compact tuples. Two hits, neither on an intraday or pre-open anchor; this is not a clearance.
-  - **ASTS** is a legitimate forward chain: the 11-08 row coded it POST_MOVE_EVENT on the same after-close 11-06 anchor, and its event_close there equals today's prior_close of 32.33.
-  - **AUGO** chains to its own 11-05-anchored *passed* item in `d564cda0`. Its only new filing is a 6-K results *presentation* (11-06 after close), so the 11-09 +11.78% is a later-day move on the same results. That disposition is carried forward in `rejected_notable`, with no new watchlist action.
-- **Noisy names** (≥3 other ≥5% sessions in the 10-session window; context for criteria 2 and 4): FRVO (6), IBRX (5), AGLT (5), PRAX (4), ASTS (4), KGS (4), QXO (3), WTTR (3).
-- **Deal-pinned:** **SGRY.** It is the target of a definitive all-cash merger with Spyglass Topco at **$25.00/share** (Amendment No. 1, 8-K Item 1.01 accepted 11-09 09:15 ET). It closed at 26.45 on IBKR, **$1.45 above the offer**, so the move prices a hoped-for higher bid. Recorded with `reason` beginning `deal-pinned:`, with no watchlist action.
-- **Rejected compact** (415, closes on the discovery basis):
-  - 188 `ANCHOR_UNRESOLVED`: no own-event filing that explains the move. Examples: AMAT +11.4%, AVGO +8.8%, APH +8.3%, CAT +7.2%, held GEV +7.1%, MU +6.2%, ASML +6.2%, OKLO +14.0%, MPWR +16.6%, FLY +17.1%.
-  - 207 `DAY2_EVENT_PRIOR`: second-day moves on events filed 10-30 → 11-06, e.g. COHR, AMD, LRCX, VSAT, WRBY, UI.
-  - 20 `POST_MOVE_EVENT`: earnings filed after the 11-09 close, e.g. RKLB, TTD, TXN, ONTO, SANM, HIMS.
-- **Durable row:** `research-screen` `single-name-move`, entry **`9f5c6b11-5ff1-4e65-b563-d0290627864d`**. It was written by the orchestrator through the digest-checked split path (3 parts + call, each accepted first try; `outcome=written`). Readback: `surfaced_count` 22 = `ARRAY_LENGTH(passed)`, and `state.research_screen_calls` parses 24 items.
+### 3. Large single-name moves — AI-significance screen, FULL mode (B ACTIVATE)
 
-### 4. Sector-level moves (IBKR regular-session closes 11-06 → 11-09)
+Durable record: `research-screen` row `c3638fec-f367-45f4-936a-b08b24291514` (screen `single-name-move`, `screen_mode` full). One row covers the four-session window; every item carries its own reaction session.
 
-- **Surfaced (3 of 9 at |move| ≥ 1%; rail tally 9):**
-  - **XLI +3.82%** (162.67 → 168.89), conviction 45: cyclicals led the relief rally on the oil slide.
-  - **XLK +3.73%** (164.74 → 170.88), conviction 45: a chip-led rebound (SMH +5.05%) despite NVDA's −6%.
-  - **XLY +2.92%** (117.58 → 121.01), conviction 30: beta plus a fuel-cost tailwind.
-- **Rejected notable:** XLE +0.52% (61.62 → 61.94), conviction 45. A dispersion item: energy lagged every other sector as Brent fell 6.10%.
-- **Not surfaced** (tracked the tape): XLC +2.45% (clears the legacy 2% bar: `rule_only`), XLV +1.91%, XLB +1.91%, XLU +1.53%, XLRE +1.45%, XLF +1.45%, XLP +0.90%.
-- **Brent** (BZUSD, provisional same-evening read) 92.32 on 2026-11-09 against 98.32 on 2026-11-06 (one FMP call; the curated series had no 11-09 row yet).
-- **Id check.** All 11 contract ids verified: each IBKR 11-06 close equals the 11-08 row's event_close. None was re-resolved.
-- **Durable row:** `research-screen` `sector-move`, entry **`8327041f-73b7-4cdc-9477-473f2ee3efc0`** (digest-checked, `written`).
+**DEGRADED DISCOVERY.** Every key-less `curl` fetch (Nasdaq screener and historical bars, EDGAR submissions, Google News RSS) was refused by this session's permission classifier. So no full ≥$2B universe sweep ran. Names came from one web search per session for published mover lists (115 entries), FMP's 11-13 gainers, losers and most-active lists (a partial net), and the 25-name gated re-check pool. All 115 discovered names were measured on IBKR regular-session daily bars (close array; two sequential batches of 60 and 55, `search_contracts` paced under 25 a minute). Events and release times came from one web attribution pass. Movers between 2% and 5% were not individually measured. The eligible population is NOT fully measured; `surfaced_count` counts confirmed passes only.
+
+**Passed (20; all ≥5% on IBKR bars, ≥$2B, own event, resolved anchor):**
+- **CRWV** +24.71% on 2026-11-11 (48.73 → 60.77); anchor 2026-11-10 (after-close); conviction 75. Q3 revenue beat, 2026 revenue guide raised to $13.0-13.3B; reported after close 11/10. Prior ≥5% sessions in the prior 10: 8.
+- **CTVA** -24.30% on 2026-11-12 (12.14 → 9.19); anchor 2026-11-11 (after-close); conviction 75. Q3 miss and sharply cut FY adj. core profit outlook (Brazil); released after close Wed 11/11, exact time not established.
+- **AAON** +19.31% on 2026-11-10 (62.87 → 75.01); anchor 2026-11-09 (after-close); conviction 60. Q3 record results, FY26 sales growth guide raised to 72-75% (also H1 restatement/material weakness); released after close Mon 11/9. Prior ≥5% sessions in the prior 10: 6.
+- **HIMS** -16.61% on 2026-11-10 (22.94 → 19.13); anchor 2026-11-09 (after-close); conviction 60. Q3 results miss, Q4 revenue guide well below consensus, FY EBITDA guide cut; release after close 11/9, exact time not established. Prior ≥5% sessions in the prior 10: 6.
+- **NOVT** -15.26% on 2026-11-10 (145.98 → 123.71); anchor 2026-11-09 (after-close); conviction 60. Q3 beat but Q4 EPS guide below consensus, Stockport factory issue; released after close 11/9 (Business Wire). Prior ≥5% sessions in the prior 10: 2.
+- **QLYS** -13.51% on 2026-11-10 (202.46 → 175.11); anchor 2026-11-09 (after-close); conviction 60. Q3 beat, FY raised, but Q4 billings growth guide ~8% vs 14%; released after close 11/9. Prior ≥5% sessions in the prior 10: 3.
+- **YETI** -10.49% on 2026-11-12 (42.79 → 38.3); anchor 2026-11-12 (pre-open); conviction 60. Q3 results, FY26 sales/EPS outlook cut (GlobeNewswire 06:00 ET). Prior ≥5% sessions in the prior 10: 1.
+- **LFTO** +30.63% on 2026-11-13 (18.71 → 24.44); anchor 2026-11-12 (after-close); conviction 60. Q3 results well above guidance (rev $238M +32%, NI $87M); reported after close 11/12. Prior ≥5% sessions in the prior 10: 5.
+- **NU** +11.75% on 2026-11-13 (11.83 → 13.22); anchor 2026-11-12 (after-close); conviction 60. Record Q3 net income $1.1B; results after close 11/12 (call 5pm ET).
+- **TTWO** +8.31% on 2026-11-10 (207.4 → 224.64); anchor 2026-11-09 (after-close); conviction 45. FQ2 FY27 results (bookings below guide), GTC VI preorders far above expectations, outlook reiterated; 8-K 11/9 after close. Prior ≥5% sessions in the prior 10: 1.
+- **ONON** -7.54% on 2026-11-10 (37.53 → 34.7); anchor 2026-11-10 (pre-open); conviction 45. Q3 results: DTC sales miss despite adj EPS beat; reported pre-market 11/10 (exact time not established). Prior ≥5% sessions in the prior 10: 2.
+- **SKYD** -7.59% on 2026-11-10 (8.7 → 8.04); anchor 2026-11-09 (after-close); conviction 45. First post-WBD-merger Q3 results, Q4 EBITDA headwind ($200M) from WB film slate; released 11/9 ahead of 5pm ET call. Prior ≥5% sessions in the prior 10: 1.
+- **GFL** -7.56% on 2026-11-10 (45.88 → 42.41); anchor 2026-11-10 (pre-open); conviction 45. Board ended strategic review, rejected ~$22B ($52/sh) Blackstone/KKR/ECP take-private proposals (not a signed deal), BC Partners stake sale; announced pre-open 11/10, exact time not established.
+- **HWC** -10.20% on 2026-11-12 (72.38 → 65); anchor 2026-11-12 (pre-open); conviction 45. Definitive all-stock agreement to acquire Trustmark (~$3.2B, 0.7463 HWC/TRMK); HWC is ACQUIRER; announced before open 11/12, exact time not established.
+- **NBIS** -16.84% on 2026-11-12 (154.69 → 128.64); anchor 2026-11-12 (pre-open); conviction 45. Q3 results: revenue beat but 2026 revenue to low end of guide, capex raised to ~$27B, 2027 capex $40-45B. Prior ≥5% sessions in the prior 10: 10.
+- **DGII** -12.72% on 2026-11-12 (66.96 → 58.44); anchor 2026-11-11 (after-close); conviction 45. FQ4 beat but FY27 growth guide 10-15% and Q1 guide disappointed; released after close Wed 11/11. Prior ≥5% sessions in the prior 10: 3.
+- **CSCO** -6.24% on 2026-11-13 (102.01 → 95.64); anchor 2026-11-12 (after-close); conviction 45. FQ1 FY27 beat/raise but Q2 guide below Q1 and margin pressure; released after close Thu 11/12, PT cuts. Prior ≥5% sessions in the prior 10: 2.
+- **MOD** +27.86% on 2026-11-13 (106.1 → 135.66); anchor 2026-11-12 (after-close); conviction 45. Bloomberg report Samsung in takeover talks for Modine (not a signed deal, no price); surfaced after Thursday close (+29% after-hours), exact time not established. Prior ≥5% sessions in the prior 10: 5.
+- **RKLB** +6.54% on 2026-11-10 (58.86 → 62.71); anchor 2026-11-09 (after-close); conviction 30. Q3 2026 results, record backlog, Q4 guide (GlobeNewswire). Prior ≥5% sessions in the prior 10: 5.
+- **STVN** -28.57% on 2026-11-03 (19.74 → 14.1); anchor 2026-11-03 (pre-open); conviction 45. Q3 results with 2027 growth warning (GLP-1 customer volume cut); released pre-market 11/3, call 8:30 ET.
+
+**Rejected_notable (18):**
+- FA -8.25% on 2026-11-10 — `OFFERING_PRICED`. Silver Lake 15M-share secondary launched after the 11-09 close and priced at $21.80, a 7.3% discount with no company proceeds; the move is the offering discount, not new information.
+- KDP -7.40% on 2026-11-12 — `OFFERING_PRICED`. $2.0B common-stock offering announced before the 11-12 open and priced at $34.50; dilution priced mechanically, not new information. KDP's 11-03 earnings anchor already passed in c51c9632.
+- ACAD +10.79% on 2026-11-10 — `ANCHOR_UNRESOLVED`. Own event identified but its first-public time was not established from an issuer or news timestamp, so the anchor is UNRESOLVED and no window is indexed: Federal Circuit oral argument on the Nuplazid patent (11-09) plus a BMO note.
+- CHTR +10.61% on 2026-11-10 — `ANCHOR_UNRESOLVED`. Own event identified but its first-public time was not established from an issuer or news timestamp, so the anchor is UNRESOLVED and no window is indexed: Q3 results with a $2B opex-cut plan and a $1.5B below-par debt tender (PRNewswire 11-10).
+- NVDA -5.47% on 2026-11-10 — `ANCHOR_UNRESOLVED`. Own event identified but its first-public time was not established from an issuer or news timestamp, so the anchor is UNRESOLVED and no window is indexed: second day of the CEO-conduct disclosure (Sunday 11-08 memo, board probe); the CEO resigned 11-12.
+- TREX -7.30% on 2026-11-10 — `ANCHOR_UNRESOLVED`. Own event identified but its first-public time was not established from an issuer or news timestamp, so the anchor is UNRESOLVED and no window is indexed: downgrade to Neutral (PT $55).
+- REZI +18.25% on 2026-11-11 — `ANCHOR_UNRESOLVED`. Own event identified but its first-public time was not established from an issuer or news timestamp, so the anchor is UNRESOLVED and no window is indexed: Q3 beat and FY26 outlook update (PRNewswire 11-10).
+- SONO +12.85% on 2026-11-11 — `ANCHOR_UNRESOLVED`. Own event identified but its first-public time was not established from an issuer or news timestamp, so the anchor is UNRESOLVED and no window is indexed: FQ4 results, $150M buyback and FQ1 guide (BusinessWire 11-10).
+- FIS -6.12% on 2026-11-12 — `ANCHOR_UNRESOLVED`. Own event identified but its first-public time was not established from an issuer or news timestamp, so the anchor is UNRESOLVED and no window is indexed: KBW-conference remarks calling 2027 a transition year and a Truist PT cut.
+- GPN -12.01% on 2026-11-12 — `ANCHOR_UNRESOLVED`. Own event identified but its first-public time was not established from an issuer or news timestamp, so the anchor is UNRESOLVED and no window is indexed: Reuters report that CD&R and GTCR abandoned take-private talks (stock halted intraday).
+- WRBY -11.34% on 2026-11-12 — `ANCHOR_UNRESOLVED`. Own event identified but its first-public time was not established from an issuer or news timestamp, so the anchor is UNRESOLVED and no window is indexed: smart-eyewear preorders opened 11-12; sell-the-news after a large run.
+- CBRS +11.22% on 2026-11-13 — `ANCHOR_UNRESOLVED`. Own event identified but its first-public time was not established from an issuer or news timestamp, so the anchor is UNRESOLVED and no window is indexed: raised 2026 core revenue outlook and a Microsoft customer win.
+- NBIS -9.92% on 2026-11-13 — `ANCHOR_UNRESOLVED`. Own event identified but its first-public time was not established from an issuer or news timestamp, so the anchor is UNRESOLVED and no window is indexed: report that Microsoft is reviewing neocloud contracts, inside a chip selloff; second day after the 11-12 print.
+- WWW +8.83% on 2026-11-13 — `ANCHOR_UNRESOLVED`. Own event identified but its first-public time was not established from an issuer or news timestamp, so the anchor is UNRESOLVED and no window is indexed: continuation after the 11-12 Q3 beat with several PT raises.
+- CVLT -8.48% on 2026-11-13 — `ANCHOR_UNRESOLVED`. Own event identified but its first-public time was not established from an issuer or news timestamp, so the anchor is UNRESOLVED and no window is indexed: CFO departure with guidance reaffirmed (11-13).
+- DGII -5.15% on 2026-11-13 — `ANCHOR_UNRESOLVED`. Own event identified but its first-public time was not established from an issuer or news timestamp, so the anchor is UNRESOLVED and no window is indexed: second day after the FQ4 print with a Piper Sandler PT cut; the same 11-11 anchor passed in this row's 11-12 item.
+- STVN +10.03% on 2026-11-13 — `ANCHOR_UNRESOLVED`. Own event identified but its first-public time was not established from an issuer or news timestamp, so the anchor is UNRESOLVED and no window is indexed: director open-market purchases after the 11-03 collapse.
+- HTFL -19.13% on 2026-11-13 — `NO_EVENT_FOUND`. A -19% move with no event found in this run's search; likely own-event but unattributed, so it does not clear the identified-event rail.
+
+**Not railed.** Sympathy and beta moves with no own event (AI-infrastructure rally on 11-11 after CoreWeave; the chip and neocloud selloff on 11-12 and 11-13 after Nvidia's CEO exit), for example MU +11.89%, ARM +12.05%, DELL +11.75% and −7.18%, AMD −8.75%, IREN, APLD, AAOI and RGTI, are listed in `fields.sympathy_not_railed`. 18 ticker-sessions were not researched for events (named in `degraded_legs`). Names under $2B (PEPG, ZIP, APPS, SECZ, AZTA, FRMI and others) are listed in `fields.below_cap_not_railed`.
+
+**First-full-run gated re-check.** The pool had 655 names; the 25 largest were checked. **STVN passed** (Q3 2027 growth warning, pre-open 11-03, −28.57%, window closes 11-17). Five were dropped for market cap under $2B. FLY's 11-06 engine deal has no release time. The rest have no own event on their gated move session (broad AI, semis and crypto beta), so their anchors stay UNRESOLVED.
+
+**Deal-pinned rail:** not triggered. GFL rejected take-private bids (a deal break), HWC is an acquirer, and MOD's Samsung talks are an unsigned report.
+
+### 4. Sector-level moves (IBKR regular-session closes 11-09 → 11-13)
+
+Durable record: `research-screen` row `70bf9236-a05d-481e-8247-e57453b7dd3b` (screen `sector-move`). 9 sector-sessions crossed the 1% rail; 3 passed:
+- **XLK 11-11 +3.23%** (168.91 → 174.36; SMH +4.82%): CoreWeave's beat-and-raise re-lit the AI-infrastructure trade. Conviction 60.
+- **XLK 11-13 −2.01%** (173.77 → 170.28; SMH −2.99%): the AI-chip selloff resumed after Nvidia's CEO exit, with the 10-year at 5.15%. Conviction 60.
+- **XLE 11-12 +1.51%** (63.37 → 64.33): Brent (BZUSD, provisional same-evening read) 92.76 on 2026-11-11 → 95.82 on 2026-11-12 after Trump's Hormuz post and Houthi claims on Saudi sites. Energy rose 4.88% on the week. Conviction 45.
+- Rejected: XLK 11-10 −1.15% (CPI and rates), XLE 11-11 +1.86% (same oil theme), XLI 11-11 +1.33% (beta), XLB 11-12 −1.28% (Corteva single-name), XLP 11-13 +1.42% and XLC 11-13 +1.05% (defensive rotation).
 
 ### 5. Notable commentary
 
-- **Fed:**
-  - Barkin (Richmond): inflation is "stubbornly elevated" and the "direction of policy" is "relatively straightforward", but policy should move "with care" (Reuters/Kitco, 18:56Z).
-  - Natixis: a hike is warranted in December (Kitco, 18:25Z).
-  - Bowman and Goolsbee were scheduled; content not found.
-- **Strategists:**
-  - Citi cut US equities to neutral from overweight, citing positioning and AI regulation (Reuters, 13:00Z).
-  - Capital Economics: the AI selloff could deepen, and earnings forecasts have not yet been cut (Investing.com).
-  - JPMorgan reiterates an 8,000 S&P year-end target and calls the selloff a "de-leveraging event". BlackRock's Rieder calls it an "unwind", not a bubble (Business Insider, 16:44Z).
-  - HSBC: look at equities again (MarketWatch).
-- **Sell-side:**
-  - Oppenheimer upgraded AMD to Outperform with a $600 target.
-  - JPMorgan upgraded SAP.
-  - Wells Fargo cut its CRWV target to $115 from $160.
-  - Jefferies set LLY at $1,700.
-- **Corporate:**
-  - TSMC is reportedly weighing 3D DRAM at Nvidia's request (Reuters/The Information via Benzinga, 15:14Z).
-  - Google launched new TPU variants (8tx, 8i Max) (Bloomberg, 12:30Z).
-  - Tesla is ending Cybertruck production in about 8 months (GovTech).
+- Goldman strategists (11-13): S&P 500 +14% over the next year on cheap hyperscaler valuations. Goldman expects hikes in December and March (Bloomberg, CNBC).
+- JPMorgan: "AI is not a continued sell"; Morgan Stanley: "buy the drop" (Axios, 11-10).
+- Citi Wealth CIO: the Fed may need to hike more than is priced.
+- Fed: Waller (11-10) put 50 bp on the table if core inflation stays near 0.3%; Logan wants at least two more hikes; Williams (11-12) said "more rate hikes likely".
 
 ## ANALYSIS — RISK TO EXISTING POSITIONS
 
-- **Union of book and view.** IBKR `get_account_positions` (read about 22:15Z on 11-09) and `state.current_positions` agree on all 8 names and share counts: AMZN 0.3464, DIS 0.7244, GEV 0.1244, GOOGL 0.2577, ISRG 0.1091, RTX 0.1601, TSM 0.155, UBER 0.5156. IBKR also holds the VOO park (16.895 shares), which is not a strategy position. **There is no reconciliation-lag position.**
-- **Exit triggers.** No tranche carries a `convergence_target` or `time_exit_date`. **No EXIT TRIGGERED.**
-- **Kill-trigger sweep.**
-  - **Strategy D.** `perf.kill_flags` (as of 11-06): every flag FALSE (drawdown, runaway, m2m, evidence, interim warning). Unit value 1.0081 against a peak of 1.1065, so drawdown is −8.89% on the 11-06 closes.
-    - **Refreshed on today's closes**, every D name rose on 11-09 (AMZN +2.94%, DIS +2.03%, GEV +7.13%, GOOGL +1.18%, ISRG +1.71%, RTX +3.58%, TSM +3.51%, UBER +3.76%), so the drawdown narrows. It is far from the 50% kill.
-    - Live snapshots were after-hours prints (`is_close` false), so closes were used.
-    - No interim-warning alert is open or due.
-  - **Strategy B.** No open positions; `analytics.b_pairwise_correlation` reports 0 positions, so the correlation check is inert.
-- **Thesis-invalidation sweep** (IBKR 11-09 closes; criteria from each tranche's `invalidation_status`):
-  - **AMZN** 266.93. No AWS growth, margin, backlog or Anthropic/OpenAI commitment datapoint. Anthropic's reported $3.4B generator purchase is not an AWS reading. **NO.**
-  - **DIS** 119.12. FQ4 FY26 is confirmed for **11-17 before the open** and has **not occurred** (EVENT-IDENTITY GATE). There is no streaming-margin, guidance, buyback or FCC news. **NO.**
-  - **GEV** 829.34 (+7.13%). Musk's SoftBank turbine-default claim is still unconfirmed and is not an orders reading. One report notes customers ordered 57 aeroderivative turbines against 9 a year ago in Q3 (FourWeekMBA, citing the filing). The criterion is organic orders growth below 15% for two quarters. **NO** (watch item).
-  - **GOOGL** 288.15. There is no structural-remedy ruling and no Cloud datapoint; the new TPU variants are not a criterion input. **NO.**
-  - **ISRG** 460.56. No company development. **NO.**
-  - **RTX** 196.31. There is no Airbus ruling, GTF slip, backlog or FCF change, or FY27 procurement cut. **NO.**
-  - **TSM** 388.62. No N2/A16 pushout and no AI-capex cut. October monthly revenue is due 11-10, and the reported 3D-DRAM study is not a criterion input. **NO.**
-  - **UBER** 71.17. No gross-bookings, margin or Uber One datapoint. **NO.**
-- **Dividend netting:** no tranche has a price-level criterion, so it does not apply.
-- **Watchlist candidates:** B is gated, and no development changes the new-entry index beyond today's additions.
+**Book.** `state.current_positions` (12 Strategy D tranches in 8 names) matches the IBKR connector exactly (AMZN 0.3464, DIS 0.7244, GEV 0.1244, GOOGL 0.2577, ISRG 0.1091, RTX 0.1601, TSM 0.155, UBER 0.5156) plus the VOO park (16.895 sh). No reconciliation-lag position. No Strategy B position, so the B pairwise-correlation check is inert (n_positions 0).
+
+**Mechanical exit sweep.** No tranche carries a convergence target or time-exit date (Strategy D, no max hold). No EXIT TRIGGERED.
+
+**Kill-trigger sweep.** `perf.kill_flags` (D as of 11-09, B as of 08-18): drawdown_kill, runaway_review, m2m_underperf_review, evidence_kill and interim_underperf_warning are all FALSE. D's engine drawdown was −5.83% at 11-09. Refreshed against 11-13 closes, the D sleeve moved by under 1% (GEV −3.2%, ISRG −3.7%, UBER −2.1%, GOOGL +2.6%, TSM +2.6% over the four sessions), far from the 50% line. No interim-underperformance alert to raise or heal.
+
+**Thesis-invalidation read, per name:**
+- DIS (2 tranches): NO. Fiscal Q4 FY26 reports Tue 11-17 before the open (Disney IR), so the SVOD-margin, EPS-guide and buyback criteria have no new reading. Test them on the 11-17 print.
+- TSM (2): NO. October revenue NT$586.89B (+59.7% y/y, record) reinforces criteria 1 and 3.
+- GEV: NO. The −17% from cost is the AI-power de-rating (SoftBank $3.7B equipment charge; Musk's turbine-default claim, denied by SoftBank; rates). The criterion is quarterly organic orders growth, and there is no new reading. Not-exit-triggering per entry: short-term price action.
+- GOOGL (2): NO. No Cloud revenue, margin or RPO reading and no structural remedy in the window.
+- UBER: NO. The Q3 print came in the window (revenue $14.77B; mobility revenue missed). No two-consecutive-quarter gross-bookings or margin breach is evidenced. The 11-13 vendor data breach is not a criterion.
+- RTX: NO. 2026 guide reaffirmed (11-10) and S&P upgraded RTX to A- (11-13).
+- AMZN (2), ISRG: NO. No criterion-relevant development.
+
+No price-level criterion is open, so dividend netting does not apply.
+
+**Watchlist candidates.** B ACTIVATE re-opens the B index path. The 451 B thesis items D2 enqueued on 11-09 are D2's to drain. No development changes an A-queue or E-pair candidacy (both gated).
 
 ## ANALYSIS — OPPORTUNITY CHECK
 
-- **A, D and E are GATED** under the ROUTER-GATED SCAN RULE, so nothing was evaluated for them.
-- **B (gated):** its ≥5% names reach the new-entry index as `watchlist` actions (item 3). SGRY is excluded as deal-pinned, and AUGO as a later-day move.
-- **C, HYBRID (FOMC-only carve-out).** No new FOMC-class candidate. The December 8–9 FOMC is already inside the 45-day window, and no new FOMC-class catalyst was announced.
+- **B:** the 20 screen passes above clear Entry criterion 1 (≥5% close-to-close on the reaction session) on IBKR bars, with resolved anchors. They go to the new-entry index for W2's ranking. None is caught by the Deal-pinned rail.
+- **C (carve-out only):** the next FOMC is Dec 8-9 (24 days out). It is not newly announced, and the carve-out class is already tracked. No new C candidate.
+- **A, D, E:** gated; nothing evaluated.
 
 ## ANALYSIS — ADD-CANDIDATE CHECK
 
-- **Durable row:** `add-candidate-review`, entry **`226bf170-5769-4201-bdf5-64f790c968f5`** (digest-checked, `written`). 12 evaluated, **0 flagged, 0 `declined_hard_gate`**, 12 `declined`.
-- **Gate.** `invalidation_status` is populated and evaluable for all 12: no NULL, no `NOT_DISCRETELY_RECORDED_AT_ENTRY` and no `NOT_ASSESSED_BY_THIS_BACKFILL`. No criterion is breached.
-
-|Tranche|Close 11-09|Mark vs cost|Trigger|Disposition|
-|---|---|---|---|---|
-|D:AMZN:2026-07-09|266.93|+10.65%|none|declined|
-|D:AMZN:2026-07-30|266.93|+0.47%|none|declined|
-|D:DIS:2026-05-07|119.12|+7.01%|none|declined|
-|D:DIS:2026-08-05|119.12|+14.78%|none|declined|
-|D:GEV:2026-08-03|829.34|−14.49%|dip-with-intact-thesis|declined (no funding path)|
-|D:GOOGL:2026-07-09|288.15|−19.92%|dip-with-intact-thesis|declined (no funding path)|
-|D:GOOGL:2026-07-26|288.15|−12.11%|dip-with-intact-thesis|declined (no funding path)|
-|D:ISRG:2026-07-20|460.56|+31.77%|none|declined|
-|D:RTX:2026-04-27|196.31|+10.97%|none|declined|
-|D:TSM:2026-07-21|388.62|−9.17%|dip-with-intact-thesis|declined (no funding path)|
-|D:TSM:2026-07-29|388.62|−1.08%|dip-with-intact-thesis|declined (no funding path)|
-|D:UBER:2026-07-09|71.17|−2.78%|none|declined|
-
-- **Price basis.** IBKR 11-09 regular-session closes over each tranche's own `cost_basis / shares`. IBKR position marks and snapshots were after-hours prints (`is_close` false) and were not used.
-- **Why none is flagged.** D is DO-NOT-ACTIVATE and capital-disabled, so no add has a funding path.
+Durable record: `add-candidate-review` row `631ac725-aff0-4803-a504-90caddb6495e`. 12 D tranches evaluated, 0 flagged, 0 declined at the hard gate. Every tranche has a populated `invalidation_status` with no NOT_ASSESSED marker (`invalidation_criteria_evaluable` TRUE). Dip reads on GEV (−17.20% vs cost) and GOOGL (−17.81%, −9.78%) and strengthened-conviction reads on TSM (record October revenue) are declined because D reads DO-NOT-ACTIVATE. Prices are IBKR 11-13 bar closes over each tranche's own cost. The connector's position marks were stale (GEV 790.01 vs 803.13).
 
 ## ANALYSIS — REGIME CHECK
 
-The standing `shock_overlay` reads `latent` (live read this run; FUNDAMENTAL_AXIS re-scored as of 2026-11-09). The Gulf/Hormuz structure is open, with the US blockade of Iranian ports in force.
-
-**Qualifying shock event: NO new one.** No dated, attributable escalation on the Gulf/Iran channel was found on 11-09: no new attack on supply infrastructure and no new closure. The Iranian state-media claim of US strikes on Qeshm "overnight" has UNRESOLVED timing, and its oil reaction was negative. The 11-08 Houthi/Riyadh and Khor Mor escalations were flagged PENDING by the prior run. For the record, their two-session oil window has S1 = 11-09: Brent (BZUSD) 98.32 → 92.32 (−6.10%), the opposite direction. S2 = 11-10 has not closed; M1R rules on qualification.
-
-**Qualifying resolution event: NO.** No ceasefire or settlement is in force, the blockade has not been lifted, and no tariff regime was removed or sanctions posture settled. The Israel Hayom "interim deal" (Hormuz reopens, blockade lifted, $8B released) is unconfirmed by either government and was called false by a Qatari official (Bloomberg). The Trump–Qatar PM meeting ended with no announced agreement. Brent's −6.10% is a measurable move, but it is a reaction to talk, not to a resolution in force; narrative de-escalation does not qualify. No `router_review` flag.
-
-**Measured triggers, for D2 to detect (not computed here).**
-- VIX closed **19.92** against 25.64: a move *out of* HIGH on the IBKR bar. That is one of the mirror triggers D2 item 4 reads from D2a's step-1e `TECHNICAL_SIGNAL` rows.
-- SPY_TREND reads NEUTRAL (D2a, 11-06).
-- Breadth is **63.14** (this run's row), up from 55.97.
-- Brent's BZUSD row for the shock price leg is D2a step 1d's.
+Standing `shock_overlay` = `latent` (M1R snapshot as of 2026-11-09; the Gulf/Hormuz structure opened 2026-09-09 remains open).
+- **11-12 events (Iran's claim of four tankers hit; Houthi claims on Saudi oil sites; Trump's "we've got their Strait" post):** the two-session window is closed. Brent (BZUSD) 92.76 (11-11) → 95.82 (11-12, +$3.06) → 95.84 (11-13, +$3.08 cumulative). That is under the >$5/bbl criterion, and no trade-flow, spread or currency leg was measured. Not a qualifying event.
+- **2026-11-14 (Sat): Iran's navy says three tankers hit mines in Hormuz** (state media via Reuters; not independently confirmed). This is a dated development on the named Hormuz channel. Its two-session oil window is S1 Mon 11-16 and S2 Tue 11-17, against a prior close of 95.84 (11-13). Neither session has closed, so the window is **PENDING**. Flagged as a `router_review` so that D2 logs it refresh-only and M1R rules after S2.
+- **11-15 IRGC drone claim on a US radar in Bahrain:** a military action with no trade-flow or price leg of its own yet. It is noted under the 11-14 flag, which covers the same window.
+- **Resolution side:** no ceasefire, settlement or blockade lift is in force. Trump said no deal is needed (11-12), and the blockade continues.
+- **Measured triggers** (VIX, SPY trend, breadth, shock price leg) are D2 item 4's to detect from D2a rows; none is computed here.
 
 ## EQUITY-BREADTH OBSERVATION
 
-- **Row written:** `events.regime_events` `TECHNICAL_INPUT` / `EQUITY_BREADTH_PCT`, as_of 2026-11-09, **63.14**.
-- **Source.** Barchart `$S5TH` via `tavily_extract` (`?cb=20261109`), headed "Quote Overview for Mon, Nov 9th, 2026". The page stamp is **16:50 ET** (post-close, settled). Previous Close 55.97 equals the stored 11-06 value (no revision). It is not an exact repeat, and there is no carry bar.
-- **EODData** shows a 09 Nov row of O 57.76 H 65.33 L 57.76 **C 64.74**, but its quote-box stamp is **15:57 ET**, a pre-close capture, so it is unsettled. Barchart and EODData are one feed family anyway, so this run has a **single settled source**. The 1.60 pp gap is read as EODData's pre-close capture, consistent with the 2026-09-17 settlement-lag precedent.
-- **ChartRow** still carries the Nov 6 reading (278 of 497, 55.94%) behind a "Nov 9" header: `chartrow_unconfirmed=lag session 2026-11-06`. No 11-05 ChartRow count is on record, so the lagged check of the prior row neither confirms nor refutes. A re-read is scheduled as the last step before run completion.
-- **MacroMicro** was not probed (Monday; the weekly re-probe rides on Sunday).
+Written to `events.regime_events` (`TECHNICAL_INPUT` / `EQUITY_BREADTH_PCT`, as_of 2026-11-13) = **63.81**. Barchart `$S5TH`, "Quote Overview for Fri, Nov 13th, 2026", with Previous Close 61.82. EODData's end-of-day table agrees (11-13 close 63.81, low 62.02; 11-12 close 61.82). Both were read on 11-15, so the dated table row is settled. Barchart and EODData count as ONE source. ChartRow cross-check: "as of market close, Nov 13, 2026", 317 of 497 eligible (63.78%), consistent. Its day-over-day gap is unavailable because no 11-12 ChartRow count is on record. The weekly MacroMicro re-probe returned HTTP 403. No 11-10..11-12 rows were written (only the last completed session is owed).
 
 ## ANALYSIS — FRONTIER-LLM CAPABILITY CHECK
 
-NO CAPTURE. The `hf://papers/daily/latest` listing was read alongside the Monday battery search ("cross-session consistency LLM agent"). Its only agent-risk items are 2611.06808 (LLM temporal self-knowledge and backtest leakage), 2611.09113 (agent authorization drift) and 2611.07624 (agent-evolution gains unreliable). All are dated 2026-11-04..06, before this window. The battery search returned nothing newer than 2026-10-02.
+NO CAPTURE. `hf://papers/daily/latest` was empty on Sunday. The Sunday long-context battery search returned only catalogued or out-of-window papers.
 
 ## RECOMMENDED ACTIONS
 
-- Watchlist: ADD FRVO to the Strategy B new-entry index — earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T13:37:24Z); reaction session 2026-11-09, +26.02% (9.03 → 11.38), with 6 prior ≥5% sessions in the window; qualifying_event_date 2026-11-09.
-- Watchlist: ADD IONS to the Strategy B new-entry index — earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T12:00:30Z); reaction session 2026-11-09, -21.36% (39.42 → 31.0), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-09.
-- Watchlist: ADD PRAX to the Strategy B new-entry index — earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T12:02:20Z); reaction session 2026-11-09, +19.94% (277.62 → 332.97), with 4 prior ≥5% sessions in the window; qualifying_event_date 2026-11-09.
-- Watchlist: ADD QXO to the Strategy B new-entry index — earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T11:02:42Z); reaction session 2026-11-09, +19.20% (11.56 → 13.78), with 3 prior ≥5% sessions in the window; qualifying_event_date 2026-11-09.
-- Watchlist: ADD IBRX to the Strategy B new-entry index — 8-K 2.02 earnings filed same morning, pre-open release (EDGAR 2026-11-09T12:39:35Z); reaction session 2026-11-09, -17.66% (8.635 → 7.11), with 5 prior ≥5% sessions in the window; qualifying_event_date 2026-11-09.
-- Watchlist: ADD IMVT to the Strategy B new-entry index — earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T12:09:17Z); reaction session 2026-11-09, +15.13% (30.53 → 35.15), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-09.
-- Watchlist: ADD ASTS to the Strategy B new-entry index — Reg FD: plan to build own 20-ton rocket w/ Firefly Miranda engines, after-close release (EDGAR 2026-11-06T22:00:25Z); reaction session 2026-11-09, +14.10% (32.33 → 36.89), with 4 prior ≥5% sessions in the window; qualifying_event_date 2026-11-06.
-- Watchlist: ADD VIA to the Strategy B new-entry index — earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T11:59:27Z); reaction session 2026-11-09, +12.80% (37.72 → 42.55), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-09.
-- Watchlist: ADD VIR to the Strategy B new-entry index — 7.01: Phase 3 ECLIPSE 1 topline call (elebsiran+tobevibart, hepatitis delta) 8:30 ET, pre-open release (EDGAR 2026-11-09T13:31:22Z); reaction session 2026-11-09, +11.71% (12.21 → 13.64), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-09.
-- Watchlist: ADD AGLT to the Strategy B new-entry index — de-SPAC business combination closing (Churchill Capital XI -> Agility Robotics, after-close release (EDGAR 2026-11-06T21:18:25Z); reaction session 2026-11-09, -11.31% (9.9 → 8.78), with 5 prior ≥5% sessions in the window; qualifying_event_date 2026-11-06.
-- Watchlist: ADD FERG to the Strategy B new-entry index — earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T11:50:12Z); reaction session 2026-11-09, +11.22% (233.7 → 259.93), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-09.
-- Watchlist: ADD CNH to the Strategy B new-entry index — Q3 2026 earnings 8-K (2.02) + 1.01 sale of 70% of Construction Equipment business to Kobelco (acquirer-side counterparty news, pre-open release (EDGAR 2026-11-09T13:02:04Z); reaction session 2026-11-09, +10.90% (11.56 → 12.82); qualifying_event_date 2026-11-09.
-- Watchlist: ADD CEG to the Strategy B new-entry index — earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T11:53:11Z); reaction session 2026-11-09, +10.46% (249.95 → 276.09), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-09.
-- Watchlist: ADD NRG to the Strategy B new-entry index — 7.01: agreed to sell six gas-fired plants to LS Power affiliate for $4B cash (NRG is seller), pre-open release (EDGAR 2026-11-09T11:45:04Z); reaction session 2026-11-09, +10.32% (88.29 → 97.4), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-09.
-- Watchlist: ADD MNDY to the Strategy B new-entry index — 6-K: Q3 2026 results press release, pre-open release (EDGAR 2026-11-09T12:00:31Z); reaction session 2026-11-09, -9.10% (87.93 → 79.93), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-09.
-- Watchlist: ADD KGS to the Strategy B new-entry index — earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T11:32:12Z); reaction session 2026-11-09, +7.20% (41.67 → 44.67), with 4 prior ≥5% sessions in the window; qualifying_event_date 2026-11-09.
-- Watchlist: ADD WTTR to the Strategy B new-entry index — earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T12:05:36Z); reaction session 2026-11-09, -6.86% (16.18 → 15.07), with 3 prior ≥5% sessions in the window; qualifying_event_date 2026-11-09.
-- Watchlist: ADD GCMG to the Strategy B new-entry index — earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T12:01:57Z); reaction session 2026-11-09, +6.24% (12.66 → 13.45); qualifying_event_date 2026-11-09.
-- Watchlist: ADD VRDN to the Strategy B new-entry index — 7.01/8.01: VRDN-008 phase 1 data, pre-open release (EDGAR 2026-11-09T12:33:19Z); reaction session 2026-11-09, +5.97% (28.49 → 30.19), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-09.
-- Watchlist: ADD TGTX to the Strategy B new-entry index — earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T12:04:06Z); reaction session 2026-11-09, +5.93% (59.83 → 63.38), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-09.
-- Watchlist: ADD TNGX to the Strategy B new-entry index — earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T12:13:42Z); reaction session 2026-11-09, +5.77% (21.5 → 22.74), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-09.
-- Watchlist: ADD AMG to the Strategy B new-entry index — earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T12:06:46Z); reaction session 2026-11-09, +5.56% (362.96 → 383.15); qualifying_event_date 2026-11-09.
+- Watchlist: ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Q3 revenue beat, 2026 revenue guide raised to $13.0-13.3B; reported after close 11/10 after-close release on 2026-11-10; reaction session 2026-11-11, +24.71% (48.73 -> 60.77), with 8 prior >=5% sessions in the window; qualifying_event_date 2026-11-10.
+- Watchlist: ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Q3 miss and sharply cut FY adj. core profit outlook (Brazil); released after close Wed 11/11, exact time not established after-close release on 2026-11-11; reaction session 2026-11-12, -24.30% (12.14 -> 9.19); qualifying_event_date 2026-11-11.
+- Watchlist: ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Q3 record results, FY26 sales growth guide raised to 72-75% (also H1 restatement/material weakness); released after close Mon 11/9 after-close release on 2026-11-09; reaction session 2026-11-10, +19.31% (62.87 -> 75.01), with 6 prior >=5% sessions in the window; qualifying_event_date 2026-11-09.
+- Watchlist: ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Q3 results miss, Q4 revenue guide well below consensus, FY EBITDA guide cut; release after close 11/9, exact time not established after-close release on 2026-11-09; reaction session 2026-11-10, -16.61% (22.94 -> 19.13), with 6 prior >=5% sessions in the window; qualifying_event_date 2026-11-09.
+- Watchlist: ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Q3 beat but Q4 EPS guide below consensus, Stockport factory issue; released after close 11/9 (Business Wire) after-close release on 2026-11-09; reaction session 2026-11-10, -15.26% (145.98 -> 123.71), with 2 prior >=5% sessions in the window; qualifying_event_date 2026-11-09.
+- Watchlist: ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Q3 beat, FY raised, but Q4 billings growth guide ~8% vs 14%; released after close 11/9 after-close release on 2026-11-09; reaction session 2026-11-10, -13.51% (202.46 -> 175.11), with 3 prior >=5% sessions in the window; qualifying_event_date 2026-11-09.
+- Watchlist: ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Q3 results, FY26 sales/EPS outlook cut (GlobeNewswire 06:00 ET) pre-open release on 2026-11-12; reaction session 2026-11-12, -10.49% (42.79 -> 38.3), with 1 prior >=5% session in the window; qualifying_event_date 2026-11-12.
+- Watchlist: ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Q3 results well above guidance (rev $238M +32%, NI $87M); reported after close 11/12 after-close release on 2026-11-12; reaction session 2026-11-13, +30.63% (18.71 -> 24.44), with 5 prior >=5% sessions in the window; qualifying_event_date 2026-11-12.
+- Watchlist: ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Record Q3 net income $1.1B; results after close 11/12 (call 5pm ET) after-close release on 2026-11-12; reaction session 2026-11-13, +11.75% (11.83 -> 13.22); qualifying_event_date 2026-11-12.
+- Watchlist: ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): FQ2 FY27 results (bookings below guide), GTC VI preorders far above expectations, outlook reiterated; 8-K 11/9 after close after-close release on 2026-11-09; reaction session 2026-11-10, +8.31% (207.4 -> 224.64), with 1 prior >=5% session in the window; qualifying_event_date 2026-11-09.
+- Watchlist: ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Q3 results: DTC sales miss despite adj EPS beat; reported pre-market 11/10 (exact time not established) pre-open release on 2026-11-10; reaction session 2026-11-10, -7.54% (37.53 -> 34.7), with 2 prior >=5% sessions in the window; qualifying_event_date 2026-11-10.
+- Watchlist: ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): First post-WBD-merger Q3 results, Q4 EBITDA headwind ($200M) from WB film slate; released 11/9 ahead of 5pm ET call after-close release on 2026-11-09; reaction session 2026-11-10, -7.59% (8.7 -> 8.04), with 1 prior >=5% session in the window; qualifying_event_date 2026-11-09.
+- Watchlist: ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Board ended strategic review, rejected ~$22B ($52/sh) Blackstone/KKR/ECP take-private proposals (not a signed deal), BC Partners stake sale; announced pre-open 11/10, exact time not established pre-open release on 2026-11-10; reaction session 2026-11-10, -7.56% (45.88 -> 42.41); qualifying_event_date 2026-11-10.
+- Watchlist: ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Definitive all-stock agreement to acquire Trustmark (~$3.2B, 0.7463 HWC/TRMK); HWC is ACQUIRER; announced before open 11/12, exact time not established pre-open release on 2026-11-12; reaction session 2026-11-12, -10.20% (72.38 -> 65); qualifying_event_date 2026-11-12.
+- Watchlist: ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Q3 results: revenue beat but 2026 revenue to low end of guide, capex raised to ~$27B, 2027 capex $40-45B pre-open release on 2026-11-12; reaction session 2026-11-12, -16.84% (154.69 -> 128.64), with 10 prior >=5% sessions in the window; qualifying_event_date 2026-11-12.
+- Watchlist: ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): FQ4 beat but FY27 growth guide 10-15% and Q1 guide disappointed; released after close Wed 11/11 after-close release on 2026-11-11; reaction session 2026-11-12, -12.72% (66.96 -> 58.44), with 3 prior >=5% sessions in the window; qualifying_event_date 2026-11-11.
+- Watchlist: ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): FQ1 FY27 beat/raise but Q2 guide below Q1 and margin pressure; released after close Thu 11/12, PT cuts after-close release on 2026-11-12; reaction session 2026-11-13, -6.24% (102.01 -> 95.64), with 2 prior >=5% sessions in the window; qualifying_event_date 2026-11-12.
+- Watchlist: ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Bloomberg report Samsung in takeover talks for Modine (not a signed deal, no price); surfaced after Thursday close (+29% after-hours), exact time not established after-close release on 2026-11-12; reaction session 2026-11-13, +27.86% (106.1 -> 135.66), with 5 prior >=5% sessions in the window; qualifying_event_date 2026-11-12.
+- Watchlist: ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Q3 2026 results, record backlog, Q4 guide (GlobeNewswire) after-close release on 2026-11-09; reaction session 2026-11-10, +6.54% (58.86 -> 62.71), with 5 prior >=5% sessions in the window; qualifying_event_date 2026-11-09.
+- Watchlist: ADD (first-full-run gated re-check) to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Q3 results with 2027 growth warning (GLP-1 customer volume cut); released pre-market 11/3, call 8:30 ET pre-open release on 2026-11-03; reaction session 2026-11-03, -28.57% (19.74 -> 14.1); qualifying_event_date 2026-11-03.
+- Router review (refresh-only): 2026-11-14 Iranian navy claim that three tankers hit mines in the Strait of Hormuz (state media via Reuters), a dated event on the Gulf/Hormuz channel while shock_overlay reads latent; it may meet the Qualifying shock event criterion (trade-flow effect or an oil move > $5/bbl). Two-session window PENDING: S1 2026-11-16, S2 2026-11-17, prior Brent (BZUSD) close 95.84 on 2026-11-13; no closed-session move yet. Also noted: 11-15 IRGC drone claim on a US radar in Bahrain.
 
 ```yaml d1_actions
 - action: watchlist
-  ticker: FRVO
+  ticker: CRWV
+  strategy: B
+  qualifying_event_date: 2026-11-10
+  source_research_screen_id: c3638fec-f367-45f4-936a-b08b24291514
+  detail: "ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Q3 revenue beat, 2026 revenue guide raised to $13.0-13.3B; reported after close 11/10 after-close release on 2026-11-10; reaction session 2026-11-11, +24.71% (48.73 -> 60.77), with 8 prior >=5% sessions in the window; qualifying_event_date 2026-11-10."
+- action: watchlist
+  ticker: CTVA
+  strategy: B
+  qualifying_event_date: 2026-11-11
+  source_research_screen_id: c3638fec-f367-45f4-936a-b08b24291514
+  detail: "ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Q3 miss and sharply cut FY adj. core profit outlook (Brazil); released after close Wed 11/11, exact time not established after-close release on 2026-11-11; reaction session 2026-11-12, -24.30% (12.14 -> 9.19); qualifying_event_date 2026-11-11."
+- action: watchlist
+  ticker: AAON
   strategy: B
   qualifying_event_date: 2026-11-09
-  source_research_screen_id: 9f5c6b11-5ff1-4e65-b563-d0290627864d
-  detail: "ADD to the Strategy B new-entry index (B gated, index only, no thesis handoff): earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T13:37:24Z); reaction session 2026-11-09, +26.02% (9.03 -> 11.38), with 6 prior ≥5% sessions in the window; qualifying_event_date 2026-11-09."
+  source_research_screen_id: c3638fec-f367-45f4-936a-b08b24291514
+  detail: "ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Q3 record results, FY26 sales growth guide raised to 72-75% (also H1 restatement/material weakness); released after close Mon 11/9 after-close release on 2026-11-09; reaction session 2026-11-10, +19.31% (62.87 -> 75.01), with 6 prior >=5% sessions in the window; qualifying_event_date 2026-11-09."
 - action: watchlist
-  ticker: IONS
+  ticker: HIMS
   strategy: B
   qualifying_event_date: 2026-11-09
-  source_research_screen_id: 9f5c6b11-5ff1-4e65-b563-d0290627864d
-  detail: "ADD to the Strategy B new-entry index (B gated, index only, no thesis handoff): earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T12:00:30Z); reaction session 2026-11-09, -21.36% (39.42 -> 31.0), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-09."
+  source_research_screen_id: c3638fec-f367-45f4-936a-b08b24291514
+  detail: "ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Q3 results miss, Q4 revenue guide well below consensus, FY EBITDA guide cut; release after close 11/9, exact time not established after-close release on 2026-11-09; reaction session 2026-11-10, -16.61% (22.94 -> 19.13), with 6 prior >=5% sessions in the window; qualifying_event_date 2026-11-09."
 - action: watchlist
-  ticker: PRAX
+  ticker: NOVT
   strategy: B
   qualifying_event_date: 2026-11-09
-  source_research_screen_id: 9f5c6b11-5ff1-4e65-b563-d0290627864d
-  detail: "ADD to the Strategy B new-entry index (B gated, index only, no thesis handoff): earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T12:02:20Z); reaction session 2026-11-09, +19.94% (277.62 -> 332.97), with 4 prior ≥5% sessions in the window; qualifying_event_date 2026-11-09."
+  source_research_screen_id: c3638fec-f367-45f4-936a-b08b24291514
+  detail: "ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Q3 beat but Q4 EPS guide below consensus, Stockport factory issue; released after close 11/9 (Business Wire) after-close release on 2026-11-09; reaction session 2026-11-10, -15.26% (145.98 -> 123.71), with 2 prior >=5% sessions in the window; qualifying_event_date 2026-11-09."
 - action: watchlist
-  ticker: QXO
+  ticker: QLYS
   strategy: B
   qualifying_event_date: 2026-11-09
-  source_research_screen_id: 9f5c6b11-5ff1-4e65-b563-d0290627864d
-  detail: "ADD to the Strategy B new-entry index (B gated, index only, no thesis handoff): earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T11:02:42Z); reaction session 2026-11-09, +19.20% (11.56 -> 13.78), with 3 prior ≥5% sessions in the window; qualifying_event_date 2026-11-09."
+  source_research_screen_id: c3638fec-f367-45f4-936a-b08b24291514
+  detail: "ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Q3 beat, FY raised, but Q4 billings growth guide ~8% vs 14%; released after close 11/9 after-close release on 2026-11-09; reaction session 2026-11-10, -13.51% (202.46 -> 175.11), with 3 prior >=5% sessions in the window; qualifying_event_date 2026-11-09."
 - action: watchlist
-  ticker: IBRX
+  ticker: YETI
+  strategy: B
+  qualifying_event_date: 2026-11-12
+  source_research_screen_id: c3638fec-f367-45f4-936a-b08b24291514
+  detail: "ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Q3 results, FY26 sales/EPS outlook cut (GlobeNewswire 06:00 ET) pre-open release on 2026-11-12; reaction session 2026-11-12, -10.49% (42.79 -> 38.3), with 1 prior >=5% session in the window; qualifying_event_date 2026-11-12."
+- action: watchlist
+  ticker: LFTO
+  strategy: B
+  qualifying_event_date: 2026-11-12
+  source_research_screen_id: c3638fec-f367-45f4-936a-b08b24291514
+  detail: "ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Q3 results well above guidance (rev $238M +32%, NI $87M); reported after close 11/12 after-close release on 2026-11-12; reaction session 2026-11-13, +30.63% (18.71 -> 24.44), with 5 prior >=5% sessions in the window; qualifying_event_date 2026-11-12."
+- action: watchlist
+  ticker: NU
+  strategy: B
+  qualifying_event_date: 2026-11-12
+  source_research_screen_id: c3638fec-f367-45f4-936a-b08b24291514
+  detail: "ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Record Q3 net income $1.1B; results after close 11/12 (call 5pm ET) after-close release on 2026-11-12; reaction session 2026-11-13, +11.75% (11.83 -> 13.22); qualifying_event_date 2026-11-12."
+- action: watchlist
+  ticker: TTWO
   strategy: B
   qualifying_event_date: 2026-11-09
-  source_research_screen_id: 9f5c6b11-5ff1-4e65-b563-d0290627864d
-  detail: "ADD to the Strategy B new-entry index (B gated, index only, no thesis handoff): 8-K 2.02 earnings filed same morning, pre-open release (EDGAR 2026-11-09T12:39:35Z); reaction session 2026-11-09, -17.66% (8.635 -> 7.11), with 5 prior ≥5% sessions in the window; qualifying_event_date 2026-11-09."
+  source_research_screen_id: c3638fec-f367-45f4-936a-b08b24291514
+  detail: "ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): FQ2 FY27 results (bookings below guide), GTC VI preorders far above expectations, outlook reiterated; 8-K 11/9 after close after-close release on 2026-11-09; reaction session 2026-11-10, +8.31% (207.4 -> 224.64), with 1 prior >=5% session in the window; qualifying_event_date 2026-11-09."
 - action: watchlist
-  ticker: IMVT
+  ticker: ONON
+  strategy: B
+  qualifying_event_date: 2026-11-10
+  source_research_screen_id: c3638fec-f367-45f4-936a-b08b24291514
+  detail: "ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Q3 results: DTC sales miss despite adj EPS beat; reported pre-market 11/10 (exact time not established) pre-open release on 2026-11-10; reaction session 2026-11-10, -7.54% (37.53 -> 34.7), with 2 prior >=5% sessions in the window; qualifying_event_date 2026-11-10."
+- action: watchlist
+  ticker: SKYD
   strategy: B
   qualifying_event_date: 2026-11-09
-  source_research_screen_id: 9f5c6b11-5ff1-4e65-b563-d0290627864d
-  detail: "ADD to the Strategy B new-entry index (B gated, index only, no thesis handoff): earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T12:09:17Z); reaction session 2026-11-09, +15.13% (30.53 -> 35.15), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-09."
+  source_research_screen_id: c3638fec-f367-45f4-936a-b08b24291514
+  detail: "ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): First post-WBD-merger Q3 results, Q4 EBITDA headwind ($200M) from WB film slate; released 11/9 ahead of 5pm ET call after-close release on 2026-11-09; reaction session 2026-11-10, -7.59% (8.7 -> 8.04), with 1 prior >=5% session in the window; qualifying_event_date 2026-11-09."
 - action: watchlist
-  ticker: ASTS
+  ticker: GFL
   strategy: B
-  qualifying_event_date: 2026-11-06
-  source_research_screen_id: 9f5c6b11-5ff1-4e65-b563-d0290627864d
-  detail: "ADD to the Strategy B new-entry index (B gated, index only, no thesis handoff): Reg FD: plan to build own 20-ton rocket w/ Firefly Miranda engines, after-close release (EDGAR 2026-11-06T22:00:25Z); reaction session 2026-11-09, +14.10% (32.33 -> 36.89), with 4 prior ≥5% sessions in the window; qualifying_event_date 2026-11-06."
+  qualifying_event_date: 2026-11-10
+  source_research_screen_id: c3638fec-f367-45f4-936a-b08b24291514
+  detail: "ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Board ended strategic review, rejected ~$22B ($52/sh) Blackstone/KKR/ECP take-private proposals (not a signed deal), BC Partners stake sale; announced pre-open 11/10, exact time not established pre-open release on 2026-11-10; reaction session 2026-11-10, -7.56% (45.88 -> 42.41); qualifying_event_date 2026-11-10."
 - action: watchlist
-  ticker: VIA
+  ticker: HWC
   strategy: B
-  qualifying_event_date: 2026-11-09
-  source_research_screen_id: 9f5c6b11-5ff1-4e65-b563-d0290627864d
-  detail: "ADD to the Strategy B new-entry index (B gated, index only, no thesis handoff): earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T11:59:27Z); reaction session 2026-11-09, +12.80% (37.72 -> 42.55), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-09."
+  qualifying_event_date: 2026-11-12
+  source_research_screen_id: c3638fec-f367-45f4-936a-b08b24291514
+  detail: "ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Definitive all-stock agreement to acquire Trustmark (~$3.2B, 0.7463 HWC/TRMK); HWC is ACQUIRER; announced before open 11/12, exact time not established pre-open release on 2026-11-12; reaction session 2026-11-12, -10.20% (72.38 -> 65); qualifying_event_date 2026-11-12."
 - action: watchlist
-  ticker: VIR
+  ticker: NBIS
   strategy: B
-  qualifying_event_date: 2026-11-09
-  source_research_screen_id: 9f5c6b11-5ff1-4e65-b563-d0290627864d
-  detail: "ADD to the Strategy B new-entry index (B gated, index only, no thesis handoff): 7.01: Phase 3 ECLIPSE 1 topline call (elebsiran+tobevibart, hepatitis delta) 8:30 ET, pre-open release (EDGAR 2026-11-09T13:31:22Z); reaction session 2026-11-09, +11.71% (12.21 -> 13.64), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-09."
+  qualifying_event_date: 2026-11-12
+  source_research_screen_id: c3638fec-f367-45f4-936a-b08b24291514
+  detail: "ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Q3 results: revenue beat but 2026 revenue to low end of guide, capex raised to ~$27B, 2027 capex $40-45B pre-open release on 2026-11-12; reaction session 2026-11-12, -16.84% (154.69 -> 128.64), with 10 prior >=5% sessions in the window; qualifying_event_date 2026-11-12."
 - action: watchlist
-  ticker: AGLT
+  ticker: DGII
   strategy: B
-  qualifying_event_date: 2026-11-06
-  source_research_screen_id: 9f5c6b11-5ff1-4e65-b563-d0290627864d
-  detail: "ADD to the Strategy B new-entry index (B gated, index only, no thesis handoff): de-SPAC business combination closing (Churchill Capital XI -> Agility Robotics, after-close release (EDGAR 2026-11-06T21:18:25Z); reaction session 2026-11-09, -11.31% (9.9 -> 8.78), with 5 prior ≥5% sessions in the window; qualifying_event_date 2026-11-06."
+  qualifying_event_date: 2026-11-11
+  source_research_screen_id: c3638fec-f367-45f4-936a-b08b24291514
+  detail: "ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): FQ4 beat but FY27 growth guide 10-15% and Q1 guide disappointed; released after close Wed 11/11 after-close release on 2026-11-11; reaction session 2026-11-12, -12.72% (66.96 -> 58.44), with 3 prior >=5% sessions in the window; qualifying_event_date 2026-11-11."
 - action: watchlist
-  ticker: FERG
+  ticker: CSCO
   strategy: B
-  qualifying_event_date: 2026-11-09
-  source_research_screen_id: 9f5c6b11-5ff1-4e65-b563-d0290627864d
-  detail: "ADD to the Strategy B new-entry index (B gated, index only, no thesis handoff): earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T11:50:12Z); reaction session 2026-11-09, +11.22% (233.7 -> 259.93), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-09."
+  qualifying_event_date: 2026-11-12
+  source_research_screen_id: c3638fec-f367-45f4-936a-b08b24291514
+  detail: "ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): FQ1 FY27 beat/raise but Q2 guide below Q1 and margin pressure; released after close Thu 11/12, PT cuts after-close release on 2026-11-12; reaction session 2026-11-13, -6.24% (102.01 -> 95.64), with 2 prior >=5% sessions in the window; qualifying_event_date 2026-11-12."
 - action: watchlist
-  ticker: CNH
+  ticker: MOD
   strategy: B
-  qualifying_event_date: 2026-11-09
-  source_research_screen_id: 9f5c6b11-5ff1-4e65-b563-d0290627864d
-  detail: "ADD to the Strategy B new-entry index (B gated, index only, no thesis handoff): Q3 2026 earnings 8-K (2.02) + 1.01 sale of 70% of Construction Equipment business to Kobelco (acquirer-side counterparty news, pre-open release (EDGAR 2026-11-09T13:02:04Z); reaction session 2026-11-09, +10.90% (11.56 -> 12.82); qualifying_event_date 2026-11-09."
+  qualifying_event_date: 2026-11-12
+  source_research_screen_id: c3638fec-f367-45f4-936a-b08b24291514
+  detail: "ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Bloomberg report Samsung in takeover talks for Modine (not a signed deal, no price); surfaced after Thursday close (+29% after-hours), exact time not established after-close release on 2026-11-12; reaction session 2026-11-13, +27.86% (106.1 -> 135.66), with 5 prior >=5% sessions in the window; qualifying_event_date 2026-11-12."
 - action: watchlist
-  ticker: CEG
-  strategy: B
-  qualifying_event_date: 2026-11-09
-  source_research_screen_id: 9f5c6b11-5ff1-4e65-b563-d0290627864d
-  detail: "ADD to the Strategy B new-entry index (B gated, index only, no thesis handoff): earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T11:53:11Z); reaction session 2026-11-09, +10.46% (249.95 -> 276.09), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-09."
-- action: watchlist
-  ticker: NRG
+  ticker: RKLB
   strategy: B
   qualifying_event_date: 2026-11-09
-  source_research_screen_id: 9f5c6b11-5ff1-4e65-b563-d0290627864d
-  detail: "ADD to the Strategy B new-entry index (B gated, index only, no thesis handoff): 7.01: agreed to sell six gas-fired plants to LS Power affiliate for $4B cash (NRG is seller), pre-open release (EDGAR 2026-11-09T11:45:04Z); reaction session 2026-11-09, +10.32% (88.29 -> 97.4), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-09."
+  source_research_screen_id: c3638fec-f367-45f4-936a-b08b24291514
+  detail: "ADD to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Q3 2026 results, record backlog, Q4 guide (GlobeNewswire) after-close release on 2026-11-09; reaction session 2026-11-10, +6.54% (58.86 -> 62.71), with 5 prior >=5% sessions in the window; qualifying_event_date 2026-11-09."
 - action: watchlist
-  ticker: MNDY
+  ticker: STVN
   strategy: B
-  qualifying_event_date: 2026-11-09
-  source_research_screen_id: 9f5c6b11-5ff1-4e65-b563-d0290627864d
-  detail: "ADD to the Strategy B new-entry index (B gated, index only, no thesis handoff): 6-K: Q3 2026 results press release, pre-open release (EDGAR 2026-11-09T12:00:31Z); reaction session 2026-11-09, -9.10% (87.93 -> 79.93), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-09."
-- action: watchlist
-  ticker: KGS
-  strategy: B
-  qualifying_event_date: 2026-11-09
-  source_research_screen_id: 9f5c6b11-5ff1-4e65-b563-d0290627864d
-  detail: "ADD to the Strategy B new-entry index (B gated, index only, no thesis handoff): earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T11:32:12Z); reaction session 2026-11-09, +7.20% (41.67 -> 44.67), with 4 prior ≥5% sessions in the window; qualifying_event_date 2026-11-09."
-- action: watchlist
-  ticker: WTTR
-  strategy: B
-  qualifying_event_date: 2026-11-09
-  source_research_screen_id: 9f5c6b11-5ff1-4e65-b563-d0290627864d
-  detail: "ADD to the Strategy B new-entry index (B gated, index only, no thesis handoff): earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T12:05:36Z); reaction session 2026-11-09, -6.86% (16.18 -> 15.07), with 3 prior ≥5% sessions in the window; qualifying_event_date 2026-11-09."
-- action: watchlist
-  ticker: GCMG
-  strategy: B
-  qualifying_event_date: 2026-11-09
-  source_research_screen_id: 9f5c6b11-5ff1-4e65-b563-d0290627864d
-  detail: "ADD to the Strategy B new-entry index (B gated, index only, no thesis handoff): earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T12:01:57Z); reaction session 2026-11-09, +6.24% (12.66 -> 13.45); qualifying_event_date 2026-11-09."
-- action: watchlist
-  ticker: VRDN
-  strategy: B
-  qualifying_event_date: 2026-11-09
-  source_research_screen_id: 9f5c6b11-5ff1-4e65-b563-d0290627864d
-  detail: "ADD to the Strategy B new-entry index (B gated, index only, no thesis handoff): 7.01/8.01: VRDN-008 phase 1 data, pre-open release (EDGAR 2026-11-09T12:33:19Z); reaction session 2026-11-09, +5.97% (28.49 -> 30.19), with 1 prior ≥5% session in the window; qualifying_event_date 2026-11-09."
-- action: watchlist
-  ticker: TGTX
-  strategy: B
-  qualifying_event_date: 2026-11-09
-  source_research_screen_id: 9f5c6b11-5ff1-4e65-b563-d0290627864d
-  detail: "ADD to the Strategy B new-entry index (B gated, index only, no thesis handoff): earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T12:04:06Z); reaction session 2026-11-09, +5.93% (59.83 -> 63.38), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-09."
-- action: watchlist
-  ticker: TNGX
-  strategy: B
-  qualifying_event_date: 2026-11-09
-  source_research_screen_id: 9f5c6b11-5ff1-4e65-b563-d0290627864d
-  detail: "ADD to the Strategy B new-entry index (B gated, index only, no thesis handoff): earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T12:13:42Z); reaction session 2026-11-09, +5.77% (21.5 -> 22.74), with 2 prior ≥5% sessions in the window; qualifying_event_date 2026-11-09."
-- action: watchlist
-  ticker: AMG
-  strategy: B
-  qualifying_event_date: 2026-11-09
-  source_research_screen_id: 9f5c6b11-5ff1-4e65-b563-d0290627864d
-  detail: "ADD to the Strategy B new-entry index (B gated, index only, no thesis handoff): earnings release (8-K 2.02), pre-open release (EDGAR 2026-11-09T12:06:46Z); reaction session 2026-11-09, +5.56% (362.96 -> 383.15); qualifying_event_date 2026-11-09."
+  qualifying_event_date: 2026-11-03
+  source_research_screen_id: c3638fec-f367-45f4-936a-b08b24291514
+  detail: "ADD (first-full-run gated re-check) to the Strategy B new-entry index (B ACTIVATE; W2 ranks, no thesis handoff from D1): Q3 results with 2027 growth warning (GLP-1 customer volume cut); released pre-market 11/3, call 8:30 ET pre-open release on 2026-11-03; reaction session 2026-11-03, -28.57% (19.74 -> 14.1); qualifying_event_date 2026-11-03."
+- action: router_review
+  ticker: n/a
+  strategy: n/a
+  qualifying_event_date: n/a
+  source_research_screen_id: n/a
+  detail: "Router review (refresh-only): 2026-11-14 Iranian navy claim that three tankers hit mines in the Strait of Hormuz (state media via Reuters), a dated event on the Gulf/Hormuz channel while shock_overlay reads latent; it may meet the Qualifying shock event criterion (trade-flow effect or an oil move > $5/bbl). Two-session window PENDING: S1 2026-11-16, S2 2026-11-17, prior Brent (BZUSD) close 95.84 on 2026-11-13; no closed-session move yet. Also noted: 11-15 IRGC drone claim on a US radar in Bahrain."
 ```
+
