@@ -17,8 +17,6 @@
         "Edit",
         "Glob",
         "Grep",
-        "WebFetch",
-        "WebSearch",
         "RemoteTrigger"
       ],
       "autofix_on_pr_create": true,
@@ -74,6 +72,10 @@
             "url": "https://github.com/JackOfSpade/Stock-Trading"
           }
         }
+      ],
+      "disallowed_tools": [
+        "WebFetch",
+        "WebSearch"
       ]
     },
     "personal": {
@@ -83,9 +85,7 @@
         "Write",
         "Edit",
         "Glob",
-        "Grep",
-        "WebFetch",
-        "WebSearch"
+        "Grep"
       ],
       "autofix_on_pr_create": true,
       "environment_id": "env_01DXtTeywLPpNoXku8rGNEie",
@@ -120,6 +120,10 @@
             "url": "https://github.com/JackOfSpade/Image-and-Video-Generation-Pipeline"
           }
         }
+      ],
+      "disallowed_tools": [
+        "WebFetch",
+        "WebSearch"
       ]
     }
   },

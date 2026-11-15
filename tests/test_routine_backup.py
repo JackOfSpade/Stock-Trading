@@ -184,6 +184,7 @@ def test_normalize_trigger_shape_and_cron_stripped():
         # lines below (sorted by name). _FLEET_TOOLS itself is NOT alphabetical, so this pins that the
         # sort actually happened rather than merely passing the input through unchanged.
         "allowed_tools": sorted(rb._FLEET_TOOLS),
+        "disallowed_tools": [],
         "autofix_on_pr_create": True,
         "notifications": {"channel": {"email": False, "push": False, "slack": False}},
         "sources": [{"git_repository": {"url": rb.FLEET_REPO_URL}}],
@@ -2142,3 +2143,17 @@ def test_check_fails_when_a_fleet_routine_lacks_the_search_guard(tmp_path, monke
     _wire(tmp_path, monkeypatch, backup_doc=doc)
     assert rb.check() == 1
     assert "GUARD_ADDENDUM" in capsys.readouterr().out
+
+
+def test_fleet_profile_hard_denies_builtin_web_tools_and_create_body_carries_it():
+    """Built-in WebSearch/WebFetch are denied via session_context.disallowed_tools (leaving them off
+    allowed_tools does NOT block them -- measured 2026-11-14), so a restored routine must carry it."""
+    for name in ("fleet", "personal"):
+        prof = rb.DEFAULT_PROFILES[name]
+        assert sorted(prof["disallowed_tools"]) == ["WebFetch", "WebSearch"]
+        assert "WebSearch" not in prof["allowed_tools"] and "WebFetch" not in prof["allowed_tools"]
+    body = rb._assemble_create_body(
+        name="x", cron_expression="0 0 * * *", enabled=True, instruction="i", environment_id="e",
+        model="m", allowed_tools=["Bash"], autofix_on_pr_create=True, sources=[], mcp_connections=[],
+        disallowed_tools=["WebFetch", "WebSearch"])
+    assert body["job_config"]["ccr"]["session_context"]["disallowed_tools"] == ["WebFetch", "WebSearch"]

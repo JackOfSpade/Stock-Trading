@@ -173,8 +173,12 @@ def _conns(*names):
 
 
 # ---- the 2 base profiles --------------------------------------------------------------------------
-_FLEET_TOOLS = ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebFetch", "WebSearch", "RemoteTrigger"]
-_PERSONAL_TOOLS = ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebFetch", "WebSearch"]
+_FLEET_TOOLS = ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "RemoteTrigger"]
+_PERSONAL_TOOLS = ["Bash", "Read", "Write", "Edit", "Glob", "Grep"]
+# Anthropic's built-in web tools are HARD-DENIED on every routine (2026-11-14): leaving them off
+# allowed_tools does NOT block them (measured -- WebFetch still returned a page), only
+# session_context.disallowed_tools does. Parallel Search (connector) is the only web path.
+_DENIED_WEB_TOOLS = ["WebFetch", "WebSearch"]
 
 # Per-routine claude.ai push/email/slack notification toggles. The entire fleet (incl. SL1-SL5) runs
 # silent -- ops.alerts -> alert_emailer.gs is the real alerting path. No routine has used push
@@ -188,6 +192,7 @@ DEFAULT_PROFILES = {
         "notifications": copy.deepcopy(NOTIFY_SILENT),
         "model": "claude-opus-5-5",
         "allowed_tools": list(_FLEET_TOOLS),
+        "disallowed_tools": list(_DENIED_WEB_TOOLS),
         "sources": [{"git_repository": {"url": FLEET_REPO_URL}}],
         "mcp_connections": _conns(*CONNECTORS_BY_NAME),
     },
@@ -197,6 +202,7 @@ DEFAULT_PROFILES = {
         "model": "claude-opus-5-5",
         "notifications": copy.deepcopy(NOTIFY_SILENT),
         "allowed_tools": list(_PERSONAL_TOOLS),
+        "disallowed_tools": list(_DENIED_WEB_TOOLS),
         "sources": [{"git_repository": {
             "url": "https://github.com/JackOfSpade/Image-and-Video-Generation-Pipeline"}}],
         "mcp_connections": _conns("Google-Calendar", "Hugging-Face", "Parallel-Search-Paid"),
@@ -381,6 +387,7 @@ def normalize_trigger(raw):
         # between two ingests of the identical live routine, pure diff noise the mcp_connections
         # precedent was specifically introduced to avoid (2026-08-08).
         "allowed_tools": sorted(sc.get("allowed_tools") or []),
+        "disallowed_tools": sorted(sc.get("disallowed_tools") or []),
         "autofix_on_pr_create": sc.get("autofix_on_pr_create"),
         "notifications": _normalize_notifications(raw.get("notifications")),
         "sources": sc.get("sources") or [],
@@ -638,6 +645,7 @@ def derive_profile(normalized, profiles):
             + (normalized["autofix_on_pr_create"] == p.get("autofix_on_pr_create"))
             + (normalized.get("notifications") == p.get("notifications"))
             + _tools_eq(normalized["allowed_tools"], p.get("allowed_tools"))
+            + _tools_eq(normalized.get("disallowed_tools") or [], p.get("disallowed_tools") or [])
             + _sources_eq(normalized["sources"], p.get("sources"))
             + (_conn_key_set(normalized["mcp_connections"]) == _conn_key_set(p.get("mcp_connections")))
         )
@@ -655,6 +663,8 @@ def derive_profile(normalized, profiles):
         overrides["notifications"] = normalized.get("notifications")
     if not _tools_eq(normalized["allowed_tools"], p.get("allowed_tools")):
         overrides["allowed_tools"] = normalized["allowed_tools"]
+    if not _tools_eq(normalized.get("disallowed_tools") or [], p.get("disallowed_tools") or []):
+        overrides["disallowed_tools"] = normalized.get("disallowed_tools") or []
     if not _sources_eq(normalized["sources"], p.get("sources")):
         overrides["sources"] = normalized["sources"]
     if _conn_key_set(normalized["mcp_connections"]) != _conn_key_set(p.get("mcp_connections")):
@@ -907,7 +917,7 @@ def _restore_conn(c):
 
 def _assemble_create_body(*, name, cron_expression=None, run_once_at=None, enabled, instruction,
                            environment_id, model, allowed_tools, autofix_on_pr_create, sources,
-                           mcp_connections, notifications=None):
+                           mcp_connections, notifications=None, disallowed_tools=None):
     """B1 (2026-08-01 audit): a RemoteTrigger create body carries EXACTLY ONE of `cron_expression`
     (recurring) or `run_once_at` (RFC3339 UTC one-shot) -- never both, never neither. Raises ValueError
     rather than silently emitting an invalid/ambiguous body; callers (build_create_body,
@@ -946,6 +956,8 @@ def _assemble_create_body(*, name, cron_expression=None, run_once_at=None, enabl
         "mcp_connections": [_restore_conn(c) for c in (mcp_connections or [])],
         "notifications": notifications if notifications is not None else copy.deepcopy(NOTIFY_SILENT),
     }
+    if disallowed_tools:
+        body["job_config"]["ccr"]["session_context"]["disallowed_tools"] = list(disallowed_tools)
     if cron_expression:
         body["cron_expression"] = cron_expression
     else:
@@ -974,6 +986,7 @@ def _resolve_fields(entry, profiles):
         "environment_id": ov.get("environment_id", p.get("environment_id")),
         "model": ov.get("model", p.get("model")),
         "allowed_tools": ov.get("allowed_tools", p.get("allowed_tools")),
+        "disallowed_tools": ov.get("disallowed_tools", p.get("disallowed_tools")),
         "autofix_on_pr_create": ov.get("autofix_on_pr_create", p.get("autofix_on_pr_create")),
         "notifications": ov.get("notifications", p.get("notifications")),
         "sources": ov.get("sources", p.get("sources")),
@@ -1005,7 +1018,8 @@ def build_unmatched_create_body(normalized):
         allowed_tools=normalized["allowed_tools"],
         autofix_on_pr_create=normalized["autofix_on_pr_create"], sources=normalized["sources"],
         mcp_connections=normalized["mcp_connections"],
-        notifications=normalized.get("notifications"))
+        notifications=normalized.get("notifications"),
+        disallowed_tools=normalized.get("disallowed_tools"))
 
 
 def _parse_rfc3339_utc(ts):
