@@ -15,6 +15,11 @@
   },
   "permissions": {
     "allow": [
+  "Bash(curl *https://api.nasdaq.com/*)",
+  "Bash(curl *https://www.nasdaq.com/feed/*)",
+  "Bash(curl *https://news.google.com/rss/*)",
+  "Bash(curl *https://data.sec.gov/*)",
+  "Bash(curl *https://fred.stlouisfed.org/*)",
   "mcp__Gmail__list_labels",
   "mcp__Google_Calendar__list_events","mcp__Google_Calendar__create_event",
   "mcp__Google_Calendar__delete_event","mcp__Google_Calendar__update_event",
