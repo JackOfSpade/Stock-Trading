@@ -488,6 +488,9 @@ sources:
       - name: confirm_event_snapshot
         description: >
           Owner order-confirmation attestations. state.confirm_event_latest / staged_without_confirm read it. Defined in bigquery/30_confirm_attestation.sql.
+      - name: connector_retirements
+        description: >
+          Connectors removed from ops/connector_tools.yaml on purpose; state.connector_tool_inventory_stale skips them. Defined in bigquery/277_connector_retirements.sql.
       - name: connector_tool_inventory
         description: >
           OPS1's live MCP connector tool inventory captures. state.connector_tool_* views read it. Defined in bigquery/151_connector_tool_inventory.sql.

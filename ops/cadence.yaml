@@ -389,7 +389,7 @@ routines:
     catchup_safe: true      # a late probe still helps; a missed one is covered next morning
     depends_on: []           # DELIBERATELY independent, same rationale as OPS0 -- a probe that exists
                               # to catch an auth failure early must never itself be blocked by one
-    writes: [ops.alerts, ops.connector_tool_inventory, ops.web_calls, ops/connector_tools.yaml]
+    writes: [ops.alerts, ops.connector_tool_inventory, ops.connector_retirements, ops.web_calls, ops/connector_tools.yaml]
                               # ops.web_calls added 2026-08-20: OPS1's FMP ^VIX probe is a metered call
                               # (1 of FMP's 250 free requests/day, account-wide), so the shared
                               # "Metered external calls" part (d) obligation applies EVERY run. OPS1 is

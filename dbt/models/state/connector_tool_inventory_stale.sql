@@ -1,13 +1,26 @@
--- Parallel-run dbt port of bigquery/151_connector_tool_inventory.sql:state.connector_tool_inventory_stale — canonical source is that file until
--- owner cutover. Added 2026-09-01 (dbt view-coverage burn-down): this view had NO dbt presence,
--- so scripts/check_dbt_view_coverage.py reported it uncovered and it carried no port at all.
--- Generated MECHANICALLY by scripts/gen_dbt_port.py from the canonical body — the only edit is
--- ref()/source() substitution for fully-qualified names — and proved token-identical to that body
--- by scripts/verify_dbt_port.py. Do not hand-edit: re-generate, then re-verify.
-WITH recent AS (
-  SELECT DISTINCT connector
+-- Parallel-run dbt port of bigquery/277_connector_retirements.sql:state.connector_tool_inventory_stale — canonical source is that file until
+-- owner cutover. Generated MECHANICALLY by scripts/gen_dbt_port.py from that canonical body — the
+-- only edit is ref()/source() substitution for fully-qualified names — and proved token-identical
+-- to it by scripts/verify_dbt_port.py. Do not hand-edit the BODY: re-generate, then re-verify.
+-- Regenerating REPLACES this header, so any hand-written provenance above the body must be put
+-- back by the person who regenerates it.
+WITH last_seen AS (
+  SELECT connector, MAX(run_date) AS last_seen_run_date
   FROM {{ source('ops', 'connector_tool_inventory') }}
   WHERE run_date >= DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 30 DAY)
+  GROUP BY connector
+),
+retired AS (
+  SELECT connector, MAX(retired_date) AS retired_date
+  FROM {{ source('ops', 'connector_retirements') }}
+  GROUP BY connector
+),
+recent AS (
+  SELECT s.connector
+  FROM last_seen s
+  LEFT JOIN retired r USING (connector)
+  WHERE r.connector IS NULL
+     OR s.last_seen_run_date > r.retired_date
 ),
 last_good AS (
   SELECT connector, MAX(run_date) AS last_good_run_date
@@ -29,12 +42,6 @@ FROM per_connector
 WHERE last_good_run_date IS NULL
    OR days_stale > 4
 UNION ALL
--- FROM UNNEST([1]) is load-bearing, NOT redundant: GoogleSQL rejects a SELECT expression-list that
--- carries a WHERE with no FROM ("Query without FROM clause cannot have a WHERE clause"), so the
--- literal-only synthetic row needs a one-row source to hang the WHERE off. Do NOT "simplify" this
--- away — the file was rejected at apply time on 2026-08-08 for exactly that shape, and
--- scripts/check_sql_dryrun.py's no-FROM-WHERE lint did not catch it because that lint scanned only
--- INSERT ... SELECT statements, not a CREATE VIEW union arm (both fixed the same day).
 SELECT
   'ALL' AS connector, CAST(NULL AS DATE) AS last_good_run_date,
   CAST(NULL AS INT64) AS days_stale, CURRENT_TIMESTAMP() AS checked_at
