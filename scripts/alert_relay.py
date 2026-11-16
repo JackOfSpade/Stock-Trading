@@ -298,6 +298,45 @@ def post(text, silent=False):
         return r.status
 
 
+# ntfy delivers a body over 4,096 BYTES as an attachment FILE instead of notification text
+# (docs.ntfy.sh/publish "Limitations", read 2026-11-16) -- and one push used to carry every alert in
+# the window with its full message, so a burst of long alerts, exactly when the push matters most,
+# would have arrived as a file to open. Bodies are therefore bounded: each alert line is cut to
+# PUSH_LINE_BYTES (the email, which is the complete record, has the rest) and lines are packed into as
+# many pushes as needed, each under PUSH_BODY_BYTES. PUSH_MAX_BODIES keeps a pathological burst from
+# spending ntfy.sh's 250-message daily allowance; whatever does not fit is counted, not dropped silently.
+PUSH_BODY_BYTES = 3800
+PUSH_LINE_BYTES = 700
+PUSH_MAX_BODIES = 6
+PUSH_CUT_MARK = " … [cut — full text in the alert email]"
+
+
+def _cut_utf8(text, limit):
+    """`text` cut to at most `limit` UTF-8 bytes on a character boundary, marked when anything was cut."""
+    raw = text.encode("utf-8")
+    if len(raw) <= limit:
+        return text
+    keep = limit - len(PUSH_CUT_MARK.encode("utf-8"))
+    return raw[:keep].decode("utf-8", errors="ignore") + PUSH_CUT_MARK
+
+
+def push_bodies(lines):
+    """Pack `lines` (a header line followed by one line per alert) into push bodies that each stay
+    under PUSH_BODY_BYTES. The header leads the first body; later bodies are marked as continuations."""
+    header, alerts = lines[0], [_cut_utf8(line, PUSH_LINE_BYTES) for line in lines[1:]]
+    bodies, current = [], [header]
+    for position, line in enumerate(alerts):
+        if len("\n".join([*current, line]).encode("utf-8")) > PUSH_BODY_BYTES:
+            if len(bodies) + 1 == PUSH_MAX_BODIES:
+                current.append(f"… and {len(alerts) - position} more alert(s) — see the alert email.")
+                break
+            bodies.append("\n".join(current))
+            current = [f"⚠ Stock-Trading — continued ({len(bodies) + 1}):"]
+        current.append(line)
+    bodies.append("\n".join(current))
+    return bodies
+
+
 def relay_alerts():
     tz = get_user_tz()
     # The NOT IN filter is RULE 2's push-side suppression (see NO_PUSH_CATEGORIES and, since
@@ -356,8 +395,10 @@ def relay_alerts():
     lines = [f"⚠ Stock-Trading — {len(rows)} new alert(s){f' ({crit} critical)' if crit else ''}:"]
     for r in rows:
         lines.append(f"[{r['severity'].upper()}] {r['source']}/{r['category']}: {r['message']} ({fmt_ts(r['alert_ts'], tz)})")
-    post("\n".join(lines))
-    print(f"alerts: posted {len(rows)}")
+    bodies = push_bodies(lines)
+    for body in bodies:
+        post(body)
+    print(f"alerts: posted {len(rows)} in {len(bodies)} push(es)")
 
 
 def relay_heartbeat():

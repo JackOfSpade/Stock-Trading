@@ -669,13 +669,13 @@ def test_main_rejects_unknown_flags_before_reading_any_file(monkeypatch, capsys,
 
 def test_gate_refuses_a_javascript_udf_tampered_behind_a_sql_comment_marker():
     """`--x; evil();` is live JavaScript but a SQL comment to canonicalize()'s tokenizer, so a tampered
-    analytics.fn_ramp_path body used to canonicalize equal to bigquery/259's and pass the gate."""
-    path = os.path.join(ROOT, "bigquery", "259_live_ramp.sql")
+    analytics.fn_ramp_path body used to canonicalize equal to the canonical one and pass the gate."""
+    final = asf.find_final_definitions()
+    path = os.path.join(ROOT, "bigquery", final[("analytics", "fn_ramp_path")][2])
     with open(path, encoding="utf-8") as fh:
         text = fh.read()
     m = next(m for m in asf.CREATE_STMT.finditer(text) if m.group(4) == "fn_ramp_path")
     stmt = text[m.start():asf.statement_end(text, m.start(), "FUNCTION")]
-    final = asf.find_final_definitions()
     assert asf.check_canonical_provenance("x.sql", stmt, final)[0] is True
 
     head, sep, rest = stmt.partition('"""\n')

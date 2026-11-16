@@ -78,7 +78,7 @@ full history is reconstructible.
 |---|---|---|
 | `mu_per_trade` | declared expected net return per closed campaign (fraction of cost basis) | required, > 0 |
 | `sigma_per_trade` | declared per-campaign return standard deviation | required, > 0 |
-| `tail_loss_5pct` | declared 5th-percentile campaign return; a trade at or below it is a **surprise** | `mu − 1.645·sigma` |
+| `tail_loss_5pct` | declared 5th-percentile campaign return; a trade at or below it is a **surprise**. Must be < 0 whether declared or derived (2026-11-16, `bigquery/278`): with `mu > 1.645·sigma` the default is positive and would score a win as a surprise, so such a declaration yields no path until a negative tail is declared | `mu − 1.645·sigma` |
 | `holding_horizon_days` | declared typical holding period | required |
 | `opening_score` | section 5 rubric output | required, in [0, 0.4] |
 | `calibration_trades` | in-line trades from 0 to 1 at full weight | 10 |

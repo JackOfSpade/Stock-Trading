@@ -107,6 +107,8 @@ class ExplicitBehaviour(unittest.TestCase):
             {"mu": 0.02, "sigma": 0.06, "opening_score": 0.2, "calibration_trades": 0},
             {"mu": 0.02, "sigma": 0.06, "opening_score": 0.2, "tail_loss_5pct": 0.0},
             {"mu": 0.02, "sigma": 0.06, "opening_score": 0.2, "tail_loss_5pct": 0.05},
+            # derived default mu - 1.645*sigma = +0.0053: a +0.4% win used to be scored as a surprise
+            {"mu": 0.03, "sigma": 0.015, "opening_score": 0.4},
         ]
         for kw in bad:
             with self.subTest(kw=kw):

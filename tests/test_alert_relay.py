@@ -554,3 +554,23 @@ def test_no_push_categories_alone_going_empty_does_not_empty_combined_set(monkey
     sql = seen["sql"]
     assert "category NOT IN (" in sql, "combined set must still be non-empty and filtered"
     assert "'routine_run_warning'" in sql
+
+
+# ---- push bodies stay under ntfy's 4,096-byte message limit (2026-11-16) ------------------------
+def test_push_bodies_split_a_burst_and_cut_a_long_line_on_a_character_boundary():
+    """Over 4,096 bytes ntfy delivers the body as an attachment FILE; one push used to carry every
+    alert in the window in full."""
+    header = "⚠ Stock-Trading — 30 new alert(s):"
+    lines = [header] + [f"[WARNING] D3/cat_{i}: " + "—é" * 400 for i in range(30)]
+    bodies = ar.push_bodies(lines)
+    assert 1 < len(bodies) <= ar.PUSH_MAX_BODIES
+    assert all(len(b.encode("utf-8")) <= ar.PUSH_BODY_BYTES for b in bodies)
+    assert bodies[0].startswith(header) and bodies[1].startswith("⚠ Stock-Trading — continued (2):")
+    assert all(len(line.encode("utf-8")) <= ar.PUSH_LINE_BYTES for b in bodies for line in b.split("\n"))
+    shown = sum(b.count("D3/cat_") for b in bodies)
+    assert shown == 30 or f"and {30 - shown} more alert(s)" in bodies[-1]
+
+
+def test_push_bodies_leave_an_ordinary_window_as_one_unchanged_push():
+    lines = ["⚠ Stock-Trading — 2 new alert(s):", "[CRITICAL] a/b: short", "[WARNING] c/d: also short"]
+    assert ar.push_bodies(lines) == ["\n".join(lines)]

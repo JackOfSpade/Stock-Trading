@@ -69,6 +69,11 @@ ALTER TABLE `stock-trading-498512.state.strategy_candidates`
 --     else raw = (r/mu)/calibration_trades, doubled by loss_asymmetry when r < 0, inc = w*clip(raw, -0.5, +0.15),
 --          score = clip(score + inc, 0, 1)
 --     evidence_kill = cum_llr <= ln(beta/(1-alpha)); evidence_confirmed = cum_llr >= ln((1-beta)/alpha)
+--
+-- SUPERSEDED LIVE by bigquery/278_ramp_tail_guard.sql (2026-11-16) — current single source of truth for
+-- this object (278 adds one guard: an effective tail_loss_5pct that is not < 0 returns no path rows).
+-- Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE FUNCTION `stock-trading-498512.analytics.fn_ramp_path`(
   trades ARRAY<STRUCT<key STRING, entry_date STRING, exit_date STRING, r FLOAT64>>,
   mu FLOAT64, sigma FLOAT64, opening_score FLOAT64, tail_loss_5pct FLOAT64,

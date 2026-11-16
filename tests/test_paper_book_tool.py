@@ -121,6 +121,12 @@ class Universe(unittest.TestCase):
         for t, title in drop:
             self.assertFalse(pb.names_company(t, title), (t, title))
 
+    def test_exchange_prefixed_ticker_cue_accepts_a_space_after_the_colon(self):
+        """The wire-release form `(NYSE: GE)` was not a cue; only `(NYSE:GE)` was (memo amendment 2026-11-16)."""
+        for title in ("GE (NYSE: GE) beats estimates", "GE (NYSE:GE) beats estimates", "GE (GE) beats estimates"):
+            self.assertTrue(pb.names_company("GE", title), title)
+        self.assertFalse(pb.names_company("GE", "GE (NYSE:  GEV) spins off"))
+
     def test_urls_are_encoded_and_cover_every_ticker(self):
         rows = pb.fetch_urls("2026-10-21")
         self.assertEqual(sum(1 for f, _, _ in rows if f.startswith("nasdaq/")), 41)
@@ -547,3 +553,10 @@ class StoryKey(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class UrlsOnly(unittest.TestCase):
+    def test_unknown_only_ticker_is_refused_instead_of_printing_nothing(self):
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            rc = pb.main(["urls", "--today", "2026-11-16", "--only", "ZZZZ"])
+        self.assertNotEqual(rc, 0)

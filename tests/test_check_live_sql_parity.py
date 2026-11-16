@@ -996,7 +996,7 @@ def test_external_body_content_refuses_an_escaped_non_raw_literal():
 
 def test_real_repo_fn_ramp_path_is_an_external_body():
     obj_type, _p, source, body = clsp.find_final_definitions()[("analytics", "fn_ramp_path")]
-    assert (obj_type, source) == ("FUNCTION", "259_live_ramp.sql")
+    assert (obj_type, source) == ("FUNCTION", "278_ramp_tail_guard.sql")
     assert isinstance(body, clsp.ExternalBody)
     assert body.startswith("var out = [];") and body.endswith("return out;")
 

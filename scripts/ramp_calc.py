@@ -1,6 +1,6 @@
 """Reference implementation of the live-ramp score algorithm (LIVE_RAMP_DESIGN.md section 3.3).
 
-analytics.fn_ramp_path (the BigQuery JavaScript UDF in bigquery/259_live_ramp.sql) must produce
+analytics.fn_ramp_path (the BigQuery JavaScript UDF, canonical in bigquery/278_ramp_tail_guard.sql) must produce
 identical results; tests/fixtures/ramp_vectors.json is the shared contract between the two.
 
 Standard library only. Usage: python3 scripts/ramp_calc.py tests/fixtures/ramp_vectors.json
@@ -68,6 +68,11 @@ def ramp_path(
 
     if tail_loss_5pct is None:
         tail_loss_5pct = mu - 1.645 * sigma
+        # The derived default is held to the same contract as a declared tail. With mu > 1.645*sigma
+        # it is positive, and an in-line WIN below it was scored as a surprise and halved the score
+        # (bigquery/278 gives analytics.fn_ramp_path the same guard).
+        if tail_loss_5pct >= 0:
+            raise ValueError("derived tail_loss_5pct (mu - 1.645*sigma) must be < 0; declare tail_loss_5pct")
     kill_bound = math.log(sprt_beta / (1.0 - sprt_alpha))
     confirm_bound = math.log((1.0 - sprt_beta) / sprt_alpha)
 

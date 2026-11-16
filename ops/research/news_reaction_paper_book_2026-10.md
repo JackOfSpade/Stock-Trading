@@ -125,6 +125,15 @@ the first run corrupted 3 of 120 `source_url` values while a sub-agent re-typed 
   agreement_score recompute from their stored inputs), and the 3 repaired URLs match the source hashes the run
   computed before its repair. Their off-subject and duplicate rows are part of the record; nothing is deleted.
 
+**Amendment 2026-11-16 (headline selection only; no section-1 constant changed, so the book is not
+re-opened).** `ticker_cue()` in `scripts/paper_book.py` now also accepts the exchange-prefixed ticker
+written with a space after the colon — `(NYSE: GE)`, `(NASDAQ: COST)` — which is the standard wire-release
+form. Until this date only the unspaced `(NYSE:GE)` matched, so for the CUE_TICKERS whose headlines often
+carry no company-name alias (GE, DE, BA, CAT, ...) such a headline was dropped. Effect from the first
+scan after 2026-11-16: slightly MORE headlines kept for those tickers; nothing previously kept is now
+dropped, the cap of 3 per ticker per scan is unchanged, and calls already recorded are not re-selected or
+re-scored. Calls dated before 2026-11-16 were selected under the narrower cue.
+
 ## 6. The hand-off (why a queue lane and OPS2, not a cron change)
 
 SL1 fires quarterly (`0 21 2 1,4,7,10 *`, next 2027-01-02). Headless routines cannot call the RemoteTrigger

@@ -330,7 +330,7 @@ def whole_words(names) -> re.Pattern:
 
 def ticker_cue(ticker: str) -> re.Pattern:
     t = re.escape(ticker)
-    return re.compile(rf"\$(?:{t})(?![A-Za-z0-9])|\((?:(?:NYSE|NASDAQ|Nasdaq|NYSEARCA):)?{t}\)|"
+    return re.compile(rf"\$(?:{t})(?![A-Za-z0-9])|\((?:(?:NYSE|NASDAQ|Nasdaq|NYSEARCA): ?)?{t}\)|"
                       rf"(?<![A-Za-z0-9]){t}(?= (?:[Ss]tock|STOCK|[Ss]hares|[Ee]arnings|Q[1-4](?![0-9])))")
 
 
