@@ -774,13 +774,16 @@ stall with it (it ran under the same identity).
   a self-reported check cannot detect its own omission, so something outside OPS1 must), and the CI gate
   `scripts/check_connector_tools.py`.
 
-  **A connector RETIRED from `ops/connector_tools.yaml` is reported stale for up to 30 days, and that is expected.**
-  The view's `recent` CTE lists every connector observed in the trailing 30 days, so a connector OPS1 stops
-  enumerating stays in it until its last row ages out (live case: Tavily, retired in `669cebaa`, last observed
-  2026-11-09, self-expires about 2026-12-09). Confirm the named connector is absent from the manifest, then leave
-  the `connector_tool_inventory_stale` warning to age out. Do not write synthetic rows for it, because they
-  restart the 30-day clock. Do not key the view on the newest run either: a manifest connector that OPS1 silently
-  omits looks the same as a retired one, so that change would lose per-connector omission detection.
+  **A connector RETIRED from `ops/connector_tools.yaml` is recorded in `ops.connector_retirements`, and the view then
+  skips it (2026-11-16, `bigquery/277_connector_retirements.sql`).** Before that file, a retired connector stayed in
+  the view until its last row aged out, and the 7-day auto-age plus nightly re-raise turned that into a weekly
+  owner email for 30 days (live case: Tavily, retired in `669cebaa`, last observed 2026-11-09). Now OPS1 calls
+  `ops.sp_retire_connector` for a stale connector that is absent from the manifest, and the view excludes a
+  connector whose newest observation is on or before its `retired_date`. The exclusion ends by itself if the
+  connector is recorded again. Two shortcuts stay rejected: do not write synthetic inventory rows for a retired
+  connector, because they restart the 30-day clock; and do not key the view on the newest run, because a manifest
+  connector that OPS1 silently omits looks the same as a retired one, so that change would lose per-connector
+  omission detection. A manifest connector in the view is always a real finding.
 
 - **§15b. Connector OAuth expiry playbook (added 2026-07-20).** The 2026-07-19 IBKR connector expiry
   (OWNER_ACTIONS.md item V) was the FIRST IBKR occurrence on record — the only prior connector-expiry

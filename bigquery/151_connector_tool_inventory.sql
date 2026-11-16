@@ -97,6 +97,12 @@ FROM (
 -- margin for a genuinely late-but-healthy Sunday run before this view falsely called it stale. 4
 -- restores one day of slack over that 3-day scheduled gap, the same margin the original 2 gave over
 -- OPS1's old every-calendar-day (1-day max gap) schedule.
+-- SUPERSEDED LIVE (2026-11-16) by bigquery/277_connector_retirements.sql -- the current canonical
+-- definition of state.connector_tool_inventory_stale. 277 adds ops.connector_retirements and makes the
+-- `recent` CTE skip a connector whose newest observation is on or before its recorded retired_date, so
+-- a connector removed from ops/connector_tools.yaml on purpose (first case: Tavily, 669cebaa) stops
+-- being reported stale for 30 days. Kept here, unmodified, for DR-rebuild apply-in-order reference
+-- only. DO NOT re-apply this CREATE live in isolation. This file stays canonical for its other objects.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.connector_tool_inventory_stale` AS
 WITH recent AS (
   SELECT DISTINCT connector

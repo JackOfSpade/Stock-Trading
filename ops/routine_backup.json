@@ -205,66 +205,6 @@
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform M1R — regular routine.\n\nSpawn Sonnet 5.5 model sub-agents to do the grunt work. Save your processing (Opus 5.5) for design/analysis/orchestration work only.\n\nDo not give final response until you have resolved every issue within this run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS this run's own job or the fix is a one-line correction; otherwise record it — an events.queue_events row or an ops.alerts info row naming the owning routine or surface — and move on.\n\nSEARCH GUARD. This routine's name is M1R — regular routine. Parallel Search tools (web_search, web_fetch) are the only web tools you may use. Treat Parallel as UNAVAILABLE only when a Parallel tool call itself fails, any result or error text mentions 429, 402, rate limit, quota, credits, insufficient, payment, too many requests, exceeded, usage limit or limit reached, or two web_search calls in a row return zero results for queries that should have results. A single URL that fails or is blocked inside a web_fetch result is NOT unavailability. On the first such failure retry that one call once immediately; do not sleep, start background tasks or end your turn while waiting. If it fails again, or the text names a rate limit or quota: stop calling every search and fetch tool, use no other web tool and invent no results; finish only parts that need no web access and mark the rest not done; send exactly one email with Gmail send_message to jacksterwu@gmail.com with subject [Routine paused] Parallel Search unavailable and a plain-text body giving the routine name, the UTC time, the exact error text, which step stopped and what is unfinished; then make the first line of your final message exactly PARALLEL_UNAVAILABLE. Never send any other email and never put page content or secrets in the email.",
       "name": "M1R — regular routine",
-      "overrides": {
-        "mcp_connections": [
-          {
-            "clear_tool_policy_overrides": false,
-            "connector_uuid": "f4bd1992-c70e-4b23-b617-271b19976e92",
-            "name": "FMP",
-            "permitted_tools": [],
-            "tool_policy_overrides": [],
-            "url": "https://financialmodelingprep.com/mcp"
-          },
-          {
-            "clear_tool_policy_overrides": false,
-            "connector_uuid": "8118e26a-1613-4cf8-b1cd-9a794b8d357b",
-            "name": "Gmail",
-            "permitted_tools": [],
-            "tool_policy_overrides": [],
-            "url": "https://gmailmcp.googleapis.com/mcp/v1"
-          },
-          {
-            "clear_tool_policy_overrides": false,
-            "connector_uuid": "c91ddbb2-ced9-4011-9838-15e5239e83e9",
-            "name": "Google-Calendar",
-            "permitted_tools": [],
-            "tool_policy_overrides": [],
-            "url": "https://calendarmcp.googleapis.com/mcp/v1"
-          },
-          {
-            "clear_tool_policy_overrides": false,
-            "connector_uuid": "64f9594a-0ed8-4081-883c-df850f1c8fcd",
-            "name": "Google-Cloud-BigQuery",
-            "permitted_tools": [],
-            "tool_policy_overrides": [],
-            "url": "https://bigquery.googleapis.com/mcp"
-          },
-          {
-            "clear_tool_policy_overrides": false,
-            "connector_uuid": "fff8d981-37df-4721-97af-9e0fdf5238e7",
-            "name": "Hugging-Face",
-            "permitted_tools": [],
-            "tool_policy_overrides": [],
-            "url": "https://huggingface.co/mcp"
-          },
-          {
-            "clear_tool_policy_overrides": false,
-            "connector_uuid": "d9d4ad11-d734-4c05-8302-9fd84698ef46",
-            "name": "Interactive-Brokers--IBKR-",
-            "permitted_tools": [],
-            "tool_policy_overrides": [],
-            "url": "https://api.ibkr.com/v1/api/mcp"
-          },
-          {
-            "clear_tool_policy_overrides": false,
-            "connector_uuid": "03c6bfd8-c61d-4e7c-8cfb-6bb592914205",
-            "name": "Parallel-Search",
-            "permitted_tools": [],
-            "tool_policy_overrides": [],
-            "url": "https://search.parallel.ai/mcp"
-          }
-        ]
-      },
       "profile": "fleet",
       "trigger_id": "trig_01R6YpUzw3pk7UEeWB5Bdtvq"
     },
