@@ -50,7 +50,10 @@ FILENAME = re.compile(r"^Adversarial_Review_(?P<review_id>.+)_(?P<role>attacker|
 # Attacker artifacts use the machine-oriented names; older orchestrator artifacts use title-cased
 # prose labels and sometimes put the review id only in the title/filename.  The filename remains the
 # durable identity in both forms, while cycle metadata remains mandatory for an exact row lookup.
-METADATA = re.compile(r"^- \*\*(?P<name>id|cycle_number|Cycle number):\*\*\s*(?P<value>\S(?:.*?\S)?)\s*$", re.MULTILINE)
+# `[ \t]*`, not `\s*`: `\s` crosses the newline, so an EMPTY `- **id:**` line swallowed the next
+# metadata line as its value and the file was reported as "missing cycle_number metadata".
+METADATA = re.compile(r"^- \*\*(?P<name>id|cycle_number|Cycle number):\*\*[ \t]*(?P<value>\S(?:.*?\S)?)[ \t\r]*$",
+                      re.MULTILINE)
 CYCLE_VALUE = re.compile(r"^(?P<cycle>[1-9][0-9]*)(?:\s*\([^\r\n]*\))?$")
 SAFE_REVIEW_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
 SAFE_ROLE = re.compile(r"^[a-z][a-z0-9_]*$")

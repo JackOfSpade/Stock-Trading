@@ -144,7 +144,6 @@ Usage:  python scripts/check_live_sql_parity.py --project stock-trading-498512
 import argparse
 import os
 import re
-import subprocess  # noqa: F401 — kept so tests can monkeypatch subprocess.run/TimeoutExpired at the module level
 
 from lib.bq_json import run_bq_query
 # _string_literal_end is private-by-name but shared on purpose — same cross-module precedent
@@ -208,6 +207,28 @@ NEXT_TOP_LEVEL = re.compile(
     r")\b",
     re.IGNORECASE | re.MULTILINE,
 )
+
+# Column-0 SCRIPT statements, which NEXT_TOP_LEVEL must keep excluding (BEGIN opens a PROCEDURE's own
+# body) but which do end a VIEW / FUNCTION / TABLE FUNCTION: such a body is one query expression, so a
+# column-0 `DECLARE`/`SET`/`BEGIN ... END`/`IF`/`EXECUTE IMMEDIATE` after it is a following statement.
+# Without this a view followed by one carried that tail in its extracted body -- a permanent false
+# DRIFT feeding D3's re-apply loop (latent until 2026-11-16: no final non-procedure body had one).
+# check_superseded_by_discipline.STANDALONE_STMT cuts on the same keywords for the same reason.
+SCRIPT_TOP_LEVEL = re.compile(r"^(?:BEGIN|DECLARE|SET|IF|EXECUTE\s+IMMEDIATE)\b", re.IGNORECASE | re.MULTILINE)
+
+
+def statement_end(txt, start, obj_type):
+    """Offset where the top-level CREATE starting at `start` stops owning text: the next
+    NEXT_TOP_LEVEL statement, and for anything but a PROCEDURE also the next SCRIPT_TOP_LEVEL one
+    (a PROCEDURE's true end is its own END -- find_procedure_body_end()). len(txt) if neither."""
+    ends = [len(txt)]
+    patterns = (NEXT_TOP_LEVEL,) if obj_type == "PROCEDURE" else (NEXT_TOP_LEVEL, SCRIPT_TOP_LEVEL)
+    for pattern in patterns:
+        m = pattern.search(txt, start + 1)
+        if m:
+            ends.append(m.start())
+    return min(ends)
+
 
 # A DROP that removes an object from find_final_definitions()'s expected set (2026-07-28 DROP-
 # awareness fix — see that function's docstring for the concrete bug this closes). Same column-0
@@ -605,8 +626,7 @@ def extract_body(txt, start, obj_type):
     view_definition/routine_definition itself contains."""
     # Find the end of this statement: the next top-level CREATE of ANY kind (NEXT_TOP_LEVEL — not
     # just the three COMPARED object types), or end of file. See NEXT_TOP_LEVEL's comment.
-    next_m = NEXT_TOP_LEVEL.search(txt, start + 1)
-    end = next_m.start() if next_m else len(txt)
+    end = statement_end(txt, start, obj_type)
     stmt = txt[start:end]
 
     if obj_type == "PROCEDURE":
@@ -702,6 +722,18 @@ def extract_body(txt, start, obj_type):
             if true_wrapper:
                 body = stripped[1:-1]
     return body.strip()
+
+
+def repo_bodies_match(a, b):
+    """True iff two REPO-side bodies (both from extract_body()) are the same definition.
+
+    canonicalize() runs the SQL tokenizer, which is wrong for an ExternalBody: in JavaScript
+    `--x; tamper();` is live code, but the tokenizer drops it as a comment, so a tampered JS UDF
+    canonicalized equal to the real one and passed apply_sql_file.py's pre-apply gate (2026-11-16).
+    An external body is therefore compared verbatim, and never equals a SQL one."""
+    if isinstance(a, ExternalBody) or isinstance(b, ExternalBody):
+        return isinstance(a, ExternalBody) and isinstance(b, ExternalBody) and str(a) == str(b)
+    return canonicalize(a) == canonicalize(b)
 
 
 def canonicalize(sql):

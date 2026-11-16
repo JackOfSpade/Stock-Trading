@@ -512,53 +512,62 @@ PROSE_PLACEHOLDERS = {
     "<ticker>": "several: the instrument symbol.",
     "<trigger_id>": "catchup_refire_blocked: the claude.ai trigger id, constant per routine.",
     "<upstream>": "upstream_marker_mismatch: the upstream routine's id.",
+    "<series>": "forecast_downside_breach (M5): which of the two forecast series breached "
+                "(deployed_unit_value / excess_vs_sgov) -- a fixed field name, part of the identity.",
+    "<the view's message column>": "lifecycle_provenance_gap (D3): state.strategy_lifecycle_provenance."
+                                   "message (bigquery/190), built in SQL from the finding's own key "
+                                   "(strategy_code + the row that defines the defect), so it only "
+                                   "changes when the defect itself does.",
 }
 
 _PROSE_CALL_RE = re.compile(r"sp_raise_alert(_once)?\s*\(")
 
 
+_BARE_PLACEHOLDER = re.compile(r"<[^<>`\n]*>")
+
+
 def _prose_call_args(text, open_paren):
-    """Split one prose CALL's argument list. Returns (args, closed) where each arg is
-    (raw_text, literal_value_or_None). Quote-aware: a `'` opens a literal, `\'` stays inside it,
-    and a `)` inside a literal does not close the call."""
+    """Split one prose CALL's argument list. Returns (args, closed) where each arg is the raw text
+    of one argument. Quote-aware for BOTH literal styles BigQuery accepts (`'...'` and `"..."`): a
+    backslash-escaped quote stays inside the literal, and a `)` or `,` inside a literal does not
+    close or split the call. An unquoted `<...>` placeholder is one atomic span, so an apostrophe
+    inside it ("<the view's message column>") cannot open a phantom literal -- that used to swallow
+    the rest of the call and demote the site from a checked placeholder to an ignored anomaly."""
     args, buf, i = [], [], open_paren + 1
-    in_str, depth = False, 0
+    quote, depth = None, 0
     while i < len(text):
         ch = text[i]
-        if in_str:
+        if quote:
             if ch == "\\" and i + 1 < len(text):
                 buf.append(text[i:i + 2])
                 i += 2
                 continue
-            if ch == "'":
-                in_str = False
+            if ch == quote:
+                quote = None
             buf.append(ch)
             i += 1
             continue
-        if ch == "'":
-            in_str = True
-            buf.append(ch)
-            i += 1
-            continue
-        if ch == "(":
+        if ch in "'\"":
+            quote = ch
+        elif ch == "<":
+            span = _BARE_PLACEHOLDER.match(text, i)
+            if span:
+                buf.append(span.group())
+                i = span.end()
+                continue
+        elif ch == "(":
             depth += 1
-            buf.append(ch)
-            i += 1
-            continue
-        if ch == ")":
+        elif ch == ")":
             if depth == 0:
                 args.append("".join(buf))
                 return args, True
             depth -= 1
-            buf.append(ch)
-            i += 1
-            continue
-        if ch == "," and depth == 0:
+        elif ch == "," and depth == 0:
             args.append("".join(buf))
             buf = []
             i += 1
             continue
-        if ch == "`" and depth == 0:
+        elif ch == "`" and depth == 0:
             # ran off the end of the markdown inline-code span without a closing paren
             return [*args, "".join(buf)], False
         buf.append(ch)
@@ -567,11 +576,12 @@ def _prose_call_args(text, open_paren):
 
 
 def _as_literal(raw):
-    """The single-quoted string literal in `raw`, with \' unescaped, or None if it is not one."""
+    """The string literal in `raw` (single- or double-quoted), with its escaped quote unescaped, or
+    None if it is not one."""
     s = raw.strip()
-    if len(s) < 2 or not s.startswith("'") or not s.endswith("'"):
+    if len(s) < 2 or s[0] not in "'\"" or s[-1] != s[0]:
         return None
-    return s[1:-1].replace("\\'", "'")
+    return s[1:-1].replace("\\" + s[0], s[0])
 
 
 def find_prose_sites(text=None):
@@ -593,7 +603,13 @@ def find_prose_sites(text=None):
         # 'trading_halted', …)"). Those are prose ABOUT a call, not the call's own spec, and the real
         # template for that category lives elsewhere in this file. Skipping them is what keeps this
         # pass's output signal rather than noise -- 25 of the 29 sites on first run were these.
-        if any(("\u2026" in a) or ("..." in a) for a in args):
+        # Only the CATEGORY and MESSAGE are tested: an ellipsis in the payload argument alone says
+        # nothing about the template, and testing every argument skipped real templates with it.
+        if any(("\u2026" in a) or ("..." in a) for a in args[2:4]):
+            continue
+        # A SIGNATURE mention ("sp_raise_alert_once(in_severity STRING, ...)") has no severity
+        # literal in first position; it is prose about the procedure, not a call.
+        if _as_literal(args[0]) is None:
             continue
 
         category = _as_literal(args[2]) or "<non-literal category>"
@@ -605,7 +621,7 @@ def find_prose_sites(text=None):
             # Test the RAW literal body, not the unescaped one: _as_literal() turns a valid `\'\'`
             # (two escaped quotes, e.g. 'it\'\'s') into `''` and used to report a false quote defect
             # (2026-10-31). A genuine `''` inside the raw body is unchanged by that unescape.
-            if lit is not None and "''" in raw.strip()[1:-1]:
+            if lit is not None and raw.strip()[0] == "'" and "''" in raw.strip()[1:-1]:
                 quote_defects.append((category, idx, lit[:90]))
 
         if not is_once:
@@ -730,7 +746,12 @@ def main():
         for ph in prose_stale:
             print(f"  - {ph}")
 
-    if new or stale or prose_unregistered or prose_quote or prose_stale:
+    if anomalies or prose_anomalies:
+        print("\nFAIL — a call site above could not be read. An unreadable site is an UNCHECKED one, "
+              "and until 2026-11-16 it was listed and passed. Make the message a literal, a registered "
+              "bare placeholder or a CONCAT/FORMAT expression (or fix the parser if it is one already).")
+
+    if new or stale or anomalies or prose_unregistered or prose_quote or prose_stale or prose_anomalies:
         return 1
 
     print(f"OK: every STRING_AGG feeding a sp_raise_alert_once message is a total order over its "

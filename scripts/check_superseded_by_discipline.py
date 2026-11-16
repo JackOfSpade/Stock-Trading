@@ -103,7 +103,10 @@ GUARDED_TABLES = {
 INVERTED_PREDICATE = re.compile(
     # `(?:\(\s*)*`: a parenthesized predicate -- `WHERE (superseded_by IS NULL)`, `AND ( t.superseded_by
     # IS NULL` -- is the same raw read and must not slip past on punctuation (2026-10-31).
-    r"\b(?:WHERE|AND|OR)\s+(?:\(\s*)*(?:[A-Za-z_][A-Za-z0-9_]*\.)?superseded_by\s+IS\s+NULL\b",
+    # ON/HAVING/QUALIFY introduce the same row filter, `NOT (` is still a predicate on the column, and
+    # the alias may be backtick-quoted -- none of which the WHERE|AND|OR-only form matched (2026-11-16).
+    r"\b(?:WHERE|AND|OR|ON|HAVING|QUALIFY|NOT)\s*(?:\(\s*)*(?:`?[A-Za-z_][A-Za-z0-9_]*`?\.)?`?superseded_by`?"
+    r"\s+IS\s+NULL\b",
     re.IGNORECASE,
 )
 
@@ -398,7 +401,12 @@ def _definition_segments(text):
         kind = normalize_kind(m.group(1))
         chunk = text[m.start():end]
         truncated = False
-        if kind in ("PROCEDURE", "FUNCTION", "TABLE FUNCTION"):
+        # PROCEDURE only. A FUNCTION/TABLE FUNCTION body is one `AS (<query>)` expression with no
+        # BEGIN of its own, so scanning its chunk for one found any LATER column-0 `BEGIN ... END`
+        # block, took that as the function's body, and skipped the standalone-statement cut below --
+        # folding every free-standing statement in between back into the function's allowlist entry
+        # (the 2026-09-04 bug, re-opened by a trailing script block; 2026-11-16).
+        if kind == "PROCEDURE":
             begin_at = _procedure_begin(chunk)
             body_end = find_procedure_body_end(chunk, begin_at) if begin_at is not None else None
             if body_end is not None:

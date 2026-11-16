@@ -146,9 +146,11 @@ def _run(cmd):
     except FileNotFoundError as e:
         return False, "", f"binary not found: {e}"
     except subprocess.TimeoutExpired:
-        return False, "", f"timed out after {TIMEOUT}s: {' '.join(cmd)[:120]}"
+        # Only the binary name: a check's argv can carry a bearer token (check_S's curl header), and
+        # this reason string is printed into the log of a workflow in a PUBLIC repo.
+        return False, "", f"timed out after {TIMEOUT}s: {cmd[0]}"
     except Exception as e:  # noqa: BLE001 - defensive fail-open catch-all (this helper never raises)  # pragma: no cover
-        return False, "", f"unexpected error running {' '.join(cmd)[:80]}: {e}"
+        return False, "", f"unexpected error running {cmd[0]}: {e}"
     if out.returncode != 0:
         return False, out.stdout, (out.stderr.strip() or out.stdout.strip() or f"exit {out.returncode}")
     return True, out.stdout, ""

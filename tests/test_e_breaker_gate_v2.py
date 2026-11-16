@@ -1,5 +1,4 @@
 """Offline tests for ops/research/e_breaker_2026-11/replay_gate_v2.py (synthetic in-memory data only)."""
-import importlib.util
 import json
 import tempfile
 from datetime import date, timedelta
@@ -7,10 +6,9 @@ from pathlib import Path
 
 import pytest
 
-_PATH = Path(__file__).resolve().parent.parent / "ops" / "research" / "e_breaker_2026-11" / "replay_gate_v2.py"
-_spec = importlib.util.spec_from_file_location("e_breaker_replay_gate_v2", _PATH)
-g2 = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(g2)
+from conftest import load_module_from_path
+
+g2 = load_module_from_path("e_breaker_replay_gate_v2", "ops", "research", "e_breaker_2026-11", "replay_gate_v2.py")
 
 
 def weekly(n, start=date(2024, 1, 5)):

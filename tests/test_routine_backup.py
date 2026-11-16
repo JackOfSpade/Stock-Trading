@@ -1820,6 +1820,27 @@ def test_check_fails_when_profile_does_not_exist(tmp_path, monkeypatch, capsys):
     assert "D1: profile 'no_such_profile' not in" in out
 
 
+# ---- check(): a non-personal entry cadence.yaml does not know (2026-11-16) -----------------------------
+def test_check_fails_on_a_routines_entry_that_is_not_in_cadence(tmp_path, monkeypatch, capsys):
+    """Check (1) only ran cadence -> backup. A retired routine's surviving entry passed `check`, and a
+    restore-all (which targets every `routines` key) would have recreated its live trigger."""
+    doc = _good_backup_doc()
+    doc["routines"]["ZZ9"] = dict(doc["routines"]["D1"], trigger_id="trig_ZZ9")
+    _wire(tmp_path, monkeypatch, backup_doc=doc)
+    assert rb.check() == 1
+    assert "ZZ9: in " in capsys.readouterr().out
+
+
+def test_check_fails_when_enabled_is_not_a_bool(tmp_path, monkeypatch, capsys):
+    """Both create-body builders hard-index entry["enabled"]: a missing key passed `check` and then
+    raised KeyError out of a restore-all, taking every healthy body with it."""
+    doc = _good_backup_doc()
+    del doc["routines"]["D1"]["enabled"]
+    _wire(tmp_path, monkeypatch, backup_doc=doc)
+    assert rb.check() == 1
+    assert "D1: enabled must be true/false (None)" in capsys.readouterr().out
+
+
 # ---- check(): profile existence checked for EVERY entry, not just cadence-known ones (mutation gap 6) --
 def test_check_profile_existence_checked_for_non_cadence_entries_too(tmp_path, monkeypatch, capsys):
     """check()'s docstring claims profile existence is validated for ANY entry, not just ones

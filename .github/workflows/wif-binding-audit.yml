@@ -192,16 +192,7 @@ jobs:
             echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           } > /tmp/body.md
 
-          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
-            --jq '[.[] | select(.title|startswith("⚠️ WIF binding audit:"))][0].number // empty')
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body-file /tmp/body.md
-            echo "Updated existing issue #$existing."
-          else
-            gh issue create --repo "$GITHUB_REPOSITORY" \
-              --title "⚠️ WIF binding audit: needs attention" \
-              --body-file /tmp/body.md
-          fi
+          scripts/finding_issue.sh open "⚠️ WIF binding audit:" "⚠️ WIF binding audit: needs attention" /tmp/body.md
 
           # CI-findings bridge (2026-07-16, CC-1): inconclusive counts as open here, matching the
           # issue behavior above. Non-fatal until the table-scoped gh-ci-runner@ dataEditor grant on
@@ -217,12 +208,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
-          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
-            --jq '[.[] | select(.title|startswith("⚠️ WIF binding audit:"))][0].number // empty')
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Resolved — the live binding now matches the wif.tf-declared scope (RUNBOOK §25 E1). Closing."
-            gh issue close "$existing" --repo "$GITHUB_REPOSITORY"
-          fi
+          scripts/finding_issue.sh close "⚠️ WIF binding audit:" "Resolved — the live binding now matches the wif.tf-declared scope (RUNBOOK §25 E1). Closing."
 
           # CI-findings bridge (2026-07-16, CC-1): unconditional resolved-row INSERT so a
           # manually-closed GH issue never strands an open ops.ci_findings row. Non-fatal until the

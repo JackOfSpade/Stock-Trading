@@ -665,3 +665,52 @@ def test_main_rejects_unknown_flags_before_reading_any_file(monkeypatch, capsys,
     f.write_text(CANONICAL_VIEW_SQL, encoding="utf-8")
     assert asf.main(["--dry_run", str(f)]) == 2
     assert "unknown flag" in capsys.readouterr().err
+
+
+def test_gate_refuses_a_javascript_udf_tampered_behind_a_sql_comment_marker():
+    """`--x; evil();` is live JavaScript but a SQL comment to canonicalize()'s tokenizer, so a tampered
+    analytics.fn_ramp_path body used to canonicalize equal to bigquery/259's and pass the gate."""
+    path = os.path.join(ROOT, "bigquery", "259_live_ramp.sql")
+    with open(path, encoding="utf-8") as fh:
+        text = fh.read()
+    m = next(m for m in asf.CREATE_STMT.finditer(text) if m.group(4) == "fn_ramp_path")
+    stmt = text[m.start():asf.statement_end(text, m.start(), "FUNCTION")]
+    final = asf.find_final_definitions()
+    assert asf.check_canonical_provenance("x.sql", stmt, final)[0] is True
+
+    head, sep, rest = stmt.partition('"""\n')
+    first_line, nl, body = rest.partition("\n")
+    tampered = head + sep + first_line + " --x; throw new Error('tampered');" + nl + body
+    assert tampered != stmt
+    ok, _noncanonical, msg = asf.check_canonical_provenance("x.sql", tampered, final)
+    assert ok is False and "does NOT match" in msg
+
+
+def test_gate_refuses_a_script_block_appended_after_a_view(tmp_path):
+    """A VIEW's statement ends at a column-0 script statement too, so the block is stray tail text."""
+    final = {("state", "v"): ("VIEW", asf.PROJECT, "1_v.sql", "SELECT 1 AS x")}
+    sql = f"CREATE OR REPLACE VIEW `{asf.PROJECT}.state.v` AS\nSELECT 1 AS x;\n"
+    assert asf.check_canonical_provenance("x.sql", sql, final)[0] is True
+    ok, _noncanonical, msg = asf.check_canonical_provenance(
+        "x.sql", sql + "BEGIN\n  DELETE FROM state.t WHERE TRUE;\nEND;\n", final)
+    assert ok is False and "follows the CREATE OR REPLACE statement" in msg
+
+
+def test_gate_refuses_the_canonical_body_under_a_rewritten_header():
+    """Only the body was compared, so the canonical body under a different parameter list / OPTIONS
+    passed as canonical although the whole file -- header included -- is what gets applied."""
+    final = asf.find_final_definitions()
+    key, (obj_type, _project, source_file, _body) = next(
+        (k, v) for k, v in sorted(final.items()) if v[0] == "PROCEDURE")
+    with open(os.path.join(ROOT, "bigquery", source_file), encoding="utf-8") as fh:
+        text = fh.read()
+    m = [m for m in asf.CREATE_STMT.finditer(text) if (m.group(3), m.group(4)) == key][-1]
+    stmt = text[m.start():asf.statement_end(text, m.start(), obj_type)]
+    body = asf.extract_body(stmt, 0, obj_type)
+    stmt = stmt[:stmt.find(body) + len(body)] + ";\n"
+    assert asf.check_canonical_provenance("x.sql", stmt, final)[0] is True
+
+    paren = stmt.index("(", m.end() - m.start() - 1)
+    tampered = stmt[:paren + 1] + "totally_different_arg ARRAY<STRING>, " + stmt[paren + 1:]
+    ok, _noncanonical, msg = asf.check_canonical_provenance("x.sql", tampered, final)
+    assert ok is False and "CREATE header" in msg

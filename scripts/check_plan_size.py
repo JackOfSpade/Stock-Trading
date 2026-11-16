@@ -9,12 +9,13 @@ from pathlib import Path
 import re
 import sys
 
+from lib.routine_manifest import INVENTORY_HEADING
+
 
 ROOT = Path(__file__).resolve().parents[1]
 TASK_PLAN = ROOT / "Claude_Task_Plan.md"
 # Next 1,000 above the largest prose paragraph after the 2026-10-30 second pass.
 MAX_PARAGRAPH_CHARS = 20_000
-INVENTORY_HEADING = "# ROUTINE INVENTORY & BIGQUERY RESPONSIBILITIES"
 INVENTORY_HEADER = "| ID | Routine | Cadence · Type | BigQuery reads | BigQuery writes | Cadence `.md` output |"
 
 

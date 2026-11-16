@@ -12,6 +12,14 @@ import subprocess
 import urllib.parse
 
 
+# Workflows that accept a `diff_base` dispatch input. A dispatched run has no `github.event.before`,
+# so without it ci.yml cannot resolve what the merge changed and takes its fail-open "validate
+# everything" branch: a full dbt compile + parity run and a dry-run of every bigquery/*.sql file
+# against a per-day BigQuery quota, on every merge, for a tree the PR head already validated. The
+# pre-merge main SHA is exactly that missing "before".
+DIFF_BASE_WORKFLOWS = frozenset({"ci.yml"})
+
+
 def validate(pr, base_sha, comparison, checks, required):
     if pr.get("state") != "open" or pr.get("draft"):
         raise ValueError("Select an open, non-draft pull request")
@@ -98,9 +106,19 @@ def main():
                 if not isinstance(value, str) or not value.isalnum():
                     raise ValueError("Invalid commit identifier from GitHub")
                 output.write(f"{key}={value}\n")
-    for workflow in json.loads(os.environ["MAIN_WORKFLOWS"]):
-        gh("workflow", "run", workflow, "--repo", repo, "--ref", "main")
+    # Cleanup first: it is best-effort and must not be skipped by a failed dispatch below.
     delete_merged_head(repo, pr, head)
+    failed = []
+    for workflow in json.loads(os.environ["MAIN_WORKFLOWS"]):
+        args = ["workflow", "run", workflow, "--repo", repo, "--ref", "main"]
+        if workflow in DIFF_BASE_WORKFLOWS:
+            args += ["-f", f"diff_base={base}"]
+        try:
+            gh(*args)
+        except subprocess.CalledProcessError as error:
+            failed.append(f"{workflow} ({error})")
+    if failed:
+        raise RuntimeError("Merged, but could not dispatch main validation: " + "; ".join(failed))
     print(f"Merged PR #{int(number)} and dispatched main validation")
 
 

@@ -245,3 +245,24 @@ def test_parenthesized_inverted_predicate_is_caught():
     for sql in ("SELECT 1 FROM t WHERE (superseded_by IS NULL)",
                 "SELECT 1 FROM t WHERE x = 1 AND ( t.superseded_by IS NULL)"):
         assert cs.INVERTED_PREDICATE.search(sql), sql
+
+
+def test_inverted_predicate_is_caught_behind_every_row_filter_introducer():
+    for sql in ("JOIN e ON d.superseded_by IS NULL", "WHERE NOT (superseded_by IS NULL)",
+                "WHERE `d`.superseded_by IS NULL", "QUALIFY superseded_by IS NULL",
+                "HAVING t.`superseded_by` IS NULL"):
+        assert cs.INVERTED_PREDICATE.search(sql), sql
+    assert not cs.INVERTED_PREDICATE.search("IF p_superseded_by IS NULL THEN")
+    assert not cs.INVERTED_PREDICATE.search("IF NOT p_superseded_by IS NULL THEN")
+
+
+def test_a_trailing_script_block_does_not_hand_a_function_the_statements_before_it():
+    """A later column-0 BEGIN...END was taken as the FUNCTION's own body, which skipped the
+    standalone-statement cut and attributed the UPDATE in between to the function."""
+    text = ("CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.find_precedents`() AS (SELECT 1 AS x);\n"
+            "UPDATE analytics.t SET c = (SELECT COUNT(*) FROM events.decision_log) WHERE TRUE;\n"
+            "BEGIN\n  SELECT 1;\nEND;\n")
+    segments, unowned = cs._definition_segments(text)
+    assert [(d, n) for d, n, _body in segments] == [("analytics", "find_precedents")]
+    assert "events.decision_log" not in segments[0][2]
+    assert any("events.decision_log" in chunk for chunk in unowned)

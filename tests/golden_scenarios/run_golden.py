@@ -12,7 +12,8 @@ AI Park Allocator's daily call, the AI Research-Significance Screen) with an exp
 CONTINUE/TERMINATE | ACTIVATE/DO-NOT-ACTIVATE call and the specific rule that produces it. This script
 is the runner.
 
-TWO MODES, matching the two-job split in .github/workflows/golden-scenarios.yml:
+TWO MODES. Only --offline runs in CI (.github/workflows/golden-scenarios.yml's single job); --live has
+had no workflow caller since golden-prose-daily.yml was retired on 2026-08-30 and is a hand-run tool:
 
   --offline (default; NO NETWORK; the CI HARD GATE)
       Pure schema validation: every scenario has the required fields, ids are unique, every

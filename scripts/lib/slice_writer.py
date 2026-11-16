@@ -17,6 +17,8 @@ def find_orphaned_markdown_files(outdir: str, expected_files, hand_maintained) -
     if not os.path.isdir(outdir):
         return []
     expected = set(expected_files) | set(hand_maintained)
+    if not os.path.isdir(outdir):  # nothing generated yet: every file is stale, none is an orphan
+        return []
     return sorted(fn for fn in os.listdir(outdir) if fn.endswith(".md") and fn not in expected)
 
 
@@ -49,7 +51,8 @@ def check_or_write_slices(
     wrote_message: str,
 ) -> int:
     """Compare or write generated slice files and report stale/orphaned outputs."""
-    os.makedirs(outdir, exist_ok=True)
+    if not check:  # --check must never mutate the tree, not even by creating an empty outdir
+        os.makedirs(outdir, exist_ok=True)
     drift = []
     for name, content in files.items():
         path = os.path.join(outdir, name)

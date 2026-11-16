@@ -101,7 +101,7 @@ except ImportError:
     raise SystemExit(2) from None
 
 from lib.routine_manifest import (
-    heading_to_id, parse_routine_headings, build_triggers_manifest, instruction_text, cadence_routines,
+    INVENTORY_HEADING, heading_to_id, parse_routine_headings, build_triggers_manifest, instruction_text, cadence_routines,
 )
 from lib.report import fail_or_ok
 from lib.sql_files import SQL_QUOTED_BODY, numbered_sql_files, resolve_canonical, sql_unquote, strip_sql_comments
@@ -455,7 +455,7 @@ PERIOD_WATCH_ROUTINE_ROW = re.compile(
     r"STRUCT\('([^']+)'\s+AS routine,\s*'([^']+)'\s+AS monitor_class\)")
 
 # ---- check K: bigquery/31/59's hand-maintained catchup-safe UNNEST([...]) AS routine id lists.
-UNNEST_ROUTINE_BRACKET = re.compile(r"UNNEST\(\[(.*?)\]\)\s*AS routine", re.S)
+UNNEST_ROUTINE_BRACKET = re.compile(r"UNNEST\(\[([^\]]*?)\]\)\s*AS routine", re.S)
 QUOTED_ID = re.compile(r"'([A-Za-z0-9_]+)'")
 
 # ---- check K (2026-09-04, 'cadence-checkk-blind-to-live-184-and-second-bracket' finding): the two
@@ -526,7 +526,6 @@ YESTERDAY_TIER_CTE_UNNEST_RE = re.compile(
 # ---- check L: the ROUTINE INVENTORY table section of Claude_Task_Plan.md (scoped between its own
 # heading and the NEXT '---' divider -- the strategy slice-map table elsewhere in the file also has
 # `| **...** |`-shaped rows and must NOT be swept in).
-INVENTORY_HEADING = "# ROUTINE INVENTORY & BIGQUERY RESPONSIBILITIES"
 # 2026-07-29: an earlier version of this file tried to tell parse_inventory_table()'s two None cases
 # apart -- "heading never introduced" (pre-feature checkout, skip silently) vs. "heading text changed"
 # (regex rot, fail loud) -- via a loose substring search for "ROUTINE INVENTORY": substring present but
@@ -722,6 +721,23 @@ def _scan_bigquery_dir(bigquery_dir):
     return out
 
 
+def _find_canonical_definer(files, ddl_re):
+    """(number, filename, ambiguous_files) for the highest-numbered file in `files` (a
+    _scan_bigquery_dir() result) whose text matches `ddl_re` -- the shared body of the four
+    find_canonical_*_file() resolvers below, which were this same loop copied per view.
+
+    (None, None, None) when nothing matches. `ambiguous_files` is None in the normal case; when two
+    files tie at the winning number, `filename` is None and `ambiguous_files` lists every colliding
+    filename -- the caller must report that as a hard error, never pick one (D6, 2026-08-06)."""
+    occurrences = [(number, os.path.basename(path)) for number, path, text in files if ddl_re.search(text)]
+    if not occurrences:
+        return None, None, None
+    winner_number, winner_files = resolve_canonical(occurrences)
+    if len(winner_files) > 1:
+        return winner_number, None, winner_files
+    return winner_number, winner_files[0], None
+
+
 def find_canonical_cadence_watch_file(scan=None):
     """(number, filename, ambiguous_files) for the highest-numbered bigquery/*.sql file that defines
     `CREATE OR REPLACE VIEW state.cadence_watch` — the object has been redefined across several
@@ -745,17 +761,7 @@ def find_canonical_cadence_watch_file(scan=None):
 
     Returns (None, None, None) if no occurrence is found at all (should never happen on a real
     checkout — CADENCE_SQL itself always defines one)."""
-    files = scan if scan is not None else _scan_bigquery_dir(BIGQUERY_DIR)
-    occurrences = []
-    for number, path, text in files:
-        if CADENCE_WATCH_VIEW_DDL.search(text):
-            occurrences.append((number, os.path.basename(path)))
-    if not occurrences:
-        return None, None, None
-    winner_number, winner_files = resolve_canonical(occurrences)
-    if len(winner_files) > 1:
-        return winner_number, None, winner_files
-    return winner_number, winner_files[0], None
+    return _find_canonical_definer(scan if scan is not None else _scan_bigquery_dir(BIGQUERY_DIR), CADENCE_WATCH_VIEW_DDL)
 
 
 def parse_canonical_deadline_sql(scan=None):
@@ -807,17 +813,7 @@ def find_canonical_stalled_runs_file(scan=None):
 
     Returns (None, None, None) if no occurrence is found at all (should never happen on a real
     checkout)."""
-    files = scan if scan is not None else _scan_bigquery_dir(STALLED_RUNS_BIGQUERY_DIR)
-    occurrences = []
-    for number, path, text in files:
-        if STALLED_RUNS_VIEW_DDL.search(text):
-            occurrences.append((number, os.path.basename(path)))
-    if not occurrences:
-        return None, None, None
-    winner_number, winner_files = resolve_canonical(occurrences)
-    if len(winner_files) > 1:
-        return winner_number, None, winner_files
-    return winner_number, winner_files[0], None
+    return _find_canonical_definer(scan if scan is not None else _scan_bigquery_dir(STALLED_RUNS_BIGQUERY_DIR), STALLED_RUNS_VIEW_DDL)
 
 
 def parse_stalled_runs_cls_ids(scan=None):
@@ -865,17 +861,7 @@ def find_canonical_catchup_refire_readiness_file(scan=None):
 
     Returns (None, None, None) if no occurrence is found at all (should never happen on a real
     checkout — bigquery/59 itself always defines one)."""
-    files = scan if scan is not None else _scan_bigquery_dir(CATCHUP_REFIRE_READINESS_BIGQUERY_DIR)
-    occurrences = []
-    for number, path, text in files:
-        if CATCHUP_REFIRE_READINESS_VIEW_DDL.search(text):
-            occurrences.append((number, os.path.basename(path)))
-    if not occurrences:
-        return None, None, None
-    winner_number, winner_files = resolve_canonical(occurrences)
-    if len(winner_files) > 1:
-        return winner_number, None, winner_files
-    return winner_number, winner_files[0], None
+    return _find_canonical_definer(scan if scan is not None else _scan_bigquery_dir(CATCHUP_REFIRE_READINESS_BIGQUERY_DIR), CATCHUP_REFIRE_READINESS_VIEW_DDL)
 
 
 def parse_yesterday_tier_ids(scan=None):
@@ -932,17 +918,7 @@ def find_canonical_period_watch_file(scan=None):
     Returns (None, None, None) if no occurrence is found at all (never true on a real checkout --
     bigquery/24 itself always defines one -- but true for the minimal tmp_path fixtures, which is why
     main() must not treat it as a hard error; see main()'s own comment at the call site)."""
-    files = scan if scan is not None else _scan_bigquery_dir(PERIOD_WATCH_BIGQUERY_DIR)
-    occurrences = []
-    for number, path, text in files:
-        if PERIOD_WATCH_VIEW_DDL.search(text):
-            occurrences.append((number, os.path.basename(path)))
-    if not occurrences:
-        return None, None, None
-    winner_number, winner_files = resolve_canonical(occurrences)
-    if len(winner_files) > 1:
-        return winner_number, None, winner_files
-    return winner_number, winner_files[0], None
+    return _find_canonical_definer(scan if scan is not None else _scan_bigquery_dir(PERIOD_WATCH_BIGQUERY_DIR), PERIOD_WATCH_VIEW_DDL)
 
 
 def _period_watch_view_body(text):
@@ -1360,8 +1336,25 @@ QUEUE_OWNER_SLOT_ANCHOR = "CLAUSE (b) IS THE ENTIRE FIX"
 # Presence of the raise itself is what puts this file in scope for check Q (see the scope note
 # in queue_owner_slot_mirror_errors) -- it is the thing the slot table exists to decide.
 QUEUE_OWNER_SLOT_SCOPE = "queue_item_stale"
-QUEUE_OWNER_SLOT_PAIR = re.compile(r"\b(AR_att|AR_orc|D3|M1R|SL2|SL5)\s+(\d{1,2}:\d{2})\b")
-QUEUE_DRIVEN_OWNERS = ("AR_att", "AR_orc", "M1R", "SL2", "SL5")
+QUEUE_DRIVEN_CLASS = "queue_driven"
+# D3 is not queue-driven; it is in the table because clause (b) compares its own run moment.
+QUEUE_SLOT_TABLE_RUNNER = "D3"
+
+
+def queue_driven_owners(cad):
+    """The queue-driven routine ids, read from ops/cadence.yaml's monitor_class. Until 2026-11-16
+    this was a hardcoded tuple (and a hardcoded regex alternation), so a NEW queue-driven routine
+    was never demanded in the slot table and never had its Sun-Thu premise checked."""
+    return sorted(rid for rid, r in cad.items() if (r or {}).get("monitor_class") == QUEUE_DRIVEN_CLASS)
+
+
+def queue_owner_slot_pair_re(cad):
+    """'<routine id> HH:MM' for ANY cadence routine id, longest id first so a longer id is never
+    shadowed by a prefix of itself."""
+    ids = sorted({QUEUE_SLOT_TABLE_RUNNER, *cad}, key=lambda rid: (-len(rid), rid))
+    return re.compile(r"\b(" + "|".join(re.escape(rid) for rid in ids) + r")\s+(\d{1,2}:\d{2})\b")
+
+
 # UTC day-of-week fields that both spell "Denver Sun-Thu", selected by the cron's UTC HOUR. Denver is
 # UTC-6 in MDT (the season time_local documents, per check_cron_dst_safety.py), so a slot at or after
 # 06:00 UTC falls on the SAME Denver calendar day and its day-of-week field must read 0,1,2,3,4, while
@@ -1384,7 +1377,7 @@ DENVER_UTC_OFFSET_HOURS_MDT = 6
 
 
 def queue_owner_slot_mirror_errors(cad):
-    """D3's OWNER-ELIGIBLE-DAY BRANCH fire-time table matches ops/cadence.yaml, and the five
+    """D3's OWNER-ELIGIBLE-DAY BRANCH fire-time table matches ops/cadence.yaml, and the
     queue-driven owners really do fire Sun-Thu. Returns a list of error strings."""
     errs = []
     txt = read_text(PLAN)
@@ -1408,7 +1401,7 @@ def queue_owner_slot_mirror_errors(cad):
     # LAST occurrence of a routine id restated twice with different times, so an incomplete edit that
     # appends a corrected time without removing the stale original would go unnoticed whenever the
     # SECOND (kept) value happens to already agree with cadence.yaml.
-    pairs_list = QUEUE_OWNER_SLOT_PAIR.findall(para)
+    pairs_list = queue_owner_slot_pair_re(cad).findall(para)
     ids_seen = [rid for rid, _t in pairs_list]
     for rid in sorted({r for r in ids_seen if ids_seen.count(r) > 1}):
         times = [t for r, t in pairs_list if r == rid]
@@ -1416,7 +1409,8 @@ def queue_owner_slot_mirror_errors(cad):
                     f"more than once ({', '.join(times)}) — the paragraph is self-contradictory; "
                     f"remove the stale restatement.")
     pairs = dict(pairs_list)
-    expect_ids = set(QUEUE_DRIVEN_OWNERS) | {"D3"}
+    owners = queue_driven_owners(cad)
+    expect_ids = {*owners, QUEUE_SLOT_TABLE_RUNNER}
     if not pairs:
         return ["Claude_Task_Plan.md: found the OWNER-ELIGIBLE-DAY BRANCH clause-(b) paragraph but "
                 "parsed ZERO '<routine> HH:MM' pairs out of it — check Q is DISARMED (regex rot, or "
@@ -1444,10 +1438,8 @@ def queue_owner_slot_mirror_errors(cad):
                         f"decision compares against, so a stale minute silently mis-decides the "
                         f"fleet's only dead-trigger detector. Update BOTH in the same pass "
                         f"(ops/cadence.yaml is the source of truth).")
-    for rid in QUEUE_DRIVEN_OWNERS:
-        r = cad.get(rid)
-        if r is None:
-            continue
+    for rid in owners:
+        r = cad[rid]
         cron = str((r.get("expected_trigger") or {}).get("cron_utc", "")).split()
         if len(cron) != 5:
             errs.append(f"ops/cadence.yaml: {rid} expected_trigger.cron_utc is not a 5-field cron, "
@@ -1471,7 +1463,7 @@ def queue_owner_slot_mirror_errors(cad):
             errs.append(f"ops/cadence.yaml: {rid} cron_utc day-of-week is '{cron[4]}', not "
                         f"'{want_dow}' (the UTC day-set that spells Denver Sun-Thu for a "
                         f"{utc_hour:02d}:xx UTC slot). D3's OWNER-ELIGIBLE-DAY BRANCH "
-                        f"asserts all five queue-driven owners fire Sun-Thu and counts eligible days "
+                        f"asserts all queue-driven owners fire Sun-Thu and counts eligible days "
                         f"on that basis; if this owner's day-set really changed, update that "
                         f"paragraph in the same pass.")
     return errs
@@ -1981,9 +1973,9 @@ def main():
     # Read the module globals at call time so tests can monkeypatch either path.
     allowlist_paths = [p for p in (AUTO_MERGE_DECISION_SH, AUTO_MERGE_YML) if os.path.exists(p)]
     if allowlist_paths:
-        found = [(p, AUTO_MERGE_ROUTINE_RE.search(read_text(p)))
-                 for p in allowlist_paths]
-        found = [(p, m) for p, m in found if m is not None]
+        # finditer, not search: every copy of the literal in a file is validated, so a second,
+        # stale alternation further down cannot hide behind a correct first one.
+        found = [(p, m) for p in allowlist_paths for m in AUTO_MERGE_ROUTINE_RE.finditer(read_text(p))]
         if not found:
             errors.append("could not find the RUNBOOK §38 marker-write routine allowlist literal in "
                           "scripts/auto_merge_decision.sh or .github/workflows/auto-merge-claude.yml "

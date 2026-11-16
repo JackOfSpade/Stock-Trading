@@ -129,6 +129,15 @@ read_argv
 assert_eq "multiline/quoted detail: p_detail reaches bq byte-for-byte literal" \
   "${argv[6]:-}" "--parameter=p_detail:STRING:${msg}"
 
+# ---- a detail cut mid-character by the caller's `head -c N` (2026-11-16) -----------------------
+# "ok ✗" is 6 bytes ("✗" is 3); the first 5 end in a partial sequence that is not valid UTF-8.
+
+cut_detail="$(printf 'ok \xe2\x9c\x97' | head -c 5)"
+run_ci_finding "sql-dryrun-sweep" "sql_dryrun_sweep" "open" "$cut_detail"
+read_argv
+assert_eq "truncated multibyte tail: the partial character is dropped, the valid text kept" \
+  "${argv[6]:-}" "--parameter=p_detail:STRING:ok "
+
 # ---- a finding_key built from shell interpolation (e.g. alert-relay.yml's relay_\${MODE}) ------
 
 run_ci_finding "alert-relay" "relay_heartbeat" "open" "relay run failed — see issue/run"

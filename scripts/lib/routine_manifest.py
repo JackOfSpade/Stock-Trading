@@ -14,6 +14,11 @@ import re
 from lib.md_fence import fence_mask
 from lib.textio import read_text
 
+# The plan's routine-inventory heading. check_cadence_consistency.py parses the table under it and
+# check_plan_size.py exempts that table from its paragraph budget; each used to carry its own copy of
+# this literal, so a reworded heading fixed in one silently changed what the other treated as the table.
+INVENTORY_HEADING = "# ROUTINE INVENTORY & BIGQUERY RESPONSIBILITIES"
+
 # A routine section heading ends with its type tag; this excludes preamble/queue-schema headings.
 ROUTINE_SUFFIX = re.compile(r"—\s*(deep research|regular routine)\s*$")
 

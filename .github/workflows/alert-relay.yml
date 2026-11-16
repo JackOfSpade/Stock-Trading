@@ -331,14 +331,7 @@ jobs:
             echo
             echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           } > /tmp/body.md
-          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
-            --jq "[.[] | select(.title|startswith(\"$title\"))][0].number // empty")
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body-file /tmp/body.md
-            echo "Updated existing issue #$existing."
-          else
-            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body-file /tmp/body.md
-          fi
+          scripts/finding_issue.sh open "$title" "$title" /tmp/body.md
           # CI-findings bridge (same non-fatal pattern as the sibling guards).
           # 2026-08-31 code-quality pass (shell-workflows#0): the VALUES-row insert itself now
           # lives in scripts/ci_finding.sh (tests/test_ci_finding.sh pins its argv) — only the
@@ -354,12 +347,7 @@ jobs:
         run: |
           set -uo pipefail
           title="⚠️ Alert relay ($MODE): needs attention"
-          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
-            --jq "[.[] | select(.title|startswith(\"$title\"))][0].number // empty")
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Resolved — a $MODE relay run succeeded. Closing."
-            gh issue close "$existing" --repo "$GITHUB_REPOSITORY"
-          fi
+          scripts/finding_issue.sh close "$title" "Resolved — a $MODE relay run succeeded. Closing."
           # CI-findings bridge (2026-07-18 fix): unconditional, SELECT-based resolved-row INSERT for
           # ALL three modes — same daily/weekly-cadence pattern as live-sql-parity.yml's clean path
           # (bigquery/67 documents this as the rule: "a clean run writes an unconditional resolved row

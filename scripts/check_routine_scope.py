@@ -188,13 +188,14 @@ def _check_absent(sections: dict[str, str], routine: str, description: str,
 # step -- and mistaking one of those for a step is the precise error being guarded.
 #
 # The owner pattern is deliberately tight.  It is CASE-SENSITIVE on "Owner:" and requires the
-# captured token to have routine SHAPE (1-4 capitals then a digit then an optional lowercase
-# letter, or AR_att / AR_orc).  A loose [A-Z]\w* would capture a filename out of an
+# captured token to have routine SHAPE (1-4 capitals then a digit then an optional letter of
+# either case -- M1R is a live id, and a lowercase-only tail silently failed to capture it -- or
+# AR_att / AR_orc).  A loose [A-Z]\w* would capture a filename out of an
 # "OWNER: <surface>" escalation line and fail the build on prose.  "Owner: the participant" does
 # not match (lowercase), and must not -- a human owner is what the 2026-07-10 SISA directive
 # removed from this loop.
 PREMORTEM = os.path.join(ROOT, "strategy", "08_pre_mortems.md")
-PREMORTEM_OWNER = re.compile(r"Owner:\s*\*{0,2}((?:AR_(?:att|orc))|(?:[A-Z]{1,4}[0-9][a-z]?))\b")
+PREMORTEM_OWNER = re.compile(r"Owner:\s*\*{0,2}((?:AR_(?:att|orc))|(?:[A-Z]{1,4}[0-9][A-Za-z]?))\b")
 WALK_MARKER = "PRE-MORTEM OWNER-ASSIGNED CHECK WALK"
 # AR_att / AR_orc read the artifact under review by queue contract (artifact_path), and their
 # headings carry no "<id>." prefix so routine_sections() cannot produce them.  Their consumption of

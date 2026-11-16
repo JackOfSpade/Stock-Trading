@@ -6,18 +6,18 @@ every generated call would be refused.
 """
 
 import contextlib
-import importlib.util
 import io
 import json
 import re
 import tempfile
 import unittest
 from pathlib import Path
+from typing import ClassVar
+
+from conftest import load_module_from_path
 
 ROOT = Path(__file__).resolve().parent.parent
-_SPEC = importlib.util.spec_from_file_location("decision_call", ROOT / "scripts" / "decision_call.py")
-dc = importlib.util.module_from_spec(_SPEC)
-_SPEC.loader.exec_module(dc)
+dc = load_module_from_path("decision_call", "scripts", "decision_call.py")
 
 VECTOR = {
     "entry_date": "2026-10-28", "entry_type": "research-screen", "strategy": None, "ticker": "ORCL",
@@ -280,7 +280,7 @@ class StagedSql(unittest.TestCase):
 class ConvictionLadder(unittest.TestCase):
     """The 2026-11-02 sector row landed at 80/65/40 and took an append-only correction (ops.alerts 8d2f052b)."""
 
-    BASE = {"entry_date": "2026-11-02", "entry_type": "research-screen", "title": "t", "source_session": "s"}
+    BASE: ClassVar[dict] = {"entry_date": "2026-11-02", "entry_type": "research-screen", "title": "t", "source_session": "s"}
 
     def screen(self, **fields):
         return dict(self.BASE, fields=fields)

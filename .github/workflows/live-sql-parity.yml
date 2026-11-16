@@ -223,16 +223,7 @@ jobs:
             echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           } > /tmp/body.md
 
-          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
-            --jq '[.[] | select(.title|startswith("⚠️ Live SQL parity:"))][0].number // empty')
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body-file /tmp/body.md
-            echo "Updated existing issue #$existing."
-          else
-            gh issue create --repo "$GITHUB_REPOSITORY" \
-              --title "⚠️ Live SQL parity: needs attention" \
-              --body-file /tmp/body.md
-          fi
+          scripts/finding_issue.sh open "⚠️ Live SQL parity:" "⚠️ Live SQL parity: needs attention" /tmp/body.md
 
           # CI-findings bridge (2026-07-16, CC-1 / issue #10): mirror this finding into
           # ops.ci_findings so a BigQuery-side consumer (D3's adjudication step, cadence_check.sql's
@@ -281,8 +272,9 @@ jobs:
           # test_missing_objects_key_extraction_matches_workflow_jq_pattern.
           run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           # FAIL LOUD ON A MISSING/MALFORMED findings.json (2026-09-06 triage). These two reads used
-          # to be bare `n=$(jq ...)`. GitHub runs every `run:` block as `bash --noprofile --norc -eo
-          # pipefail {0}` — errexit is ON by default and this workflow sets no `shell:`/`defaults:`
+          # to be bare `n=$(jq ...)`. GitHub runs a `run:` block with no `shell:` key as `bash -e {0}`
+          # (pipefail is added only for an explicit `shell: bash`) — errexit is ON by default and this
+          # workflow sets no `shell:`/`defaults:`
           # override, so this step's own `set -uo pipefail` (which deliberately omits -e) does NOT
           # turn it off. A checker CRASH before write_json_out() leaves /tmp/findings.json absent;
           # the parity step's if/else then correctly reports result=drift, this step runs, and jq
@@ -377,12 +369,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
-          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
-            --jq '[.[] | select(.title|startswith("⚠️ Live SQL parity:"))][0].number // empty')
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Resolved — every checked object's live definition now matches its final-effective bigquery/*.sql source. Closing."
-            gh issue close "$existing" --repo "$GITHUB_REPOSITORY"
-          fi
+          scripts/finding_issue.sh close "⚠️ Live SQL parity:" "Resolved — every checked object's live definition now matches its final-effective bigquery/*.sql source. Closing."
 
           # CI-findings bridge (2026-07-16, CC-1; PER-OBJECT since 2026-07-18): a clean run resolves
           # EVERY still-open live-sql-parity key — the per-object keys the drift path now writes AND

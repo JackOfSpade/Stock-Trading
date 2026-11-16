@@ -152,12 +152,12 @@ import sys
 # already on disk; neither needs a BigQuery client).
 from check_live_sql_parity import (
     CREATE_STMT,
-    NEXT_TOP_LEVEL,
-    canonicalize,
     extract_body,
     find_final_definitions,
     find_procedure_body_end,
+    repo_bodies_match,
     sql_tokens,
+    statement_end,
 )
 from lib.sql_files import _string_literal_end, normalize_kind, strip_sql_comments
 
@@ -242,7 +242,9 @@ def _bq_dry_run(sql_text=None, sql_path=None):
             p = subprocess.run(cmd, input=sql_text, capture_output=True, text=True, timeout=180)
     except Exception as e:  # noqa: BLE001 — a harness/timeout error is non-blocking (tolerated)
         return 1, f"harness-error: {e}"
-    return p.returncode, (p.stderr or p.stdout or "").strip()
+    # Both streams, for the reason lib/bq_json.run_bq_query gives: stderr noise must not mask the
+    # error bq printed on stdout and turn a syntax error into a non-blocking "unknown".
+    return p.returncode, "\n".join(t for t in ((p.stderr or "").strip(), (p.stdout or "").strip()) if t)
 
 
 def canary_ok():
@@ -305,9 +307,7 @@ def _extract_statement_text(txt, m, obj_type):
     than NEXT_TOP_LEVEL's own boundary (the next top-level CREATE/DML/DDL keyword, or EOF).
     """
     start = m.start()
-    next_m = NEXT_TOP_LEVEL.search(txt, start + 1)
-    end = next_m.start() if next_m else len(txt)
-    stmt = txt[start:end]
+    stmt = txt[start:statement_end(txt, start, obj_type)]
     if obj_type == "PROCEDURE":
         begin_at = next(
             (tstart for kind, val, tstart, _tend in sql_tokens(stmt)
@@ -352,7 +352,7 @@ def _is_final_create(path, txt, m, obj_type, dataset, name, final):
     body = extract_body(txt, m.start(), obj_type)
     if body is None:
         return False
-    return canonicalize(body) == canonicalize(entry_body)
+    return repo_bodies_match(body, entry_body)
 
 
 _TOP_LEVEL_DDL_RE = re.compile(r"^(?:CREATE|ALTER|DROP)\b", re.IGNORECASE | re.MULTILINE)

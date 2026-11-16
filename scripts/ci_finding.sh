@@ -57,6 +57,16 @@ finding_key="$2"
 status="$3"
 detail="$4"
 
+# Callers truncate with `head -c N`, which can cut a multibyte character (the logs are full of ✗ / —)
+# in half and leave invalid UTF-8 at the end of the STRING parameter. Drop any such partial sequence
+# here, once, rather than at each call site; valid text passes through unchanged. iconv's exit status
+# is ignored on purpose (it is non-zero precisely when it had something to drop); a missing iconv, or
+# one that produced nothing, leaves the detail exactly as given.
+clean=$(printf '%s' "$detail" | iconv -c -f UTF-8 -t UTF-8 2>/dev/null) || true
+if [ -n "$clean" ]; then
+  detail="$clean"
+fi
+
 run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 
 # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted BigQuery identifier

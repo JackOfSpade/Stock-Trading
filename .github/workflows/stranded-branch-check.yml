@@ -2,8 +2,11 @@ name: Stranded-branch check
 
 # Closes the monitoring gap behind the 2026-06-14 W5/W2 data loss (ops/RUNBOOK.md §20):
 # a routine can log "completed" in ops.run_log (BigQuery) while its committed .md output
-# NEVER reaches main — a branch whose CI stays red (auto-merge skips it) or an unresolved
-# "Auto-merge conflict:" PR. Every existing monitor (freshness / cadence) watches BigQuery,
+# NEVER reaches main — a branch whose checks stay red, or one whose routine never dispatched
+# "Merge validated PR" for it. (Until 2026-10-26 a branch-sweeping auto-merge also opened
+# "Auto-merge conflict:" PRs, and this sweep listed those too; nothing creates them any more, so
+# that lookup — and the false "problem" it raised on a GitHub API blip — was removed 2026-11-16.)
+# Every existing monitor (freshness / cadence) watches BigQuery,
 # so it is blind to this git↔BigQuery divergence. This sweep flags it within hours and opens
 # a GitHub issue (which notifies the repo owner) instead of it sitting unnoticed for weeks.
 #
@@ -110,11 +113,11 @@ jobs:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
 
-      - name: Detect stranded branches + open conflict PRs
+      - name: Detect stranded branches
         id: detect
         env:
           GH_TOKEN: ${{ github.token }}
-          MAX_AGE_HOURS: '6'   # a healthy branch auto-merges within minutes of green CI; >6h unmerged = stuck
+          MAX_AGE_HOURS: '6'   # a healthy branch is merged by its own routine within minutes of green checks; >6h unmerged = stuck
         run: |
           set -uo pipefail
           # Fetch ALL remote branches (checkout only brought main).
@@ -137,31 +140,12 @@ jobs:
             fi
           done
 
-          # READ FAILURE (API rate limit, token/permission hiccup, transient GH outage) is NOT the same as
-          # "zero open conflict PRs" — the prior version's `|| true` made a failed `gh pr list` call
-          # indistinguishable from a clean empty result, so the check never having run could silently
-          # report "OK: no ... open conflict PRs" (2026-07-09 fix, same bug class as keyless-sa-audit.yml).
-          # (No separate pre-truncation of /tmp/conflicts.txt needed here — the `>` redirect below already
-          # truncates it before `gh` runs, on both the success and failure path; the `then`-branch
-          # re-truncation is what actually guards against partial output surviving a failed read, since
-          # that runs AFTER gh may have already written partial stdout through the redirect.)
-          if ! gh pr list --repo "$GITHUB_REPOSITORY" --state open --json number,title,url \
-                --jq '.[] | select(.title|startswith("Auto-merge conflict:")) | "- #\(.number) \(.title) (\(.url))"' \
-                > /tmp/conflicts.txt 2>/tmp/gh_pr_list_error.txt; then
-            : > /tmp/conflicts.txt   # a failed read must not carry over partial/stale output
-          else
-            : > /tmp/gh_pr_list_error.txt   # successful read — no error to report
-          fi
-
-          if [ -s /tmp/gh_pr_list_error.txt ]; then
-            echo "problem=true" >> "$GITHUB_OUTPUT"
-            echo "::warning::Could not check for open 'Auto-merge conflict:' PRs ($(tr '\n' ' ' < /tmp/gh_pr_list_error.txt)) — treating as a problem so a gh/API failure surfaces instead of silently reporting OK."
-          elif [ -s /tmp/stranded.txt ] || [ -s /tmp/conflicts.txt ]; then
+          if [ -s /tmp/stranded.txt ]; then
             echo "problem=true" >> "$GITHUB_OUTPUT"
             echo "::warning::Stranded routine output detected — see the Alert step / opened issue."
           else
             echo "problem=false" >> "$GITHUB_OUTPUT"
-            echo "OK: no stranded branches (> ${MAX_AGE_HOURS}h), no open conflict PRs."
+            echo "OK: no stranded branches (> ${MAX_AGE_HOURS}h)."
           fi
 
       - name: Bounded next-Pacific-day rerun for per-day-quota CI failures
@@ -228,7 +212,7 @@ jobs:
 
           if [ "${{ steps.detect.outputs.problem }}" = "true" ]; then
             # detail is SHORT and IDENTITY-BEARING: it lands in a JSON payload and an operator email.
-            # Name the branches/PRs, not the full markdown issue body. Note the alert MESSAGE only ever
+            # Name the branches, not the full markdown issue body. Note the alert MESSAGE only ever
             # says "stranded-branch-check/stranded_branch" — a single stable finding_key, so
             # sp_raise_alert_once dedups to ONE open row while the condition persists, exactly the
             # "identity in the message, detail in the payload" convention the cadence_check blocks use.
@@ -237,13 +221,8 @@ jobs:
             # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted markdown
             # branch-name pattern must stay literal, not shell-expanded (same as the rerun step above).
             branches=$(sed -nE 's/^- `([^`]+)`.*/\1/p' /tmp/stranded.txt 2>/dev/null | paste -sd',' - || true)
-            prs=$(sed -nE 's/^- (#[0-9]+).*/\1/p' /tmp/conflicts.txt 2>/dev/null | paste -sd',' - || true)
             detail=""
             [ -n "$branches" ] && detail="unmerged branch(es): ${branches}"
-            [ -n "$prs" ] && detail="${detail:+${detail}; }open auto-merge conflict PR(s): ${prs}"
-            if [ -s /tmp/gh_pr_list_error.txt ]; then
-              detail="${detail:+${detail}; }could not read conflict PRs (monitoring gap, not necessarily a strand): $(tr '\n' ' ' < /tmp/gh_pr_list_error.txt)"
-            fi
             [ -n "$detail" ] || detail="stranded-branch check reported a problem but produced no detail lines — see the run log"
             detail="Routine output may be stranded off main (RUNBOOK §20). ${detail}"
             detail=$(printf '%s' "$detail" | cut -c1-900)
@@ -264,7 +243,7 @@ jobs:
             # shellcheck disable=SC2016 # single-quoted intentionally: see above.
             if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false \
                  --parameter="p_url:STRING:${run_url}" \
-                 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) SELECT workflow, finding_key, "resolved", "no stranded branches or conflict PRs this sweep", @p_url FROM `stock-trading-498512.state.ci_findings_open` WHERE workflow = "stranded-branch-check"'; then
+                 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) SELECT workflow, finding_key, "resolved", "no stranded branches this sweep", @p_url FROM `stock-trading-498512.state.ci_findings_open` WHERE workflow = "stranded-branch-check"'; then
               echo "::warning::Could not auto-resolve the stranded-branch finding in ops.ci_findings; a stale open row may linger until the next clean sweep."
             fi
           fi
@@ -303,18 +282,7 @@ jobs:
 
           # Same title-prefix selector the open step dedups on, so the two can never disagree about
           # which issue represents this condition.
-          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
-            --jq '[.[] | select(.title|startswith("⚠️ Stranded routine branch"))][0].number // empty' \
-            2>/dev/null || echo "")
-
-          if [ -z "$existing" ]; then
-            echo "No open stranded-branch issue to close — nothing to do."
-          else
-            gh issue close "$existing" --repo "$GITHUB_REPOSITORY" \
-              --comment "Closed automatically: this sweep found no stranded branches and no open auto-merge conflict PRs, so the condition this issue reports is no longer true. Sweep run: ${run_url}. The matching ops.ci_findings row was resolved by the same sweep. A future strand opens a NEW issue (this workflow dedups on open issues only), so closing here is what keeps that notification loud." \
-              && echo "Closed stale stranded-branch issue #$existing." \
-              || echo "::warning::Could not close stranded-branch issue #$existing (transient gh failure?) — it stays open and the NEXT incident will edit it rather than opening a fresh, notifying issue. Close it by hand if this repeats."
-          fi
+          scripts/finding_issue.sh close "⚠️ Stranded routine branch" "Closed automatically: this sweep found no stranded branches, so the condition this issue reports is no longer true. Sweep run: ${run_url}. The matching ops.ci_findings row was resolved by the same sweep. A future strand opens a NEW issue (this workflow dedups on open issues only), so closing here is what keeps that notification loud."
 
       - name: Open alert issue (dedup) and fail the run
         if: steps.detect.outputs.problem == 'true'
@@ -328,27 +296,11 @@ jobs:
             if [ -s /tmp/stranded.txt ]; then
               echo "**Stranded branches (unmerged > 6h):**"; echo; cat /tmp/stranded.txt; echo
             fi
-            if [ -s /tmp/conflicts.txt ]; then
-              echo "**Open auto-merge conflict PRs:**"; echo; cat /tmp/conflicts.txt; echo
-            fi
-            if [ -s /tmp/gh_pr_list_error.txt ]; then
-              echo "**Could not check for open 'Auto-merge conflict:' PRs** (\`gh pr list\` failed — this is a monitoring gap, not necessarily a stranded branch): $(cat /tmp/gh_pr_list_error.txt)"; echo
-            fi
-            echo "**Resolve:** get the branch's CI green (the auto-merge then drains it), or merge/close the conflict PR. If the branch is obsolete, confirm its outputs are superseded (or back-fill cumulative files like \`B_Sub_Pattern_Taxonomy.md\`) before deleting."
+            echo "**Resolve:** get the branch's PR checks green on its exact head, then dispatch the **Merge validated PR** workflow with its PR number (nothing drains a green branch on its own any more). If the branch is obsolete, confirm its outputs are superseded (or back-fill cumulative files like \`B_Sub_Pattern_Taxonomy.md\`) before deleting."
           } > /tmp/body.md
 
           # Dedup by title prefix (avoids a new issue every sweep while one incident is open — the
           # cadence was every 6h until the 2026-08-30 retune to `23 0,8,16`, i.e. every 8h; MAX_AGE_HOURS
           # a few steps up is a DIFFERENT 6, the staleness threshold, and is unaffected).
-          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
-            --jq '[.[] | select(.title|startswith("⚠️ Stranded routine branch"))][0].number // empty')
-          if [ -n "$existing" ]; then
-            gh issue edit "$existing" --repo "$GITHUB_REPOSITORY" --body-file /tmp/body.md \
-              && echo "Alert issue #$existing already open; body refreshed with the current stranded list." \
-              || echo "::warning::could not refresh issue #$existing body (transient gh failure?) — issue remains open with a stale body."
-          else
-            gh issue create --repo "$GITHUB_REPOSITORY" \
-              --title "⚠️ Stranded routine branch / unmerged output detected" \
-              --body-file /tmp/body.md
-          fi
+          scripts/finding_issue.sh open "⚠️ Stranded routine branch" "⚠️ Stranded routine branch / unmerged output detected" /tmp/body.md edit
           exit 1   # surface red in the Actions tab too

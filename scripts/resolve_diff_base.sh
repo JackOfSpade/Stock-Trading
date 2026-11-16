@@ -11,7 +11,7 @@
 # (extracted 2026-07-26, codebase audit — de-duplication). Mirrors the precedent set by
 # scripts/auto_merge_decision.sh: production and tests source the SAME implementation (no
 # shadow copy to drift), and tests/test_resolve_diff_base.sh exercises it against a scratch
-# git repo, wired into ci.yml's `test` job.
+# git repo, wired into ci.yml's `checks` job.
 #
 # WHY THIS WAS EXTRACTED: dbt-parity and sql-validate each carried their OWN verbatim copy of
 # this ~15-line precedence chain (sql-validate's own comment admitted it "mirrors dbt-parity's

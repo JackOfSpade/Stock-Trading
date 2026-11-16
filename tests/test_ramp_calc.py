@@ -1,16 +1,15 @@
 """Pins the LIVE_RAMP_DESIGN.md section 3.3 ramp algorithm (scripts/ramp_calc.py) on fixed vectors."""
 
-import importlib.util
 import json
 import random
 import unittest
 from pathlib import Path
 from typing import ClassVar
 
+from conftest import load_module_from_path
+
 ROOT = Path(__file__).resolve().parent.parent
-_SPEC = importlib.util.spec_from_file_location("ramp_calc", ROOT / "scripts" / "ramp_calc.py")
-ramp_calc = importlib.util.module_from_spec(_SPEC)
-_SPEC.loader.exec_module(ramp_calc)
+ramp_calc = load_module_from_path("ramp_calc", "scripts", "ramp_calc.py")
 
 FIXTURE = ROOT / "tests" / "fixtures" / "ramp_vectors.json"
 with open(FIXTURE, encoding="utf-8") as _fh:

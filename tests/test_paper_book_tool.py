@@ -7,7 +7,6 @@ guarded row would be skipped.
 
 import contextlib
 import hashlib
-import importlib.util
 import io
 import json
 import os
@@ -17,10 +16,10 @@ import unittest
 from pathlib import Path
 from typing import ClassVar
 
+from conftest import load_module_from_path
+
 ROOT = Path(__file__).resolve().parent.parent
-_SPEC = importlib.util.spec_from_file_location("paper_book", ROOT / "scripts" / "paper_book.py")
-pb = importlib.util.module_from_spec(_SPEC)
-_SPEC.loader.exec_module(pb)
+pb = load_module_from_path("paper_book", "scripts", "paper_book.py")
 
 with open(ROOT / "tests" / "fixtures" / "paper_book_vectors.json", encoding="utf-8") as _fh:
     VECTORS = json.load(_fh)

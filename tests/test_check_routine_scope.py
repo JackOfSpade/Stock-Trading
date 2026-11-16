@@ -267,6 +267,16 @@ def test_walk_step_without_any_assignment_fails():
     assert any("assigns it no `Owner: M4` locus" in e for e in errors)
 
 
+def test_every_cadence_routine_id_is_capturable_as_an_owner():
+    """`[a-z]?` could not capture M1R (uppercase tail), so an `Owner: M1R` assignment was invisible."""
+    import yaml
+
+    with open(crs.ROOT + "/ops/cadence.yaml", encoding="utf-8") as fh:
+        ids = {r["id"] for r in yaml.safe_load(fh)["routines"]}
+    text = "".join(f"Owner: {i}.\nOwner: **{i}** re-scores\n" for i in sorted(ids))
+    assert crs.premortem_owner_routines(text) == ids
+
+
 def test_human_owner_and_surface_owner_are_not_routine_assignments():
     premortem = (
         "manually verified by Owner: the participant against both code paths.\n"

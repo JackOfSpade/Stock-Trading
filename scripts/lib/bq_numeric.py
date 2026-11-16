@@ -16,6 +16,8 @@ def numeric_text(value: Decimal, *, trim_scale: bool = False) -> str:
     if not value.is_finite():
         raise ValueError("is not finite")
     _, coefficient, exponent = value.as_tuple()
+    if trim_scale and value == 0:  # an exact zero at any scale (0E-20) has nothing to round
+        return "0"
     if trim_scale and exponent < 0:
         coefficient = list(coefficient)
         while coefficient and coefficient[-1] == 0 and exponent < 0:

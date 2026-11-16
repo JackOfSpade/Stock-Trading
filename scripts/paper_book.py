@@ -56,6 +56,7 @@ from decimal import Decimal, InvalidOperation
 from email.utils import parsedate_to_datetime
 from urllib.parse import quote_plus
 
+from lib.bq_literal import sql_str
 from lib.bq_numeric import numeric_text
 
 PROJECT = "stock-trading-498512"
@@ -221,24 +222,6 @@ def story_key(headline: str) -> str:
     if " - " in s:
         s = s.rsplit(" - ", 1)[0]
     return hashlib.sha256(s.strip(" ").lower().encode("utf-8")).hexdigest()[:DIGEST_HEX]
-
-
-def sql_str(value: str) -> str:
-    """A GoogleSQL quoted literal whose value is exactly `value`, written in printable ASCII only."""
-    out = []
-    for ch in value:
-        o = ord(ch)
-        if ch == "\\":
-            out.append("\\\\")
-        elif ch == "'":
-            out.append("\\'")
-        elif 0x20 <= o < 0x7F:
-            out.append(ch)
-        elif o <= 0xFFFF:
-            out.append("\\u%04x" % o)
-        else:
-            out.append("\\U%08x" % o)
-    return "'" + "".join(out) + "'"
 
 
 # ----- input normalisation -----
@@ -881,6 +864,9 @@ def main(argv: list[str] | None = None) -> int:
             if not a.today:
                 raise RowError("urls needs --today")
             only = {t.strip().upper() for t in a.only.split(",")} if a.only else None
+            unknown = sorted((only or set()) - set(ALL_TICKERS))
+            if unknown:  # an unknown ticker used to print nothing and exit 0
+                raise RowError(f"--only {unknown} are not paper-book tickers")
             for path, accept, url in fetch_urls(a.today, a.since_date, only):
                 print(f"{path}\t{accept}\t{url}")
             return 0

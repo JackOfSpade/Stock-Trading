@@ -12,8 +12,8 @@ WHY IT MATTERS. Both are BLOCKING CI gates and they sit on opposite sides of the
 check_settings_toolcov.py decides which `mcp__` references in Claude_Task_Plan.md / ops/triggers.json
 MUST appear in .claude/settings.json's allowlist, while check_connector_tools.py decides which
 allowlist entries count as covering a declared connector tool. If the token shape ever has to widen
--- a connector server name containing a hyphen is the obvious candidate, which `[A-Za-z0-9_]+`
-cannot match today -- fixing only one copy silently desynchronizes the pair: one gate stops
+-- it did on 2026-11-14, when the first hyphenated server name arrived (see MCP_TOKEN below) --
+fixing only one copy silently desynchronizes the pair: one gate stops
 requiring a newly-shaped tool to be allowlisted while the other stops recognizing an
 already-allowlisted entry of that shape as coverage. That is precisely the "two sites drift, one
 gate goes quietly weaker than intended" failure class these checkers exist to prevent elsewhere.
@@ -32,7 +32,11 @@ import re
 # A full mcp__<Server>__<tool> token. Deliberately NOT backtick-anchored: both consumers scan
 # running prose as well as JSON/allowlist strings, and a token can legitimately appear bare
 # mid-sentence.
-MCP_TOKEN = re.compile(r"mcp__[A-Za-z0-9_]+")
+# A server name may contain hyphens (`mcp__Parallel-Search-Paid__web_search`, added 2026-11-14): the
+# hyphen-less form truncated that token to `mcp__Parallel` in prose and failed fullmatch on its
+# allowlist entries, blinding the stale-entry and retired-tool checks for the whole connector. A
+# hyphen is only taken BETWEEN word characters, so a token followed by a dash in prose stays intact.
+MCP_TOKEN = re.compile(r"mcp__[A-Za-z0-9_]+(?:-[A-Za-z0-9_]+)*")
 
 
 def load_allow_entries(settings_path, *, mcp_only=False):

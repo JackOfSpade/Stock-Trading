@@ -244,6 +244,26 @@ run_hook "$NOREMOTE"; err="$HOOK_ERR"
 assert_eq "hook exits 0 with no remote configured" "$HOOK_RC" "0"
 assert_eq "no-remote repo is left alone" "$(cd "$NOREMOTE" && git rev-list --count HEAD)" "1"
 
+# ---------------------------------------------------------------------------
+# 6. A SINGLE-BRANCH clone of ANOTHER branch still resets to origin/main (2026-11-16).
+#    `--depth 1 --branch <x>` implies --single-branch, so the clone's fetch refspec does
+#    not cover main: a bare `git fetch origin main` only wrote FETCH_HEAD, origin/main
+#    stayed absent, and the hook printed "git reset --hard origin/main failed" and left
+#    the session on the feature branch's stale tree.
+# ---------------------------------------------------------------------------
+(
+  cd "$ORIGIN"
+  git branch -q claude/feature HEAD~3
+) >/dev/null
+SINGLE="$TMP/single"
+git clone -q --depth 1 --branch claude/feature "$ORIGIN_URL" "$SINGLE"
+assert_eq "single-branch fixture has no origin/main to start with" \
+  "$(cd "$SINGLE" && git rev-parse -q --verify refs/remotes/origin/main >/dev/null && echo yes || echo no)" "no"
+run_hook "$SINGLE"; err="$HOOK_ERR"
+assert_eq "hook exits 0 on the single-branch path" "$HOOK_RC" "0"
+assert_eq "single-branch clone is reset to origin's main tip" \
+  "$(cd "$SINGLE" && git rev-parse HEAD)" "$(cd "$ORIGIN" && git rev-parse main)"
+
 echo
 if [ "$fail" -eq 0 ]; then
   echo "All $pass_count session-start hook assertions passed."

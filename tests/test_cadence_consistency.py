@@ -3293,7 +3293,7 @@ def _cadQ(sl2_dow="1,2,3,4,5", m1r_dow="0,1,2,3,4"):
     # Both spell Denver Sun-Thu; hardcoding one literal for both cohorts is the bug this parameter
     # exists to keep the suite honest about.
     def r(rid, local, dow, hour=0):
-        return {"id": rid,
+        return {"id": rid, "monitor_class": "daily" if rid == "D3" else "queue_driven",
                 "expected_trigger": {"time_local": local, "cron_utc": f"0 {hour} * * {dow}"}}
     return {
         "AR_att": r("AR_att", "18:00", "1,2,3,4,5"),
@@ -3314,6 +3314,18 @@ def _writeQ(tmp_path, monkeypatch, text):
     p = tmp_path / "plan.md"
     p.write_text(text, encoding="utf-8")
     monkeypatch.setattr(cc, "PLAN", str(p))
+
+
+def test_check_q_new_queue_driven_routine_is_demanded_without_editing_the_checker(tmp_path, monkeypatch):
+    """The owner set was a hardcoded tuple + regex alternation, so a sixth queue-driven routine was
+    never required in the slot table and its Sun-Thu premise was never read."""
+    _writeQ(tmp_path, monkeypatch, _Q_TABLE)
+    cad = _cadQ()
+    cad["SL6"] = {"id": "SL6", "monitor_class": "queue_driven",
+                  "expected_trigger": {"time_local": "19:30", "cron_utc": "30 1 * * 6"}}
+    errs = cc.queue_owner_slot_mirror_errors(cad)
+    assert any("omits SL6" in e for e in errs), errs
+    assert any("SL6 cron_utc day-of-week is '6'" in e for e in errs), errs
 
 
 def test_check_q_matching_slot_table_is_clean(tmp_path, monkeypatch):
@@ -3370,7 +3382,7 @@ def test_check_q_morning_owner_with_the_evening_day_set_is_caught(tmp_path, monk
 def test_check_q_duplicate_id_in_table_is_caught(tmp_path, monkeypatch):
     # THE regression test for 'queue-slot-table-duplicate-id-uncaught' (2026-09-02): a routine id
     # restated TWICE in the slot table must be caught -- even when the SECOND (kept-by-dict()) value
-    # happens to already agree with ops/cadence.yaml. Pre-fix, `dict(QUEUE_OWNER_SLOT_PAIR.findall
+    # happens to already agree with ops/cadence.yaml. Pre-fix, `dict(<pair regex>.findall
     # (para))` collapses straight to the last occurrence (19:05, correct), so the per-id drift loop
     # sees a clean match and reports NOTHING even though the paragraph restates SL2 twice -- this
     # fixture reproduces exactly that "stale first occurrence, correct second occurrence" shape.

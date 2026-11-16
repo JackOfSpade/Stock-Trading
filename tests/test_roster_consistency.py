@@ -1806,3 +1806,13 @@ def test_module_coverage_gap_note_is_non_blocking_even_after_spec_hash_is_kept_c
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))
+
+
+def test_func_divisor_sees_a_parenthesised_first_argument_and_money_matching_ignores_case():
+    for sql in ("SAFE_DIVIDE(SUM(cf.amount), 5)", "SAFE_DIVIDE(SUM(IFNULL(cf.amount, 0)), 5)",
+                "IEEE_DIVIDE(cf.amount, 5)", "DIV(cf.amount, 5)"):
+        assert rc.FUNC_DIVISOR.search(sql), sql
+    assert not rc.FUNC_DIVISOR.search("SAFE_DIVIDE(a, b) + SAFE_DIVIDE(c, n_active)")
+    assert rc._money_nearby("SUM(cf.AMOUNT) / 5", ("amount",), set())
+    assert rc._money_nearby("SUM(raw) / 5", (), {"Raw"})
+    assert not rc._money_nearby("SUM(drawing) / 5", (), {"Raw"})

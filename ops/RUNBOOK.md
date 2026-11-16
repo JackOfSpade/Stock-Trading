@@ -1074,6 +1074,14 @@ dataset (or a custom role with only `bigquery.tables.updateData` on `ops.alerts`
 `bq query` an `INSERT` via the existing WIF auth — then it flows through the alert-emailer + weekly report
 + `state.system_health` like every other alert. Left off by default to keep CI read-only.
 
+**Update 2026-11-16 — the conflict-PR half is retired.** Nothing has opened an `Auto-merge conflict:` PR
+since the branch-sweeping auto-merge was replaced by the explicit **Merge validated PR** dispatch
+(2026-10-26), so the sweep no longer lists them: the lookup could only ever raise a false "problem" on a
+GitHub API blip. A stranded branch is now resolved by getting its PR checks green on the exact head and
+dispatching that workflow with the PR number. The workflow's issue open/close steps (and the seven
+sibling guard workflows') go through `scripts/finding_issue.sh`, which never fails its step — a GitHub
+Issues outage can no longer stop the `ops.ci_findings` row that feeds the alert email.
+
 **IMPLEMENTED VARIANT (2026-07-16, CC-1, issue #10):** the narrow, table-scoped form of this same
 upgrade is now live-wired (pending the OWNER_ACTIONS.md grant) for the four CI *guard* workflows
 (`live-sql-parity.yml`, `keyless-sa-audit.yml`, `wif-binding-audit.yml`, `guard-config-audit.yml`) —

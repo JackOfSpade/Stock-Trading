@@ -198,3 +198,38 @@ def test_unresolvable_base_says_so_loudly_instead_of_claiming_a_period_check(tmp
 
 def test_real_repo_is_consistent():
     assert svc.main() == 0
+
+
+# --- write_dt(), against a real throwaway repo ---------------------------------------------------
+
+def test_write_dt_dates_the_commit_that_changed_the_marker_not_a_later_body_edit(tmp_path, monkeypatch):
+    """`git log -1 base..HEAD -- path` returned the newest commit TOUCHING the file, so a body-only
+    edit on Jul 1 re-dated a marker correctly stamped on Jun 30 and failed it as a period mismatch."""
+    import subprocess
+
+    def git(*args, date=None):
+        env = {"PATH": __import__("os").environ["PATH"], "HOME": str(tmp_path),
+               "GIT_CONFIG_NOSYSTEM": "1", "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
+               "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com"}
+        if date:
+            env["GIT_AUTHOR_DATE"] = env["GIT_COMMITTER_DATE"] = date
+        return subprocess.run(["git", *args], cwd=tmp_path, env=env, check=True,
+                              capture_output=True, text=True).stdout.strip()
+
+    f = tmp_path / "Monthly_Fundamental.md"
+    git("init", "-q")
+    f.write_text("2026-05\n\nbody\n")
+    git("add", "-A")
+    git("commit", "-qm", "base", date="2026-06-01T12:00:00-06:00")
+    base = git("rev-parse", "HEAD")
+    f.write_text("2026-06\n\nbody\n")
+    git("commit", "-qam", "stamp", date="2026-06-30T12:00:00-06:00")
+    f.write_text("2026-06\n\nbody, edited\n")
+    git("commit", "-qam", "body only", date="2026-07-01T12:00:00-06:00")
+    monkeypatch.setattr(svc, "ROOT", str(tmp_path))
+
+    assert svc.write_dt(base, f.name).date() == datetime.date(2026, 6, 30)
+
+    # An uncommitted marker edit is dated NOW, whatever the commits in range say.
+    f.write_text("2026-07\n\nbody, edited\n")
+    assert svc.write_dt(base, f.name).date() == datetime.datetime.now(svc.OPERATING_TZ).date()

@@ -10,7 +10,6 @@
 import argparse
 import collections
 import datetime as dt
-import glob
 import hashlib
 from html.parser import HTMLParser
 import json

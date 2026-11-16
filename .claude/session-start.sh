@@ -30,7 +30,10 @@ if [ -z "$(git remote 2>/dev/null)" ]; then
 fi
 
 # Best-effort fetch.
-if ! git fetch origin main >/dev/null 2>&1; then
+# Explicit refspec: a clone made with --depth/--single-branch for ANOTHER branch has a fetch refspec
+# that does not cover main, so a bare `git fetch origin main` only writes FETCH_HEAD, origin/main
+# stays absent, and the reset below fails -- leaving the session on stale state (2026-11-16).
+if ! git fetch origin '+refs/heads/main:refs/remotes/origin/main' >/dev/null 2>&1; then
   echo "[session-start] git fetch origin main failed; staying on current state" >&2
   exit 0
 fi

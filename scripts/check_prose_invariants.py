@@ -463,14 +463,22 @@ def check_adversarial_review_storage(errors):
         # overlapping an already-reported physical line cannot re-report it at the earlier line.
         reported = set()
         for i, end_i, line in match_units(visible_lines, wrapped_lines=True):
-            if (ACTIVE_REVIEW_FILE_WRITE.search(line)
+            # Substring prefilter: each regex below can only match a unit containing its own fixed
+            # needle, and the backtracking scans were ~half of this script's runtime on the ~46k
+            # units (lines up to ~10 KB) it walks. Identical findings, measured 1.4 s -> 0.2 s.
+            low = line.lower()
+            has_artifact = "adversarial_review_" in low
+            if not (has_artifact or "_output_path" in low or "file" in low
+                    or "pending_adversarial_reviews.md" in low):
+                continue
+            if (has_artifact and ACTIVE_REVIEW_FILE_WRITE.search(line)
                     and not NEGATED_REVIEW_FILE_WRITE.search(line)
                     and _claim_unit(reported, "write", i, end_i)):
                 errors.append(
                     f"[adversarial_review_storage] {rel}:{i + 1}: active write of a retired "
                     "Adversarial_Review_*.md transcript; write events.adversarial_reviews instead"
                 )
-            if (ACTIVE_REVIEW_OUTPUT_PATH.search(line)
+            if ("_output_path" in low and ACTIVE_REVIEW_OUTPUT_PATH.search(line)
                     and not NEGATED_REVIEW_OUTPUT_PATH.search(line)
                     and _claim_unit(reported, "output_path", i, end_i)):
                 errors.append(
@@ -478,18 +486,21 @@ def check_adversarial_review_storage(errors):
                     "depends on a retired local transcript; hand off by review id/cycle/role in "
                     "state.adversarial_reviews_current instead"
                 )
-            if ACTIVE_REVIEW_FILE_HANDOFF.search(line) and _claim_unit(reported, "file_handoff", i, end_i):
+            if ("file" in low and ACTIVE_REVIEW_FILE_HANDOFF.search(line)
+                    and _claim_unit(reported, "file_handoff", i, end_i)):
                 errors.append(
                     f"[adversarial_review_storage] {rel}:{i + 1}: active local transcript "
                     "file hand-off depends on a retired Markdown copy; hand off by review "
                     "id/cycle/role in state.adversarial_reviews_current instead"
                 )
-            if ACTIVE_RETIRED_REVIEW_QUEUE.search(line) and _claim_unit(reported, "retired_queue", i, end_i):
+            if ("pending_adversarial_reviews.md" in low and ACTIVE_RETIRED_REVIEW_QUEUE.search(line)
+                    and _claim_unit(reported, "retired_queue", i, end_i)):
                 errors.append(
                     f"[adversarial_review_storage] {rel}:{i + 1}: active use of retired "
                     "Pending_Adversarial_Reviews.md; use events.queue_events / state.open_queue instead"
                 )
-            if ACTIVE_REVIEW_FILE_AS_DURABLE_RECORD.search(line) and _claim_unit(reported, "durable", i, end_i):
+            if (has_artifact and ACTIVE_REVIEW_FILE_AS_DURABLE_RECORD.search(line)
+                    and _claim_unit(reported, "durable", i, end_i)):
                 errors.append(
                     f"[adversarial_review_storage] {rel}:{i + 1}: retired Markdown transcript "
                     "is described as a durable record; events.adversarial_reviews is canonical"

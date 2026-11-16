@@ -531,3 +531,18 @@ def test_real_repo_connector_tools_is_consistent():
     passing -- fix the underlying manifest/routine-text/allowlist files instead.
     """
     assert cct.main() == 0
+
+
+def test_hyphenated_server_token_matches_whole_and_stops_at_prose_punctuation():
+    """`[A-Za-z0-9_]+` truncated mcp__Parallel-Search-Paid__web_search to mcp__Parallel."""
+    token = "mcp__Parallel-Search-Paid__web_search"
+    assert cct.MCP_TOKEN.fullmatch(token)
+    assert cct.MCP_TOKEN.findall(f"call {token} - then `mcp__FMP__quote`-style") == [token, "mcp__FMP__quote"]
+
+
+def test_unbalanced_ignore_fence_is_a_finding_not_a_silent_blind_spot():
+    s, e = cct.IGNORE_START, cct.IGNORE_END
+    assert cct.ignore_fence_errors([s, "x", e, f"{s} inline {e}", s, "y", e]) == []
+    assert len(cct.ignore_fence_errors([s, "x", s, "y", e])) == 1      # first fence lost its end
+    assert len(cct.ignore_fence_errors([s, "x"])) == 1                 # runs to EOF
+    assert len(cct.ignore_fence_errors(["x", e])) == 1                 # end with nothing open

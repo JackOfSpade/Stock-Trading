@@ -150,6 +150,7 @@ Files are applied IN THE ORDER GIVEN, and the run STOPS at the first failure —
 matters (a view a procedure reads must exist before that procedure is created).
 """
 import hashlib
+import os
 import re
 import sys
 
@@ -165,11 +166,13 @@ except ImportError:  # pragma: no cover - environment guard, same shape as the o
 # touch BigQuery: CREATE_STMT is a compiled regex, the other three are pure-text functions over files
 # already on disk, which is exactly why check_canonical_provenance() below needs no client argument.
 from check_live_sql_parity import (
+    BIGQUERY_DIR,
     CREATE_STMT,
-    NEXT_TOP_LEVEL,
     canonicalize,
     extract_body,
     find_final_definitions,
+    repo_bodies_match,
+    statement_end,
 )
 from lib.sql_files import normalize_kind, strip_sql_comments
 
@@ -324,8 +327,7 @@ def check_canonical_provenance(path, sql, final=None):
     # EOF) rather than a second, independently-derived boundary. Everything from there to EOF must
     # reduce to nothing once comments are stripped -- a leftover DELETE/MERGE/DROP/etc. is real text
     # after stripping and refuses; trailing comments and blank lines strip to nothing and pass.
-    next_m = NEXT_TOP_LEVEL.search(sql, m.start() + 1)
-    stmt_end = next_m.start() if next_m else len(sql)
+    stmt_end = statement_end(sql, m.start(), obj_type)
     tail = sql[stmt_end:]
     stray_tail = strip_sql_comments(tail).strip()
     if stray_tail:
@@ -367,15 +369,51 @@ def check_canonical_provenance(path, sql, final=None):
     _canon_obj_type, _canon_project, source_file, canon_body = final[key]
     file_canon = canonicalize(body)
     repo_canon = canonicalize(canon_body)
-    if file_canon != repo_canon:
+    if not repo_bodies_match(body, canon_body):
         return False, False, (
             f"{path}: `{dataset}.{name}` body does NOT match the repo's own canonical (apply-in-order) "
             f"definition in bigquery/{source_file} -- this is exactly the drift check_live_sql_parity.py "
             "would flag if this were already live. Refusing to apply.\n" + _diff_hint(repo_canon, file_canon))
 
+    # The HEADER too (2026-11-16). Only the body was compared, but the whole file is sent: the
+    # canonical body under a rewritten parameter list / OPTIONS(...) passed as "canonical" and would
+    # have replaced the live signature. Compare this file's header against the canonical file's own.
+    file_header = _header_text(sql, m, body)
+    repo_header = _canonical_header(source_file, key, obj_type, canon_body)
+    if repo_header is not None and canonicalize(file_header) != canonicalize(repo_header):
+        return False, False, (
+            f"{path}: `{dataset}.{name}` body matches bigquery/{source_file} but its CREATE header "
+            "(parameter list / RETURNS / OPTIONS) does NOT -- the whole file is applied, so a "
+            "different signature would replace the live one. Refusing to apply.\n"
+            + _diff_hint(canonicalize(repo_header), canonicalize(file_header)))
+
     return True, False, (
         f"{path}: canonical -- `{dataset}.{name}` ({obj_type}) matches bigquery/{source_file}'s "
         "apply-in-order final definition.")
+
+
+def _header_text(sql, m, body):
+    """The CREATE header: from the CREATE_STMT match to where the extracted body begins."""
+    at = sql.find(str(body), m.start())
+    return sql[m.start():at if at >= 0 else m.end()]
+
+
+def _canonical_header(source_file, key, obj_type, canon_body):
+    """The header of `key`'s final definition inside bigquery/<source_file>, or None when that
+    occurrence cannot be located (the body comparison has then already been the whole verdict)."""
+    try:
+        with open(os.path.join(BIGQUERY_DIR, source_file), encoding="utf-8") as fh:
+            text = fh.read()
+    except OSError:
+        return None
+    header = None
+    for cm in CREATE_STMT.finditer(text):
+        if (cm.group(3), cm.group(4)) != key:
+            continue
+        cbody = extract_body(text, cm.start(), obj_type)
+        if cbody is not None and repo_bodies_match(cbody, canon_body):
+            header = _header_text(text, cm, cbody)
+    return header
 
 
 def check_registry_lockstep(client, path, sql):

@@ -161,17 +161,7 @@ jobs:
           # second run finding a DIFFERENT load-bearing gap (e.g. offsite-backup newly missing after
           # alert-relay got fixed) never updated the issue, so the operator kept reading a stale problem
           # set. Mirrors stranded-branch-check.yml's identical dedup-and-refresh idiom.
-          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
-            --jq '[.[] | select(.title|startswith("⚠️ Guard config:"))][0].number // empty')
-          if [ -n "$existing" ]; then
-            gh issue edit "$existing" --repo "$GITHUB_REPOSITORY" --body-file /tmp/body.md \
-              && echo "Alert issue #$existing already open; body refreshed with the current finding set." \
-              || echo "::warning::could not refresh issue #$existing body (transient gh failure?) — issue remains open with a stale body."
-          else
-            gh issue create --repo "$GITHUB_REPOSITORY" \
-              --title "⚠️ Guard config: load-bearing alert/backup channel still dormant" \
-              --body-file /tmp/body.md
-          fi
+          scripts/finding_issue.sh open "⚠️ Guard config:" "⚠️ Guard config: load-bearing alert/backup channel still dormant" /tmp/body.md edit
 
           # CI-findings bridge (2026-07-16, CC-1): non-fatal, and only attempted when the CI-findings
           # bridge WIF auth actually ran (vars unset -> no bq CLI credentials -> skip cleanly). Table-
@@ -202,12 +192,7 @@ jobs:
           WIF_LIVE: ${{ steps.wifguard.outputs.skip == 'false' }}
         run: |
           set -uo pipefail
-          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
-            --jq '[.[] | select(.title|startswith("⚠️ Guard config:"))][0].number // empty')
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Resolved — all load-bearing guards are now configured (or WIF was removed, resetting to the pre-bootstrap state). Closing."
-            gh issue close "$existing" --repo "$GITHUB_REPOSITORY"
-          fi
+          scripts/finding_issue.sh close "⚠️ Guard config:" "Resolved — all load-bearing guards are now configured (or WIF was removed, resetting to the pre-bootstrap state). Closing."
 
           # CI-findings bridge (2026-07-16, CC-1): unconditional resolved-row INSERT (when the bridge's
           # own WIF auth ran) so a manually-closed GH issue never strands an open ops.ci_findings row.

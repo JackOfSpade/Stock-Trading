@@ -12,6 +12,16 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      diff_base:
+        # Set by .github/scripts/merge_validated_pr.py to the pre-merge main SHA. A dispatched run has
+        # no `github.event.before`, so without it every path gate below fails open and each merge
+        # re-validates the whole tree (full dbt parity + a dry-run of every bigquery/*.sql file).
+        # It reaches the gates only through resolve_diff_base, which rejects anything that is not a
+        # commit in this checkout; leave it empty on a manual dispatch to validate everything.
+        description: Commit to diff against (the pre-merge main SHA); empty validates everything
+        required: false
+        type: string
 
 # Cancel redundant in-flight runs on the same branch when a newer push arrives.
 # Safe because auto-merge-claude.yml only reads the conclusion of the tip-SHA run;
@@ -60,7 +70,7 @@ jobs:
         id: scope
         # Path gate for the OPTIONAL step groups only. Everything that can regress from a change
         # ANYWHERE in the tree — the module self-test, pytest, every consistency checker, the bash
-        # and node suites, and the workflow_run name-sync check — stays unconditional below; only
+        # and node suites — stays unconditional below; only
         # the three groups whose inputs are structurally confined to a path set are gated:
         #   dbt_needed  — dbt parse/coverage read bigquery/** + dbt/** (plus the pinned constraint file)
         #   lint_needed — actionlint/shellcheck read .github/** and *.sh
@@ -70,11 +80,10 @@ jobs:
         # scope cannot be determined runs everything rather than silently skipping a real check.
         env:
           EVENT_NAME: ${{ github.event_name }}
-          # ci.yml has no pull_request trigger, so this is normally empty — the positional argument
-          # is retained for the same reason the warehouse-validation guard steps retain it (the
-          # helper is shared, and either side's trigger could be restored).
+          # Set on a pull_request run (ci.yml's `on:` has had that trigger again since the 2026-10-20
+          # required-PR-checks policy); empty on push and dispatch.
           PR_BASE: ${{ github.event.pull_request.base.sha }}
-          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_BEFORE: ${{ github.event.before || inputs.diff_base }}
           HEAD_SHA: ${{ github.sha }}
           REF_NAME: ${{ github.ref_name }}
         run: |
@@ -240,7 +249,7 @@ jobs:
         # one's script/test target is missing from precondition 5's paragraph — see the script's
         # docstring for exactly what counts as "blocking" and what is deliberately excluded.
         run: python scripts/check_adopt_gate_coverage.py
-      - name: auto-merge decision logic (CI-gate + delete-safety fixtures — 2026-07-04 code-quality audit)
+      - name: routine commit-marker helpers (scripts/auto_merge_decision.sh — the CI-gate/delete-safety predicates it once held were removed 2026-10-26)
         run: bash tests/test_auto_merge_logic.sh
       - name: diff-base resolution (dbt-parity/sql-validate shared precedence chain — 2026-07-26 codebase audit)
         # scripts/resolve_diff_base.sh replaced the two path gates' verbatim-duplicated base-resolution
@@ -342,10 +351,7 @@ jobs:
       # PATH-GATED (`lint_needed`, see the change-scope step): actionlint reads .github/** only, and the
       # standalone shellcheck pass reads *.sh only, so a push touching neither cannot change either
       # verdict. Both remain BLOCKING whenever they run — an `if:` narrows WHEN a gate applies, it does
-      # not downgrade it to advisory, and the scope step fails open. The `workflow_run` name-sync check
-      # after them is deliberately NOT gated: it is sub-second and reads three workflow files plus the
-      # merge-trigger array, so leaving it unconditional costs nothing and keeps the merge-gate coupling
-      # checked on every single push.
+      # not downgrade it to advisory, and the scope step fails open.
       - name: Cache actionlint binary (pinned v1.7.12)
         id: cache-actionlint
         if: steps.scope.outputs.lint_needed == 'true'
@@ -472,13 +478,9 @@ jobs:
         continue-on-error: ${{ vars.DBT_PARITY != 'block' }}
         env:
           EVENT_NAME: ${{ github.event_name }}
-          # ci.yml no longer has a pull_request trigger, so this is normally empty. Keep the positional
-          # argument: resolve_diff_base.sh is shared with golden-scenarios.yml, whose own pull_request
-          # trigger was ALSO removed (2026-08-08, same cost-audit follow-up -- see that workflow's header
-          # for the duplicate-run evidence). Dropping the argument here would silently break ci.yml
-          # diff-base resolution if either workflow's pull_request trigger is ever restored.
+          # Set on a pull_request run; empty on push and dispatch (resolve_diff_base.sh picks by event).
           PR_BASE: ${{ github.event.pull_request.base.sha }}
-          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_BEFORE: ${{ github.event.before || inputs.diff_base }}
           HEAD_SHA: ${{ github.sha }}
           REF_NAME: ${{ github.ref_name }}   # push event's short branch name (e.g. "main"); rev 2026-07-20b
           WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
@@ -644,10 +646,9 @@ jobs:
       # table-scoped bigquery.dataEditor binding on exactly ops.ci_findings (RUNBOOK §6). Writing
       # ops.alerts directly from CI would have needed a new owner-run grant and was NOT done.
       #
-      # Removing this step is safe against every coupling point that exists: ci.yml's
-      # "workflow_run trigger names stay in sync" step compares only workflow `name:` fields, and
-      # auto-merge-claude.yml's post-merge coverage block mirrors only the credential-free `checks` job
-      # (it deliberately excludes dbt-parity and sql-validate entirely), so neither reads this step.
+      # Removing this step was safe against every coupling point: nothing else reads it (the old
+      # `workflow_run` name-sync step and auto-merge-claude.yml's post-merge coverage block that this
+      # note used to cite are both gone -- that workflow now dispatches the whole of ci.yml instead).
 
 
       # SQL syntax validation remains an unconditional blocking gate.
@@ -660,7 +661,7 @@ jobs:
           # cost-audit follow-up -- see that workflow's header), so a trigger restored on either side
           # still needs this argument unchanged.
           PR_BASE: ${{ github.event.pull_request.base.sha }}
-          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_BEFORE: ${{ github.event.before || inputs.diff_base }}
           HEAD_SHA: ${{ github.sha }}
           REF_NAME: ${{ github.ref_name }}   # push event's short branch name (e.g. "main"); rev 2026-07-20b
         run: |

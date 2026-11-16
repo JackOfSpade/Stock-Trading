@@ -347,3 +347,25 @@ def test_prose_two_backslash_escaped_quotes_are_not_a_doubled_quote_defect():
     ok = _prose("sp_raise_alert('info','Q4','synced','quoted \\'\\'x\\'\\' text','<JSON>')")
     _unreg, quote, _used, _sql, _anom = cams.find_prose_sites(ok)
     assert quote == []
+
+
+def test_apostrophe_inside_a_bare_placeholder_does_not_hide_the_site():
+    """`<the view's message column>` opened a phantom literal, so the site became an ignored anomaly
+    instead of a placeholder held to the registry."""
+    text = "`CALL ops.sp_raise_alert_once('warning','D3','cat_x', <someone's free text>, <payload>)`"
+    unregistered, _quote, _used, _sql, anomalies = cams.find_prose_sites(text)
+    assert unregistered == [("cat_x", "<someone's free text>")] and anomalies == []
+
+
+def test_double_quoted_prose_call_is_parsed_like_a_single_quoted_one():
+    text = '`CALL ops.sp_raise_alert_once("warning","M5","cat_y","<strategy> fell, <made up>","<JSON: a, b>")`'
+    unregistered, _quote, used, _sql, anomalies = cams.find_prose_sites(text)
+    assert unregistered == [("cat_y", "<made up>")] and "<strategy>" in used and anomalies == []
+
+
+def test_signature_mention_and_payload_only_ellipsis_are_classified_correctly():
+    text = ("`sp_raise_alert_once(in_severity STRING, in_source STRING, in_category STRING, "
+            "in_message STRING, in_payload_json STRING)` and "
+            "`CALL ops.sp_raise_alert_once('warning','D3','cat_z','<made up> happened','{…}')`")
+    unregistered, _quote, _used, _sql, anomalies = cams.find_prose_sites(text)
+    assert unregistered == [("cat_z", "<made up>")] and anomalies == []

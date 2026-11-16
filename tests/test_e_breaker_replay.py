@@ -1,14 +1,11 @@
 """Offline tests for ops/research/e_breaker_2026-11/replay_data.py (no network)."""
-import importlib.util
 import math
-from pathlib import Path
 
 import pytest
 
-_PATH = Path(__file__).resolve().parent.parent / "ops" / "research" / "e_breaker_2026-11" / "replay_data.py"
-_spec = importlib.util.spec_from_file_location("e_breaker_replay_data", _PATH)
-rd = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(rd)
+from conftest import load_module_from_path
+
+rd = load_module_from_path("e_breaker_replay_data", "ops", "research", "e_breaker_2026-11", "replay_data.py")
 
 
 def test_pairs_constant():

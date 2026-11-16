@@ -961,3 +961,16 @@ def test_live_scope_prints_no_warning_when_every_name_matches_a_model(monkeypatc
     monkeypatch.setattr(dp, "bq", lambda sql: [{"n_missing": 0, "n_extra": 0}])
     assert dp.main() == 0
     assert "WARNING" not in capsys.readouterr().out
+
+
+def test_schema_marker_split_by_a_bq_line_wrap_still_fails_closed(monkeypatch):
+    """bq hard-wraps long errors mid-phrase; "not found\\ninside" matched no marker and the model was
+    skipped green instead of reported as drift."""
+    monkeypatch.setattr(dp, "live_columns", lambda dataset, name: [{"column_name": "c", "data_type": "STRING"}])
+
+    def boom(sql):
+        raise RuntimeError("Name peak_window_gap_days not found\ninside parity_src at [3:9]")
+
+    monkeypatch.setattr(dp, "bq", boom)
+    status, _detail = dp.check_one_model("state", "v", "SELECT 1 AS c", None)
+    assert status == "error"

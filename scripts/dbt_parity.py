@@ -32,6 +32,7 @@ Two column adjustments make the EXCEPT well-defined:
 """
 import concurrent.futures
 import os
+import re
 
 from lib.bq_json import run_bq_query
 from lib.sql_files import DBT_DATASETS
@@ -417,7 +418,10 @@ def check_one_model(dataset, name, compiled, batch_cols):
         # A parity-query error AFTER live_columns() succeeded is, for a schema-shaped cause, real
         # drift (not a transient hiccup) — fail closed instead of swallowing it as a skip that
         # lets the drift pass green (2026-07-17 audit). Anything else stays a tolerant skip.
-        if any(marker in str(e).lower() for marker in SCHEMA_DRIFT_MARKERS):
+        # Whitespace collapsed first: bq hard-wraps long errors mid-phrase ("...not found\ninside..."),
+        # which split a multi-word marker and turned real drift back into a green skip -- the same
+        # wrap check_sql_dryrun.classify() was fixed for on 2026-09-11.
+        if any(marker in re.sub(r"\s+", " ", str(e)).lower() for marker in SCHEMA_DRIFT_MARKERS):
             return ("error", f"{dataset}.{name} (parity query failed on a schema-shaped error — the "
                              f"dbt port likely lacks a column its live view has, or a column type "
                              f"can't be EXCEPT-compared: {e})")

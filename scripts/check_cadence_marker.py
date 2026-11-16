@@ -114,17 +114,33 @@ def first_line_at(rev, rel_path):
 
 
 def write_dt(base, rel_path):
-    """When the marker under test was written: the newest commit in base..HEAD touching rel_path.
+    """When the marker under test was written: the author date of the newest commit in base..HEAD
+    that CHANGED rel_path's first line.
 
-    Falls back to NOW for a working-tree edit not yet committed (the local pre-commit case), so the
-    check is usable before the commit exists. It used to fall back to HEAD's author date, which is
-    when the LAST commit was written, not when this edit was made -- a marker stamped on the 2nd of
-    a month over a HEAD authored on the 31st read as a false period mismatch (2026-10-31).
+    Not simply the newest commit touching the file: a later body-only edit in the same branch (or
+    the same Daily.md across midnight MT) would re-date an unchanged marker into the next period and
+    fail it falsely -- the same re-dating flaw the module docstring rejects for "last commit".
+
+    Falls back to NOW when the working tree's line 1 is not what HEAD has (an edit not yet committed
+    -- the local pre-commit case), and when no commit in the range changed line 1. It used to fall
+    back to HEAD's author date, which is when the LAST commit was written, not when this edit was
+    made -- a marker stamped on the 2nd of a month over a HEAD authored on the 31st read as a false
+    period mismatch (2026-10-31).
     """
-    stamp = _git("log", "-1", "--format=%aI", f"{base}..HEAD", "--", rel_path)
-    if not stamp:
-        return datetime.now(OPERATING_TZ)
-    return datetime.fromisoformat(stamp).astimezone(OPERATING_TZ)
+    now = datetime.now(OPERATING_TZ)
+    try:
+        with open(os.path.join(ROOT, rel_path), encoding="utf-8") as fh:
+            working = fh.readline().rstrip()
+    except OSError:
+        working = None
+    if working != first_line_at("HEAD", rel_path):
+        return now
+    log = _git("log", "--format=%H %aI", f"{base}..HEAD", "--", rel_path)
+    for row in (log or "").splitlines():
+        sha, stamp = row.split(" ", 1)
+        if first_line_at(sha, rel_path) != first_line_at(f"{sha}~1", rel_path):
+            return datetime.fromisoformat(stamp).astimezone(OPERATING_TZ)
+    return now
 
 
 def expected_marker(cadence, offset, dt):
@@ -201,8 +217,6 @@ def main():
             continue  # marker untouched in this range; its authoring date is not knowable here
 
         dt = write_dt(base, name)
-        if dt is None:
-            continue
         want = expected_marker(cadence, offset, dt)
         period_checked.append(name)
         if marker != want:

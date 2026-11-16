@@ -483,20 +483,36 @@ def _instruction_match(instruction, triggers_doc):
     return None
 
 
-def match_routine_id(normalized, trigger_ids_doc, triggers_doc):
-    """trigger_id lookup first (ops/trigger_ids.json, ground truth once recorded), else a core-
-    instruction match against ops/triggers.json (covers a routine whose trigger was just recreated and
-    has no trigger_ids.json entry yet). None if neither resolves -- the caller decides between the
-    'personal' out-of-scope case and the genuine `_unmatched` catch-all.
+def _matched_ids(normalized, trigger_ids_doc, triggers_doc):
+    """(trigger_id_rid, instruction_rid): what each of the two sources resolves `normalized` to, each
+    None when that source does not resolve it. The ONE place both lookups run -- ingest() and the two
+    public helpers below all derive their answer from this pair via _resolved_id()/_conflict_of(), so
+    the priority and conflict rules the tests pin are the ones ingest() actually executes (they used
+    to be re-implemented inline there, leaving match_routine_id()/match_conflict() test-only)."""
+    return (_trigger_id_match(normalized["trigger_id"], trigger_ids_doc),
+            _instruction_match(normalized["instruction"], triggers_doc))
 
-    Priority is deliberate and must never flip (B5, 2026-08-01 audit): trigger_id is the ground truth
-    once recorded. See match_conflict() for the case where BOTH sources resolve and DISAGREE -- that
-    is a caller-level concern (ingest() must not silently corrupt either routine's entry), not
-    something this function's return value alone can carry."""
-    tid_rid = _trigger_id_match(normalized["trigger_id"], trigger_ids_doc)
-    if tid_rid is not None:
-        return tid_rid
-    return _instruction_match(normalized["instruction"], triggers_doc)
+
+def _resolved_id(tid_rid, instr_rid):
+    """trigger_id first (ops/trigger_ids.json, ground truth once recorded), else the core-instruction
+    match (covers a routine whose trigger was just recreated and has no trigger_ids.json entry yet).
+    Priority is deliberate and must never flip (B5, 2026-08-01 audit)."""
+    return tid_rid if tid_rid is not None else instr_rid
+
+
+def _conflict_of(tid_rid, instr_rid):
+    """(trigger_id_rid, instruction_rid) when BOTH sources resolve AND disagree, else None."""
+    if tid_rid is not None and instr_rid is not None and tid_rid != instr_rid:
+        return tid_rid, instr_rid
+    return None
+
+
+def match_routine_id(normalized, trigger_ids_doc, triggers_doc):
+    """The routine id `normalized` resolves to (see _resolved_id() for the priority), or None if
+    neither source resolves -- the caller decides between the 'personal' out-of-scope case and the
+    genuine `_unmatched` catch-all. A caller that must not silently pick a side when the two sources
+    DISAGREE checks match_conflict() first, as ingest() does."""
+    return _resolved_id(*_matched_ids(normalized, trigger_ids_doc, triggers_doc))
 
 
 def match_conflict(normalized, trigger_ids_doc, triggers_doc):
@@ -504,17 +520,12 @@ def match_conflict(normalized, trigger_ids_doc, triggers_doc):
     ops/triggers.json (by core instruction) resolve `normalized` to a routine id AND those ids
     DISAGREE. None when they agree, or when either source fails to resolve at all.
 
-    WHY THIS MATTERS (B5, 2026-08-01 audit): match_routine_id() resolves by trigger_id first and
-    returns unconditionally -- with a stale or duplicated ops/trigger_ids.json (13 ids were replaced
-    2026-08-01, so this is live risk) a trigger can be filed under the WRONG routine, silently
-    overwriting that routine's stored config while the correct routine's entry never gets refreshed.
-    ingest() calls this BEFORE match_routine_id() and, on a conflict, records it and leaves BOTH
-    routines' stored entries untouched rather than picking a side."""
-    tid_rid = _trigger_id_match(normalized["trigger_id"], trigger_ids_doc)
-    instr_rid = _instruction_match(normalized["instruction"], triggers_doc)
-    if tid_rid is not None and instr_rid is not None and tid_rid != instr_rid:
-        return tid_rid, instr_rid
-    return None
+    WHY THIS MATTERS (B5, 2026-08-01 audit): with a stale or duplicated ops/trigger_ids.json (13 ids
+    were replaced 2026-08-01, so this is live risk) a trigger can be filed under the WRONG routine,
+    silently overwriting that routine's stored config while the correct routine's entry never gets
+    refreshed. ingest() records a conflict and leaves BOTH routines' stored entries untouched rather
+    than picking a side."""
+    return _conflict_of(*_matched_ids(normalized, trigger_ids_doc, triggers_doc))
 
 
 def is_personal(normalized):
@@ -719,16 +730,10 @@ def ingest(path):
         # overwrite the WRONG routine's stored config. Record it loudly and leave every existing entry
         # untouched rather than guess.
         #
-        # DEDUPED LOOKUP (quality pass 2026-09-02): match_conflict() and match_routine_id() each
-        # independently recompute _trigger_id_match()/_instruction_match() over this same normalized
-        # trigger -- calling both back-to-back (as this loop used to) redid the identical two linear
-        # scans a second time for nothing. Compute each match ONCE here and derive both the conflict
-        # check and the resolved id from these two locals, mirroring the two functions' own bodies
-        # exactly (match_conflict()/match_routine_id() are left unedited -- still directly unit-tested
-        # below -- only this call site changes).
-        tid_rid = _trigger_id_match(normalized["trigger_id"], trigger_ids_doc)
-        instr_rid = _instruction_match(normalized["instruction"], triggers_doc)
-        if tid_rid is not None and instr_rid is not None and tid_rid != instr_rid:
+        # Both lookups run ONCE (_matched_ids); the conflict check and the resolved id are derived
+        # from that pair by the same two helpers match_conflict()/match_routine_id() use.
+        tid_rid, instr_rid = _matched_ids(normalized, trigger_ids_doc, triggers_doc)
+        if _conflict_of(tid_rid, instr_rid):
             conflicts.append({
                 "trigger_id": normalized["trigger_id"],
                 "trigger_id_routine": tid_rid,
@@ -736,7 +741,7 @@ def ingest(path):
             })
             continue
 
-        rid = tid_rid if tid_rid is not None else instr_rid
+        rid = _resolved_id(tid_rid, instr_rid)
         if rid is None and is_personal(normalized):
             rid = _personal_id(normalized["name"])
         if rid is None:
@@ -1213,6 +1218,12 @@ def _fields_errors(rid, fields, entry):
                        f"channel.{{email,push,slack}} as bools ({notif!r})")
     if not entry.get("name"):
         errors.append(f"{rid}: name is missing/empty")
+    # Both create-body builders hard-index entry["enabled"], so a missing key used to pass `check`
+    # and then raise KeyError out of a restore-all -- losing every healthy body with it -- and a
+    # None (normalize_trigger()'s value for a payload that omits the field) would restore as
+    # `"enabled": null`. Require a real bool here so both paths report it as a clean finding.
+    if not isinstance(entry.get("enabled"), bool):
+        errors.append(f"{rid}: enabled must be true/false ({entry.get('enabled')!r})")
     # `instruction` is the single most load-bearing recovery field -- it IS the routine; a create body
     # built with an empty prompt recreates a live SCHEDULED trigger that fires and does nothing.
     # Nothing else guarded it (quality pass 2026-09-04): not _schedule_errors(), not
@@ -1347,6 +1358,16 @@ def check():
     for rid in cad_ids:
         if rid not in routines:
             errors.append(f"{rid}: in ops/cadence.yaml but missing from {rel} 'routines'")
+
+    # (1b) ...and the reverse: a non-personal entry cadence.yaml no longer knows is a retired or
+    # renamed routine whose snapshot survived (ingest never prunes), and a restore-all targets every
+    # `routines` key -- so it would recreate that routine's live trigger. Only the `personal_*`
+    # entries (the id shape _personal_id() gives every non-cadence trigger) live outside cadence.yaml.
+    cad_id_set = set(cad_ids)
+    for rid in sorted(routines):
+        if rid not in cad_id_set and not rid.startswith("personal_"):
+            errors.append(f"{rid}: in {rel} 'routines' but not in ops/cadence.yaml -- a retired/renamed "
+                          f"routine a restore-all would recreate; delete the entry")
 
     # (4) every profile referenced (by ANY entry, not just cadence-known ones) must exist; (5) schedule
     # shape; (6) resolved fields -- (6) is skipped for an entry whose profile is invalid (already

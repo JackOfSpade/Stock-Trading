@@ -414,7 +414,11 @@ FIXED_DIVISOR = re.compile(r"/\s*\d+\b")
 # sits INSIDE the same call (e.g. `SAFE_DIVIDE(cf.amount, 5)`), so the adjacency guard passes trivially,
 # with no new false-positive risk. `[^,()]*` (not `.*`) keeps the first-argument scan from crossing into an
 # unrelated later divide call sharing the same statement.
-FUNC_DIVISOR = re.compile(r"\b(?:SAFE_DIVIDE|DIV)\s*\(\s*[^,()]*,\s*\d+\s*\)", re.I)
+# The first argument may hold parenthesised calls two deep (`SAFE_DIVIDE(SUM(cf.amount), 5)`,
+# `SAFE_DIVIDE(SUM(IFNULL(x, 0)), 5)`) -- the most natural spelling, which a flat `[^,()]*` first
+# argument never matched, so only the bare-column form was caught (2026-11-16). IEEE_DIVIDE likewise.
+_NESTED_ARG = r"(?:[^,()]|\((?:[^()]|\([^()]*\))*\))*"
+FUNC_DIVISOR = re.compile(r"\b(?:SAFE_DIVIDE|IEEE_DIVIDE|DIV)\s*\(\s*" + _NESTED_ARG + r",\s*\d+\s*\)", re.I)
 # A SIMPLE `<col> AS <alias>` binding — one identifier, optionally table-qualified (`cf.amount`), followed
 # by `AS <alias>` (case-insensitive). Deliberately restricted to a single bare identifier on the source
 # side (NOT an arbitrary expression like `a + b AS x`) so alias resolution stays the same precise
@@ -637,12 +641,15 @@ def _money_nearby(ctx, markers, money_aliases):
     (_money_alias_names() — codebase audit 2026-07-26). Whole-word (`\\b`) matching on the alias side only,
     matching the STRUCTURE of the pre-existing marker check but avoiding a short alias name (e.g. `raw`)
     accidentally substring-matching an unrelated longer identifier."""
-    if any(marker in ctx for marker in markers):
+    # Case-insensitive on both sides: BigQuery column names are, so `cf.AMOUNT / 5` and an alias
+    # declared `AS Raw` but used as `raw` are the same money value the lowercase spelling is.
+    low = ctx.lower()
+    if any(marker.lower() in low for marker in markers):
         return True
     if not money_aliases:
         return False
     alias_pattern = r"\b(?:" + "|".join(re.escape(a) for a in money_aliases) + r")\b"
-    return re.search(alias_pattern, ctx) is not None
+    return re.search(alias_pattern, ctx, re.I) is not None
 
 
 def diff_msg(name_a, a, name_b, b):
@@ -939,17 +946,20 @@ def _compare_rails(mapping, container, prefix, sql_consts, errors):
     integer counts, and this file is mutated autonomously by SL1-SL5 with no human review (SISA), so even
     an integral `2.0` is itself worth flagging as suspicious drift (e.g. a stray float computation in a
     generator) rather than silently normalizing it to `2`."""
+    # Name the file the constants were READ from (RAILS_SQL follows the canonical definer), not
+    # bigquery/35, which a mismatch message used to send the operator to long after it was superseded.
+    rails_file = os.path.basename(RAILS_SQL) if RAILS_SQL else "<no arsenal_rails definer>"
     for yaml_key, sql_name in mapping.items():
         if sql_name not in sql_consts:
             continue
         if yaml_key not in container:
             errors.append(f"R-E: roster.yaml {prefix}{yaml_key} is missing but "
-                          f"bigquery/35_strategy_arsenal.sql arsenal_rails.{sql_name}={sql_consts[sql_name]} exists")
+                          f"bigquery/{rails_file} arsenal_rails.{sql_name}={sql_consts[sql_name]} exists")
             continue
         raw = container[yaml_key]
         if isinstance(raw, float):
             errors.append(f"R-E: roster.yaml {prefix}{yaml_key}={raw!r} is a float, not an integer — cannot "
-                          f"compare against bigquery/35_strategy_arsenal.sql arsenal_rails.{sql_name}"
+                          f"compare against bigquery/{rails_file} arsenal_rails.{sql_name}"
                           f"={sql_consts[sql_name]} (int() would silently truncate it — fix the YAML to a "
                           f"plain integer literal)")
             continue
@@ -957,12 +967,12 @@ def _compare_rails(mapping, container, prefix, sql_consts, errors):
             val = int(raw)
         except (TypeError, ValueError):
             errors.append(f"R-E: roster.yaml {prefix}{yaml_key}={raw!r} is not an integer — "
-                          f"cannot compare against bigquery/35_strategy_arsenal.sql arsenal_rails.{sql_name}"
+                          f"cannot compare against bigquery/{rails_file} arsenal_rails.{sql_name}"
                           f"={sql_consts[sql_name]}")
             continue
         if val != sql_consts[sql_name]:
             errors.append(f"R-E: roster.yaml {prefix}{yaml_key}={container[yaml_key]} but "
-                          f"bigquery/35_strategy_arsenal.sql arsenal_rails.{sql_name}={sql_consts[sql_name]}")
+                          f"bigquery/{rails_file} arsenal_rails.{sql_name}={sql_consts[sql_name]}")
 
 
 # R-J: a bolded regime-token bullet in strategy/01, e.g. `- **UP:** SPY close > ...`.
@@ -1446,8 +1456,13 @@ def main():
                           f"position deep-dive.")
 
     # ---- R-J: arsenal_regime_coverage cell tokens == the strategy/01 shared regime vocabulary ----
-    # (H7 fix, 2026-07-17). Only runs when bigquery/35 exists (its absence is already reported by R-A/R-E).
-    if os.path.exists(ARSENAL_SQL):
+    # (H7 fix, 2026-07-17). Reads COVERAGE_SQL (the canonical state.arsenal_regime_coverage definer),
+    # so that is what it is gated on: with no definer at all the read below would raise TypeError
+    # instead of reporting a finding.
+    if not COVERAGE_SQL or not os.path.exists(COVERAGE_SQL):
+        errors.append("R-J: no bigquery/*.sql file defines state.arsenal_regime_coverage — cannot compare "
+                      "its cell tokens against strategy/01's shared regime vocabulary.")
+    else:
         spy_vocab, vix_vocab, vocab_path = shared_regime_tokens()
         if spy_vocab is None:
             errors.append(f"R-J: {os.path.relpath(vocab_path, ROOT)} absent — cannot source the canonical "

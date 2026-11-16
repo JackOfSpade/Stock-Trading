@@ -84,6 +84,9 @@ jobs:
           HAS_ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL != '' }}
           HAS_OFFSITE_BACKUP_GCS: ${{ secrets.OFFSITE_BACKUP_GCS != '' }}
         run: |
+          # pipefail: a `run:` with no `shell:` key is `bash -e {0}` — errexit only — so without this a
+          # verifier CRASH was masked by tee's exit 0 and the run went green on a traceback.
+          set -o pipefail
           python scripts/verify_owner_actions.py | tee /tmp/verify_out.txt
           {
             echo "### OWNER_ACTIONS.md auto-verify"

@@ -4,7 +4,6 @@ The vectors were also run through the live view body in BigQuery when bigquery/2
 text guards below keep the canonical SQL on the carry-forward shape the reference implements.
 """
 
-import importlib.util
 import json
 import math
 import random
@@ -12,10 +11,10 @@ import re
 import unittest
 from pathlib import Path
 
+from conftest import load_module_from_path
+
 ROOT = Path(__file__).resolve().parent.parent
-_SPEC = importlib.util.spec_from_file_location("paper_regime_cells", ROOT / "scripts" / "paper_regime_cells.py")
-prc = importlib.util.module_from_spec(_SPEC)
-_SPEC.loader.exec_module(prc)
+prc = load_module_from_path("paper_regime_cells", "scripts", "paper_regime_cells.py")
 
 FIXTURE = ROOT / "tests" / "fixtures" / "paper_regime_cells_vectors.json"
 with open(FIXTURE, encoding="utf-8") as _fh:

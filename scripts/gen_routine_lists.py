@@ -461,7 +461,7 @@ def build_targets():
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     g = ap.add_mutually_exclusive_group(required=True)
-    g.add_argument("--write", action="store_true", help="regenerate all 8 marker regions in place")
+    g.add_argument("--write", action="store_true", help="regenerate every marker region in place")
     g.add_argument("--check", action="store_true", help="exit 1 + diff if any region is stale")
     args = ap.parse_args()
 
@@ -475,7 +475,7 @@ def main():
         if changed:
             print(f"gen_routine_lists --write: regenerated {', '.join(changed)}.")
         else:
-            print("gen_routine_lists --write: all 8 regions already current (no-op).")
+            print(f"gen_routine_lists --write: all {len(targets)} regions already current (no-op).")
         return 0
 
     # --check

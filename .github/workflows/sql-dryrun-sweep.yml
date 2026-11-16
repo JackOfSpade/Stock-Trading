@@ -142,7 +142,7 @@ jobs:
           # resulting empty `existing` array used to fall into a "nothing found -> warning + PASS" branch,
           # which also auto-closed any open finding issue. Unlike ci.yml's push-scoped dry-run gate (where
           # zero changed SQL files legitimately means nothing to check), THIS sweep exists to validate
-          # EVERY bigquery/*.sql file every week — a zero-file result can only mean a broken checkout or
+          # EVERY bigquery/*.sql file every month — a zero-file result can only mean a broken checkout or
           # repo layout, never "clean", so it must fail loud instead of reporting a clean sweep.
           shopt -s nullglob
           mapfile -t files < <(printf '%s\n' bigquery/*.sql bigquery/scheduled_queries/*.sql)
@@ -165,7 +165,7 @@ jobs:
           if python scripts/check_sql_dryrun.py "${existing[@]}" 2>&1 | tee /tmp/sweep.txt; then
             echo "result=ok" >> "$GITHUB_OUTPUT"
           else
-            msg="🧩 Stock-Trading SQL sweep FAILED — a bigquery/*.sql file has a PARSE error and would abort on apply (DR rebuild / re-apply). This file did not change recently, so ci.yml's path-gated gate never saw it. $(grep -cE '✗ (SYNTAX ERROR|NO-FROM-WHERE) \(blocks merge\)' /tmp/sweep.txt || true) file(s) affected; see the run log."
+            msg="🧩 Stock-Trading SQL sweep FAILED — a bigquery/*.sql file has a PARSE or ANALYSIS error and would abort on apply (DR rebuild / re-apply). This file did not change recently, so ci.yml's path-gated gate never saw it. $(grep -cE '✗ (SYNTAX ERROR|ANALYSIS ERROR|NO-FROM-WHERE) \(blocks merge\)' /tmp/sweep.txt || true) finding(s); see the run log."
             echo "::error::$msg"
             scripts/notify_webhook.sh "$msg" || true
             printf '%s\n\n' "$msg" > /tmp/finding.md
@@ -196,16 +196,7 @@ jobs:
             echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           } > /tmp/body.md
 
-          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
-            --jq '[.[] | select(.title|startswith("⚠️ BigQuery SQL sweep:"))][0].number // empty')
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body-file /tmp/body.md
-            echo "Updated existing issue #$existing."
-          else
-            gh issue create --repo "$GITHUB_REPOSITORY" \
-              --title "⚠️ BigQuery SQL sweep: parse error in an unchanged file" \
-              --body-file /tmp/body.md
-          fi
+          scripts/finding_issue.sh open "⚠️ BigQuery SQL sweep:" "⚠️ BigQuery SQL sweep: parse error in an unchanged file" /tmp/body.md
 
           # CI-findings bridge (2026-07-18): mirror each failing FILE into ops.ci_findings — one row
           # per file (finding_key=<path>, the per-object pattern live-sql-parity.yml uses), so the
@@ -218,12 +209,17 @@ jobs:
           # 2026-08-31 code-quality pass (shell-workflows#0): both VALUES-row inserts below now go
           # through scripts/ci_finding.sh, which builds its own run_url — the shell $run_url var
           # this step used to define is gone with them (nothing else in this step needed it).
-          grep -E '✗ (SYNTAX ERROR|NO-FROM-WHERE) \(blocks merge\):' /tmp/sweep.txt | sed -E 's/.*\(blocks merge\): //' > /tmp/bad_files.txt || true
+          # ANALYSIS ERROR is a blocking class too (check_sql_dryrun.py, 2026-09-11) but was missing from
+          # this alternation, so an analysis-only failure produced no per-file row and fell through to
+          # the generic canary row below with the offending file cut off (2026-11-16).
+          grep -E '✗ (SYNTAX ERROR|ANALYSIS ERROR|NO-FROM-WHERE) \(blocks merge\):' /tmp/sweep.txt | sed -E 's/.*\(blocks merge\): //' > /tmp/bad_files.txt || true
           if [ ! -s /tmp/bad_files.txt ]; then
             # Failure with ZERO per-file blocking findings = the checker's fail-closed canary path (the
             # environment could not prove it detects syntax errors) — no files to key on, so land ONE
             # aggregate not-verified row, same convention as live-sql-parity's zero-verification key.
-            detail=$(head -c 4000 /tmp/sweep.txt)
+            # The checker prints its ✗ lines LAST, after one line per swept file, so the head of the
+            # log rarely holds the reason. Lead with every ✗ / ::error:: line, then the head as context.
+            detail=$( { grep -E '✗|::error::' /tmp/sweep.txt || true; head -c 2000 /tmp/sweep.txt; } | head -c 4000 || true)
             if ! scripts/ci_finding.sh "sql-dryrun-sweep" "sql_dryrun_sweep" "open" "$detail"; then
               echo "::error::ops.ci_findings not-verified INSERT FAILED (verify the gh-ci-runner@ dataEditor grant on ops.ci_findings)."
               exit 1
@@ -248,14 +244,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
-          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
-            --jq '[.[] | select(.title|startswith("⚠️ BigQuery SQL sweep:"))][0].number // empty')
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" \
-              --body "Resolved — the full sweep now parses every \`bigquery/*.sql\` cleanly. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-            gh issue close "$existing" --repo "$GITHUB_REPOSITORY"
-            echo "Closed issue #$existing."
-          fi
+          scripts/finding_issue.sh close "⚠️ BigQuery SQL sweep:" "Resolved — the full sweep now parses every \`bigquery/*.sql\` cleanly. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
           # CI-findings bridge (2026-07-18): a clean sweep resolves every still-open sweep key —
           # same per-object resolve-all pattern as live-sql-parity.yml's clean path. Writes zero

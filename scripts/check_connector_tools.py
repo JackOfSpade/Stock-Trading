@@ -326,6 +326,33 @@ def ignored_line_mask(lines):
     return mask
 
 
+def ignore_fence_errors(lines):
+    """Findings for an unbalanced ignore fence: a start while one is already open, an end with none
+    open, or a start still open at EOF. ignored_line_mask() deliberately keeps ignoring past a missing
+    end, so without this one deleted `ignore-end` silently disarmed CHECK 3/4 from there to the next
+    end marker -- or to EOF (the same silent-disarm class as the one-line fence, a line deletion away)."""
+    errors, open_at = [], None
+    for lineno, line in enumerate(lines, 1):
+        # Markers in the order they appear on the line, so a one-line fence balances itself.
+        events = sorted([(m.start(), "start") for m in re.finditer(re.escape(IGNORE_START), line)]
+                        + [(m.start(), "end") for m in re.finditer(re.escape(IGNORE_END), line)])
+        for _pos, kind in events:
+            if kind == "start":
+                if open_at is not None:
+                    errors.append(f"CHECK4: ignore-start at line {lineno} while the fence opened at line "
+                                  f"{open_at} is still open -- its ignore-end is missing, so every line "
+                                  f"in between is silently unscanned")
+                open_at = lineno
+            elif open_at is None:
+                errors.append(f"CHECK4: ignore-end at line {lineno} with no open ignore-start")
+            else:
+                open_at = None
+    if open_at is not None:
+        errors.append(f"CHECK4: ignore-start at line {open_at} is never closed -- everything after it to "
+                      f"the end of the file is silently unscanned")
+    return errors
+
+
 def scan_task_plan_references():
     """Return (bare_refs, full_refs): lists of (1-based lineno, matched text) for every bare backticked
     identifier and every full mcp__ token in TASK_PLAN, excluding ignore-fenced lines."""
@@ -548,6 +575,8 @@ def main():
 
     check2_required_allowlisted(connectors, allow_set, findings)
     check_task_plan_calls(connectors, findings, ambiguous_notes)
+    rel_plan = os.path.relpath(TASK_PLAN, ROOT)
+    findings.extend(f"{e} ({rel_plan})" for e in ignore_fence_errors(read_text(TASK_PLAN).split("\n")))
     check5_stale_allowlist(connectors, allow_set, findings, report_only_notes)
 
     n_connectors = len(connectors)

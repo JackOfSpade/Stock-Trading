@@ -1,13 +1,10 @@
 """Offline tests for ops/research/e_breaker_2026-11/replay_gate.py (synthetic in-memory data only)."""
-import importlib.util
-from pathlib import Path
 
 import pytest
 
-_PATH = Path(__file__).resolve().parent.parent / "ops" / "research" / "e_breaker_2026-11" / "replay_gate.py"
-_spec = importlib.util.spec_from_file_location("e_breaker_replay_gate", _PATH)
-rg = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(rg)
+from conftest import load_module_from_path
+
+rg = load_module_from_path("e_breaker_replay_gate", "ops", "research", "e_breaker_2026-11", "replay_gate.py")
 
 MDATES = ["2020-01-31", "2020-02-28", "2020-03-31", "2020-04-30", "2020-05-29"]
 

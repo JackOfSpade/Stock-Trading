@@ -63,7 +63,8 @@ import sys
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
-from lib.bq_numeric import INTEGER_DIGITS, SCALE, numeric_text
+from lib.bq_literal import sql_str
+from lib.bq_numeric import numeric_text
 
 PROJECT = "stock-trading-498512"
 PROC = f"`{PROJECT}.ops.sp_log_decision_checked`"
@@ -82,8 +83,6 @@ ARGS = [
     ("source_session", "str"),
 ]
 REQUIRED = {"entry_date", "entry_type", "title", "source_session"}
-NUMERIC_SCALE = SCALE
-NUMERIC_INT_DIGITS = INTEGER_DIGITS
 WRAP = 400  # max characters of one literal piece per line of call.sql
 # Measured truncation at ~30-45KB of agent output 2026-10-29; paper book uses <30,000.
 FILE_BUDGET = 24000
@@ -93,38 +92,6 @@ SCREEN_ITEM_LISTS = ("passed", "rejected_notable")
 
 class InputError(ValueError):
     pass
-
-
-def sql_str(value: str, wrap: int | None = None, indent: str = "") -> str:
-    """A GoogleSQL quoted literal whose value is exactly `value`, written in printable ASCII only.
-
-    With `wrap`, the literal is split into adjacent quoted pieces of at most `wrap` characters, one per
-    line; an escape sequence is never split across pieces.
-    """
-    out = []
-    for ch in value:
-        o = ord(ch)
-        if ch == "\\":
-            out.append("\\\\")
-        elif ch == "'":
-            out.append("\\'")
-        elif 0x20 <= o < 0x7F:
-            out.append(ch)
-        elif o <= 0xFFFF:
-            out.append("\\u%04x" % o)
-        else:
-            out.append("\\U%08x" % o)
-    if not wrap:
-        return "'" + "".join(out) + "'"
-    pieces, cur, n = [], [], 0
-    for tok in out:
-        if cur and n + len(tok) > wrap:
-            pieces.append("'" + "".join(cur) + "'")
-            cur, n = [], 0
-        cur.append(tok)
-        n += len(tok)
-    pieces.append("'" + "".join(cur) + "'")
-    return ("\n" + indent).join(pieces)
 
 
 def _check_text(key: str, value: str) -> str:

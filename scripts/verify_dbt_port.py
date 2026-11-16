@@ -36,7 +36,6 @@ model nobody compiled is exactly the vacuous-green this gate exists to prevent.
 """
 import difflib
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -64,10 +63,12 @@ def canonical_body(dataset, name):
 
 
 def normalize(sql):
-    """Comment-stripped, quote-unified, whitespace-collapsed token stream."""
-    # `proj`.`ds`.`name`  ->  `proj.ds.name`   (dbt's rendering vs the repo's literal style)
-    sql = re.sub(r"`([^`]+)`\.`([^`]+)`\.`([^`]+)`", r"`\1.\2.\3`", sql)
-    sql = re.sub(r"`([^`]+)`\.`([^`]+)`", r"`\1.\2`", sql)
+    """Comment-stripped, quote-unified, whitespace-collapsed token stream.
+
+    Quote-unified by the tokenizer itself: P.sql_tokens() drops every backtick and emits `.` as its
+    own token, so dbt's `proj`.`ds`.`name` and the repo's `proj.ds.name` already tokenize identically
+    (pinned by tests/test_verify_dbt_port.py). Two regex passes used to "unify" them first on the RAW
+    text -- a no-op for identifiers, and able to rewrite a backtick pair inside a string literal."""
     out = []
     for kind, val, _s, _e in P.sql_tokens(sql):   # drops comments; keeps literals verbatim
         if kind == "W":

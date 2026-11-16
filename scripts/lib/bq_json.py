@@ -67,5 +67,7 @@ def run_bq_query(sql, project, max_rows=None, timeout=600):
     except subprocess.TimeoutExpired as e:
         raise RuntimeError(f"bq query timed out after {e.timeout}s: {sql[:120]}") from e
     if out.returncode != 0:
-        raise RuntimeError(out.stderr.strip() or out.stdout.strip())
+        # BOTH streams: bq prints query errors on stdout, so `stderr or stdout` let any stderr noise
+        # (a credential or deprecation warning) replace the real error text callers classify on.
+        raise RuntimeError("\n".join(t for t in (out.stderr.strip(), out.stdout.strip()) if t))
     return parse_bq_json_stdout(out.stdout)
