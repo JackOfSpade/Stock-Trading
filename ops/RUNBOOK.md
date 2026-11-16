@@ -774,6 +774,14 @@ stall with it (it ran under the same identity).
   a self-reported check cannot detect its own omission, so something outside OPS1 must), and the CI gate
   `scripts/check_connector_tools.py`.
 
+  **A connector RETIRED from `ops/connector_tools.yaml` is reported stale for up to 30 days, and that is expected.**
+  The view's `recent` CTE lists every connector observed in the trailing 30 days, so a connector OPS1 stops
+  enumerating stays in it until its last row ages out (live case: Tavily, retired in `669cebaa`, last observed
+  2026-11-09, self-expires about 2026-12-09). Confirm the named connector is absent from the manifest, then leave
+  the `connector_tool_inventory_stale` warning to age out. Do not write synthetic rows for it, because they
+  restart the 30-day clock. Do not key the view on the newest run either: a manifest connector that OPS1 silently
+  omits looks the same as a retired one, so that change would lose per-connector omission detection.
+
 - **§15b. Connector OAuth expiry playbook (added 2026-07-20).** The 2026-07-19 IBKR connector expiry
   (OWNER_ACTIONS.md item V) was the FIRST IBKR occurrence on record — the only prior connector-expiry
   incident on record is BigQuery's, 2026-06-26 (§26). It was discovered only at D2a's 16:20 MT
