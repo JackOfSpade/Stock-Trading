@@ -95,6 +95,54 @@ CI adds deterministic offline behavior coverage across Python versions.
   fixes are involved. If the operator wants a given interactive session to operate autonomously
   end-to-end, they say so in that session.
 
+## Routine run efficiency — binds every routine run AND every sub-agent
+
+Measured 2026-11-16 from the run logs of all 30 fleet runs of 2026-11-15..17 and the cost history of
+343 runs since 2026-10-17 ($1,278; D1 alone 29%). A message re-reads the whole context it sits on, so
+a run's cost is (number of messages) x (context size), not the work done. About two thirds of fleet
+spend was cache re-reads from long one-call-per-message loops. The weekly limit this exhausts is the
+one the fleet shares with chat: it blacked the fleet out 2026-11-10..12.
+
+- **Put independent tool calls in ONE message.** BigQuery reads, file reads, greps and lookups that do
+  not depend on each other go out together. Measured: 88 of 95 tool messages in a D1 main session
+  carried a single call, at 150k-390k tokens of context each.
+- **IBKR pace is a request rate per tool, never "one call per message".** `search_contracts` and
+  `get_price_history` each allow 30 a minute, separately. Send up to 2 calls per tool per message. On a
+  rate-limit error re-issue only the failed calls and carry one call per tool for the next five
+  messages. One-call-per-message briefs produced sub-agents of 123-197 messages; three of them were
+  129M of one D2 run's input tokens ($55 run, $5 median).
+- **Keep measuring sub-agents small: at most 30 names each**, consecutive, never two IBKR batches at
+  once. An agent's cost grows with the square of its call count.
+- **Launch sibling sub-agents as foreground `Agent` calls in one message** unless the main session has
+  real work to do meanwhile. Each background completion wakes the main session for a full-context
+  message that only says it is still waiting (about 15 such wakes in one D2 run).
+- **Do not guess column names — a failed query is a wasted full-context message** (about 35 such
+  errors in 30 runs). The ones guessed wrong most: `ops.alerts` is keyed on `alert_ts` (not
+  `created_ts`/`ts`); `ops.run_log` on `log_ts` (not `logged_ts`); `events.decision_log` has
+  `entry_id, event_ts, entry_date, entry_type, strategy, decision, sub_pattern, title, fields,
+  superseded_by` (its `state.*` views add a few derived columns), so the routine, source and body
+  live inside `fields`, never in a column of their own. For any other
+  table, read `INFORMATION_SCHEMA.COLUMNS` for all the tables you need in one query first.
+- **SQL literals:** never escape a quote as `''` (BigQuery rejects it as concatenated literals); use
+  `\'` or a triple-quoted string. `CAST(... AS NUMERIC)` any float going into a NUMERIC column.
+- **`ML.GENERATE_TEXT_EMBEDDING` queries run one at a time**; concurrent ones hit a project quota.
+- **Large files** (`Operating_Protocols.md`, `Claude_Task_Plan.md`, `task_plan/*.md`): `grep -n` for
+  the anchor, then read that range. A whole-file `Read` fails on size and costs a message.
+- **Foreground `sleep` is blocked in the routine sandbox.** Do not try it to pace calls; to wait for CI
+  use ONE background shell wait, as the plan's landing section says.
+- **Read your plan section in one message:** `python3 scripts/plan_section.py <ID>` lists it as a few
+  bounded parts; issue all the `--part` commands together. Do not explore the plan with a chain of
+  `grep`/`sed`/`awk` calls (7 to 31 of them per run, measured).
+- **Landing a PR:** open it only after every other write is issued, wait with one background timer,
+  and write no message that only says you are waiting. About half of D1's 20 post-push messages, at
+  390k tokens each, did nothing else.
+- **Parallel `web_search` takes `search_queries` as a JSON array of strings**, never `a | b | c`
+  (rejected unparsed 10 times in one W1 run). Put the array form in sub-agent briefs.
+- **Key-less `curl` fetches the plan pins are allowed and are not web tools.** Issue each as a plain
+  command beginning with `curl`: no `mkdir`/variable/`;`/`&&` chain, no proxy probe, no "test" fetch.
+  A refusal of one command says nothing about the next; chained forms were refused on 2026-11-15/16
+  while the plain form was never tried.
+
 ## Known non-issues — do NOT re-investigate
 
 - **An unexplained `updated_at` bump on a claude.ai routine trigger.** The RemoteTrigger/routines API

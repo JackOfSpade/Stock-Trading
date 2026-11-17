@@ -118,7 +118,8 @@ SCOPE_ADDENDUM = ("\n\nDo not give final response until you have resolved every 
 NOTIFY_EMAIL = "jacksterwu@gmail.com"
 _GUARD_TEMPLATE = (
     "\n\nSEARCH GUARD. This routine's name is {name}. Parallel Search tools (web_search, web_fetch) "
-    "are the only web tools you may use. Treat Parallel as UNAVAILABLE only when a Parallel tool call "
+    "are the only web tools you may use. A Bash curl fetch of a key-less endpoint that the plan pins "
+    "is not a web tool and stays allowed. Treat Parallel as UNAVAILABLE only when a Parallel tool call "
     "itself fails, any result or error text mentions 429, 402, rate limit, quota, credits, insufficient, payment, too many requests, "
     "exceeded, usage limit or limit reached, or two web_search calls in a row return zero results for "
     "queries that should have results. A single URL that fails or is blocked inside a web_fetch result "
