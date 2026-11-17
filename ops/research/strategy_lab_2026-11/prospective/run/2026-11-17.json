@@ -1,0 +1,50 @@
+{
+ "run": "2026-11-17",
+ "i": "2026-11-13",
+ "p": "2026-11-16",
+ "days": [
+  "2026-11-13"
+ ],
+ "calendar_failures": [],
+ "candidates": 10,
+ "readers": [
+  {
+   "id": "32190e8df728",
+   "s": "SGML",
+   "d": "2026-11-13",
+   "call": "2026-11-13",
+   "n": "Sigma Lithium Corporation",
+   "ne": 2,
+   "mc": 587731460.0,
+   "analysts": 4,
+   "i": "2026-11-13",
+   "p": "2026-11-16",
+   "entry": "2026-11-17",
+   "run": "2026-11-17",
+   "reaction": -0.0978043912175649,
+   "close_i_minus1": 5.01,
+   "close_i_plus1": 4.52,
+   "late": false,
+   "pack_sha256": "0eeb4521110f8941257979500365bb2c3af109e53e04086ee73f38d770421e6a"
+  },
+  {
+   "id": "4f13b4db38eb",
+   "s": "RMIX",
+   "d": "2026-11-13",
+   "call": "2026-11-13",
+   "n": "Suncrete, Inc.",
+   "ne": 2,
+   "mc": 383697248.0,
+   "analysts": 6,
+   "i": "2026-11-13",
+   "p": "2026-11-16",
+   "entry": "2026-11-17",
+   "run": "2026-11-17",
+   "reaction": -0.34482758620689646,
+   "close_i_minus1": 8.12,
+   "close_i_plus1": 5.32,
+   "late": false,
+   "pack_sha256": "dab6373c19ed44c8032fe57c82d9b2a47ee053dd2b8a27ac773005b3d8efb122"
+  }
+ ]
+}
