@@ -16,6 +16,11 @@
 -- table, a flat count, or a growing count never fires; only a genuine DROP does. Self-bootstrapping:
 -- a table with no prior snapshot to compare against (prior_rows IS NULL) never flags — there is
 -- nothing to compare, not a finding.
+--
+-- SUPERSEDED LIVE by bigquery/279_backup_row_drop_ttl_exempt.sql (2026-11-17) — exempts tables that
+-- expire their own rows (ops.decision_call_parts, 14-day partition TTL; alert 1ef79974); current
+-- single source of truth for this object. Kept here, unmodified, for DR-rebuild apply-in-order
+-- reference only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.backup_per_table_health` AS
 WITH ranked AS (
   SELECT COALESCE(dataset, 'events') AS dataset, run_date, per_table_rows,
