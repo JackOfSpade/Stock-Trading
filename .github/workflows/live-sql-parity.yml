@@ -173,8 +173,10 @@ jobs:
           if [ "${{ steps.b3.outputs.result }}" = "violation" ]; then
             # Keep `detail` SHORT and STABLE-ish: it lands in a JSON payload and an email. Name the failing
             # tests rather than pasting dbt's whole log.
-            failed="$(grep -oE '(Failure|Error) in test [a-zA-Z0-9_]+' /tmp/b3_out.txt 2>/dev/null \
-                       | sed -E 's/^(Failure|Error) in test //' | sort -u | paste -sd',' - || true)"
+            # Match bare "in test NAME": dbt now logs "[ERROR]: in test NAME (path)" (ANSI-coloured), which the
+            # old "(Failure|Error) in test" pattern missed (D3 2026-11-16, run 43823873687); still matches the old form.
+            failed="$(grep -oE 'in test [a-zA-Z0-9_]+' /tmp/b3_out.txt 2>/dev/null \
+                       | sed -E 's/^in test //' | sort -u | paste -sd',' - || true)"
             [ -n "$failed" ] || failed="see run log (could not parse test names)"
             detail="B3 live-data invariant failure(s): ${failed}"
             # 2026-08-31 code-quality pass (shell-workflows#0): VALUES-row insert extracted to
