@@ -350,3 +350,40 @@
 {"analysts": 6, "d": "2026-11-12", "dry": false, "i": "2026-11-12", "late": true, "mc": 314476992.0, "ne": 2, "p": "2026-11-13", "run": "2026-11-17", "s": "PROK", "status": "no_transcript"}
 {"analysts": 6, "d": "2026-11-12", "dry": false, "i": "2026-11-12", "late": true, "mc": 322793376.0, "ne": 2, "p": "2026-11-13", "run": "2026-11-17", "s": "SLI", "status": "no_transcript"}
 {"analysts": 4, "d": "2026-11-12", "dry": false, "i": "2026-11-12", "late": true, "mc": 321649248.0, "ne": 1, "p": "2026-11-13", "run": "2026-11-17", "s": "SCTX", "status": "no_transcript"}
+{"analysts": 3, "call": "2026-11-16", "d": "2026-11-16", "dry": false, "i": "2026-11-16", "id": "36c3730a20b0", "late": false, "mc": 1207437060.0, "ne": 1, "p": "2026-11-17", "run": "2026-11-18", "s": "OMER", "status": "prepared"}
+{"analysts": 9, "call": "2026-11-16", "d": "2026-11-16", "dry": false, "i": "2026-11-16", "id": "2d3558b0f59b", "late": false, "mc": 886378820.0, "ne": 1, "p": "2026-11-17", "run": "2026-11-18", "s": "PICS", "status": "prepared"}
+{"analysts": null, "d": "2026-11-16", "dry": false, "i": "2026-11-16", "late": false, "mc": 806450690.0, "ne": 2, "p": "2026-11-17", "run": "2026-11-18", "s": "POET", "status": "no_transcript"}
+{"analysts": 18, "call": "2026-11-16", "d": "2026-11-16", "dry": false, "i": "2026-11-16", "id": "9a674b7946e3", "late": false, "mc": 656313340.0, "ne": 2, "p": "2026-11-17", "run": "2026-11-18", "s": "IQ", "status": "prepared"}
+{"analysts": null, "d": "2026-11-16", "dry": false, "i": "2026-11-16", "late": false, "mc": 597776640.0, "ne": 1, "p": "2026-11-17", "run": "2026-11-18", "s": "SCZM", "status": "no_transcript"}
+{"analysts": 4, "d": "2026-11-16", "dry": false, "i": "2026-11-16", "late": false, "mc": 561699460.0, "ne": 2, "p": "2026-11-17", "run": "2026-11-18", "s": "IAM", "status": "no_transcript"}
+{"analysts": 4, "d": "2026-11-16", "dry": false, "i": "2026-11-16", "late": false, "mc": 546080260.0, "ne": 1, "p": "2026-11-17", "run": "2026-11-18", "s": "BALY", "status": "no_transcript"}
+{"analysts": 2, "d": "2026-11-16", "dry": false, "i": "2026-11-16", "late": false, "mc": 440101440.0, "ne": 1, "p": "2026-11-17", "run": "2026-11-18", "s": "EMAT", "status": "no_transcript"}
+{"analysts": 6, "d": "2026-11-16", "dry": false, "i": "2026-11-16", "late": false, "mc": 436959840.0, "ne": 1, "p": "2026-11-17", "run": "2026-11-18", "s": "PERI", "status": "no_transcript"}
+{"analysts": 2, "d": "2026-11-16", "dry": false, "i": "2026-11-16", "late": false, "mc": 418719008.0, "ne": 1, "p": "2026-11-17", "run": "2026-11-18", "s": "XTND", "status": "no_transcript"}
+{"analysts": 6, "d": "2026-11-16", "dry": false, "i": "2026-11-16", "late": false, "mc": 310768032.0, "ne": 2, "p": "2026-11-17", "run": "2026-11-18", "s": "ENTA", "status": "no_transcript"}
+{"analysts": null, "d": "2026-11-16", "dry": false, "i": "2026-11-16", "late": false, "mc": 305239264.0, "ne": 1, "p": "2026-11-17", "run": "2026-11-18", "s": "GALT", "status": "no_transcript"}
+{"analysts": 6, "d": "2026-11-12", "dry": false, "i": "2026-11-12", "late": true, "mc": 1879865470.0, "ne": 1, "p": "2026-11-13", "run": "2026-11-18", "s": "SSMR", "status": "no_transcript"}
+{"analysts": 5, "d": "2026-11-12", "dry": false, "i": "2026-11-12", "late": true, "mc": 1536693380.0, "ne": 2, "p": "2026-11-13", "run": "2026-11-18", "s": "ADRX", "status": "no_transcript"}
+{"analysts": 12, "d": "2026-11-12", "dry": false, "i": "2026-11-12", "late": true, "mc": 1309413250.0, "ne": 1, "p": "2026-11-13", "run": "2026-11-18", "s": "ABSI", "status": "no_transcript"}
+{"analysts": 5, "d": "2026-11-12", "dry": false, "i": "2026-11-12", "late": true, "mc": 1243040130.0, "ne": 1, "p": "2026-11-13", "run": "2026-11-18", "s": "AVLN", "status": "no_transcript"}
+{"analysts": 4, "d": "2026-11-12", "dry": false, "i": "2026-11-12", "late": true, "mc": 832787010.0, "ne": 1, "p": "2026-11-13", "run": "2026-11-18", "s": "SID", "status": "no_transcript"}
+{"analysts": 7, "d": "2026-11-12", "dry": false, "i": "2026-11-12", "late": true, "mc": 919797760.0, "ne": 2, "p": "2026-11-13", "run": "2026-11-18", "s": "TBN", "status": "no_transcript"}
+{"analysts": 8, "d": "2026-11-12", "dry": false, "i": "2026-11-12", "late": true, "mc": 965345150.0, "ne": 1, "p": "2026-11-13", "run": "2026-11-18", "s": "AFYA", "status": "no_transcript"}
+{"analysts": 5, "d": "2026-11-12", "dry": false, "i": "2026-11-12", "late": true, "mc": 745612740.0, "ne": 2, "p": "2026-11-13", "run": "2026-11-18", "s": "OBX", "status": "no_transcript"}
+{"analysts": 11, "d": "2026-11-12", "dry": false, "i": "2026-11-12", "late": true, "mc": 647326530.0, "ne": 1, "p": "2026-11-13", "run": "2026-11-18", "s": "HELP", "status": "no_transcript"}
+{"analysts": 12, "d": "2026-11-12", "dry": false, "i": "2026-11-12", "late": true, "mc": 527739104.0, "ne": 2, "p": "2026-11-13", "run": "2026-11-18", "s": "LAC", "status": "no_transcript"}
+{"analysts": 6, "d": "2026-11-12", "dry": false, "i": "2026-11-12", "late": true, "mc": 524937728.0, "ne": 2, "p": "2026-11-13", "run": "2026-11-18", "s": "ETRA", "status": "no_transcript"}
+{"analysts": 5, "d": "2026-11-12", "dry": false, "i": "2026-11-12", "late": true, "mc": 480905664.0, "ne": 2, "p": "2026-11-13", "run": "2026-11-18", "s": "BLSM", "status": "no_transcript"}
+{"analysts": null, "d": "2026-11-12", "dry": false, "i": "2026-11-12", "late": true, "mc": 413035232.0, "ne": 1, "p": "2026-11-13", "run": "2026-11-18", "s": "BOC", "status": "no_transcript"}
+{"analysts": 5, "d": "2026-11-12", "dry": false, "i": "2026-11-12", "late": true, "mc": 460737984.0, "ne": 1, "p": "2026-11-13", "run": "2026-11-18", "s": "ASMB", "status": "no_transcript"}
+{"analysts": 6, "d": "2026-11-12", "dry": false, "i": "2026-11-12", "late": true, "mc": 332619872.0, "ne": 2, "p": "2026-11-13", "run": "2026-11-18", "s": "PROK", "status": "no_transcript"}
+{"analysts": 6, "d": "2026-11-12", "dry": false, "i": "2026-11-12", "late": true, "mc": 302007552.0, "ne": 2, "p": "2026-11-13", "run": "2026-11-18", "s": "SLI", "status": "no_transcript"}
+{"analysts": 4, "d": "2026-11-12", "dry": false, "i": "2026-11-12", "late": true, "mc": 321649248.0, "ne": 1, "p": "2026-11-13", "run": "2026-11-18", "s": "SCTX", "status": "no_transcript"}
+{"analysts": 4, "d": "2026-11-13", "dry": false, "i": "2026-11-13", "late": true, "mc": 1146966400.0, "ne": 2, "p": "2026-11-16", "run": "2026-11-18", "s": "INBX", "status": "no_transcript"}
+{"analysts": null, "d": "2026-11-13", "dry": false, "i": "2026-11-13", "late": true, "mc": 771085440.0, "ne": 2, "p": "2026-11-16", "run": "2026-11-18", "s": "USAS", "status": "no_transcript"}
+{"analysts": 4, "d": "2026-11-13", "dry": false, "i": "2026-11-13", "late": true, "mc": 635594110.0, "ne": 2, "p": "2026-11-16", "run": "2026-11-18", "s": "SBC", "status": "no_transcript"}
+{"analysts": 11, "d": "2026-11-13", "dry": false, "i": "2026-11-13", "late": true, "mc": 560383170.0, "ne": 1, "p": "2026-11-16", "run": "2026-11-18", "s": "HELP", "status": "no_transcript"}
+{"analysts": null, "d": "2026-11-13", "dry": false, "i": "2026-11-13", "late": true, "mc": 472900480.0, "ne": 1, "p": "2026-11-16", "run": "2026-11-18", "s": "LWLG", "status": "no_transcript"}
+{"analysts": 6, "d": "2026-11-13", "dry": false, "i": "2026-11-13", "late": true, "mc": 387482880.0, "ne": 1, "p": "2026-11-16", "run": "2026-11-18", "s": "BAK", "status": "no_transcript"}
+{"analysts": 8, "d": "2026-11-13", "dry": false, "i": "2026-11-13", "late": true, "mc": 405037312.0, "ne": 2, "p": "2026-11-16", "run": "2026-11-18", "s": "IRLA", "status": "no_transcript"}
+{"analysts": 5, "d": "2026-11-13", "dry": false, "i": "2026-11-13", "late": true, "mc": 310053792.0, "ne": 2, "p": "2026-11-16", "run": "2026-11-18", "s": "TRXB", "status": "no_transcript"}
