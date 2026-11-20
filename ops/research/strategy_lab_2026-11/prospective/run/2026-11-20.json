@@ -1,0 +1,69 @@
+{
+ "run": "2026-11-20",
+ "i": "2026-11-18",
+ "p": "2026-11-19",
+ "days": [
+  "2026-11-18"
+ ],
+ "calendar_failures": [],
+ "candidates": 3,
+ "readers": [
+  {
+   "id": "7e071fcc5341",
+   "s": "JJSF",
+   "d": "2026-11-18",
+   "call": "2026-11-18",
+   "n": "J & J Snack Foods Corp.",
+   "ne": 1,
+   "mc": 1853776000.0,
+   "analysts": 3,
+   "i": "2026-11-18",
+   "p": "2026-11-19",
+   "entry": "2026-11-20",
+   "run": "2026-11-20",
+   "reaction": 0.042384105960264984,
+   "close_i_minus1": 90.6,
+   "close_i_plus1": 94.44,
+   "late": false,
+   "pack_sha256": "1c18901eed74bda898db917dbfff9eb3d5102bc945dcf550138cd9bfccbc6682"
+  },
+  {
+   "id": "d761130c334a",
+   "s": "BORR",
+   "d": "2026-11-18",
+   "call": "2026-11-19",
+   "n": "Borr Drilling Limited",
+   "ne": 1,
+   "mc": 996951490.0,
+   "analysts": 7,
+   "i": "2026-11-18",
+   "p": "2026-11-19",
+   "entry": "2026-11-20",
+   "run": "2026-11-20",
+   "reaction": 0.028301886792452713,
+   "close_i_minus1": 3.18,
+   "close_i_plus1": 3.27,
+   "late": false,
+   "pack_sha256": "a85322082ac0fe9fce6667754c93d682b0a739ebf37e9869ce709213d9eb3e5e"
+  },
+  {
+   "id": "f2fa6e2c3952",
+   "s": "KRNT",
+   "d": "2026-11-18",
+   "call": "2026-11-18",
+   "n": "Kornit Digital Ltd.",
+   "ne": 2,
+   "mc": 548682620.0,
+   "analysts": 5,
+   "i": "2026-11-18",
+   "p": "2026-11-19",
+   "entry": "2026-11-20",
+   "run": "2026-11-20",
+   "reaction": -0.10929951690821249,
+   "close_i_minus1": 16.56,
+   "close_i_plus1": 14.75,
+   "late": false,
+   "pack_sha256": "85286ac16e8e542a23171fdb7d6a9a462e98c134cc9572628eeb27bba855046e"
+  }
+ ]
+}
