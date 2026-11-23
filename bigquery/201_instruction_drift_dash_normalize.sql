@@ -37,6 +37,13 @@
 -- SUPERSEDES `state.instruction_drift` in bigquery/183_instruction_drift_stale_sample.sql
 -- (which itself superseded bigquery/115 and bigquery/15). Apply after bigquery/183.
 -- Defines exactly one view; creates, redefines or drops nothing else.
+--
+-- SUPERSEDED LIVE by bigquery/280_instruction_drift_full_text.sql (2026-11-23) — current single
+-- source of truth for state.instruction_drift. It keeps this file's core-line logic unchanged and adds
+-- a FULL-TEXT comparison against ops/routine_backup.json, because this prefix match never looked past
+-- the first line of the trigger (6c01e91's un-rolled-out SEARCH GUARD edit, 2026-11-16..23, read
+-- "0 drifted" all week). Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation.
 
 CREATE OR REPLACE VIEW `stock-trading-498512.state.instruction_drift` AS
 WITH li AS (

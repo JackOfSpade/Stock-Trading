@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Generate the routine-list STRUCT rows for bigquery/12/15/24/105/114/132/205/241 from ops/cadence.yaml +
-Claude_Task_Plan.md.
+"""Generate the routine-list STRUCT rows for bigquery/12/15/24/105/114/132/205/241/280 from
+ops/cadence.yaml + Claude_Task_Plan.md (+ ops/routine_backup.json for 280).
 
 WHY THIS EXISTS (ARCH-3 Item 30b, closing the deferred hand-copy hole). bigquery/12
 (state.cadence_expected_today), bigquery/15 (ops.routine_catalog), bigquery/24
@@ -52,9 +52,17 @@ Regions generated (marker-delimited, one BEGIN/END pair per file):
                                         bigquery/114 above is now the DR-record-only one. Byte-identical
                                         to the 24 and 114 regions (same gen_24_region call), for the
                                         same reason 114 reuses it.
+  bigquery/280_instruction_drift_full_text.sql -- state.routine_canonical_full_instruction's STRUCT
+                                        rows (added 2026-11-23): one per FLEET routine in
+                                        ops/trigger_ids.json order (never `_meta`, never a
+                                        `personal_*` entry), carrying the FULL canonical trigger
+                                        instruction from ops/routine_backup.json (core one-liner PLUS
+                                        the standing operator paragraphs) and its canonical_full_since
+                                        date. The ONE region whose source is routine_backup.json rather
+                                        than cadence.yaml + the plan; see gen_280_region().
 
 Usage:
-  python scripts/gen_routine_lists.py --write   # regenerate all 8 marker regions in place
+  python scripts/gen_routine_lists.py --write   # regenerate all 9 marker regions in place
   python scripts/gen_routine_lists.py --check   # exit 1 + diff if any region is stale
 
 Markers (exactly one BEGIN/END pair per file, wrapping ONLY the STRUCT rows -- the surrounding
@@ -64,6 +72,7 @@ Markers (exactly one BEGIN/END pair per file, wrapping ONLY the STRUCT rows -- t
 """
 import argparse
 import datetime
+import json
 import os
 import re
 import sys
@@ -390,7 +399,179 @@ def gen_241_region(routines):
     return "\n".join(lines)
 
 
-def build_targets():
+# ---- bigquery/280: the FULL canonical trigger instruction per fleet routine (2026-11-23) ----------
+# state.instruction_drift's core-line check (bigquery/201) compares only the one-liner in
+# ops.routine_catalog, so a change in the standing operator paragraphs (Spawn Sonnet / Do not give
+# final response / SEARCH GUARD) was structurally invisible to it -- commit 6c01e91 added a sentence to
+# every SEARCH GUARD in ops/routine_backup.json on 2026-11-16, the live triggers stayed un-rolled-out
+# for a week, and the nightly check reported "0 drifted" throughout. bigquery/280 adds a full-text
+# comparison; this region is its canonical side, generated from the same routine_backup.json
+# `scripts/routine_backup.py check` validates and OPS0/Q4 step E diff the live triggers against.
+ROUTINE_BACKUP_JSON = os.path.join(ROOT, "ops", "routine_backup.json")
+TRIGGER_IDS_JSON = os.path.join(ROOT, "ops", "trigger_ids.json")
+FULL_INSTRUCTION_SQL = os.path.join(ROOT, "bigquery", "280_instruction_drift_full_text.sql")
+
+# The "this sample is a placeholder summary, not a transcription" pattern. It is written ONCE here and
+# must appear VERBATIM (as the r'...' literal) in bigquery/280's state.instruction_drift body --
+# tests/test_gen_routine_lists_full_text.py pins that lockstep, and gen_280_region() refuses a
+# canonical instruction that would itself match it (a canonical that looks like a placeholder could
+# never produce full-text evidence, silently disabling the check for that routine). The syntax used
+# is the common subset of Python `re` and BigQuery RE2: case-insensitive flag group, character
+# classes, alternation. Measured placeholder shapes it must catch (ops.run_log, 2026-11-16..18):
+#   "SEARCH GUARD. [...Parallel search guard paragraph per trigger...]"
+#   "[Parallel Search guard paragraph per stored trigger]"   "[Parallel Search guard paragraph]"
+# while canonical text's own brackets ("[Routine paused]") must NOT match.
+PLACEHOLDER_PATTERN = (r"(?i)\[\s*(\.\.\.|…)|\[[^\]]*(paragraph|guard|omitted|truncated|elided|"
+                       r"abridged|redacted|snip|per trigger|per stored|verbatim)[^\]]*\]")
+PLACEHOLDER_RE = re.compile(PLACEHOLDER_PATTERN)
+
+FULL_ROW_RE = re.compile(
+    r"STRUCT\('([^']+)' AS routine, r'''(.*?)''' AS canonical_full_instruction, "
+    r"DATE '(\d{4}-\d{2}-\d{2})' AS canonical_full_since, "
+    r"(?:r'''(.*?)'''|CAST\(NULL AS STRING\)) AS superseded_full_instruction\)", re.DOTALL)
+
+
+def _load_json(path):
+    # json.load preserves key order, which load_full_instructions() relies on (trigger_ids.json order).
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def load_full_instructions(backup_path=None, ids_path=None):
+    """[(routine, full_instruction)] for every FLEET routine, in ops/trigger_ids.json order. The fleet
+    is trigger_ids.json minus its `_meta` key; routine_backup.json additionally carries the operator's
+    `personal_*` triggers, which are not fleet routines, never log to ops.run_log under a catalog id,
+    and are deliberately left out. RAISES SystemExit (never guesses) when a fleet routine has no
+    non-empty string instruction in routine_backup.json -- `routine_backup.py check` would flag the
+    same tree, and an empty canonical here would make every sample a false full-text drift."""
+    ids = _load_json(ids_path or TRIGGER_IDS_JSON)
+    backup = _load_json(backup_path or ROUTINE_BACKUP_JSON)
+    routines = (backup or {}).get("routines") or {}
+    out = []
+    for rid in ids:
+        if rid == "_meta" or rid.startswith("personal_"):
+            continue
+        instr = (routines.get(rid) or {}).get("instruction")
+        if not isinstance(instr, str) or not instr.strip():
+            raise SystemExit(f"{rid}: ops/routine_backup.json has no instruction for this fleet routine "
+                             f"-- gen_280_region cannot build its canonical full instruction")
+        out.append((rid, instr))
+    return out
+
+
+def parse_full_since(path=None):
+    """{routine: (canonical_full_instruction, canonical_full_since, superseded_full_instruction or None)}
+    parsed back out of the CURRENT bigquery/280 generated region -- the same preserve-on-unchanged role
+    parse_catalog_since() plays for bigquery/15. A missing file or region parses to {} (every routine
+    then seeds to today with no superseded text)."""
+    p = path or FULL_INSTRUCTION_SQL
+    if not os.path.exists(p):
+        return {}
+    region = current_region(p) or ""
+    # A NULL superseded text takes the CAST(NULL ...) branch, so findall yields "" for group 4.
+    return {rid: (instr, since, sup or None)
+            for rid, instr, since, sup in FULL_ROW_RE.findall(region)}
+
+
+def _check_raw_literal_safe(rid, instr):
+    """A raw triple-quoted GoogleSQL literal r'''...''' cannot carry its own delimiter, and a body
+    ending in ' would fuse with the closing '''. Backslashes are refused too: raw makes them literal in
+    BigQuery, but lib.sql_files' tokenizer (strip_sql_comments, verify_dbt_port, check_live_sql_parity)
+    treats a backslash as an escape regardless of the r prefix, so one could desynchronise those
+    parsers from BigQuery's. Refusing is cheap -- no fleet instruction contains any of these today."""
+    if "'''" in instr:
+        raise SystemExit(f"{rid}: instruction contains ''' -- cannot be emitted as a raw triple-quoted literal")
+    if instr.endswith("'") or instr.startswith("'"):
+        raise SystemExit(f"{rid}: instruction starts/ends with ' -- would fuse with the ''' delimiter")
+    if "\\" in instr:
+        raise SystemExit(f"{rid}: instruction contains a backslash -- refused (see _check_raw_literal_safe)")
+    if "\r" in instr:
+        raise SystemExit(f"{rid}: instruction contains a carriage return -- refused (newline-preserving round trip)")
+    if PLACEHOLDER_RE.search(instr):
+        raise SystemExit(f"{rid}: canonical instruction itself matches PLACEHOLDER_PATTERN -- no logged "
+                         f"sample could ever count as full-text evidence; narrow the pattern or the text")
+
+
+def _raw_or_null(text):
+    return "CAST(NULL AS STRING)" if text is None else "r'''" + text + "'''"
+
+
+def gen_280_region(full, prior=None, today=None, since_floor=None):
+    """state.routine_canonical_full_instruction rows: one per fleet routine (load_full_instructions()
+    order), 2-space indent matching the surrounding `SELECT * FROM UNNEST([` block.
+
+    canonical_full_since has EXACTLY canonical_since's semantics (bigquery/183/201, gen_15_region): a
+    logged sample whose run_date is on/before it cannot be evidence about the CURRENT canonical, so a
+    mismatch on it is reported as unproven, never as drifted. Same STABILITY CONTRACT as gen_15_region:
+    the date is PRESERVED verbatim while this routine's full instruction is unchanged versus the region
+    already in the file, and re-stamped to `today` only when the text changes (or the routine is new),
+    so --check on any later day regenerates a byte-identical region.
+
+    `today` is the OPERATING-plane (America/Denver) date, as in gen_15_region and for the same reason:
+    the view compares it against ops.run_log.run_date, which is keyed in that plane.
+
+    SEED (2026-11-23): every routine starts at 2026-11-23, the day the owner rolled 6c01e91's SEARCH
+    GUARD sentence out to the 33 live triggers (08:10-08:18Z). Pre-rollout FULL transcriptions are still
+    some routines' latest samples (D2/D2a, 2026-11-22); without the seed they would raise a drift
+    alert about triggers that are now correct -- the 2026-08-19 false-alarm class bigquery/183 fixed.
+
+    superseded_full_instruction (adversarial review 2026-11-23): the canonical text this routine's
+    CURRENT text replaced -- taken from the prior region when the text changes, PRESERVED while it is
+    unchanged, NULL for a routine with no earlier version. A logged sample equal to it is PROOF the live
+    trigger was never rolled out, whatever its length; the 0.85 length rule alone cannot see a stale
+    trigger once the new canonical is more than ~15% longer (the 2026-11-14 SEARCH GUARD addition grew
+    every canonical ~530 -> ~1936 chars). Only ONE version back is kept; a trigger two edits stale falls
+    back to the length rule. SEED: the pre-6c01e91 text (6c01e91^:ops/routine_backup.json) for all 33.
+
+    since_floor (`--write --full-since YYYY-MM-DD`): raise every canonical_full_since earlier than that
+    date to it -- the supported way to record that the live rollout landed after the --write day (see
+    the bigquery/280 header, LANDING). Never lowers a date; the preserve rule then keeps the raised date
+    on every later --check."""
+    prior = parse_full_since() if prior is None else prior
+    today = today or datetime.datetime.now(OPERATING_TZ).date().isoformat()
+    lines = []
+    n = len(full)
+    for i, (rid, instr) in enumerate(full):
+        _check_raw_literal_safe(rid, instr)
+        prior_instr, prior_since, prior_sup = (tuple(prior.get(rid, ())) + (None, None, None))[:3]
+        if prior_since and prior_instr == instr:
+            since, sup = prior_since, prior_sup
+        elif prior_instr is not None:
+            since, sup = today, prior_instr       # text changed: the old canonical becomes the superseded one
+        else:
+            since, sup = today, None              # new routine
+        if since_floor and since < since_floor:
+            since = since_floor
+        if sup is not None:
+            _check_raw_literal_safe(rid, sup)
+        comma = "," if i < n - 1 else ""
+        lines.append(f"  STRUCT('{rid}' AS routine, r'''{instr}''' AS canonical_full_instruction, "
+                     f"DATE '{since}' AS canonical_full_since, "
+                     f"{_raw_or_null(sup)} AS superseded_full_instruction){comma}")
+    return "\n".join(lines)
+
+
+class GenError(str):
+    """A target body that could not be generated. build_targets() stores one in place of the 280 body
+    when routine_backup.json holds an instruction gen_280_region refuses, so --check / --write still
+    process the other eight regions and report the 280 failure on its own."""
+
+
+# Printed whenever bigquery/280 is stale (--check) or rewritten (--write): the whole landing, in order.
+# Step 3 BEFORE step 4 matters -- a trigger rolled out while the LIVE canonical view still carries the
+# old text makes every new full transcription read as a mismatch against the old one.
+FULL_LANDING_STEPS = (
+    "  bigquery/280 landing, in order:\n"
+    "    1. python scripts/gen_routine_lists.py --write\n"
+    "    2. python scripts/gen_dbt_port.py state.routine_canonical_full_instruction  (then put back the\n"
+    "       port's hand-kept Provenance lines)\n"
+    "    3. after merge, apply bigquery/280 statement (1) live yourself -- do not wait for D3 self-heal\n"
+    "    4. only then roll the changed instructions out to the live triggers\n"
+    "    5. if the rollout landed on a later day than step 1, re-run step 1 with --full-since <rollout\n"
+    "       date> and land + apply that too, so pre-rollout transcriptions are not raised as drift")
+
+
+def build_targets(since_floor=None):
     routines = load_cadence_routines()
     head_by_id = load_headings_by_id()
     targets = [
@@ -455,6 +636,20 @@ def build_targets():
     # tests/test_gen_routine_lists.py::_wire_fixture) keeps the target and exercises it normally.
     if os.path.dirname(ALERT_MSG_STABILITY_SQL) == os.path.dirname(DEP_GATE_SQL):
         targets.append((ALERT_MSG_STABILITY_SQL, gen_24_region(routines)))
+    # bigquery/280 (9th target, 2026-11-23): the FULL canonical instruction per fleet routine, from
+    # ops/routine_backup.json. Same PAIRED-PATH GUARD shape as 205 above, keyed on ROUTINE_CATALOG_SQL
+    # (its sibling canonical, bigquery/15): on a real run both sit in ROOT/bigquery so the target is
+    # ALWAYS present and --check ALWAYS validates it; a test fixture that redirects the catalog into
+    # tmp_path without also redirecting FULL_INSTRUCTION_SQL skips it instead of letting a --write
+    # reach past the fixture into the real, live-parity-checked bigquery/280 (the clobber
+    # tests/test_cadence_consistency.py::_patch_gen_paths records biting three times). The JSON is
+    # read only inside the guard, so such fixtures need no routine_backup.json of their own.
+    if os.path.dirname(FULL_INSTRUCTION_SQL) == os.path.dirname(ROUTINE_CATALOG_SQL):
+        try:
+            body280 = gen_280_region(load_full_instructions(), since_floor=since_floor)
+        except SystemExit as e:
+            body280 = GenError(str(e))
+        targets.append((FULL_INSTRUCTION_SQL, body280))
     return targets
 
 
@@ -463,20 +658,38 @@ def main():
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--write", action="store_true", help="regenerate every marker region in place")
     g.add_argument("--check", action="store_true", help="exit 1 + diff if any region is stale")
+    ap.add_argument("--full-since", metavar="YYYY-MM-DD", default=None,
+                    help="with --write only: raise every bigquery/280 canonical_full_since earlier than "
+                         "this date to it (records the day the live trigger rollout landed)")
     args = ap.parse_args()
+    if args.full_since is not None:
+        if not args.write:
+            ap.error("--full-since is only valid with --write")
+        try:
+            datetime.date.fromisoformat(args.full_since)
+        except ValueError:
+            ap.error(f"--full-since: not a YYYY-MM-DD date: {args.full_since!r}")
 
-    targets = build_targets()
+    targets = build_targets(since_floor=args.full_since)
+    errors = [(p, b) for p, b in targets if isinstance(b, GenError)]
+    targets = [(p, b) for p, b in targets if not isinstance(b, GenError)]
+    for path, err in errors:
+        print(f"{os.path.relpath(path, ROOT)}: CANNOT GENERATE -- {err} (every other region is still "
+              f"processed)")
 
     if args.write:
         changed = []
         for path, body in targets:
             if write_region(path, body):
-                changed.append(os.path.relpath(path, ROOT))
+                changed.append(path)
         if changed:
-            print(f"gen_routine_lists --write: regenerated {', '.join(changed)}.")
+            print(f"gen_routine_lists --write: regenerated "
+                  f"{', '.join(os.path.relpath(p, ROOT) for p in changed)}.")
         else:
             print(f"gen_routine_lists --write: all {len(targets)} regions already current (no-op).")
-        return 0
+        if FULL_INSTRUCTION_SQL in changed:
+            print(FULL_LANDING_STEPS)
+        return 1 if errors else 0
 
     # --check
     drift = False
@@ -491,11 +704,14 @@ def main():
         if current != want:
             drift = True
             print(f"{rel}: GENERATED ROUTINE LIST region is STALE vs ops/cadence.yaml + "
-                  f"Claude_Task_Plan.md -- run `python scripts/gen_routine_lists.py --write`")
-    if drift:
+                  f"Claude_Task_Plan.md + ops/routine_backup.json -- run "
+                  f"`python scripts/gen_routine_lists.py --write`")
+            if path == FULL_INSTRUCTION_SQL:
+                print(FULL_LANDING_STEPS)
+    if drift or errors:
         return 1
-    print("gen_routine_lists --check: OK -- bigquery/12, 15, 24, 105, 114, 132, 205, 241 generated regions "
-          "match ops/cadence.yaml + Claude_Task_Plan.md.")
+    print("gen_routine_lists --check: OK -- bigquery/12, 15, 24, 105, 114, 132, 205, 241, 280 generated "
+          "regions match ops/cadence.yaml + Claude_Task_Plan.md + ops/routine_backup.json.")
     return 0
 
 

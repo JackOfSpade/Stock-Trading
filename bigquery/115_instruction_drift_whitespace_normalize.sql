@@ -46,11 +46,12 @@
 -- ops.routine_catalog TABLE + its generated STRUCT rows are UNCHANGED and remain canonical there —
 -- this file does not touch them).
 
--- SUPERSEDED LIVE by bigquery/201_instruction_drift_dash_normalize.sql (2026-08-26) — current
+-- SUPERSEDED LIVE by bigquery/280_instruction_drift_full_text.sql (2026-11-23) — current
 -- single source of truth for state.instruction_drift. Supersession chain: 2026-07-29 this file
 -- introduced the whitespace-normalized PREFIX match; 2026-08-19 bigquery/183 added the staleness
 -- gate; 2026-08-26 bigquery/201 added em/en-dash folding (r'[—–]' → '-') before the whitespace
--- normalization. Apply bigquery/201 — do NOT re-apply the CREATE OR REPLACE VIEW below live in
+-- normalization; 2026-11-23 bigquery/280 added the FULL-TEXT comparison against
+-- ops/routine_backup.json. Apply bigquery/280 — do NOT re-apply the CREATE OR REPLACE VIEW below live in
 -- isolation. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
 
 CREATE OR REPLACE VIEW `stock-trading-498512.state.instruction_drift` AS
