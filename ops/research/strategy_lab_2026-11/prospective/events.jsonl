@@ -427,3 +427,10 @@
 {"analysts": null, "d": "2026-11-16", "dry": false, "i": "2026-11-16", "late": true, "mc": 305239264.0, "ne": 1, "p": "2026-11-17", "run": "2026-11-20", "s": "GALT", "status": "no_transcript"}
 {"analysts": 16, "d": "2026-11-17", "dry": false, "i": "2026-11-17", "late": true, "mc": 1324175100.0, "ne": 1, "p": "2026-11-18", "run": "2026-11-20", "s": "WB", "status": "no_transcript"}
 {"analysts": null, "d": "2026-11-17", "dry": false, "i": "2026-11-17", "late": true, "mc": 764115010.0, "ne": 1, "p": "2026-11-18", "run": "2026-11-20", "s": "VREX", "status": "no_transcript"}
+{"analysts": null, "d": "2026-11-19", "dry": false, "i": "2026-11-19", "late": false, "mc": 1679582210.0, "ne": 1, "p": "2026-11-20", "run": "2026-11-23", "s": "FORTY", "status": "no_transcript"}
+{"analysts": 5, "d": "2026-11-19", "dry": false, "i": "2026-11-19", "late": false, "mc": 1087080700.0, "ne": 2, "p": "2026-11-20", "run": "2026-11-23", "s": "DRTS", "status": "no_transcript"}
+{"analysts": 2, "call": "2026-11-19", "d": "2026-11-19", "dry": false, "i": "2026-11-19", "id": "101437d3f0d3", "late": false, "mc": 1000323710.0, "ne": 2, "p": "2026-11-20", "run": "2026-11-23", "s": "LQDT", "status": "prepared"}
+{"analysts": 4, "call": "2026-11-19", "d": "2026-11-19", "dry": false, "i": "2026-11-19", "id": "3f29c4a526d7", "late": false, "mc": 859518780.0, "ne": 1, "p": "2026-11-20", "run": "2026-11-23", "s": "RERE", "status": "prepared"}
+{"analysts": null, "call": "2026-11-19", "d": "2026-11-19", "dry": false, "i": "2026-11-19", "id": "725a80eac4f3", "late": false, "mc": 461462016.0, "ne": 1, "p": "2026-11-20", "run": "2026-11-23", "s": "MAGN", "status": "prepared"}
+{"analysts": 16, "d": "2026-11-17", "dry": false, "i": "2026-11-17", "late": true, "mc": 1275040640.0, "ne": 1, "p": "2026-11-18", "run": "2026-11-23", "s": "WB", "status": "no_transcript"}
+{"analysts": null, "d": "2026-11-17", "dry": false, "i": "2026-11-17", "late": true, "mc": 764115010.0, "ne": 1, "p": "2026-11-18", "run": "2026-11-23", "s": "VREX", "status": "no_transcript"}
