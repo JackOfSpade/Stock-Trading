@@ -37,6 +37,7 @@ Re-authorize the Google-Cloud-BigQuery connector in claude.ai connector settings
 - **Replay order:** W1 (own catch-up via `catchup_safe`), then its declared dependent **W4** (`ops/cadence.yaml` `depends_on: [W1, W2, W3]`): own catch-up loop; recovers once the upstream's catch-up lands (W4 also waits on W2 and W3, which halt on the same outage).
 - **Expected signature after re-auth:** no W1 `run_log` row for 2026-11-22 until the catch-up replays it; `Weekly_Catalyst_Calendar.md` stale at the prior ISO week until then. Cadence/period-watch dead-man switches may record the gap, and W4's dependency gate may hold. That is expected, not a fresh fault.
 
-## Unfiled findings
+## Unfiled findings — FILED 2026-11-22
 
 - None new. `ops.alerts` is unreachable, so nothing was filed.
+- 2026-11-22 (OPS0 UNFILED-FINDINGS INTAKE, first OPS0 run with BigQuery live after the outage): this record lists no finding, so there were zero bullets to file as `ops.alerts` info rows. The heading is marked FILED so the intake does not re-process it. Recovery observed: W1 and W4 both logged `completed` for 2026-11-22 in `ops.run_log` (W1 ~12:43 MST).
