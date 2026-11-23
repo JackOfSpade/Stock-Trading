@@ -86,10 +86,11 @@
 -- see a real difference. The staleness gate above removes only verdicts the view was never entitled
 -- to make.
 --
--- SUPERSEDED LIVE by bigquery/201_instruction_drift_dash_normalize.sql (2026-08-26) — that file is the
--- CURRENT canonical definition of state.instruction_drift; it adds em/en-dash normalization
--- (r'[—–]' → '-') before the whitespace-normalized PREFIX match so transcription artefacts that fold
--- em-dashes to ASCII hyphens no longer fire a false drift. Do NOT re-apply this file's view in isolation.
+-- SUPERSEDED LIVE by bigquery/280_instruction_drift_full_text.sql (2026-11-23) — that file is the
+-- CURRENT canonical definition of state.instruction_drift. It keeps file 201's em/en-dash
+-- normalization (r'[—–]' → '-', 2026-08-26) before the whitespace-normalized PREFIX match, and adds a
+-- FULL-TEXT comparison against ops/routine_backup.json gated by canonical_full_since (this file's
+-- staleness rule, applied to the full text). Do NOT re-apply this file's view in isolation.
 
 CREATE OR REPLACE VIEW `stock-trading-498512.state.instruction_drift` AS
 WITH li AS (
