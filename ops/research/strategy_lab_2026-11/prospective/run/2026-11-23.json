@@ -1,0 +1,69 @@
+{
+ "run": "2026-11-23",
+ "i": "2026-11-19",
+ "p": "2026-11-20",
+ "days": [
+  "2026-11-19"
+ ],
+ "calendar_failures": [],
+ "candidates": 5,
+ "readers": [
+  {
+   "id": "101437d3f0d3",
+   "s": "LQDT",
+   "d": "2026-11-19",
+   "call": "2026-11-19",
+   "n": "Liquidity Services, Inc.",
+   "ne": 2,
+   "mc": 1000323710.0,
+   "analysts": 2,
+   "i": "2026-11-19",
+   "p": "2026-11-20",
+   "entry": "2026-11-23",
+   "run": "2026-11-23",
+   "reaction": -0.2751876279281328,
+   "close_i_minus1": 43.97,
+   "close_i_plus1": 31.87,
+   "late": false,
+   "pack_sha256": "102a754865e8184a5d7f0f2eb0acd49996163d12e286e07ff9ed5f20f4e5719d"
+  },
+  {
+   "id": "3f29c4a526d7",
+   "s": "RERE",
+   "d": "2026-11-19",
+   "call": "2026-11-19",
+   "n": "ATRenew Inc.",
+   "ne": 1,
+   "mc": 859518780.0,
+   "analysts": 4,
+   "i": "2026-11-19",
+   "p": "2026-11-20",
+   "entry": "2026-11-23",
+   "run": "2026-11-23",
+   "reaction": -0.01754385964912286,
+   "close_i_minus1": 3.99,
+   "close_i_plus1": 3.92,
+   "late": false,
+   "pack_sha256": "206d6e2a26031a0401dc874d49a2b3e06ab0c080a566d7f020365e3316c1585d"
+  },
+  {
+   "id": "725a80eac4f3",
+   "s": "MAGN",
+   "d": "2026-11-19",
+   "call": "2026-11-19",
+   "n": "Magnera Corporation",
+   "ne": 1,
+   "mc": 461462016.0,
+   "analysts": null,
+   "i": "2026-11-19",
+   "p": "2026-11-20",
+   "entry": "2026-11-23",
+   "run": "2026-11-23",
+   "reaction": 0.08228379513014272,
+   "close_i_minus1": 11.91,
+   "close_i_plus1": 12.89,
+   "late": false,
+   "pack_sha256": "43fc6580ac802a015e61b1269ac5df8233b4a28d48953bec8938957237d2bea2"
+  }
+ ]
+}
