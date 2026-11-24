@@ -31,12 +31,18 @@ The SQL file is RESOLVED, not hardcoded: the highest-numbered bigquery/NNN_*.sql
 register INSERT wins, so a later re-registration file supersedes 257 automatically (the same
 apply-in-order rule scripts/check_roster_notice_lockstep.py uses for sp_auto_resolve_alerts).
 
-Exit 0 and one summary line on agreement; exit 1 with file:line diagnostics otherwise. Stdlib only.
+Both anchors are searched in comment-stripped SQL (lib.sql_files.strip_sql_comments, which preserves
+offsets and line numbers), so a header comment that merely quotes the INSERT can neither win file
+resolution nor be parsed as the seed.
+
+Exit 0 and one summary line on agreement; exit 1 with file:line diagnostics otherwise.
 """
 import os
 import re
 import sys
 from decimal import Decimal, InvalidOperation
+
+from lib.sql_files import numbered_sql_files, strip_sql_comments
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -310,6 +316,7 @@ def _parse_sql_value(s):
 
 def parse_sql(text, rel):
     """Return {code: (line_no, {field: value})} from the register INSERT's UNNEST block."""
+    text = strip_sql_comments(text)
     a = text.find(INSERT_ANCHOR)
     if a == -1:
         raise CheckError(f"{rel}:1: MISSING ANCHOR — no `{INSERT_ANCHOR}` statement")
@@ -397,23 +404,19 @@ def parse_sql(text, rel):
 
 
 def resolve_sql():
-    """(relpath, text) of the highest-numbered bigquery/NNN_*.sql containing the register INSERT."""
+    """(relpath, text) of the highest-numbered bigquery/NNN_*.sql whose SQL (not a comment) contains
+    the register INSERT."""
     bq = os.path.join(REPO, "bigquery")
     best = None
     if os.path.isdir(bq):
-        for fn in sorted(os.listdir(bq)):
-            m = re.match(r"^(\d+)_.*\.sql$", fn)
-            if not m:
-                continue
-            with open(os.path.join(bq, fn), encoding="utf-8") as f:
+        for _number, path in numbered_sql_files(bq):
+            with open(path, encoding="utf-8") as f:
                 text = f.read()
-            if INSERT_ANCHOR in text:
-                key = (int(m.group(1)), fn)
-                if best is None or key > best[0]:
-                    best = (key, fn, text)
+            if INSERT_ANCHOR in strip_sql_comments(text):
+                best = (os.path.basename(path), text)   # numeric apply order: the last hit wins
     if best is None:
         raise CheckError(f"bigquery/:1: MISSING ANCHOR — no bigquery/NNN_*.sql contains `{INSERT_ANCHOR}`")
-    return f"bigquery/{best[1]}", best[2]
+    return f"bigquery/{best[0]}", best[1]
 
 
 # ---------------------------------------------------------------- comparison --------------------

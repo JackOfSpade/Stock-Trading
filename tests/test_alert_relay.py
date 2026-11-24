@@ -339,6 +339,15 @@ def test_orders_mode_is_retired_and_never_posts(monkeypatch, capsys):
     assert "RETIRED" in capsys.readouterr().out
 
 
+def test_unknown_mode_fails_and_never_relays(monkeypatch, capsys):
+    monkeypatch.setattr(ar, "WEBHOOK_URL", "https://ntfy.sh/stock-trading-testtopic")
+    monkeypatch.setattr(ar, "MODE", "heartbeet")
+    monkeypatch.setattr(ar, "post", lambda *a, **k: pytest.fail("unknown mode POSTed"))
+    monkeypatch.setattr(ar, "bq", lambda sql: pytest.fail("unknown mode queried BigQuery"))
+    assert ar.main() == 2
+    assert "unknown RELAY_MODE" in capsys.readouterr().err
+
+
 def test_relay_orders_function_is_gone():
     # The mode is retired at BOTH layers. Leaving the function behind would invite a future edit to
     # re-wire it (re-breaking RULE 1) without touching the workflow or the docstring that explain why

@@ -50,6 +50,16 @@ class TestVectors(unittest.TestCase):
         self.assertFalse(got["demonstrated"])
 
 
+    def test_all_unloggable_cell_has_null_excess(self):
+        # REGRESSION: the view's EXP(SUM(log_rel_excess)) - 1 is NULL when every day is unloggable
+        # (SUM over only NULLs); the reference returned exp(0) - 1 = 0.0, a false "flat" cell.
+        got = prc.regime_cells([("X", "2027-01-01", -1.0), ("X", "2027-01-02", -1.5)],
+                               {"2027-01-01": "UP/LOW", "2027-01-02": "UP/LOW"})[("X", "UP/LOW")]
+        self.assertEqual(got["unloggable_days"], 2)
+        self.assertIsNone(got["cell_excess"])
+        self.assertFalse(got["demonstrated"])
+
+
 class TestCarryForwardInvariant(unittest.TestCase):
     def test_cells_compound_to_latest_kept_index(self):
         # Over any sequence, the product of every cell's (1 + cell_excess) equals 1 + the cumulative excess on

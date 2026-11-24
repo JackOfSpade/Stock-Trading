@@ -205,9 +205,11 @@ def parse_field(field: str, lo: int, hi: int, what: str) -> set[int]:
     if field == "*":
         return set(range(lo, hi + 1))
     out: set[int] = set()
-    for part in field.split(","):
-        part = part.strip()
-        if not part.isdigit():
+    for raw in field.split(","):
+        part = raw.strip()
+        # isascii(): str.isdigit() is also True for e.g. "\u00b2", which int() then rejects with a
+        # raw ValueError instead of a CronParseError naming the field.
+        if not (part.isascii() and part.isdigit()):
             raise CronParseError(f"unsupported {what} field {field!r} (only '*', N, and N,N,N)")
         val = int(part)
         if not lo <= val <= hi:

@@ -709,15 +709,19 @@ def extract_body(txt, start, obj_type):
         # aware scan (like canonicalize's tokenizer) is unneeded here.
         stripped = body.strip()
         if stripped.startswith("(") and stripped.endswith(")"):
+            # Count parens over sql_tokens(), not raw characters: a `(`/`)` inside a string literal
+            # or comment used to unbalance the scan, keep the wrapper, and report permanent DRIFT.
             depth = 0
             true_wrapper = False
-            for idx, ch in enumerate(stripped):
-                if ch == "(":
+            for kind, val, _ts, tend in sql_tokens(stripped):
+                if kind != "P":
+                    continue
+                if val == "(":
                     depth += 1
-                elif ch == ")":
+                elif val == ")":
                     depth -= 1
                     if depth == 0:
-                        true_wrapper = idx == len(stripped) - 1
+                        true_wrapper = tend == len(stripped)
                         break
             if true_wrapper:
                 body = stripped[1:-1]
@@ -1095,6 +1099,10 @@ def main():
     final = find_final_definitions()
     print(f"Parsed {len(final)} final-effective object definitions from bigquery/*.sql.")
     if offline:
+        if not final:
+            # A parser self-check that parsed nothing has checked nothing.
+            print("--offline: PARSER CHECK FAILED — 0 object definitions parsed from bigquery/*.sql.")
+            return 1
         print("--offline: parser structure check only, no live comparison performed.")
         return 0
 

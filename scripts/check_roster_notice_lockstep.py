@@ -35,11 +35,12 @@ in four places at once, or not made at all.
 Exit 1 on any disagreement. Wired into ci.yml's `checks` job (blocking, no credentials needed) and
 mirrored in auto-merge-claude.yml's post-merge coverage check, like its sibling consistency guards.
 """
+import ast
 import os
 import re
 import sys
 
-from lib.sql_files import canonical_definer
+from lib.sql_files import canonical_definer, strip_sql_comments
 from lib.textio import read_text
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -51,19 +52,37 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def _extract_py_tuple(text):
-    """scripts/alert_relay.py — NO_PUSH_CATEGORIES = ( 'a', 'b', ... )"""
-    m = re.search(r"NO_PUSH_CATEGORIES\s*=\s*\((.*?)\)", text, re.DOTALL)
-    if not m:
-        raise ValueError("could not find the NO_PUSH_CATEGORIES = (...) tuple")
-    return set(re.findall(r"[\"']([a-z0-9_]+)[\"']", m.group(1)))
+    """scripts/alert_relay.py — NO_PUSH_CATEGORIES = ( 'a', 'b', ... )
+
+    Read with ast, not a regex: a commented-out entry (`# 'x',`) is not in the live tuple, and a ')'
+    inside a trailing comment must not end the tuple early."""
+    try:
+        tree = ast.parse(text)
+    except SyntaxError as e:
+        raise ValueError(f"could not parse the source as Python ({e.msg}, line {e.lineno})") from None
+    for node in tree.body:
+        if (isinstance(node, ast.Assign) and len(node.targets) == 1
+                and isinstance(node.targets[0], ast.Name) and node.targets[0].id == "NO_PUSH_CATEGORIES"):
+            try:
+                value = ast.literal_eval(node.value)
+            except ValueError:
+                raise ValueError("NO_PUSH_CATEGORIES is not a literal tuple of strings") from None
+            if not isinstance(value, (tuple, list)) or not all(isinstance(v, str) for v in value):
+                raise ValueError("NO_PUSH_CATEGORIES is not a literal tuple of strings")
+            return set(value)
+    raise ValueError("could not find the NO_PUSH_CATEGORIES = (...) tuple")
 
 
 def _extract_gs_array(text):
-    """ops/monitoring/alert_emailer.gs — const ROSTER_NOTICE_CATEGORIES = [ 'a', 'b', ... ];"""
+    """ops/monitoring/alert_emailer.gs — const ROSTER_NOTICE_CATEGORIES = [ 'a', 'b', ... ];
+
+    `//` and `/* */` comments inside the array are dropped first, so a commented-out entry is not
+    counted as live."""
     m = re.search(r"ROSTER_NOTICE_CATEGORIES\s*=\s*\[(.*?)\]", text, re.DOTALL)
     if not m:
         raise ValueError("could not find the ROSTER_NOTICE_CATEGORIES = [...] array")
-    return set(re.findall(r"[\"']([a-z0-9_]+)[\"']", m.group(1)))
+    body = re.sub(r"/\*.*?\*/|//[^\n]*", " ", m.group(1), flags=re.DOTALL)
+    return set(re.findall(r"[\"']([a-z0-9_]+)[\"']", body))
 
 
 def _extract_sql_rule5(text):
@@ -72,8 +91,9 @@ def _extract_sql_rule5(text):
     Anchored on the presence of the two categories that only ever appear in THIS list, rather than on
     "the first category IN (...)" — sp_auto_resolve_alerts contains several other category IN/= tests
     and matching the wrong one would compare an unrelated list and pass or fail for the wrong reason.
+    Comments are stripped first, so a header comment quoting an older list is never read as the live one.
     """
-    for m in re.finditer(r"category\s+IN\s*\(([^)]*)\)", text, re.IGNORECASE | re.DOTALL):
+    for m in re.finditer(r"category\s+IN\s*\(([^)]*)\)", strip_sql_comments(text), re.IGNORECASE | re.DOTALL):
         cats = set(re.findall(r"'([a-z0-9_]+)'", m.group(1)))
         if {"strategy_shadow_registered", "roster_below_floor"} <= cats:
             return cats

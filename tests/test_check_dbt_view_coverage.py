@@ -330,3 +330,16 @@ def test_main_reports_zero_uncovered_with_no_live_views(monkeypatch, capsys):
     monkeypatch.setattr(cov, "dbt_source_names", lambda: set())
     assert cov.main() == 0
     assert "0 live state/analytics/perf views" in capsys.readouterr().out
+
+
+def test_live_views_counts_a_plain_create_view_without_or_replace(tmp_path, monkeypatch):
+    # REGRESSION: VIEW_DDL required OR REPLACE, so a plain CREATE VIEW (or CREATE VIEW IF NOT EXISTS)
+    # was never counted live and could not be reported uncovered.
+    bq = tmp_path / "bigquery"
+    bq.mkdir()
+    (bq / "01_a.sql").write_text(
+        "CREATE VIEW `stock-trading-498512.state.plain` AS SELECT 1;\n"
+        "CREATE VIEW IF NOT EXISTS `stock-trading-498512.perf.guarded` AS SELECT 1;\n"
+    )
+    monkeypatch.setattr(cov, "BIGQUERY_DIR", str(bq))
+    assert cov.live_views() == {("state", "plain"), ("perf", "guarded")}

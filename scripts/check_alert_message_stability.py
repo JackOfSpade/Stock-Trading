@@ -276,12 +276,10 @@ def _is_identifier_token(tokens, i):
     if val.isdigit():
         return False
     nxt = _skip_ws(tokens, i + 1)
-    if nxt < len(tokens) and tokens[nxt][0] == "P" and tokens[nxt][1] in ("(", "."):
-        # Followed by "(" -> this token is a FUNCTION NAME, not a column.
-        # Followed by "." -> this token is a QUALIFIER (e.g. the "t" in "t.routine"); only the
-        # final segment after the last "." is treated as the column identifier.
-        return False
-    return True
+    # Followed by "(" -> this token is a FUNCTION NAME, not a column.
+    # Followed by "." -> this token is a QUALIFIER (e.g. the "t" in "t.routine"); only the
+    # final segment after the last "." is treated as the column identifier.
+    return not (nxt < len(tokens) and tokens[nxt][0] == "P" and tokens[nxt][1] in ("(", "."))
 
 
 def _extract_identifiers(tokens, start, end):

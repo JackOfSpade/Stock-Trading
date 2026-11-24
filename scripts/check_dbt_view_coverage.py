@@ -76,8 +76,9 @@ DATASETS = DBT_DATASETS
 # close that, because today's only triple-quoted EXECUTE IMMEDIATE blocks (bigquery/75) contain only
 # EXPORT DATA, never a column-0 CREATE/DROP, and lib.sql_files has no literal-masking helper to reuse
 # (strip_sql_comments() deliberately copies literals verbatim rather than masking them).
+# OR REPLACE and IF NOT EXISTS are both optional: a plain `CREATE VIEW` is still a live view.
 VIEW_DDL = re.compile(
-    r"^CREATE\s+OR\s+REPLACE\s+VIEW\s+`stock-trading-498512\.(state|analytics|perf)\.(\w+)`",
+    r"^CREATE\s+(?:OR\s+REPLACE\s+)?VIEW\s+(?:IF\s+NOT\s+EXISTS\s+)?`stock-trading-498512\.(state|analytics|perf)\.(\w+)`",
     re.IGNORECASE | re.MULTILINE,
 )
 DROP_VIEW_DDL = re.compile(

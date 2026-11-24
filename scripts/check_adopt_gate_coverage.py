@@ -156,6 +156,12 @@ def required_identifiers(steps):
     return required
 
 
+def mentions(paragraph, ident):
+    """True when `ident` appears in `paragraph` as a whole token. A bare substring test let a longer
+    name satisfy a shorter one (`precheck_x.py` covering a CI step that runs `check_x.py`)."""
+    return re.search(r"(?<![\w-])" + re.escape(ident) + r"(?![\w-])", paragraph) is not None
+
+
 def find_precondition5_paragraph(plan_text):
     """The step-list paragraph's text, or None if the anchors have moved/vanished."""
     try:
@@ -200,7 +206,7 @@ def main():
         missing = []
         seen = set()
         for ident, step_name in required:
-            if ident in paragraph or ident in seen:
+            if mentions(paragraph, ident) or ident in seen:
                 continue
             seen.add(ident)
             missing.append((ident, step_name))

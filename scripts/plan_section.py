@@ -21,8 +21,8 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import split_task_plan as stp  # noqa: E402
-from lib.textio import read_text_preserving_newlines  # noqa: E402
+import split_task_plan as stp
+from lib.textio import read_text_preserving_newlines
 
 # A Bash result of about 27,000 characters came back inline in the audited runs and ones over 30,000
 # spilled to a file that then cost further Read calls, so parts stay under this.

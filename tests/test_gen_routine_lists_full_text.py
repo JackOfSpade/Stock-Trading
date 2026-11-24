@@ -262,7 +262,7 @@ def test_gen_280_region_refuses_an_unemittable_superseded_text():
 
 
 def test_main_bad_instruction_fails_only_280_and_still_checks_the_rest(tmp_path, monkeypatch, capsys):
-    f280, bk = _wire_full_fixture(tmp_path, monkeypatch)
+    _f280, bk = _wire_full_fixture(tmp_path, monkeypatch)
     monkeypatch.setattr(sys, "argv", ["gen_routine_lists.py", "--write"])
     assert gr.main() == 0
     out = capsys.readouterr().out

@@ -234,3 +234,20 @@ def test_main_write_excludes_ids_not_in_cadence(tmp_path, monkeypatch):
     pr.main()
     written = json.loads(triggers.read_text())
     assert set(written) == {"D1"}
+
+
+def test_main_prints_the_instruction_note_the_live_trigger_carries(tmp_path, monkeypatch, capsys):
+    # REGRESSION: the printout is meant for (re)creating triggers, but it printed only the generic
+    # first line and dropped cadence.yaml's instruction_note, which --write puts in the manifest.
+    plan = tmp_path / "Claude_Task_Plan.md"
+    plan.write_text("## D1. Market Development Scan — deep research\nbody\n")
+    cadence = tmp_path / "cadence.yaml"
+    cadence.write_text("timezone: America/Denver\nroutines:\n  - id: D1\n    monitor_class: daily_trading\n"
+                       "    instruction_note: \"NOTE one.\\nNOTE two.\"\n")
+    monkeypatch.setattr(pr, "PLAN", str(plan))
+    monkeypatch.setattr(pr, "CADENCE", str(cadence))
+    monkeypatch.setattr(pr, "TRIGGERS_JSON", str(tmp_path / "triggers.json"))
+    monkeypatch.setattr(sys, "argv", ["print_routines.py"])
+    assert pr.main() == 0
+    out = capsys.readouterr().out
+    assert "      NOTE one.\n      NOTE two.\n" in out

@@ -105,7 +105,7 @@ run_hook() {
   local errfile="$TMP/hook-stderr.$$"
   set +e
   env CLAUDE_CODE_REMOTE=true CLAUDE_PROJECT_DIR="$dir" \
-      bash "$HOOK" >/dev/null 2>"$errfile"
+      bash "$HOOK" </dev/null >/dev/null 2>"$errfile"
   HOOK_RC=$?
   set -e
   HOOK_ERR="$(cat "$errfile")"
@@ -197,7 +197,7 @@ chmod +x "$SHIMDIR/git"
 
 set +e
 env CLAUDE_CODE_REMOTE=true CLAUDE_PROJECT_DIR="$BROKEN" PATH="$SHIMDIR:$PATH" \
-    bash "$HOOK" >/dev/null 2>"$TMP/broken-stderr"
+    bash "$HOOK" </dev/null >/dev/null 2>"$TMP/broken-stderr"
 rc=$?
 set -e
 err="$(cat "$TMP/broken-stderr")"
@@ -219,7 +219,7 @@ LOCAL="$TMP/local"
 git clone -q --depth 1 --branch main "$ORIGIN_URL" "$LOCAL"
 before="$(cd "$LOCAL" && git rev-list --count HEAD)"
 set +e
-env -u CLAUDE_CODE_REMOTE CLAUDE_PROJECT_DIR="$LOCAL" bash "$HOOK" >/dev/null 2>&1
+env -u CLAUDE_CODE_REMOTE CLAUDE_PROJECT_DIR="$LOCAL" bash "$HOOK" </dev/null >/dev/null 2>&1
 rc=$?
 set -e
 assert_eq "hook exits 0 when CLAUDE_CODE_REMOTE is unset" "$rc" "0"
@@ -263,6 +263,48 @@ run_hook "$SINGLE"; err="$HOOK_ERR"
 assert_eq "hook exits 0 on the single-branch path" "$HOOK_RC" "0"
 assert_eq "single-branch clone is reset to origin's main tip" \
   "$(cd "$SINGLE" && git rev-parse HEAD)" "$(cd "$ORIGIN" && git rev-parse main)"
+
+# ---------------------------------------------------------------------------
+# 7. A mid-session SessionStart ("compact", "resume", "clear") must NOT hard-reset.
+#    The settings.json matcher is empty, so the hook also fires when a long run compacts;
+#    a reset there would silently discard the session's uncommitted edits and local commits.
+# ---------------------------------------------------------------------------
+run_hook_json() {   # run_hook_json <repo dir> <hook JSON on stdin>
+  local dir="$1" json="$2"
+  set +e
+  printf '%s' "$json" | env CLAUDE_CODE_REMOTE=true CLAUDE_PROJECT_DIR="$dir" \
+      bash "$HOOK" >/dev/null 2>"$TMP/json-stderr"
+  HOOK_RC=$?
+  set -e
+  HOOK_ERR="$(cat "$TMP/json-stderr")"
+}
+
+for src in compact resume clear; do
+  WIP="$TMP/wip-$src"
+  git clone -q --branch main "$ORIGIN_URL" "$WIP"
+  (
+    cd "$WIP"
+    echo "local work" > local.txt
+    git add local.txt
+    git commit -q -m "unpushed local commit"
+    echo "uncommitted edit" >> history.txt
+  ) >/dev/null
+  head_before="$(cd "$WIP" && git rev-parse HEAD)"
+  run_hook_json "$WIP" "{\"session_id\":\"x\",\"hook_event_name\":\"SessionStart\",\"source\": \"$src\"}"
+  assert_eq "source=$src: hook exits 0" "$HOOK_RC" "0"
+  assert_eq "source=$src: local commit kept (HEAD not reset)" "$(cd "$WIP" && git rev-parse HEAD)" "$head_before"
+  assert_contains "source=$src: uncommitted edit kept" "$(cd "$WIP" && git diff -- history.txt)" "uncommitted edit"
+  assert_contains "source=$src: skip is announced" "$HOOK_ERR" "not startup"
+done
+
+# 8. An explicit "startup" source still resets, exactly like a caller that sends no JSON.
+START="$TMP/startup"
+git clone -q --branch main "$ORIGIN_URL" "$START"
+(cd "$START" && echo "stale" > local.txt && git add local.txt && git commit -q -m "stale local commit") >/dev/null
+run_hook_json "$START" '{"hook_event_name":"SessionStart","source":"startup"}'
+assert_eq "source=startup: hook exits 0" "$HOOK_RC" "0"
+assert_eq "source=startup: HEAD reset to origin/main" \
+  "$(cd "$START" && git rev-parse HEAD)" "$(cd "$ORIGIN" && git rev-parse main)"
 
 echo
 if [ "$fail" -eq 0 ]; then

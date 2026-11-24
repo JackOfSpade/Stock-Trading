@@ -269,3 +269,21 @@ def test_explicit_pr_merge_requires_full_ci_dispatch(tmp_path, monkeypatch, caps
     assert not cs.dispatches_full_ci()
     assert cs.main() == 1
     assert "POST-MERGE VALIDATION: FAIL" in capsys.readouterr().out
+
+
+def test_longer_name_containing_the_script_does_not_count_as_a_mention(tmp_path, monkeypatch, capsys):
+    # REGRESSION: coverage was a bare substring test, so `precheck_cadence_marker.py` in the prose
+    # satisfied a CI step running check_cadence_marker.py.
+    wire(
+        tmp_path, monkeypatch,
+        steps=[{"name": "markers", "run": "python scripts/check_cadence_marker.py"}],
+        script_mentions=["scripts/precheck_cadence_marker.py"],
+    )
+    assert cs.main() == 1
+    assert "check_cadence_marker.py" in capsys.readouterr().out
+
+
+def test_mentions_accepts_a_path_prefixed_or_punctuated_name():
+    assert cs.mentions("run `scripts/check_x.py`, then", "check_x.py")
+    assert cs.mentions("finally check_x.py.", "check_x.py")
+    assert not cs.mentions("run my_check_x.py", "check_x.py")

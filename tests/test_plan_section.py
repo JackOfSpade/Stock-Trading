@@ -27,7 +27,7 @@ def test_a_line_longer_than_the_limit_stays_whole_in_its_own_part():
 
 def test_every_real_routine_section_matches_its_generated_slice():
     text = ps.read_text_preserving_newlines(ps.stp.SRC)
-    preamble, routines = ps.stp.split(text)
+    _preamble, routines = ps.stp.split(text)
     assert routines
     for rid, _title, group_intro, body in routines:
         sec = ps.section(rid, text)
@@ -37,8 +37,10 @@ def test_every_real_routine_section_matches_its_generated_slice():
 
 
 def test_cli_lists_parts_then_prints_one_and_rejects_bad_input():
-    run = lambda *a: subprocess.run([sys.executable, "scripts/plan_section.py", *a], cwd=ROOT,
-                                    capture_output=True, text=True)
+    def run(*a):
+        return subprocess.run([sys.executable, "scripts/plan_section.py", *a], cwd=ROOT,
+                              capture_output=True, text=True, check=False)
+
     listing = run("D1")
     assert listing.returncode == 0 and "--part 1" in listing.stdout
     part = run("D1", "--part", "1")

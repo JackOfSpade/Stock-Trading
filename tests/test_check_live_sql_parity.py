@@ -1731,3 +1731,27 @@ def test_extract_body_strips_the_scalar_udf_as_wrapper():
     assert clsp.normalize_kind(m.group(1)) == "FUNCTION"
     body = clsp.extract_body(txt, m.start(), "FUNCTION")
     assert body == "t IS NOT NULL AND REGEXP_CONTAINS(t, r'^[A-Z]{1,6}$')"
+
+
+@pytest.mark.parametrize("inner", [
+    "SELECT ')' AS x",                     # unbalanced paren inside a string literal
+    "SELECT 1 AS x -- step 1)\nFROM t",    # unbalanced paren inside a line comment
+    "SELECT 1 AS x /* ( */ FROM t",        # unbalanced paren inside a block comment
+])
+def test_table_function_wrapper_paren_scan_ignores_literals_and_comments(inner):
+    # The wrapper-strip used to count raw characters, so a paren inside a literal or comment kept the
+    # `( ... )` wrapper on the repo side and the object reported permanent false DRIFT.
+    txt = f"CREATE OR REPLACE TABLE FUNCTION `p.d.f`() AS (\n{inner}\n);"
+    assert clsp.extract_body(txt, 0, "TABLE FUNCTION") == inner
+
+
+def test_table_function_body_that_is_not_one_wrapper_keeps_its_parens():
+    txt = "CREATE OR REPLACE TABLE FUNCTION `p.d.f`() AS (SELECT 1) UNION ALL (SELECT 2);"
+    assert clsp.extract_body(txt, 0, "TABLE FUNCTION") == "(SELECT 1) UNION ALL (SELECT 2)"
+
+
+def test_main_offline_fails_when_nothing_parsed(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["check_live_sql_parity.py", "--offline"])
+    monkeypatch.setattr(clsp, "find_final_definitions", dict)
+    assert clsp.main() == 1
+    assert "0 object definitions" in capsys.readouterr().out

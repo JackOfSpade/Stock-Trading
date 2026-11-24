@@ -602,3 +602,11 @@ def test_metadata_value_never_spans_a_newline():
     """`\\s*` after `:**` crossed the newline, so an empty id line swallowed the cycle line as its value."""
     found = [(m["name"], m["value"]) for m in ars.METADATA.finditer("- **id:**\n- **cycle_number:** 3\r\n")]
     assert found == [("cycle_number", "3")]
+
+
+@pytest.mark.parametrize("value", ["0", "-5"])
+def test_main_repair_rejects_non_positive_timeout_before_bigquery_client(monkeypatch, value):
+    monkeypatch.setattr(ars, "GoogleBigQueryWarehouse", lambda *a, **k: pytest.fail("client should not be constructed"))
+    with pytest.raises(SystemExit) as exc:
+        ars.main(["repair", "--timeout-seconds", value])
+    assert exc.value.code == 2

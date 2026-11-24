@@ -137,6 +137,17 @@ def test_build_duplicate_id_collision_gets_underscore_suffixed_slice(tmp_path, m
     assert "body b" in files["AR_att_.md"]
 
 
+def test_build_routine_slice_never_overwrites_the_index_or_preamble(tmp_path, monkeypatch):
+    # REGRESSION: `used` started empty, so a routine whose id is INDEX (or 00_preamble) wrote over
+    # the generated INDEX.md / 00_preamble.md entry instead of being disambiguated.
+    src = tmp_path / "Claude_Task_Plan.md"
+    src.write_text(f"# Title\n\npreamble\n\n# DAILY\n## INDEX. Odd Routine {DR}\nbody i\n", encoding="utf-8")
+    monkeypatch.setattr(stp, "SRC", str(src))
+    files = stp.build()
+    assert files["INDEX.md"].startswith("# Claude_Task_Plan.md — generated routine-slice index")
+    assert "body i" in files["INDEX_.md"]
+
+
 # ---- main(): end-to-end write / --check / orphan handling -------------------------------------
 
 def _write_plan(tmp_path):

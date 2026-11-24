@@ -78,6 +78,27 @@ class MergePolicyTests(unittest.TestCase):
             policy.validate(self.pr, "base", self.comparison, self.checks,
                             ["CI required", "Security required"])
 
+    def test_empty_required_check_list_fails_closed(self):
+        with self.assertRaises(ValueError):
+            policy.validate(self.pr, "base", self.comparison, self.checks, [])
+
+    def test_malformed_config_is_rejected_before_any_github_call(self):
+        base = {'GITHUB_REPOSITORY': 'owner/repo', 'PR_NUMBER': '7',
+                'REQUIRED_CHECKS': '["CI required"]', 'MAIN_WORKFLOWS': '["ci.yml"]'}
+        calls = []
+        for name, value in [('REQUIRED_CHECKS', '[]'), ('REQUIRED_CHECKS', '"CI required"'),
+                            ('MAIN_WORKFLOWS', '[]'), ('MAIN_WORKFLOWS', '[""]'),
+                            ('MAIN_WORKFLOWS', 'not json')]:
+            with self.subTest(name=name, value=value):
+                calls.clear()
+                env = dict(base, **{name: value})
+                with patch.dict(policy.os.environ, env, clear=True), \
+                        patch.object(policy, 'api', lambda *a, **k: calls.append(a)), \
+                        patch.object(policy, 'gh', lambda *a: calls.append(a)):
+                    with self.assertRaises(ValueError):
+                        policy.main()
+                self.assertEqual(calls, [])
+
     def test_merge_targets_one_exact_head_then_dispatches_main_validation(self):
         calls = []
         def api(path, paginated=False):

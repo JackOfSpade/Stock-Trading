@@ -206,3 +206,26 @@ def test_split_args_ignores_line_comments_between_fields():
     args = cs._split_args(text, 1, len(text) - 1)
     assert [a.strip() for _pos, a in args] == ["'a'", "'b'"]
     assert [pos for pos, _a in args] == [1, text.index(",") + 1]
+
+
+def test_commented_anchor_in_higher_file_does_not_win_resolution(tmp_path, monkeypatch, capsys):
+    # A later file that only QUOTES the INSERT in a comment used to win resolve_sql() and then fail
+    # parse_sql() with "no FROM UNNEST" -- a false red on a file with no register SQL at all.
+    _make_repo(tmp_path, monkeypatch)
+    (tmp_path / "bigquery" / "999_note.sql").write_text(
+        f"-- history: the {cs.INSERT_ANCHOR} in an earlier file seeds the register.\nSELECT 1;\n",
+        encoding="utf-8")
+    rel, _text = cs.resolve_sql()
+    assert rel == REAL_SQL_REL
+    rc, out, err = _run(capsys)
+    assert rc == 0, err
+    assert "LOCKSTEP: OK" in out
+
+
+def test_block_comment_inside_unnest_block_is_ignored():
+    sql = _read(REAL_SQL_REL)
+    m = re.search(r"FROM\s+UNNEST\s*\(\s*\[", sql[sql.index(cs.INSERT_ANCHOR):], re.IGNORECASE)
+    assert m
+    at = sql.index(cs.INSERT_ANCHOR) + m.end()
+    mutated = sql[:at] + "\n  /* retired: STRUCT('Z', 'X') */\n" + sql[at:]
+    assert cs.parse_sql(mutated, REAL_SQL_REL).keys() == cs.parse_sql(sql, REAL_SQL_REL).keys()

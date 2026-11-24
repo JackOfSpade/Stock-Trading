@@ -1078,7 +1078,8 @@ def restore(routine_ids):
     doc = load_backup()
     profiles, routines, unmatched = doc["profiles"], doc["routines"], doc.get("_unmatched", {})
 
-    targets = list(routine_ids) if routine_ids else sorted(routines)
+    # dict.fromkeys: an id named twice must yield one body -- two would create two live triggers.
+    targets = list(dict.fromkeys(routine_ids)) if routine_ids else sorted(routines)
     bodies, errors = [], []
     for rid in targets:
         if rid in routines:

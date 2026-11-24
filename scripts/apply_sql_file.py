@@ -524,6 +524,15 @@ def main(argv):
     if not args:
         print(__doc__, file=sys.stderr)
         return 2
+    # The same file twice would be applied twice: harmless for CREATE OR REPLACE, a double write for a
+    # --allow-noncanonical INSERT/MERGE.
+    seen = {}
+    for path in args:
+        real = os.path.realpath(path)
+        if real in seen:
+            print(f"FAILED: {path} names the same file as {seen[real]}; give each file once", file=sys.stderr)
+            return 2
+        seen[real] = path
 
     # One repo-side walk of bigquery/*.sql for the whole run (not per-file) — pure disk I/O, no
     # BigQuery client needed, same cost shape find_final_definitions()'s own callers (check_live_sql_

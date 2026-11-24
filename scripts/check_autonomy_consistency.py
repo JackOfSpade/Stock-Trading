@@ -342,12 +342,16 @@ def _check_cadence_heartbeat_coverage(errors):
     cadence_path, resolve_errors = canonical_cadence_sql()
     errors.extend(resolve_errors)
     monitored = cadence_heartbeat_loops()
+    expected = active_auto_loops() - HEARTBEAT_SELF_MONITORED_LOOPS
     if monitored is None:
-        # The canonical cadence-check SQL is not present in this checkout (or its definition is
-        # AMBIGUOUS, already reported above); nothing to compare.
+        # AMBIGUOUS resolution is already reported above. A MISSING file is only harmless when no
+        # active_auto loop needs covering; otherwise nothing shows those loops have a dead-man's switch.
+        if cadence_path is not None and expected:
+            errors.append(f"{os.path.relpath(cadence_path, ROOT)} (ops.{CADENCE_PROC}): file not found "
+                          f"-- cannot verify the constant_tuning_loop_heartbeat_missing dead-man's "
+                          f"switch covers active_auto loop(s) {sorted(expected)}")
         return
     rel = os.path.relpath(cadence_path, ROOT)
-    expected = active_auto_loops() - HEARTBEAT_SELF_MONITORED_LOOPS
     if expected and not monitored:
         errors.append(f"{rel} (ops.{CADENCE_PROC}): found no "
                       "'loop:<id>' heartbeat literals — the constant_tuning_loop_heartbeat_missing UNNEST "

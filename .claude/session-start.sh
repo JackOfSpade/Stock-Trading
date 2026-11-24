@@ -21,6 +21,18 @@ if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
   exit 0
 fi
 
+# SessionStart also fires on "resume", "clear" and "compact" (the matcher in .claude/settings.json is
+# empty), and those run inside the SAME container mid-session: a hard reset there would discard the
+# session's uncommitted edits and unpushed commits. Only a "startup" (or a caller that sends no hook
+# JSON, e.g. the tests) resets. The hook JSON arrives on stdin; never block on a terminal.
+hook_source=""
+if [ ! -t 0 ]; then
+  hook_input=""
+  IFS= read -r -t 2 -d '' hook_input || true
+  hook_source="$(printf '%s' "$hook_input" \
+    | grep -oE '"source"[[:space:]]*:[[:space:]]*"[A-Za-z_]+"' | head -1 | sed -E 's/.*"([A-Za-z_]+)"$/\1/' || true)"
+fi
+
 # CLAUDE_PROJECT_DIR is set by the harness to the repo root.
 cd "${CLAUDE_PROJECT_DIR:-$(pwd)}" || exit 0
 
@@ -78,6 +90,11 @@ if [ "$(git rev-parse --is-shallow-repository 2>/dev/null)" = "true" ]; then
   else
     echo "[session-start] WARNING: git fetch --unshallow origin failed; history is still SHALLOW. Treat git log -S/-L, git blame, git log --since and git merge-base --is-ancestor as INCONCLUSIVE this session (Claude_Task_Plan.md, HISTORY-DEPTH PRECHECK)." >&2
   fi
+fi
+
+if [ -n "$hook_source" ] && [ "$hook_source" != "startup" ]; then
+  echo "[session-start] SessionStart source '$hook_source' (not startup): leaving the working tree and branch as they are." >&2
+  exit 0
 fi
 
 unmerged="$(git rev-list --count origin/main..HEAD 2>/dev/null || echo 0)"
