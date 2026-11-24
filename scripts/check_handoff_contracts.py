@@ -541,8 +541,8 @@ def parse_create_table_bodies(bigquery_dir):
 def required_not_null_columns(column_body):
     """Column names that are NOT NULL with no DEFAULT, from one CREATE TABLE's parenthesized body."""
     cols = []
-    for part in _split_top_level_commas(column_body):
-        part = part.strip()
+    for raw in _split_top_level_commas(column_body):
+        part = raw.strip()
         if not part:
             continue
         if TABLE_CONSTRAINT_RE.match(part):

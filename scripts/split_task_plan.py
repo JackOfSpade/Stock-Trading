@@ -133,7 +133,7 @@ def build():
              "only the slice a routine needs; the monolith stays authoritative.\n\n",
              "| Routine ID | Section | File |\n|---|---|---|\n",
              "| _(shared)_ | preamble: OPERATING MODEL + FILE CONVENTIONS | `00_preamble.md` |\n"]
-    used = set()
+    used = {"00_preamble.md", "INDEX.md"}  # reserved: a routine slice must never overwrite these
     for rid, title, group_intro, body in routines:
         # dedupe_slice_name: defensive against a duplicate cadence id, which would otherwise clobber
         # a sibling slice (shared with split_strategy.py's identical guard — tooling-misc#0).

@@ -112,3 +112,23 @@ def test_real_repo_uses_the_apply_in_order_winner_for_rule5():
     assert name.endswith(".sql")
     assert "PROCEDURE `stock-trading-498512.ops.sp_auto_resolve_alerts`" in text
     assert cs._extract_sql_rule5(text) == SIX
+
+
+# ---- commented-out entries are not live entries (regression) ------------------------------------
+
+def test_py_extractor_ignores_a_commented_out_entry():
+    src = ("NO_PUSH_CATEGORIES = (\n    'strategy_graduated',  # see (M4)\n"
+           "    # 'roster_below_floor',  disabled\n)\n")
+    assert cs._extract_py_tuple(src) == {"strategy_graduated"}
+
+
+def test_gs_extractor_ignores_a_commented_out_entry():
+    src = ("const ROSTER_NOTICE_CATEGORIES = [\n  'strategy_graduated',\n"
+           "  // 'roster_below_floor',\n  /* 'retirement_proposed', */\n];\n")
+    assert cs._extract_gs_array(src) == {"strategy_graduated"}
+
+
+def test_sql_extractor_ignores_a_list_quoted_in_a_comment():
+    src = ("-- old: AND category IN ('strategy_shadow_registered', 'roster_below_floor', 'gone')\n"
+           "AND category IN ('strategy_shadow_registered', 'roster_below_floor')\n")
+    assert cs._extract_sql_rule5(src) == {"strategy_shadow_registered", "roster_below_floor"}

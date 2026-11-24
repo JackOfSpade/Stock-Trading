@@ -539,6 +539,14 @@ def _print_repair_result(result):
         print(f"  replacement_event_id={result.replacement_event_id}")
 
 
+def _positive_seconds(value):
+    """argparse type: 0 or a negative timeout made every BigQuery job time out on its first poll."""
+    seconds = int(value)
+    if seconds < 1:
+        raise argparse.ArgumentTypeError("must be a positive number of seconds")
+    return seconds
+
+
 def _write_new_file(path, body, root=ROOT):
     path = Path(path)
     if not path.parent.is_dir():
@@ -571,7 +579,7 @@ def main(argv=None):
     repair.add_argument("--file", action="append", type=Path,
                         help="legacy file to repair (repeatable for dry-run; default is every tracked root review file)")
     repair.add_argument("--apply", action="store_true", help="append one replacement; without this flag repair is read-only")
-    repair.add_argument("--timeout-seconds", type=int, default=DEFAULT_BQ_TIMEOUT_SECONDS,
+    repair.add_argument("--timeout-seconds", type=_positive_seconds, default=DEFAULT_BQ_TIMEOUT_SECONDS,
                         help="abort a stuck BigQuery job (query or --apply write) after this many "
                              "seconds instead of hanging forever (default: %(default)s; also settable "
                              "via BQ_QUERY_TIMEOUT_SECONDS)")

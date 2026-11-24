@@ -2178,3 +2178,12 @@ def test_fleet_profile_hard_denies_builtin_web_tools_and_create_body_carries_it(
         model="m", allowed_tools=["Bash"], autofix_on_pr_create=True, sources=[], mcp_connections=[],
         disallowed_tools=["WebFetch", "WebSearch"])
     assert body["job_config"]["ccr"]["session_context"]["disallowed_tools"] == ["WebFetch", "WebSearch"]
+
+
+def test_restore_emits_one_body_for_an_id_named_twice(tmp_path, monkeypatch):
+    """Two bodies for one routine would recreate it as two live scheduled triggers."""
+    _wire(tmp_path, monkeypatch)
+    rb.ingest(str(_write(tmp_path, "in.json", {"data": [_raw_trigger()]})))
+    bodies, errors, _ = rb.restore(["D1", "D1"])
+    assert errors == []
+    assert [rid for rid, _ in bodies] == ["D1"]

@@ -80,7 +80,7 @@ def test_parse_field_supported_forms():
     assert cs.parse_field("1,4,7,10", 1, 12, "month") == {1, 4, 7, 10}
 
 
-@pytest.mark.parametrize("bad", ["*/5", "1-5", "MON", "", "1,", "1-3,5"])
+@pytest.mark.parametrize("bad", ["*/5", "1-5", "MON", "", "1,", "1-3,5", "\u00b2", "\u0663"])
 def test_parse_field_rejects_what_it_cannot_evaluate(bad):
     # A checker that silently treats unsupported syntax as a wildcard would report success on
     # precisely the schedules that most need evaluating. Fail closed instead.

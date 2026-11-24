@@ -107,6 +107,13 @@ def main():
         deps = ", ".join(r.get("depends_on") or []) or "—"
         print(f"{rid}   cadence: {r.get('schedule', '(not in cadence.yaml)')}   deps: {deps}")
         print(f"   instruction: {instruction_text(h)}")
+        # The live trigger carries cadence.yaml's instruction_note too (build_triggers_manifest), so
+        # print it: a trigger recreated from the first line alone would lose that paragraph.
+        note = r.get("instruction_note")
+        if note:
+            print("   instruction continues (blank line, then):")
+            for note_line in note.splitlines():
+                print(f"      {note_line}")
         print()
     print("=" * 100)
     print(f"{len(headings)} routines.")

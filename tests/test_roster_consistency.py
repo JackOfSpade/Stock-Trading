@@ -1816,3 +1816,15 @@ def test_func_divisor_sees_a_parenthesised_first_argument_and_money_matching_ign
     assert rc._money_nearby("SUM(cf.AMOUNT) / 5", ("amount",), set())
     assert rc._money_nearby("SUM(raw) / 5", (), {"Raw"})
     assert not rc._money_nearby("SUM(drawing) / 5", (), {"Raw"})
+
+
+def test_declared_frequency_commented_out_struct_row_is_not_coverage(repo_copy):
+    # A commented-out seed row must not count: deleting E's real row and leaving a `--` copy of it
+    # used to keep E "covered" and silence the R-L gap NOTE.
+    p = rc.DECLARED_FREQUENCY_SQL
+    txt = _read(p)
+    old = ("  STRUCT('E', '6-12 pair theses per year (12-24 trades counting both legs).', "
+           "'strategy/07_strategy_e.md:68', FALSE)\n")
+    assert old in txt, "fixture assumption about bigquery/166's E seed row shape drifted"
+    _write(p, txt.replace(old, "  -- " + old.lstrip()))
+    assert rc.declared_frequency_seed_codes() == {"A", "B", "C", "D"}

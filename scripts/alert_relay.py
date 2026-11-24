@@ -450,6 +450,11 @@ def main():
               "which reaches BOTH email (alert_emailer.gs) and this relay's `alerts` mode. "
               "Nothing to do here.")
         return 0
+    if MODE != "alerts":
+        # Same reasoning as `orders` above: an unknown mode (a typo'd RELAY_MODE in a manual run)
+        # must not silently run the alerts relay under another name.
+        print(f"unknown RELAY_MODE {MODE!r} (expected alerts | heartbeat)", file=sys.stderr)
+        return 2
     try:
         relay_alerts()
     except Exception as e:  # noqa: BLE001 - best-effort: never fail CI on a transient bq/webhook hiccup

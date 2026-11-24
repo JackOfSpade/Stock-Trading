@@ -20,7 +20,18 @@ import urllib.parse
 DIFF_BASE_WORKFLOWS = frozenset({"ci.yml"})
 
 
+def _names(env_name):
+    """A non-empty JSON list of non-empty strings from the environment, else ValueError."""
+    names = json.loads(os.environ[env_name])
+    if not isinstance(names, list) or not names or not all(isinstance(n, str) and n for n in names):
+        raise ValueError(f"{env_name} must be a non-empty JSON list of names")
+    return names
+
+
 def validate(pr, base_sha, comparison, checks, required):
+    # An empty list would otherwise pass every PR with no checks at all.
+    if not required:
+        raise ValueError("No required checks configured")
     if pr.get("state") != "open" or pr.get("draft"):
         raise ValueError("Select an open, non-draft pull request")
     if pr["base"]["ref"] != "main":
@@ -82,7 +93,9 @@ def main():
     number = os.environ["PR_NUMBER"]
     if not number.isdecimal() or int(number) < 1:
         raise ValueError("PR number must be a positive integer")
-    required = json.loads(os.environ["REQUIRED_CHECKS"])
+    required = _names("REQUIRED_CHECKS")
+    # Parsed before the merge, so a malformed list cannot leave a merge with no main validation.
+    workflows = _names("MAIN_WORKFLOWS")
     pr = api(f"repos/{repo}/pulls/{int(number)}")
     head = pr["head"]["sha"]
     base = api(f"repos/{repo}/git/ref/heads/main")["object"]["sha"]
@@ -109,7 +122,7 @@ def main():
     # Cleanup first: it is best-effort and must not be skipped by a failed dispatch below.
     delete_merged_head(repo, pr, head)
     failed = []
-    for workflow in json.loads(os.environ["MAIN_WORKFLOWS"]):
+    for workflow in workflows:
         args = ["workflow", "run", workflow, "--repo", repo, "--ref", "main"]
         if workflow in DIFF_BASE_WORKFLOWS:
             args += ["-f", f"diff_base={base}"]

@@ -340,6 +340,23 @@ def test_region_bounds_raises_systemexit_naming_the_path():
         gr._region_bounds("no markers here", "somepath.sql")
 
 
+def test_region_bounds_rejects_a_second_marker_pair():
+    # find() only sees the first pair, so a duplicated region would be silently unchecked by --check.
+    txt = _sql_with_region("\nBODY\n  ") + _sql_with_region("\nHAND-EDITED\n  ")
+    with pytest.raises(SystemExit, match=r"found 2 BEGIN / 2 END"):
+        gr._region_bounds(txt, "somepath.sql")
+
+
+def test_main_check_fails_on_duplicated_marker_pair(tmp_path, monkeypatch, capsys):
+    f12, *_ = _wire_fixture(tmp_path, monkeypatch)
+    monkeypatch.setattr(sys, "argv", ["gen_routine_lists.py", "--write"])
+    assert gr.main() == 0
+    f12.write_text(f12.read_text() + _sql_with_region("\nHAND-EDITED\n  "))
+    monkeypatch.setattr(sys, "argv", ["gen_routine_lists.py", "--check"])
+    assert gr.main() == 1
+    assert "exactly one pair is required" in capsys.readouterr().out
+
+
 def test_current_region_returns_exact_text_between_markers(tmp_path):
     p = tmp_path / "x.sql"
     p.write_text(_sql_with_region("\n    STRUCT('D1' AS routine, 'daily_trading' AS schedule)\n  "))

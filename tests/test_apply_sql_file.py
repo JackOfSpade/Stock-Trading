@@ -714,3 +714,15 @@ def test_gate_refuses_the_canonical_body_under_a_rewritten_header():
     tampered = stmt[:paren + 1] + "totally_different_arg ARRAY<STRING>, " + stmt[paren + 1:]
     ok, _noncanonical, msg = asf.check_canonical_provenance("x.sql", tampered, final)
     assert ok is False and "CREATE header" in msg
+
+
+# ---- main(): the same file named twice is refused before BigQuery (it would be applied twice) -------
+def test_main_refuses_the_same_file_given_twice(monkeypatch, capsys, tmp_path):
+    dml_path = tmp_path / "63_registry_merge.sql"
+    dml_path.write_text("INSERT INTO `stock-trading-498512.ops.x` (a) VALUES (1);\n", encoding="utf-8")
+    monkeypatch.setattr(asf.bigquery, "Client",
+                         lambda **kw: (_ for _ in ()).throw(AssertionError("client must not be constructed")))
+    alias = tmp_path / "." / "63_registry_merge.sql"
+    rc = asf.main(["--allow-noncanonical", str(dml_path), str(alias)])
+    assert rc == 2
+    assert "same file" in capsys.readouterr().err

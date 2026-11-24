@@ -311,9 +311,22 @@ def test_cadence_heartbeat_coverage_respects_self_monitored_exemption(tmp_path, 
     assert errors == []
 
 
-def test_cadence_heartbeat_coverage_no_op_when_sql_file_missing(tmp_path, monkeypatch):
+def test_cadence_heartbeat_coverage_fails_when_sql_file_missing_with_active_auto_loop(tmp_path, monkeypatch):
+    # Fail closed: an active_auto loop with no cadence SQL to check against has no provable
+    # dead-man's switch (this used to return [] -- a silent pass).
     autonomy = tmp_path / "autonomy_levels.yaml"
     autonomy.write_text("loops:\n  - id: some_loop\n    stage: active_auto\n")
+    monkeypatch.setattr(ac, "AUTONOMY", str(autonomy))
+    monkeypatch.setattr(ac, "CADENCE_SQL", str(tmp_path / "does_not_exist.sql"))
+    errors = []
+    ac._check_cadence_heartbeat_coverage(errors)
+    assert len(errors) == 1
+    assert "file not found" in errors[0] and "some_loop" in errors[0]
+
+
+def test_cadence_heartbeat_coverage_no_op_when_sql_file_missing_and_nothing_to_cover(tmp_path, monkeypatch):
+    autonomy = tmp_path / "autonomy_levels.yaml"
+    autonomy.write_text("loops:\n  - id: some_loop\n    stage: shadow\n")
     monkeypatch.setattr(ac, "AUTONOMY", str(autonomy))
     monkeypatch.setattr(ac, "CADENCE_SQL", str(tmp_path / "does_not_exist.sql"))
     errors = []

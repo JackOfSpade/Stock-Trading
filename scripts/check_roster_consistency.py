@@ -1151,7 +1151,9 @@ def declared_frequency_seed_codes():
     latter instead of silently treating it as zero coverage."""
     if not os.path.exists(DECLARED_FREQUENCY_SQL):
         return None
-    txt = read_text(DECLARED_FREQUENCY_SQL)
+    # Comments stripped first, as seed_active_codes() does: a commented-out STRUCT('X' ...) row must
+    # not count as seed coverage.
+    txt = strip_sql_comments(read_text(DECLARED_FREQUENCY_SQL))
     m = DECLARED_FREQUENCY_SEED_BLOCK.search(txt)
     if not m:
         return None

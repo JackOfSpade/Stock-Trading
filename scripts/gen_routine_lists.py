@@ -260,6 +260,12 @@ def _region_bounds(txt, path):
     e = txt.find(END_MARKER)
     if b == -1 or e == -1 or e < b:
         raise SystemExit(f"{path}: could not find BEGIN/END GENERATED ROUTINE LIST markers")
+    # Exactly one pair: with a second (e.g. copy-pasted) pair, find() only ever sees the first, so
+    # --check would pass while the second region's rows go unchecked and --write never refreshes them.
+    nb, ne = txt.count(BEGIN_MARKER), txt.count(END_MARKER)
+    if nb != 1 or ne != 1:
+        raise SystemExit(f"{path}: found {nb} BEGIN / {ne} END GENERATED ROUTINE LIST markers -- "
+                         f"exactly one pair is required")
     return b, e
 
 
@@ -533,7 +539,7 @@ def gen_280_region(full, prior=None, today=None, since_floor=None):
     n = len(full)
     for i, (rid, instr) in enumerate(full):
         _check_raw_literal_safe(rid, instr)
-        prior_instr, prior_since, prior_sup = (tuple(prior.get(rid, ())) + (None, None, None))[:3]
+        prior_instr, prior_since, prior_sup = (*prior.get(rid, ()), None, None, None)[:3]
         if prior_since and prior_instr == instr:
             since, sup = prior_since, prior_sup
         elif prior_instr is not None:
@@ -695,11 +701,14 @@ def main():
     drift = False
     for path, body in targets:
         rel = os.path.relpath(path, ROOT)
-        current = current_region(path)
-        if current is None:
-            print(f"{rel}: could not find BEGIN/END GENERATED ROUTINE LIST markers")
+        txt = read_text(path)
+        try:
+            b, e = _region_bounds(txt, rel)
+        except SystemExit as exc:
+            print(exc)  # missing, out-of-order, or duplicated markers
             drift = True
             continue
+        current = txt[b + len(BEGIN_MARKER):e]
         want = wanted_region(body)
         if current != want:
             drift = True

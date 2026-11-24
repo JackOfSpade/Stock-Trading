@@ -8,7 +8,8 @@ Per strategy, paper days are taken in incubation_day order. A day is KEPT when i
 NULL and the technical-regime series gives it a cell. Each kept day's log marginal excess is
 ln((1 + excess) / (1 + base)), where base is the cumulative excess on the previous kept day (0 before the
 first), so a skipped day's change rolls into the next kept day. A ratio that cannot be logged is unloggable
-(BigQuery SAFE.LN / SAFE_DIVIDE return NULL). A cell is demonstrated with >= 5 kept days, no unloggable day
+(BigQuery SAFE.LN / SAFE_DIVIDE return NULL). cell_excess is None when every day in the cell is unloggable
+(SUM over only NULLs is NULL, so the view's EXP(SUM(...)) - 1 is NULL). A cell is demonstrated with >= 5 kept days, no unloggable day
 and a compounded in-cell excess >= 0.
 """
 import math
@@ -47,10 +48,11 @@ def regime_cells(paper_rows, series):
             base = excess
     out = {}
     for key, a in acc.items():
+        loggable = a["n"] > a["unloggable"]
         out[key] = {
             "paper_days_in_cell": a["n"],
             "unloggable_days": a["unloggable"],
-            "cell_excess": math.exp(a["log_sum"]) - 1,
+            "cell_excess": math.exp(a["log_sum"]) - 1 if loggable else None,
             "demonstrated": a["n"] >= MIN_DAYS and a["unloggable"] == 0 and a["log_sum"] >= 0,
         }
     return out
