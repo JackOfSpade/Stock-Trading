@@ -1,0 +1,71 @@
+{
+ "run": "2026-11-25",
+ "i": "2026-11-23",
+ "p": "2026-11-24",
+ "days": [
+  "2026-11-21",
+  "2026-11-22",
+  "2026-11-23"
+ ],
+ "calendar_failures": [],
+ "candidates": 7,
+ "readers": [
+  {
+   "id": "56966d034a54",
+   "s": "CMP",
+   "d": "2026-11-23",
+   "call": "2026-11-24",
+   "n": "Compass Minerals International, Inc.",
+   "ne": 2,
+   "mc": 853471170.0,
+   "analysts": 4,
+   "i": "2026-11-23",
+   "p": "2026-11-24",
+   "entry": "2026-11-25",
+   "run": "2026-11-25",
+   "reaction": 0.2080954852101713,
+   "close_i_minus1": 19.27,
+   "close_i_plus1": 23.28,
+   "late": false,
+   "pack_sha256": "354bc17f1dba5798cac36d225820f2ad8db7fee7c9a228561bcade68238e40d2"
+  },
+  {
+   "id": "3ea87ecd0eff",
+   "s": "VNET",
+   "d": "2026-11-23",
+   "call": "2026-11-23",
+   "n": "VNET Group, Inc.",
+   "ne": 2,
+   "mc": 723464320.0,
+   "analysts": 15,
+   "i": "2026-11-23",
+   "p": "2026-11-24",
+   "entry": "2026-11-25",
+   "run": "2026-11-25",
+   "reaction": -0.09633027522935789,
+   "close_i_minus1": 2.18,
+   "close_i_plus1": 1.97,
+   "late": false,
+   "pack_sha256": "4bb3bf1fa78cc392b2cdbeec251d55e979b4e7abfe051be63cdbb9ef5cc47e58"
+  },
+  {
+   "id": "86ee7b71f9e0",
+   "s": "PFLT",
+   "d": "2026-11-23",
+   "call": "2026-11-24",
+   "n": "PennantPark Floating Rate Capital Ltd.",
+   "ne": 2,
+   "mc": 620111870.0,
+   "analysts": 8,
+   "i": "2026-11-23",
+   "p": "2026-11-24",
+   "entry": "2026-11-25",
+   "run": "2026-11-25",
+   "reaction": 0.04492512479201349,
+   "close_i_minus1": 6.01,
+   "close_i_plus1": 6.28,
+   "late": false,
+   "pack_sha256": "e4d99938289c1c85c0361eea6387dba82cb049c810c3a450a1fead9d43cdd06e"
+  }
+ ]
+}

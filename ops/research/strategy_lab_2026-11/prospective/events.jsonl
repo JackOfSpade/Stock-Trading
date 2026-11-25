@@ -434,3 +434,12 @@
 {"analysts": null, "call": "2026-11-19", "d": "2026-11-19", "dry": false, "i": "2026-11-19", "id": "725a80eac4f3", "late": false, "mc": 461462016.0, "ne": 1, "p": "2026-11-20", "run": "2026-11-23", "s": "MAGN", "status": "prepared"}
 {"analysts": 16, "d": "2026-11-17", "dry": false, "i": "2026-11-17", "late": true, "mc": 1275040640.0, "ne": 1, "p": "2026-11-18", "run": "2026-11-23", "s": "WB", "status": "no_transcript"}
 {"analysts": null, "d": "2026-11-17", "dry": false, "i": "2026-11-17", "late": true, "mc": 764115010.0, "ne": 1, "p": "2026-11-18", "run": "2026-11-23", "s": "VREX", "status": "no_transcript"}
+{"analysts": null, "d": "2026-11-23", "dry": false, "i": "2026-11-23", "late": false, "mc": 995746620.0, "ne": 1, "p": "2026-11-24", "run": "2026-11-25", "s": "FSCO", "status": "no_transcript"}
+{"analysts": 3, "d": "2026-11-23", "dry": false, "i": "2026-11-23", "late": false, "mc": 931147140.0, "ne": 2, "p": "2026-11-24", "run": "2026-11-25", "s": "CTY", "status": "no_transcript"}
+{"analysts": 4, "d": "2026-11-23", "dry": false, "i": "2026-11-23", "late": false, "mc": 895397700.0, "ne": 1, "p": "2026-11-24", "run": "2026-11-25", "s": "TUYA", "status": "no_transcript"}
+{"analysts": 4, "call": "2026-11-24", "d": "2026-11-23", "dry": false, "i": "2026-11-23", "id": "56966d034a54", "late": false, "mc": 853471170.0, "ne": 2, "p": "2026-11-24", "run": "2026-11-25", "s": "CMP", "status": "prepared"}
+{"analysts": null, "d": "2026-11-23", "dry": false, "i": "2026-11-23", "late": false, "mc": 764115010.0, "ne": 1, "p": "2026-11-24", "run": "2026-11-25", "s": "VREX", "status": "no_transcript"}
+{"analysts": 15, "call": "2026-11-23", "d": "2026-11-23", "dry": false, "i": "2026-11-23", "id": "3ea87ecd0eff", "late": false, "mc": 723464320.0, "ne": 2, "p": "2026-11-24", "run": "2026-11-25", "s": "VNET", "status": "prepared"}
+{"analysts": 8, "call": "2026-11-24", "d": "2026-11-23", "dry": false, "i": "2026-11-23", "id": "86ee7b71f9e0", "late": false, "mc": 620111870.0, "ne": 2, "p": "2026-11-24", "run": "2026-11-25", "s": "PFLT", "status": "prepared"}
+{"analysts": null, "d": "2026-11-19", "dry": false, "i": "2026-11-19", "late": true, "mc": 1679582210.0, "ne": 1, "p": "2026-11-20", "run": "2026-11-25", "s": "FORTY", "status": "no_transcript"}
+{"analysts": 5, "d": "2026-11-19", "dry": false, "i": "2026-11-19", "late": true, "mc": 1153665020.0, "ne": 2, "p": "2026-11-20", "run": "2026-11-25", "s": "DRTS", "status": "no_transcript"}
